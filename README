@@ -1,0 +1,6 @@
+Oberon 07 compiler
+
+Written in JavaScript and transaltes Oberon to JavaScript code so it can be run in web browser.
+
+Quick start:
+Go to browser/ and run build.cmd. It will make os.js.
