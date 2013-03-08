@@ -1,0 +1,5 @@
+MODULE m;
+IMPORT JS;
+BEGIN
+	JS.console.info("test")
+END m.

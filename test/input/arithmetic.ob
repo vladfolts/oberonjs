@@ -1,0 +1,22 @@
+MODULE m;
+
+VAR 
+	i1, i2: INTEGER;
+	r1, r2: REAL;
+
+BEGIN
+	i1 := 1;
+	i2 := 2;
+	i1 := i1 + i2;
+	i1 := i1 - i2;
+	i1 := i1 * i2;
+	i1 := i1 DIV i2;
+	i1 := i1 MOD i2;
+
+	r1 := 1.0;
+	r2 := 2.0;
+	r1 := r1 + r2;
+	r1 := r1 - r2;
+	r1 := r1 * r2;
+	r1 := r1 / r2
+END m.

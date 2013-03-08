@@ -1,0 +1,57 @@
+MODULE m;
+
+TYPE R = RECORD i: INTEGER; p: POINTER TO R END;
+
+VAR 
+	i: INTEGER;
+	b: BOOLEAN;
+	a: ARRAY 5 OF INTEGER;
+
+PROCEDURE p1(VAR i1, i2: INTEGER);
+BEGIN
+    i1 := 1;
+	i2 := 2
+END p1;
+
+PROCEDURE p2(i: INTEGER; b: BOOLEAN);
+END p2;
+
+PROCEDURE index(VAR i: INTEGER): INTEGER;
+	RETURN i
+END index;
+
+PROCEDURE array(VAR a: ARRAY OF INTEGER): INTEGER;
+	RETURN a[0]
+END array;
+
+PROCEDURE p3(VAR i: INTEGER; VAR b: BOOLEAN);
+VAR j: INTEGER;
+	r: R;
+	ar: ARRAY 5 OF R;
+	ai: ARRAY 5 OF INTEGER;
+BEGIN
+	j := i + 1;
+	j := 2 * i;
+	j := i / 2;
+	j := -i;
+	b := ~b;
+	a[i] := i;
+    p1(j, i);
+	p1(i, j);
+	p1(i, a[index(i)]);
+	p2(i, b);
+
+	p1(r.i, ar[index(r.i)].i);
+
+	NEW(r.p);
+	NEW(ar[j].p);
+	p1(r.p.i, ar[j].p.i);
+	p2(ar[j].p.i, r.p.i = ar[j].p.i);
+
+	j := array(ai)
+END p3;
+
+BEGIN
+    p3(i, b)
+
+END m.

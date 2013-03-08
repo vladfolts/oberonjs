@@ -1,0 +1,13 @@
+MODULE m;
+                
+TYPE T1 = RECORD field1: INTEGER END;
+
+VAR p: POINTER TO RECORD END;
+	p1: POINTER TO T1;
+	r: RECORD p: POINTER TO T1 END;
+
+BEGIN
+	NEW(p);
+	NEW(p1);
+	NEW(r.p)
+END m.

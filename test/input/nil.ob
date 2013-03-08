@@ -1,0 +1,7 @@
+MODULE m;
+
+VAR p: POINTER TO RECORD END;
+
+BEGIN
+	p := NIL
+END m.

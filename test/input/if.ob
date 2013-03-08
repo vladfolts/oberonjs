@@ -1,0 +1,17 @@
+MODULE m;
+
+VAR b1: BOOLEAN;
+	i1: INTEGER;
+
+BEGIN    
+	IF TRUE THEN b1 := TRUE END;
+	IF b1 THEN i1 := 0 ELSE i1 := 1 END;
+	IF b1 THEN i1 := 0 ELSIF FALSE THEN i1 := 1 ELSE i1 := 2 END;
+
+	IF b1 THEN
+		IF b1 THEN i1 := 0; b1 := FALSE END
+	ELSE
+		b1 := TRUE
+	END
+	
+END m.

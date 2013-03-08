@@ -1,0 +1,29 @@
+MODULE m;
+
+CONST arraySize = 10;
+
+TYPE
+    T1 = ARRAY arraySize OF INTEGER;
+    T2 = ARRAY 5 OF T1;
+    T3 = ARRAY 3 OF ARRAY 7 OF BOOLEAN;
+    T4 = ARRAY 3, 4 OF BOOLEAN;
+
+VAR
+    a1: T1;
+    a2: T2;
+    a3: ARRAY 5 OF BOOLEAN;
+	a4: T4;
+    a5: ARRAY 3 OF RECORD END;
+
+PROCEDURE p; 
+VAR a3: ARRAY 1 OF INTEGER;
+BEGIN 
+    a3[0] := 1 
+END p;
+
+BEGIN
+    a1[0] := 1;
+    a3[1] := TRUE;
+	a4[1][2] := TRUE;
+	a4[1, 2] := TRUE
+END m.

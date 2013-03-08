@@ -1,0 +1,44 @@
+MODULE m;
+
+TYPE
+	P1 = PROCEDURE(a1: INTEGER);
+	P2 = PROCEDURE(): P2;
+
+PROCEDURE p1(arg1: INTEGER);
+TYPE
+    T1 = RECORD 
+        field1: INTEGER END;
+    T2 = RECORD (T1) 
+        field2: BOOLEAN END;
+VAR 
+    i, j: INTEGER; 
+    b: BOOLEAN;
+    t1: T1;
+    t2: T2;
+BEGIN
+    i := arg1 + 1;
+    t1.field1 := i;
+    t2.field1 := t1.field1;
+    b := TRUE;
+    t2.field2 := b
+END p1;
+
+PROCEDURE p2; BEGIN p1(123) END p2;
+
+PROCEDURE p3(i: INTEGER): INTEGER; 
+BEGIN
+	p1(123);
+	p2;
+	p2()
+	RETURN 123
+END p3;
+
+PROCEDURE p4(): INTEGER; 
+	RETURN p3(123) + p3(p3(123))
+END p4;
+
+PROCEDURE p5(): P2; 
+	RETURN p5
+END p5;
+
+END m.

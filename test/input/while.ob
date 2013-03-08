@@ -1,0 +1,22 @@
+MODULE m;
+
+VAR b1, b2: BOOLEAN;
+	i1: INTEGER;
+
+BEGIN    
+	b1 := TRUE;
+	b2 := FALSE;
+
+	WHILE b1 DO i1 := 0 END;
+
+	WHILE b1 DO i1 := 0 
+	ELSIF b2 DO i1 := 1
+	END;
+
+	WHILE b1 DO
+		WHILE b2 DO i1 := 1
+		ELSIF b1 DO i1 := 2
+		END
+	END
+	
+END m.

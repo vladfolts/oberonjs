@@ -1,0 +1,42 @@
+MODULE m;
+
+CONST
+	ch1 = "a";
+	constI = 12;
+
+VAR i: INTEGER;
+	b1: BOOLEAN;
+	i1: INTEGER;
+	c: CHAR;
+
+BEGIN    
+	CASE i1 OF END;
+
+	CASE 123 OF 1: b1 := TRUE END;
+
+	CASE i1 OF 
+		  1: i := 2
+		| 2: i := 3; b1 := FALSE
+	END;
+
+	CASE i1 OF 
+		  1: i := 2
+		| 2: i := 3; b1 := FALSE
+	END;
+
+	CASE i1 OF
+		  1, 2, 3: i := 4
+		| constI: i := constI
+		| 4..5: i := 5
+		| 6, 7..10: b1 := TRUE
+	END;
+
+	CASE c OF
+		  "A": i := 1
+		| ch1: i := 2
+		| "B", "C": i := 2
+		| "D".."F", "I", "J": i:=3
+		| "K".."Z": b1:= TRUE
+	END
+
+END m.

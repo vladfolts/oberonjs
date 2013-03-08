@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<body>
+<p>
+Oberon module:
+</p>
+<textarea id="source" rows="10" cols="80">
+MODULE test;
+IMPORT JS;
+BEGIN
+    JS.alert("Hello, World!")
+END test.
+</textarea>
+<p>
+<button onclick="compile()">Compile</button>
+<button onclick="compile(); run()">Compile &amp; Run</button>
+</p>
+<textarea id="result" rows="10" cols="80">
+</textarea>
+<p>
+<button onclick="run()">Run</button>
+</p>
+<script>
+function require(){}
+</script>
+
+<script src="oc.js"></script>
+
+<script>
+function compile(){
+	var src = document.getElementById("source").value;
+	var result = require("oc.js").compile(src);
+	document.getElementById("result").value = result;
+}
+
+function run(){
+	eval(document.getElementById("result").value);
+}
+</script>
+
+</body>
+</html>

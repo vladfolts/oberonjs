@@ -1,0 +1,18 @@
+MODULE m;
+
+TYPE
+	Base = RECORD END;
+	Derived1 = RECORD(Base) field1: INTEGER END;
+	Derived2 = RECORD(Derived1) field2: INTEGER END;
+VAR
+	pb: POINTER TO Base;
+	pd1: POINTER TO Derived1;
+	pd2: POINTER TO Derived2;
+BEGIN 
+	NEW(pd2);
+	pb := pd2;
+	pd1 := pd2;
+    pb(Derived1).field1 := 0;
+    pb(Derived2).field2 := 1;
+    pd1(Derived2).field2 := 2
+END m.

@@ -1,0 +1,17 @@
+MODULE m;
+
+VAR b1, b2: BOOLEAN;
+	i1: INTEGER;
+
+BEGIN    
+	b1 := TRUE;
+	b2 := FALSE;
+
+	REPEAT i1 := 0 UNTIL b1;
+
+	REPEAT 
+		i1 := 1;
+		b2 := FALSE 
+	UNTIL b1
+	
+END m.

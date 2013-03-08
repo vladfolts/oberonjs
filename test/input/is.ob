@@ -1,0 +1,19 @@
+MODULE m;
+
+TYPE
+	Base = RECORD END;
+	Derived1 = RECORD(Base) field1: INTEGER END;
+	Derived2 = RECORD(Derived1) field2: INTEGER END;
+VAR
+	pb: POINTER TO Base;
+	pd1: POINTER TO Derived1;
+	pd2: POINTER TO Derived2;
+	b: BOOLEAN;
+BEGIN 
+    NEW(pd2);
+    pb := pd2;
+    pd1 := pd2;
+    b := pb IS Derived1;
+    b := pb IS Derived2;
+    b := pd1 IS Derived2
+END m.

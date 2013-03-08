@@ -1,0 +1,12 @@
+MODULE m;
+
+VAR 
+	b1, b2: BOOLEAN;
+
+BEGIN
+	b1 := TRUE;
+	b2 := b1 OR b1;
+	b1 := b1 & b2;
+	b1 := ~b2;
+	b1 := b1 & b2 OR ~b1 
+END m.
