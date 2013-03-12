@@ -30,8 +30,8 @@ def process(path, out, resolved, resolving):
 			if req and not req in resolved:
 				try:
 					resolve_require(req, out, resolved, resolving + [module_name])
-				except Exception, e:
-					print 'while resolving "%s"...' % module_name
+				except Exception as e:
+					print ('while resolving "%s"...' % module_name)
 					raise e
 			result += l
 	result += '\n})(imports["%s"]);\n' % path
