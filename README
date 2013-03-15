@@ -3,4 +3,4 @@ Oberon 07 compiler
 Written in JavaScript and transaltes Oberon to JavaScript code so it can be run in web browser.
 
 Quick start:
-Go to browser/ and run build.cmd. It will make os.js in current directory. Now you can open oberonjs.html.
+run build.cmd (installed Python 2.x or 3.x required). It will make _out/os.js and _out/oberonjs.html. You can try compiler using oberonjs.html.
