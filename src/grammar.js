@@ -41,8 +41,7 @@ var real = context(and(digit, repeat(digit), point, repeat(digit), optional(scal
 
 var number = or(real, integer);
 
-var string = or(context(and("\"", repeat(character), required("\"", "unexpected end of string"))
-					  , Context.String)
+var string = or(context(Lexer.string, Context.String)
 			  , context(and(digit, repeat(hexDigit), "X"), Context.Char));
 
 var factor = context(

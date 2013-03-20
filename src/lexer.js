@@ -34,6 +34,29 @@ exports.character = function(stream, context){
 	return true;
 }
 
+function string(stream, context){
+	var c = stream.char();
+	if (c != '"')
+		return false;
+
+	var result = "";
+	var parsed = false;
+	stream.read(function(c){
+		if (c == '"'){
+			parsed = true;
+			return false;
+		}
+		result += c;
+		return true;
+	});
+	if (!parsed)
+		throw new Errors.Error("unexpected end of string");
+
+	stream.next(1);
+	context.handleString(result);
+	return true;
+}
+
 function isLetter(c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');}
 
 exports.ident = function(stream, context){
@@ -102,3 +125,4 @@ exports.literal = function(s){
 	}
 }	
 
+exports.string = string;

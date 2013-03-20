@@ -111,9 +111,9 @@ function escapeString(s){
 exports.String = ChainedContext.extend({
 	init: function StringContext(context){
 		ChainedContext.prototype.init.bind(this)(context);
-		this.__result = "";
+		this.__result = undefined;
 	},
-	handleChar: function(c){this.__result += c;},
+	handleString: function(s){this.__result = s;},
 	toStr: function(s){return s;},
 	endParse: function(){
 		var s = this.toStr(this.__result);
@@ -127,6 +127,7 @@ exports.Char = exports.String.extend({
 		exports.String.prototype.init.bind(this)(context);
 		this.__result = "";
 	},
+	handleChar: function(c){this.__result += c;},
 	toStr: function(s){return String.fromCharCode(parseInt(s, 16));}
 });
 
