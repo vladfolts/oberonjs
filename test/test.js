@@ -1,50 +1,61 @@
-var oc = require('oc');
-var fs = require('fs');
+function TestError(s) {this.__s = s;}
+TestError.prototype.toString = function(){return this.__s;};
 
-function normalizeLineEndings(text)
-{
-    return text.replace(/\r\n/g, '\n');
+function runImpl(tests, stat, tab){
+    for(var t in tests)
+        if (!runTest(t, tests, stat, tab))
+            ++stat.failCount;
 }
 
-function run()
-{
-    var inputDir = "input";
-    var outputDir = "output";
-    if (!fs.existsSync(outputDir))
-        fs.mkdirSync(outputDir);
-    var sources = fs.readdirSync(inputDir);
-    var failCount = 0;
+function runTest(t, tests, stat, tab){
+    var r = tests[t];
+	if (typeof r != "function"){
+        console.log(tab + t);
+        runImpl(r, stat, tab + "\t");
+        return true;
+    }
+
+    var result = false;
+	var padding = "                           ";
+	var log = t;
+	if (log.length < padding.length)
+		log = t + padding.substring(log.length);
+	else
+		log += " ";
+
+	try {
+        ++stat.count;
+		r();
+		log += "OK";
+		result = true;
+	}
+	catch (x){
+		if (x instanceof TestError)
+			log += "Failed\n\t" + tab + x;
+		else
+			log += "Failed\n" + (x.stack ? x.stack : '\t' + tab + x);
+	}
+	console.log(tab + log);
+	return result;
+}
+
+function run(tests){
+    var stat = {count: 0, failCount: 0};
 
     var start = Date.now();
-
-    for(var i = 0; i < sources.length; ++i)
-    {
-        var source = sources[i];
-        console.log(source + ":\t");
-        var text = fs.readFileSync(inputDir + "/" + source, "utf8");
-        var result = oc.compile(text);
-        var resultName = source.replace(".ob", ".js");
-        fs.writeFileSync(outputDir + "/" + resultName, result);
-        var success = (normalizeLineEndings(result) == normalizeLineEndings(fs.readFileSync("expected/" + resultName, "utf8")));
-        console.log(success ? "OK" : "Failed");
-        if (!success)
-            ++failCount;
-    }
-    console.log(sources.length + " tests" + (failCount ? ", " + failCount + " failed." : ""));
-
+    if (typeof process != "undefined" && process.argv.length > 2)
+        runTest(process.argv[2], tests, "");
+    else
+        runImpl(tests, stat, "");
     var stop = Date.now();
+
     console.log("elapsed: " + (stop - start) / 1000 + " s" );
-
-    if (!failCount)
+    console.log(stat.count + " test(s) run");
+    if (!stat.failCount)
         console.log("All OK!");
+    else
+        console.log(stat.failCount + " test(s) failed");
 }
 
-//try
-{
-    run();
-}
-//catch (x)
-//{
- //   console.error(x);
-//    console.error(x.stack);
-//}
+exports.run = run;
+exports.TestError = TestError;

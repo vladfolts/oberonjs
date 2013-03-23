@@ -5,7 +5,7 @@ var Grammar = require("grammar.js");
 var Lexer = require("lexer.js");
 var Stream = require("stream.js").Stream;
 
-exports.compile = function(text){
+exports.compile = function(text, handleErrors){
 	var stream = new Stream(text);
 	var context = new Context.Context();
 	try {
@@ -14,8 +14,11 @@ exports.compile = function(text){
 	}
 	catch (x) {
 		if (x instanceof Errors.Error) {
-			console.log(context.getResult());
-			console.error(stream.describePosition());
+			//console.log(context.getResult());
+			if (handleErrors){
+				handleErrors(stream.describePosition() + ": " + x);
+				return undefined;
+			}
 		}
 		throw x;
 	}

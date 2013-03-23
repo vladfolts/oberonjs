@@ -5,9 +5,9 @@ var Grammar = require("grammar.js");
 var oc = require("oc.js");
 var Class = require("rtl.js").Class;
 var Stream = require("stream.js").Stream;
+var Test = require("test.js");
 
-function TestError(s) {this.__s = s;}
-TestError.prototype.toString = function(){return this.__s;};
+var TestError = Test.TestError;
 
 function parseInContext(grammar, s, context){
 	var stream = new Stream(s);
@@ -771,47 +771,4 @@ IMPORT: function(){
 	test.parse("MODULE m; IMPORT JS; BEGIN JS.console.info(123) END m.");
 }};
 
-function runTest(t){
-	var result = false;
-	var padding = "                           ";
-	var log = t;
-	if (log.length < padding.length)
-		log = t + padding.substring(log.length);
-	else
-		log += " ";
-
-	try {
-		testSuite[t]();
-		log += "OK";
-		result = true;
-	}
-	catch (x){
-		if (x instanceof TestError)
-			log += "Failed\n\t" + x;
-		else
-			log += "Failed\n" + (x.stack ? x.stack : '\t' + x);
-	}
-	console.log(log);
-	return result;
-}
-
-var failCount = 0;
-var start = Date.now();
-
-if (typeof process != "undefined" && process.argv.length > 2)
-	runTest(process.argv[2]);
-else {
-	console.log("Running " + Object.keys(testSuite).length + " tests...");
-
-	for(var t in testSuite)
-		if (!runTest(t))
-			++failCount;
-}
-
-var stop = Date.now();
-console.log("elapsed: " + (stop - start) / 1000 + " s" );
-
-if (!failCount)
-	console.log("All OK!");
-else
-	console.log(failCount + " test(s) failed");
+Test.run(testSuite);
