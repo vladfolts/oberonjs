@@ -15,6 +15,10 @@ END test.
 <button onclick="compile()">Compile</button>
 <button onclick="compile(); run()">Compile &amp; Run</button>
 </p>
+
+<p id="errors" style="color:red">
+</p>
+
 <textarea id="result" rows="10" cols="80">
 </textarea>
 <p>
@@ -29,8 +33,17 @@ function require(){}
 <script>
 function compile(){
 	var src = document.getElementById("source").value;
-	var result = require("oc.js").compile(src);
+	var result = "";
+	var errors = "";
+	try {
+		result = require("oc.js").compile(src);
+		}
+	catch (e) {
+		errors = "" + e;
+		}
+
 	document.getElementById("result").value = result;
+	document.getElementById("errors").textContent = errors;
 }
 
 function run(){
