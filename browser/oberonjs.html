@@ -33,15 +33,19 @@ function require(){}
 <script>
 function compile(){
 	var src = document.getElementById("source").value;
-	var result = "";
+	var result;
 	var errors = "";
 	try {
-		result = require("oc.js").compile(src);
+		result = require("oc.js").compile(src, function(e){
+			errors += e;
+		});
 		}
 	catch (e) {
-		errors = "" + e;
+		errors += e;
 		}
 
+	if (!result)
+		result = "";
 	document.getElementById("result").value = result;
 	document.getElementById("errors").textContent = errors;
 }

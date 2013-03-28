@@ -1,0 +1,5 @@
+MODULE m1;
+VAR i: INTEGER;
+BEGIN
+	i := 1; (* extra semicolon *)
+END m1.

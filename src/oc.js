@@ -10,7 +10,7 @@ exports.compile = function(text, handleErrors){
 	var context = new Context.Context();
 	try {
 		if (!Grammar.module(stream, context))
-			throw new Errors.Error("syntax error, position: " + stream.pos());
+			throw new Errors.Error("syntax error");
 	}
 	catch (x) {
 		if (x instanceof Errors.Error) {

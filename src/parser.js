@@ -7,7 +7,6 @@ exports.and = function(/*...*/){
 	assert(args.length >= 2);
 
 	return function(stream, context){
-		var savePos = stream.pos();
 		for(var i = 0; i < args.length; ++i){
 			if (i != 0)
 				Lexer.skipSpaces(stream, context);
@@ -16,10 +15,8 @@ exports.and = function(/*...*/){
 			if (typeof p == "string")
 				p = Lexer.literal(p);
 			
-			if (!p(stream, context)){
-				stream.setPos(savePos);
+			if (!p(stream, context))
 				return false;
-			}
 		}
 	 	return true;
 	}
