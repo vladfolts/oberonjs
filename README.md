@@ -1,6 +1,6 @@
-Oberon 07 compiler
+# Oberon 07 compiler
 
 Written in JavaScript and transaltes Oberon to JavaScript code so it can be run in web browser.
 
-Quick start:
+## Quick start
 run build.cmd (Python 2.x or 3.x is required). It will make _out/os.js and _out/oberonjs.html. Open oberonjs.html in the browser and try the compiler!
