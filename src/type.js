@@ -23,7 +23,8 @@ exports.String = Type.extend({
 	idType: function(){return "string";},
 	description: function(){return (this.__s.length == 1 ? "single-" : "multi-") + "character string";},
 	value: function(){return this.__s;},
-	asChar: function (){return this.__s.length == 1 ? this.__s.charCodeAt(0) : undefined;}
+	asChar: function(){return this.__s.length == 1 ? this.__s.charCodeAt(0) : undefined;},
+	length: function(){return this.__s.length;}
 });
 
 var BasicType = Type.extend({
@@ -46,7 +47,7 @@ exports.Array = BasicType.extend({
 		this.__size = size;
 	},
 	elementsType: function(){return this.__elementsType;},
-	arraySize: function(){return this.__size;}
+	length: function(){return this.__size;}
 });
 
 exports.Pointer = BasicType.extend({

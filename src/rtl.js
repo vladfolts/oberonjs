@@ -31,10 +31,9 @@ function RTLMakeArray(/*dimensions, initializer*/){
 				result[i] = init;
 	}
 	else
-		for(i = 0; i < result.length; ++i){
+		for(i = 0; i < result.length; ++i)
 			result[i] = RTLMakeArray.apply(this, forward);
 	return result;
-	}
 }
 
 function RTLMakeSet(/*...*/){
@@ -79,6 +78,14 @@ function RTLSetInclR(l, r){
 	return l & r == r;
 }
 
+function RTLAssignArrayFromString(a, s){
+	var i;
+	for(i = 0; i < s.length; ++i)
+		a[i] = s.charCodeAt(i);
+	for(i = s.length; i < a.length; ++i)
+		a[i] = 0;
+}
+
 exports.Class = Class;
 exports.RTL = Class.extend({
 	init: function RTL(){
@@ -121,6 +128,11 @@ exports.RTL = Class.extend({
 		if (!this.__entries.setInclR)
 			this.__entries.setInclR = RTLSetInclR;
 		return "RTL$.setInclR(" + args + ")";
+	},
+	assignArrayFromString: function(a, s){
+		if (!this.__entries.assignArrayFromString)
+			this.__entries.assignArrayFromString = RTLAssignArrayFromString;
+		return "RTL$.assignArrayFromString(" + a + ", " + s + ")";
 	},
 	generate: function(){
 		var result = "var RTL$ = {\n";

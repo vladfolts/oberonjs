@@ -13,10 +13,9 @@ var RTL$ = {
 					result[i] = init;
 		}
 		else
-			for(i = 0; i < result.length; ++i){
+			for(i = 0; i < result.length; ++i)
 				result[i] = RTLMakeArray.apply(this, forward);
 		return result;
-		}
 	},
 	extend: function extend(methods){
 		methods.__proto__ = this.prototype; // make instanceof work

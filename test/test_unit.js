@@ -754,6 +754,17 @@ procedure: function(){
 	test.expectError("v10 := v11", "type mismatch: 'v10' is 'ProcType6' and cannot be assigned to 'ProcType7' expression" );
 	test.expectError("v8 := v8VAR", "type mismatch: 'v8' is 'ProcType4' and cannot be assigned to 'ProcType4VAR' expression" );
 },
+"string assignment": function(){
+	var test = setupWithContext(
+		  Grammar.statement
+		, "VAR a1: ARRAY 3 OF CHAR;"
+		);
+	test.parse("a1 := \"abc\"");
+	test.parse("a1 := \"ab\"");
+	test.parse("a1 := \"a\"");
+	test.parse("a1 := 22X");
+	test.expectError("a1 := \"abcd\"", "3-character ARRAY is too small for 4-character string");
+},
 "scope": function(){
 	var test = setup(Grammar.declarationSequence);
 	test.parse("PROCEDURE p1(a1: INTEGER); END p1; PROCEDURE p2(a1: BOOLEAN); END p2;");

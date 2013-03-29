@@ -4,5 +4,9 @@ CONST
 	s1 = 22X;
 	s2 = "ABC";
 	s3 = "with space";
-
+VAR
+	a2: ARRAY 3 OF CHAR;
+BEGIN
+	a2 := s1;
+	a2 := s2
 END m.

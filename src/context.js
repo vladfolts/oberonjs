@@ -195,9 +195,9 @@ exports.Designator = ChainedContext.extend({
 		var type = this.__currentType;
 		if (!(type instanceof Type.Array))
 			throw new Errors.Error("ARRAY expected, got '" + type.name() + "'");
-		if (value !== undefined && value >= type.arraySize())
+		if (value !== undefined && value >= type.length())
 			throw new Errors.Error("index out of bounds: maximum possible index is "
-								 + (type.arraySize() - 1)
+								 + (type.length() - 1)
 								 + ", got " + value );
 		this.__currentType = type.elementsType();
 		this.__info = new Type.Variable(this.__currentType, false, this.__info.isReadOnly());
@@ -1222,7 +1222,9 @@ exports.Assignment = ChainedContext.extend({
 		this.__designator = undefined;
 		this.__leftOp = undefined;
 		this.__type = undefined;
+		this.__code = new Code.SimpleGenerator();
 	},
+	codeGenerator: function(){return this.__code;},
 	setDesignator: function(d){
 		this.__designator = d;
 	},
@@ -1233,19 +1235,31 @@ exports.Assignment = ChainedContext.extend({
 			throw new Errors.Error("cannot assign to " + d_info.idType());
 		this.__leftOp = d.code();
 		this.__type = d.type();
-		this.codeGenerator().write(this.__leftOp + (d_info.isVar() ? ".set(" : " = "));
+		if (!(this.__type instanceof Type.Array))
+			this.__code.write(this.__leftOp + (d_info.isVar() ? ".set(" : " = "));
 	},
 	handleExpression: function(type, value, designator){
-		if (!Cast.implicit(type, this.__type))
+		if (type instanceof Type.String
+			&& this.__type instanceof Type.Array
+			&& this.__type.elementsType() == basicTypes.char){
+			if (type.length() > this.__type.length())
+				throw new Errors.Error(
+					this.__type.length() + "-character ARRAY is too small for " 
+					+ type.length() + "-character string");
+			this.__code = new Code.SimpleGenerator(
+				this.rtl().assignArrayFromString(this.__leftOp, this.__code.result()));
+		}
+		else if (!Cast.implicit(type, this.__type))
 			throw new Errors.Error("type mismatch: '" + this.__leftOp
 								 + "' is '" + this.__type.description()
 								 + "' and cannot be assigned to '" + type.description() + "' expression");
-		if (designator)
-			writeDerefDesignatorCode(designator, this.codeGenerator());
+		else if (designator)
+			writeDerefDesignatorCode(designator, this.__code);
 	},
 	endParse: function(){
 		if (this.__designator.info().isVar())
-			this.codeGenerator().write(")");
+			this.__code.write(")");
+		this.parent().codeGenerator().write(this.__code.result());
 	}
 });
 
