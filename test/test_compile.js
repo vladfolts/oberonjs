@@ -16,7 +16,10 @@ function compareResults(result, name, dirs){
 
 function expectOk(src, dirs){
     var text = fs.readFileSync(src, "utf8");
-    var result = oc.compile(text);
+    var errors = "";
+    var result = oc.compile(text, function(e){errors += e;});
+    if (errors)
+        throw new Test.TestError(errors);
     var resultName = path.basename(src).replace(".ob", ".js");
     compareResults(result, resultName, dirs);
 }

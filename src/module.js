@@ -6,8 +6,8 @@ var AnyType = Type.Basic.extend({
 		Type.Basic.prototype.init.call(this, "ANY");
 	},
 	findSymbol: function(){return this;},
-	callGenerator: function(codegenerator, id){
-		return new Procedure.CallGenerator(codegenerator, id);
+	callGenerator: function(context, id){
+		return new Procedure.CallGenerator(context, id);
 	}
 });
 

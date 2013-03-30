@@ -6,7 +6,14 @@ CONST
 	s3 = "with space";
 VAR
 	a2: ARRAY 3 OF CHAR;
+
+PROCEDURE p1(s: ARRAY OF CHAR);
+END p1;
+
 BEGIN
 	a2 := s1;
-	a2 := s2
+	a2 := s2;
+
+	p1(s1);
+	p1(s2)
 END m.

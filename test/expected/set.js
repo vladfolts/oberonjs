@@ -1,12 +1,12 @@
 var RTL$ = {
-	makeSet: function RTLMakeSet(/*...*/){
+	makeSet: function (/*...*/){
 		var result = 0;
 		
 		function checkBit(b){
 			if (b < 0 || b > 31)
 				throw new Error("integes between 0 and 31 expected, got " + b);
 		}
-	
+
 		function setBit(b){
 			checkBit(b);
 			result |= 1 << b;
@@ -27,12 +27,8 @@ var RTL$ = {
 		}
 		return result;
 	},
-	setInclL: function RTLSetInclL(l, r){
-		return l & r == l;
-	},
-	setInclR: function RTLSetInclR(l, r){
-		return l & r == r;
-	}
+	setInclL: function (l, r){return l & r == l;},
+	setInclR: function (l, r){return l & r == r;}
 };
 var m = function (){
 var ci = 3;

@@ -1,5 +1,5 @@
 var RTL$ = {
-	makeArray: function RTLMakeArray(/*dimensions, initializer*/){
+	makeArray: function (/*dimensions, initializer*/){
 		var forward = Array.prototype.slice.call(arguments);
 		var result = new Array(forward.shift());
 		var i;
@@ -17,12 +17,18 @@ var RTL$ = {
 				result[i] = RTLMakeArray.apply(this, forward);
 		return result;
 	},
-	assignArrayFromString: function RTLAssignArrayFromString(a, s){
+	assignArrayFromString: function (a, s){
 		var i;
 		for(i = 0; i < s.length; ++i)
 			a[i] = s.charCodeAt(i);
 		for(i = s.length; i < a.length; ++i)
 			a[i] = 0;
+	},
+	strToArray: function (s){
+		var result = new Array(s.length);
+		for(i = 0; i < s.length; ++i)
+			result[i] = s.charCodeAt(i);
+		return result;
 	}
 };
 var m = function (){
@@ -30,6 +36,11 @@ var s1 = "\"";
 var s2 = "ABC";
 var s3 = "with space";
 var a2 = RTL$.makeArray(3, 0);
+
+function p1(s/*ARRAY OF CHAR*/){
+}
 RTL$.assignArrayFromString(a2, "\"");
 RTL$.assignArrayFromString(a2, "ABC");
+p1(RTL$.strToArray("\""));
+p1(RTL$.strToArray("ABC"));
 }();

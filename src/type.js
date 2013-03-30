@@ -10,7 +10,7 @@ var Type = Id.extend({
 		Id.prototype.init.bind(this)();
 	},
 	idType: function(){return "type";},
-	isProcedure: function(){return false;}
+	isProcedure: function(){return false;},
 });
 
 exports.Type = Type;

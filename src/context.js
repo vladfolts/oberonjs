@@ -232,7 +232,7 @@ exports.Designator = ChainedContext.extend({
 
 		checkTypeCast(this.__currentType, type, "invalid type cast");
 
-		var code = this.rtl().genCast(this.__code.result(), type);
+		var code = this.rtl().typeGuard(this.__code.result(), type.name());
 		this.__code = new Code.SimpleGenerator(code);
 
 		if (this.__currentType instanceof Type.Pointer)
@@ -1242,6 +1242,8 @@ exports.Assignment = ChainedContext.extend({
 		if (type instanceof Type.String
 			&& this.__type instanceof Type.Array
 			&& this.__type.elementsType() == basicTypes.char){
+			if (this.__type.length() === undefined)
+				throw new Errors.Error("string cannot be assigned to open " + this.__type.description());
 			if (type.length() > this.__type.length())
 				throw new Errors.Error(
 					this.__type.length() + "-character ARRAY is too small for " 
@@ -1353,8 +1355,8 @@ exports.ProcedureCall = ChainedContext.extend({
 		var type = d.type();
 		assertProcType(type);
 		this.__type = type;
-		this.__procCall = type.callGenerator(new Code.SimpleGenerator(), d.code());
 		this.__code = new Code.SimpleGenerator();
+		this.__procCall = type.callGenerator(this, d.code());
 	},
 	codeGenerator: function(){
 		return this.__code ? this.__code : this.parent().codeGenerator();

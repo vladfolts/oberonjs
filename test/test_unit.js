@@ -629,7 +629,7 @@ procedure: function(){
 	test.parse("PROCEDURE p(a: INTEGER); BEGIN p(a) END p");
 	test.parse("PROCEDURE p(a: INTEGER; b: BOOLEAN); BEGIN p(a, b) END p");
 	test.expectError("PROCEDURE p(a: INTEGER; b: BOOLEAN); BEGIN p(b, a) END p"
-				  , "expect 'INTEGER' type for argument 0, got 'BOOLEAN'");
+				   , "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'");
 	test.expectError("PROCEDURE p; BEGIN p1() END p", "undeclared identifier: 'p1'");
 
 	test.parse("PROCEDURE p(): ProcType; RETURN p END p");
@@ -714,8 +714,8 @@ procedure: function(){
 
 	test.parse("p2(1, TRUE)");
 	test.expectError("notProcedure", "PROCEDURE expected, got 'INTEGER'");
-	test.expectError("p2(TRUE, 1)", "expect 'INTEGER' type for argument 0, got 'BOOLEAN'");
-	test.expectError("p2(1, 1)", "expect 'BOOLEAN' type for argument 1, got 'INTEGER'");
+	test.expectError("p2(TRUE, 1)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'");
+	test.expectError("p2(1, 1)", "type mismatch for argument 2: 'INTEGER' cannot be converted to 'BOOLEAN'");
 	test.expectError("p3()()", "not parsed");
 },
 "procedure assignment": function(){
@@ -764,6 +764,22 @@ procedure: function(){
 	test.parse("a1 := \"a\"");
 	test.parse("a1 := 22X");
 	test.expectError("a1 := \"abcd\"", "3-character ARRAY is too small for 4-character string");
+},
+"string assignment to open array fails": function(){
+	var test = setup(Grammar.procedureDeclaration);
+	test.expectError("PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "cannot assign to read-only variable");
+	test.expectError("PROCEDURE p(VAR s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "string cannot be assigned to open ARRAY OF CHAR");
+},
+"string argument": function(){
+	var test = setupWithContext(
+		  Grammar.statement
+		, "PROCEDURE p1(s: ARRAY OF CHAR); END p1;"
+		+ "PROCEDURE p2(VAR s: ARRAY OF CHAR); END p2;"
+		+ "PROCEDURE p3(i: INTEGER); END p3;"
+		);
+	test.parse("p1(\"abc\")");
+	test.expectError("p2(\"abc\")", "expression cannot be used as VAR parameter");
+	test.expectError("p3(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'INTEGER'");
 },
 "scope": function(){
 	var test = setup(Grammar.declarationSequence);
