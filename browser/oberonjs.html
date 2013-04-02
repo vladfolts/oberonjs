@@ -16,14 +16,15 @@ END test.
 <button onclick="compile(); run()">Compile &amp; Run</button>
 </p>
 
-<p id="errors" style="color:red">
-</p>
+<p id="compileErrors" style="color:red"></p>
 
 <textarea id="result" rows="10" cols="80">
 </textarea>
 <p>
 <button onclick="run()">Run</button>
 </p>
+<p id="runErrors" style="color:red"></p>
+
 <script>
 function require(){}
 </script>
@@ -47,11 +48,19 @@ function compile(){
 	if (!result)
 		result = "";
 	document.getElementById("result").value = result;
-	document.getElementById("errors").textContent = errors;
+	document.getElementById("compileErrors").textContent = errors;
 }
 
 function run(){
-	eval(document.getElementById("result").value);
+	var errElement = document.getElementById("runErrors");
+	errElement.textContent = "";
+	try{
+		eval(document.getElementById("result").value);
+	}
+	catch (e){
+		var errors = "" + e;
+		errElement.textContent = errors;
+	}
 }
 </script>
 
