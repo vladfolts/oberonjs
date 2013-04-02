@@ -84,28 +84,13 @@ var impl = {
 	}
 };
 
-function makeOnDemandFunction(name){
-	return function(){
-		if (!this.__entries[name])
-			this.__entries[name] = impl[name];
-		var result = "RTL$." + name + "(";
-		for(var a = 0; a < arguments.length; ++a){
-			if (a)
-				result += ", ";
-			result += arguments[a];
-		}
-		result += ")";
-		return result;
-	};
-}
-
 exports.Class = Class;
 exports.RTL = Class.extend({
 	init: function RTL(){
 		this.__entries = {};
 		this.__supportJS = false;
 		for(var fName in impl){
-			this[fName] = makeOnDemandFunction(fName);
+			this[fName] = this.__makeOnDemand(fName);
 		}
 	},
 	supportJS: function(){this.__supportJS = true;},
@@ -132,5 +117,20 @@ exports.RTL = Class.extend({
 		if (this.__supportJS)
 			result += "var JS = function(){return this;}();\n";
 		return result;
+	},
+	__makeOnDemand: function(name){
+		return function(){
+			if (!this.__entries[name])
+				this.__entries[name] = impl[name];
+			var result = "RTL$." + name + "(";
+			if (arguments.length){
+				result += arguments[0];
+				for(var a = 1; a < arguments.length; ++a)
+					result += ", " + arguments[a];
+			}
+			result += ")";
+			return result;
+		};
 	}
+
 });

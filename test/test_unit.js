@@ -364,7 +364,7 @@ expression: function(){
 	test.expectError("VAR a: ARRAY 10 OF BOOLEAN; BEGIN a[0,0] := TRUE END"
 				   , "ARRAY expected, got 'BOOLEAN'");
 	test.expectError("VAR a: ARRAY 10, 20 OF BOOLEAN; BEGIN a[0] := TRUE END"
-				   , "type mismatch: 'a[0]' is 'ARRAY OF BOOLEAN' and cannot be assigned to 'BOOLEAN' expression");
+				   , "'a[0]' is 'ARRAY OF BOOLEAN' and cannot be assigned");
 	test.expectError("VAR a: ARRAY 10 OF INTEGER; BEGIN a[10] := 0 END"
 				   , "index out of bounds: maximum possible index is 9, got 10");
 	test.expectError("CONST c1 = 5; VAR a: ARRAY 10 OF INTEGER; BEGIN a[10 + c1] := 0 END"
@@ -758,12 +758,34 @@ procedure: function(){
 	var test = setupWithContext(
 		  Grammar.statement
 		, "VAR a1: ARRAY 3 OF CHAR;"
+			+ "ch1: CHAR;"
+			+ "intArray: ARRAY 10 OF INTEGER;"
 		);
 	test.parse("a1 := \"abc\"");
 	test.parse("a1 := \"ab\"");
 	test.parse("a1 := \"a\"");
 	test.parse("a1 := 22X");
+	test.parse("ch1 := \"A\"");
+	test.parse("ch1 := 22X");
 	test.expectError("a1 := \"abcd\"", "3-character ARRAY is too small for 4-character string");
+	test.expectError("intArray := \"abcd\""
+				   , "'intArray' is 'ARRAY OF INTEGER' and cannot be assigned");
+},
+"array assignment fails": function(){
+	var test = setupWithContext(
+		  Grammar.statement
+		, "VAR charArray: ARRAY 3 OF CHAR;"
+			+ "intArray: ARRAY 10 OF INTEGER;"
+		);
+	test.expectError("intArray := intArray"
+				   , "'intArray' is 'ARRAY OF INTEGER' and cannot be assigned");
+},
+"open array assignment fails": function(){
+	var test = setup(Grammar.procedureDeclaration);
+	test.expectError("PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p"
+				   , "cannot assign to read-only variable");
+	test.expectError("PROCEDURE p(VAR s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p"
+				   , "'s1' is 'ARRAY OF CHAR' and can be assigned to a string only (got 'ARRAY OF CHAR' expression intead)");
 },
 "string assignment to open array fails": function(){
 	var test = setup(Grammar.procedureDeclaration);

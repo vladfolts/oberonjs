@@ -1239,18 +1239,26 @@ exports.Assignment = ChainedContext.extend({
 			this.__code.write(this.__leftOp + (d_info.isVar() ? ".set(" : " = "));
 	},
 	handleExpression: function(type, value, designator){
-		if (type instanceof Type.String
-			&& this.__type instanceof Type.Array
-			&& this.__type.elementsType() == basicTypes.char){
-			if (this.__type.length() === undefined)
-				throw new Errors.Error("string cannot be assigned to open " + this.__type.description());
-			if (type.length() > this.__type.length())
-				throw new Errors.Error(
-					this.__type.length() + "-character ARRAY is too small for " 
-					+ type.length() + "-character string");
-			this.__code = new Code.SimpleGenerator(
-				this.rtl().assignArrayFromString(this.__leftOp, this.__code.result()));
-		}
+		if (this.__type instanceof Type.Array)
+			if (this.__type.elementsType() == basicTypes.char)
+				if (type instanceof Type.String){
+					if (this.__type.length() === undefined)
+						throw new Errors.Error("string cannot be assigned to open " + this.__type.description());
+					if (type.length() > this.__type.length())
+						throw new Errors.Error(
+							this.__type.length() + "-character ARRAY is too small for " 
+							+ type.length() + "-character string");
+					this.__code = new Code.SimpleGenerator(
+						this.rtl().assignArrayFromString(this.__leftOp, this.__code.result()));
+				}
+				else
+					throw new Errors.Error("'" + this.__leftOp
+										 + "' is '" + this.__type.description()
+								 		 + "' and can be assigned to a string only (got '" + type.description() + "' expression intead)");
+			else
+				throw new Errors.Error("'" + this.__leftOp
+									 + "' is '" + this.__type.description()
+									 + "' and cannot be assigned");
 		else if (!Cast.implicit(type, this.__type))
 			throw new Errors.Error("type mismatch: '" + this.__leftOp
 								 + "' is '" + this.__type.description()
