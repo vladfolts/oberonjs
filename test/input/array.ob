@@ -9,7 +9,7 @@ TYPE
     T4 = ARRAY 3, 4 OF BOOLEAN;
 
 VAR
-    a1: T1;
+    a1, a11: T1;
     a2: T2;
     a3: ARRAY 5 OF BOOLEAN;
 	a4: T4;
@@ -25,5 +25,7 @@ BEGIN
     a1[0] := 1;
     a3[1] := TRUE;
 	a4[1][2] := TRUE;
-	a4[1, 2] := TRUE
+	a4[1, 2] := TRUE;
+
+    a1 := a11
 END m.

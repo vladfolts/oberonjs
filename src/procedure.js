@@ -33,6 +33,7 @@ var ProcCallGenerator = Class.extend({
 		this.writeCode(this.prolog());
 	},
 	id: function(){return this.__id;},
+	context: function(){return this.__context;},
 	codeGenerator: function(){return this.__code;},
 	handleArgument: function(type, designator, code){
 		var pos = this.__argumentsCount++;
@@ -64,16 +65,18 @@ var ProcCallGenerator = Class.extend({
 		this.writeCode(prefix + code);
 	},
 	end: function(){
-		if (this.__type){
-			var procArgs = this.__type.arguments();
-			if (this.__argumentsCount != procArgs.length)
-				throw new Errors.Error(procArgs.length + " argument(s) expected, got "
-									 + this.__argumentsCount);
-		}
+		if (this.__type)
+			this.checkArgumentsCount(this.__argumentsCount);
 		this.writeCode(this.epilog());
 		return this.codeGenerator().result();
 	},
 	prolog: function(){return this.__id + "(";},
+	checkArgumentsCount: function(count){
+		var procArgs = this.__type.arguments();
+		if (count != procArgs.length)
+			throw new Errors.Error(procArgs.length + " argument(s) expected, got "
+								 + this.__argumentsCount);
+	},
 	checkArgument: function(pos, type, designator){
 		var arg = this.__type.arguments()[pos];
 		var convert;
@@ -196,6 +199,30 @@ exports.predefined = [
 				return new NewProcCallGenerator(context, id, type);
 			}));
 		var symbol = new Type.Symbol(name, type);
+		return symbol;
+	}(),
+	function(){
+		var AssertProcCallGenerator = ProcCallGenerator.extend({
+			init: function AssertProcCallGenerator(context, id, type){
+				ProcCallGenerator.prototype.init.call(this, context, id, type);
+			},
+			prolog: function(){return this.context().rtl().assertId() + "(";},
+			checkArgumentsCount: function(count){
+				if (count != 1 && count != 2 )
+					throw new Errors.Error("1 or 2 arguments expected, got " + this.__argumentsCount);
+			}
+		});
+
+		var args = [new Arg(Type.basic.bool), new Arg(Type.basic.int)];
+		var proc = new ProcType(
+			"predefined procedure ASSERT",
+			args,
+			undefined,
+			function(context, id, type){
+				return new AssertProcCallGenerator(context, id, type);
+			});
+		var type = new Type.Procedure(proc);
+		var symbol = new Type.Symbol("ASSERT", type);
 		return symbol;
 	}(),
 	function(){

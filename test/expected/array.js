@@ -27,11 +27,20 @@ var RTL$ = {
 		result.prototype = methods;
 		result.extend = extend;
 		return result;
+	},
+	copy: function (from, to){
+        for(var prop in from){
+            var v = from[prop];
+            if (typeof v == "object")
+                this.copy(v, to[prop]);
+            else if (typeof v != "function")
+                to[prop] = v;
+        }
 	}
 };
 var m = function (){
 var arraySize = 10;
-var a1 = RTL$.makeArray(10, 0);
+var a1 = RTL$.makeArray(10, 0);var a11 = RTL$.makeArray(10, 0);
 var a2 = RTL$.makeArray(5, function(){return RTL$.makeArray(10, 0);});
 var a3 = RTL$.makeArray(5, false);
 var a4 = RTL$.makeArray(3, 4, false);
@@ -49,4 +58,5 @@ a1[0] = 1;
 a3[1] = true;
 a4[1][2] = true;
 a4[1][2] = true;
+RTL$.copy(a11, a1);
 }();

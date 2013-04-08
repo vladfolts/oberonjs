@@ -1239,31 +1239,44 @@ exports.Assignment = ChainedContext.extend({
 			this.__code.write(this.__leftOp + (d_info.isVar() ? ".set(" : " = "));
 	},
 	handleExpression: function(type, value, designator){
-		if (this.__type instanceof Type.Array)
-			if (this.__type.elementsType() == basicTypes.char)
-				if (type instanceof Type.String){
-					if (this.__type.length() === undefined)
-						throw new Errors.Error("string cannot be assigned to open " + this.__type.description());
-					if (type.length() > this.__type.length())
-						throw new Errors.Error(
-							this.__type.length() + "-character ARRAY is too small for " 
-							+ type.length() + "-character string");
-					this.__code = new Code.SimpleGenerator(
-						this.rtl().assignArrayFromString(this.__leftOp, this.__code.result()));
-				}
-				else
-					throw new Errors.Error("'" + this.__leftOp
-										 + "' is '" + this.__type.description()
-								 		 + "' and can be assigned to a string only (got '" + type.description() + "' expression intead)");
-			else
-				throw new Errors.Error("'" + this.__leftOp
-									 + "' is '" + this.__type.description()
-									 + "' and cannot be assigned");
-		else if (!Cast.implicit(type, this.__type))
+		var isArray = this.__type instanceof Type.Array;
+		if (isArray
+			&& this.__type.elementsType() == basicTypes.char
+			&& type instanceof Type.String){
+			if (this.__type.length() === undefined)
+				throw new Errors.Error("string cannot be assigned to open " + this.__type.description());
+			if (type.length() > this.__type.length())
+				throw new Errors.Error(
+					this.__type.length() + "-character ARRAY is too small for " 
+					+ type.length() + "-character string");
+			this.__code = new Code.SimpleGenerator(
+				this.rtl().assignArrayFromString(this.__leftOp, this.__code.result()));
+			return;
+		}
+		
+		if (!Cast.implicit(type, this.__type))
 			throw new Errors.Error("type mismatch: '" + this.__leftOp
 								 + "' is '" + this.__type.description()
 								 + "' and cannot be assigned to '" + type.description() + "' expression");
-		else if (designator)
+
+		if (isArray && type instanceof Type.Array)
+			if (this.__type.length() === undefined)
+				throw new Errors.Error("'" + this.__leftOp
+									 + "' is open '" + this.__type.description()
+									 + "' and cannot be assigned");
+			else if (type.length() === undefined)
+				throw new Errors.Error("'" + this.__leftOp
+									 + "' cannot be assigned to open '"
+									 + this.__type.description() + "'");
+			else if (this.__type.length() != type.length())
+				throw new Errors.Error("array size mismatch: '" + this.__leftOp
+									 + "' has size " + this.__type.length()
+									 + " and cannot be assigned to the array with size " + type.length());
+			else
+				this.__code = new Code.SimpleGenerator(
+					this.rtl().copy(this.__code.result(), this.__leftOp));
+
+		if (designator)
 			writeDerefDesignatorCode(designator, this.__code);
 	},
 	endParse: function(){

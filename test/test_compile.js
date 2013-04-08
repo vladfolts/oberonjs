@@ -14,12 +14,17 @@ function compareResults(result, name, dirs){
         throw new Test.TestError("Failed");
 }
 
-function expectOk(src, dirs){
+function compile(src){
     var text = fs.readFileSync(src, "utf8");
     var errors = "";
     var result = oc.compile(text, function(e){errors += e;});
     if (errors)
         throw new Test.TestError(errors);
+    return result;
+}
+
+function expectOk(src, dirs){
+    var result = compile(src);
     var resultName = path.basename(src).replace(".ob", ".js");
     compareResults(result, resultName, dirs);
 }
@@ -37,6 +42,10 @@ function expectError(src, dirs){
         throw new Test.TestError("compiler error expected");
     var resultName = path.basename(src).replace(".ob", ".txt");
     compareResults(errors, resultName, dirs);
+}
+
+function run(src, dirs){
+    eval(compile(src));
 }
 
 function makeTest(test, src, dirs){
@@ -57,14 +66,20 @@ function makeTests(test, dirs){
 
 var okDirs = {input: "input", output: "output", expected: "expected"};
 var errDirs = {};
+var runDirs = {};
 for(var p in okDirs)
     errDirs[p] = okDirs[p] + "/errors";
+for(var p in okDirs)
+    runDirs[p] = okDirs[p] + "/run";
 
 if (!fs.existsSync(okDirs.output))
     fs.mkdirSync(okDirs.output);
 if (!fs.existsSync(errDirs.output))
     fs.mkdirSync(errDirs.output);
+if (!fs.existsSync(runDirs.output))
+    fs.mkdirSync(runDirs.output);
 
 Test.run({"expect OK": makeTests(expectOk, okDirs),
-          "expect compile error": makeTests(expectError, errDirs)}
+          "expect compile error": makeTests(expectError, errDirs),
+          "run": makeTests(run, runDirs)}
         );

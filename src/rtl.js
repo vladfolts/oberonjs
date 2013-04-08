@@ -81,6 +81,20 @@ var impl = {
 		for(i = 0; i < s.length; ++i)
 			result[i] = s.charCodeAt(i);
 		return result;
+	},
+	copy: function(from, to){
+        for(var prop in from){
+            var v = from[prop];
+            if (typeof v == "object")
+                this.copy(v, to[prop]);
+            else if (typeof v != "function")
+                to[prop] = v;
+        }
+	},
+	assert: function(condition, code){
+		if (!condition)
+			throw new Error("assertion failed"
+						  + ((code !== undefined) ? " with code " + code : ""));
 	}
 };
 
@@ -91,6 +105,7 @@ exports.RTL = Class.extend({
 		this.__supportJS = false;
 		for(var fName in impl){
 			this[fName] = this.__makeOnDemand(fName);
+			this[fName + "Id"] = this.__makeIdOnDemand(fName);
 		}
 	},
 	supportJS: function(){this.__supportJS = true;},
@@ -118,11 +133,16 @@ exports.RTL = Class.extend({
 			result += "var JS = function(){return this;}();\n";
 		return result;
 	},
-	__makeOnDemand: function(name){
+	__makeIdOnDemand: function(name){
 		return function(){
 			if (!this.__entries[name])
 				this.__entries[name] = impl[name];
-			var result = "RTL$." + name + "(";
+			return "RTL$." + name;
+		};
+	},
+	__makeOnDemand: function(name){
+		return function(){
+			var result = this[name +"Id"]() + "(";
 			if (arguments.length){
 				result += arguments[0];
 				for(var a = 1; a < arguments.length; ++a)

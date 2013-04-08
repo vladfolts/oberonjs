@@ -1,0 +1,6 @@
+MODULE m;
+
+BEGIN
+    ASSERT(TRUE);
+    ASSERT(TRUE, 123)
+END m.

@@ -1,0 +1,14 @@
+MODULE m;
+
+TYPE
+	T1 = RECORD field: INTEGER END;
+VAR
+	a1: ARRAY 3 OF T1;
+	a2: ARRAY 3 OF T1;
+BEGIN
+	a1[0].field := 123;
+	a2 := a1;
+	ASSERT(a2[0].field = 123);
+	a1[0].field := 345;
+	ASSERT(a2[0].field = 123)
+END m.
