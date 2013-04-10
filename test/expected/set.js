@@ -1,32 +1,32 @@
 var RTL$ = {
 	makeSet: function (/*...*/){
-		var result = 0;
-		
-		function checkBit(b){
-			if (b < 0 || b > 31)
-				throw new Error("integes between 0 and 31 expected, got " + b);
-		}
+        var result = 0;
+        
+        function checkBit(b){
+            if (b < 0 || b > 31)
+                throw new Error("integes between 0 and 31 expected, got " + b);
+        }
 
-		function setBit(b){
-			checkBit(b);
-			result |= 1 << b;
-		}
-		
-		for(var i = 0; i < arguments.length; ++i){
-			var b = arguments[i];
-			if (b instanceof Array){
-				var from = b[0];
-				var to = b[1];
-				if (from < to)
-					throw new Error("invalid SET diapason: " + from + ".." + to);
-				for(var bi = from; bi <= to; ++bi)
-					setBit(bi);
-			}
-			else
-				setBit(b);
-		}
-		return result;
-	},
+        function setBit(b){
+            checkBit(b);
+            result |= 1 << b;
+        }
+        
+        for(var i = 0; i < arguments.length; ++i){
+            var b = arguments[i];
+            if (b instanceof Array){
+                var from = b[0];
+                var to = b[1];
+                if (from < to)
+                    throw new Error("invalid SET diapason: " + from + ".." + to);
+                for(var bi = from; bi <= to; ++bi)
+                    setBit(bi);
+            }
+            else
+                setBit(b);
+        }
+        return result;
+    },
 	setInclL: function (l, r){return l & r == l;},
 	setInclR: function (l, r){return l & r == r;}
 };

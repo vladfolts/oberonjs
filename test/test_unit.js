@@ -787,6 +787,19 @@ procedure: function(){
 	test.expectError("intArray3 := charArray"
 				   , "type mismatch: 'intArray3' is 'ARRAY OF INTEGER' and cannot be assigned to 'ARRAY OF CHAR' expression");
 },
+"record assignment": function(){
+	var test = setupWithContext(
+		  Grammar.statement
+		, "TYPE Base1 = RECORD END;"
+			+ "T1 = RECORD (Base1) END;"
+			+ "T2 = RECORD END;"
+		+ "VAR b1: Base1; r1: T1; r2: T2;"
+		);
+	test.parse("r1 := r1");
+	test.parse("b1 := r1");
+	test.expectError("r1 := r2", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'T2' expression");
+	test.expectError("r1 := b1", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'Base1' expression");
+},
 "open array assignment fails": function(){
 	var test = setup(Grammar.procedureDeclaration);
 	test.expectError("PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p"

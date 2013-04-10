@@ -1,37 +1,37 @@
 var RTL$ = {
 	extend: function extend(methods){
-		methods.__proto__ = this.prototype; // make instanceof work
+        methods.__proto__ = this.prototype; // make instanceof work
 
-		// to see constructor name in diagnostic
-		var result = methods.init;
-		methods.constructor = result.prototype.constructor;
+        // to see constructor name in diagnostic
+        var result = methods.init;
+        methods.constructor = result.prototype.constructor;
 
-		result.prototype = methods;
-		result.extend = extend;
-		return result;
-	},
+        result.prototype = methods;
+        result.extend = extend;
+        return result;
+    },
 	makeArray: function (/*dimensions, initializer*/){
-		var forward = Array.prototype.slice.call(arguments);
-		var result = new Array(forward.shift());
-		var i;
-		if (forward.length == 1){
-			var init = forward[0];
-			if (typeof init == "function")
-				for(i = 0; i < result.length; ++i)
-					result[i] = init();
-			else
-				for(i = 0; i < result.length; ++i)
-					result[i] = init;
-		}
-		else
-			for(i = 0; i < result.length; ++i)
-				result[i] = RTLMakeArray.apply(this, forward);
-		return result;
-	},
+        var forward = Array.prototype.slice.call(arguments);
+        var result = new Array(forward.shift());
+        var i;
+        if (forward.length == 1){
+            var init = forward[0];
+            if (typeof init == "function")
+                for(i = 0; i < result.length; ++i)
+                    result[i] = init();
+            else
+                for(i = 0; i < result.length; ++i)
+                    result[i] = init;
+        }
+        else
+            for(i = 0; i < result.length; ++i)
+                result[i] = RTLMakeArray.apply(this, forward);
+        return result;
+    },
 	makeRef: function (obj, prop){
-	    return {set: function(v){ obj[prop] = v; },
-	            get: function(){ return obj[prop]; }};
-	}
+        return {set: function(v){ obj[prop] = v; },
+                get: function(){ return obj[prop]; }};
+    }
 };
 var m = function (){
 var R = RTL$.extend({

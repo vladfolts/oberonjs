@@ -1,15 +1,15 @@
 var RTL$ = {
 	extend: function extend(methods){
-		methods.__proto__ = this.prototype; // make instanceof work
+        methods.__proto__ = this.prototype; // make instanceof work
 
-		// to see constructor name in diagnostic
-		var result = methods.init;
-		methods.constructor = result.prototype.constructor;
+        // to see constructor name in diagnostic
+        var result = methods.init;
+        methods.constructor = result.prototype.constructor;
 
-		result.prototype = methods;
-		result.extend = extend;
-		return result;
-	}
+        result.prototype = methods;
+        result.extend = extend;
+        return result;
+    }
 };
 var m = function (){
 
@@ -21,7 +21,7 @@ function p1(arg1/*INTEGER*/){
 	});
 	var T2 = T1.extend({
 		init: function T2(){
-			T1.prototype.init.bind(this)();
+			T1.prototype.init.call(this);
 			this.field2 = false;
 		}
 	});

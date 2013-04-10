@@ -16,15 +16,16 @@ function implicitCast(from, to){
 	}
 	else if (from instanceof ArrayType && to instanceof ArrayType)
 		return implicitCast(from.elementsType(), to.elementsType());
-	else if (from instanceof PointerType && to instanceof PointerType){
-		toR = to.baseType();
-		fromR = from.baseType();
+	else if ((from instanceof PointerType && to instanceof PointerType)
+		|| (from instanceof Type.Record && to instanceof Type.Record)){
+		var toR = to instanceof PointerType ? to.baseType() : to;
+		var fromR = from.baseType();
 		while (fromR && fromR != toR)
 			fromR = fromR.baseType();
 		if (fromR)
 			return true;
 	}
-	else if (from == Type.nil 
+	else if (from == Type.nil
 		&& (to instanceof PointerType || to.isProcedure()))
 		return true;
 	else if (from.isProcedure() && to.isProcedure()){

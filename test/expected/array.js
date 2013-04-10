@@ -1,42 +1,44 @@
 var RTL$ = {
 	makeArray: function (/*dimensions, initializer*/){
-		var forward = Array.prototype.slice.call(arguments);
-		var result = new Array(forward.shift());
-		var i;
-		if (forward.length == 1){
-			var init = forward[0];
-			if (typeof init == "function")
-				for(i = 0; i < result.length; ++i)
-					result[i] = init();
-			else
-				for(i = 0; i < result.length; ++i)
-					result[i] = init;
-		}
-		else
-			for(i = 0; i < result.length; ++i)
-				result[i] = RTLMakeArray.apply(this, forward);
-		return result;
-	},
-	extend: function extend(methods){
-		methods.__proto__ = this.prototype; // make instanceof work
-
-		// to see constructor name in diagnostic
-		var result = methods.init;
-		methods.constructor = result.prototype.constructor;
-
-		result.prototype = methods;
-		result.extend = extend;
-		return result;
-	},
-	copy: function (from, to){
-        for(var prop in from){
-            var v = from[prop];
-            if (typeof v == "object")
-                this.copy(v, to[prop]);
-            else if (typeof v != "function")
-                to[prop] = v;
+        var forward = Array.prototype.slice.call(arguments);
+        var result = new Array(forward.shift());
+        var i;
+        if (forward.length == 1){
+            var init = forward[0];
+            if (typeof init == "function")
+                for(i = 0; i < result.length; ++i)
+                    result[i] = init();
+            else
+                for(i = 0; i < result.length; ++i)
+                    result[i] = init;
         }
-	}
+        else
+            for(i = 0; i < result.length; ++i)
+                result[i] = RTLMakeArray.apply(this, forward);
+        return result;
+    },
+	extend: function extend(methods){
+        methods.__proto__ = this.prototype; // make instanceof work
+
+        // to see constructor name in diagnostic
+        var result = methods.init;
+        methods.constructor = result.prototype.constructor;
+
+        result.prototype = methods;
+        result.extend = extend;
+        return result;
+    },
+	copy: function (from, to){
+        for(var prop in to){
+            if (to.hasOwnProperty(prop)){
+                var v = from[prop];
+                if (v !== null && typeof v == "object")
+                    this.copy(v, to[prop]);
+                else
+                    to[prop] = v;
+            }
+        }
+    }
 };
 var m = function (){
 var arraySize = 10;

@@ -888,7 +888,7 @@ exports.Expression = ChainedContext.extend({
 		}
 		else if (type === undefined || this.__type === undefined)
 			this.__type = type;
-		else if (type !== this.__type)
+		else if (!Cast.implicit(type, this.__type))
 			throw new Errors.Error("type mismatch: expected '" + this.__type.name()
 								 + "', got '" + type.name() + "'");
 	},
@@ -1235,7 +1235,8 @@ exports.Assignment = ChainedContext.extend({
 			throw new Errors.Error("cannot assign to " + d_info.idType());
 		this.__leftOp = d.code();
 		this.__type = d.type();
-		if (!(this.__type instanceof Type.Array))
+		if (!(this.__type instanceof Type.Array)
+			&& !(this.__type instanceof Type.Record))
 			this.__code.write(this.__leftOp + (d_info.isVar() ? ".set(" : " = "));
 	},
 	handleExpression: function(type, value, designator){
@@ -1272,8 +1273,9 @@ exports.Assignment = ChainedContext.extend({
 				throw new Errors.Error("array size mismatch: '" + this.__leftOp
 									 + "' has size " + this.__type.length()
 									 + " and cannot be assigned to the array with size " + type.length());
-			else
-				this.__code = new Code.SimpleGenerator(
+		
+		if (isArray || type instanceof Type.Record)
+			this.__code = new Code.SimpleGenerator(
 					this.rtl().copy(this.__code.result(), this.__leftOp));
 
 		if (designator)
@@ -1341,6 +1343,7 @@ exports.FieldListDeclaration = ChainedContext.extend({
 		this.__idents = [];
 		this.__type = undefined;
 	},
+	typeName: function(){return undefined;},
 	setIdent: function(id) {this.__idents.push(id);},
 	setType: function(type) {this.__type = type;},
 	endParse: function(){
@@ -1440,7 +1443,7 @@ exports.RecordDecl = ChainedContext.extend({
 		gen.write("init: function " + type.name() + "()");
 		gen.openScope();
 		if (baseType)
-			gen.write(baseType.name() + ".prototype.init.bind(this)();\n");
+			gen.write(baseType.name() + ".prototype.init.call(this);\n");
 		var ownFields = type.ownFields();
 		for(var f in ownFields)
 			gen.write("this." + f + " = " + ownFields[f].initializer() + ";\n");

@@ -1,20 +1,20 @@
 var RTL$ = {
 	extend: function extend(methods){
-		methods.__proto__ = this.prototype; // make instanceof work
+        methods.__proto__ = this.prototype; // make instanceof work
 
-		// to see constructor name in diagnostic
-		var result = methods.init;
-		methods.constructor = result.prototype.constructor;
+        // to see constructor name in diagnostic
+        var result = methods.init;
+        methods.constructor = result.prototype.constructor;
 
-		result.prototype = methods;
-		result.extend = extend;
-		return result;
-	},
+        result.prototype = methods;
+        result.extend = extend;
+        return result;
+    },
 	typeGuard: function (from, to){
-		if (!(from instanceof to))
-			throw new Error("typeguard assertion failed");
-		return from;
-	}
+        if (!(from instanceof to))
+            throw new Error("typeguard assertion failed");
+        return from;
+    }
 };
 var m = function (){
 var Base = RTL$.extend({
@@ -23,13 +23,13 @@ var Base = RTL$.extend({
 });
 var Derived1 = Base.extend({
 	init: function Derived1(){
-		Base.prototype.init.bind(this)();
+		Base.prototype.init.call(this);
 		this.field1 = 0;
 	}
 });
 var Derived2 = Derived1.extend({
 	init: function Derived2(){
-		Derived1.prototype.init.bind(this)();
+		Derived1.prototype.init.call(this);
 		this.field2 = 0;
 	}
 });

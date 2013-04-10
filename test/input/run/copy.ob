@@ -1,14 +1,32 @@
 MODULE m;
 
 TYPE
-	T1 = RECORD field: INTEGER END;
+	T1 = RECORD
+		i1: INTEGER;
+		proc1: PROCEDURE
+	END;
+
 VAR
 	a1: ARRAY 3 OF T1;
 	a2: ARRAY 3 OF T1;
+
+PROCEDURE proc1;
+END proc1;
+
+PROCEDURE proc2;
+END proc2;
+
 BEGIN
-	a1[0].field := 123;
+	a1[0].i1 := 123;
+	a1[0].proc1 := proc1;
+	a2[1].proc1 := proc1;
 	a2 := a1;
-	ASSERT(a2[0].field = 123);
-	a1[0].field := 345;
-	ASSERT(a2[0].field = 123)
+	ASSERT(a2[0].i1 = 123);
+	ASSERT(a2[0].proc1 = proc1);
+	ASSERT(a2[1].proc1 = NIL);
+
+	a1[0].i1 := 345;
+	a1[0].proc1 := proc2;
+	ASSERT(a2[0].i1 = 123);
+	ASSERT(a2[0].proc1 = proc1)
 END m.
