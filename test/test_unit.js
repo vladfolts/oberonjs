@@ -322,6 +322,14 @@ expression: function(){
 	test.expectError("PROCEDURE readOnlyPointers(a: ARRAY OF P); BEGIN NEW(a[0]) END readOnlyPointers",
 					 "read-only variable cannot be used as VAR parameter");
 },
+"LEN": function(){
+	var test = setup(Grammar.procedureDeclaration);
+
+	test.parse("PROCEDURE p(a: ARRAY OF INTEGER): INTEGER; RETURN LEN(a) END p");
+	test.parse("PROCEDURE p(VAR a: ARRAY OF BOOLEAN): INTEGER; RETURN LEN(a) END p");
+	test.expectError("PROCEDURE p(a: ARRAY OF INTEGER): INTEGER; RETURN LEN(a[0]) END p",
+					 "ARRAY expected, got 'INTEGER'");
+},
 "assignment statement": function(){
 	var test = setupWithContext(
 		  Grammar.statement

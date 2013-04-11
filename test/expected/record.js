@@ -34,5 +34,14 @@ var T1 = Base1.extend({
 });
 var b1 = new Base1();
 var r1 = new T1();
+
+function p1(r/*T1*/){
+}
+
+function p2(r/*VAR T1*/){
+	p1(r);
+}
 RTL$.copy(r1, b1);
+p1(r1);
+p2(r1);
 }();

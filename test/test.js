@@ -44,7 +44,7 @@ function run(tests){
 
     var start = Date.now();
     if (typeof process != "undefined" && process.argv.length > 2)
-        runTest(process.argv[2], tests, "");
+        runTest(process.argv[2], tests, stat, "");
     else
         runImpl(tests, stat, "");
     var stop = Date.now();

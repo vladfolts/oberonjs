@@ -5,6 +5,17 @@ TYPE
 VAR
 	b1: Base1;
 	r1: T1;
+
+PROCEDURE p1(r: T1);
+END p1;
+
+PROCEDURE p2(VAR r: T1);
 BEGIN
-	b1 := r1
+    p1(r)
+END p2;
+
+BEGIN
+	b1 := r1;
+    p1(r1);
+    p2(r1)
 END m.

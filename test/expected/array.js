@@ -56,9 +56,18 @@ function p(){
 	var a3 = RTL$.makeArray(1, 0);
 	a3[0] = 1;
 }
+
+function p1(a/*ARRAY OF INTEGER*/){
+}
+
+function p2(a/*VAR ARRAY OF INTEGER*/){
+	p1(a);
+}
 a1[0] = 1;
 a3[1] = true;
 a4[1][2] = true;
 a4[1][2] = true;
+p1(a1);
+p2(a1);
 RTL$.copy(a11, a1);
 }();

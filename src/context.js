@@ -258,6 +258,7 @@ exports.Designator = ChainedContext.extend({
 		if (this.__derefCode)
 			return this.rtl().makeRef(this.__derefCode, this.__propCode);
 		if (!(this.__currentType instanceof Type.Array)
+			&& !(this.__currentType instanceof Type.Record)
 			&& this.__info instanceof Type.Variable && !this.__info.isVar())
 			return "{set: function($v){" + code + " = $v;}, get: function(){return " + code + ";}}";
 		return code;

@@ -21,11 +21,22 @@ BEGIN
     a3[0] := 1 
 END p;
 
+PROCEDURE p1(a: T1);
+END p1;
+
+PROCEDURE p2(VAR a: T1);
+BEGIN
+    p1(a)
+END p2;
+
 BEGIN
     a1[0] := 1;
     a3[1] := TRUE;
 	a4[1][2] := TRUE;
 	a4[1, 2] := TRUE;
+
+    p1(a1);
+    p2(a1);
 
     a1 := a11
 END m.

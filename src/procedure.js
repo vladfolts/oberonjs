@@ -52,7 +52,10 @@ var ProcCallGenerator = Class.extend({
 		if (designator){
 			var info = designator.info();
 			if (info instanceof Type.Variable)
-				if (info.isVar() && !isVarArg)
+				if (info.isVar() && !isVarArg 
+					&& !(type instanceof Type.Array)
+					&& !(type instanceof Type.Record)
+					)
 					code += ".get()";
 				else if (!info.isVar() && isVarArg)
 					code = designator.refCode();
@@ -197,6 +200,34 @@ exports.predefined = [
 			undefined,
 			function(context, id, type){
 				return new NewProcCallGenerator(context, id, type);
+			}));
+		var symbol = new Type.Symbol(name, type);
+		return symbol;
+	}(),
+	function(){
+		var LenProcCallGenerator = ProcCallGenerator.extend({
+			init: function LenProcCallGenerator(context, id, type){
+				ProcCallGenerator.prototype.init.call(this, context, id, type);
+			},
+			prolog: function(id){return "";},
+			checkArgument: function(pos, type, designator){
+				ProcCallGenerator.prototype.checkArgument.call(this, pos, type, designator);
+				if (!(type instanceof Type.Array))
+					throw new Errors.Error("ARRAY expected, got '"
+										 + type.name() + "'");
+				return new CheckArgumentResult(type, false);
+			},
+			epilog: function(){return ".length";}
+		});
+
+		var name = "LEN";
+		var args = [new Arg(undefined, false)];
+		var type = new Type.Procedure(new ProcType(
+			"predefined procedure LEN",
+			args,
+			Type.basic.int,
+			function(context, id, type){
+				return new LenProcCallGenerator(context, id, type);
 			}));
 		var symbol = new Type.Symbol(name, type);
 		return symbol;
