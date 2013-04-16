@@ -35,12 +35,18 @@ var m = function (){
 var s1 = "\"";
 var s2 = "ABC";
 var s3 = "with space";
+var ch1 = 0;
 var a2 = RTL$.makeArray(3, 0);
 
 function p1(s/*ARRAY OF CHAR*/){
 }
+
+function p2(c/*CHAR*/){
+}
+ch1 = 34;
 RTL$.assignArrayFromString(a2, "\"");
 RTL$.assignArrayFromString(a2, "ABC");
 p1(RTL$.strToArray("\""));
 p1(RTL$.strToArray("ABC"));
+p2(34);
 }();

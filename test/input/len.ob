@@ -1,5 +1,8 @@
 MODULE m;
                 
+CONST
+    s1 = 22X;
+
 VAR
     a1: ARRAY 10 OF INTEGER;
     a2: ARRAY 15 OF BOOLEAN;
@@ -16,5 +19,7 @@ END p2;
 BEGIN
 	p1(a1);
 	p2(a2);
-	ASSERT(LEN(a3) = 20)
+	ASSERT(LEN(a3) = 20);
+    ASSERT(LEN(s1) = 1);
+    ASSERT(LEN("abc") = 3)
 END m.

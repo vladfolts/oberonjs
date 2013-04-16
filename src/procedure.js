@@ -62,7 +62,7 @@ var ProcCallGenerator = Class.extend({
 			}
 		
 		if (convert)
-			code = convert(code);
+			code = convert.code(this.__context, code);
 		
 		var prefix = pos ? ", " : "";
 		this.writeCode(prefix + code);
@@ -82,16 +82,14 @@ var ProcCallGenerator = Class.extend({
 	},
 	checkArgument: function(pos, type, designator){
 		var arg = this.__type.arguments()[pos];
-		var convert;
+		var castOperation;
 		var expectType = arg.type; // can be undefined for predefined functions (like NEW), dont check it in this case
-		if (expectType && !Cast.implicit(type, expectType))
-			if (type instanceof Type.String && expectType instanceof Type.Array){
-				var rtl = this.__context.rtl();
-				convert = function(code){return rtl.strToArray(code);};
-			}
-			else
+		if (expectType){
+            castOperation = Cast.implicit(type, expectType);
+            if (!castOperation)
 				throw new Errors.Error("type mismatch for argument " + (pos + 1) + ": '" + type.description()
 								 	 + "' cannot be converted to '" + expectType.description() + "'");
+        }
 		if (arg.isVar){
 			if (!designator)
 				throw new Errors.Error("expression cannot be used as VAR parameter");
@@ -101,7 +99,7 @@ var ProcCallGenerator = Class.extend({
 			if (info.isReadOnly())
 				throw new Errors.Error("read-only variable cannot be used as VAR parameter");
 		}
-		return new CheckArgumentResult(arg.type, arg.isVar, convert);
+		return new CheckArgumentResult(arg.type, arg.isVar, castOperation);
 	},
 	epilog: function(){return ")";},
 	writeCode: function(s){this.codeGenerator().write(s);}
@@ -211,17 +209,17 @@ exports.predefined = [
 			},
 			prolog: function(id){return "";},
 			checkArgument: function(pos, type, designator){
-				ProcCallGenerator.prototype.checkArgument.call(this, pos, type, designator);
-				if (!(type instanceof Type.Array))
-					throw new Errors.Error("ARRAY expected, got '"
-										 + type.name() + "'");
-				return new CheckArgumentResult(type, false);
+				if (type instanceof Type.Array || type instanceof Type.String)
+                    return new CheckArgumentResult(type, false);
+                
+                // should throw error
+                ProcCallGenerator.prototype.checkArgument.call(this, pos, type, designator);
 			},
 			epilog: function(){return ".length";}
 		});
 
 		var name = "LEN";
-		var args = [new Arg(undefined, false)];
+		var args = [new Arg(new Type.Array("ARRAY OF any type"), false)];
 		var type = new Type.Procedure(new ProcType(
 			"predefined procedure LEN",
 			args,
@@ -232,6 +230,26 @@ exports.predefined = [
 		var symbol = new Type.Symbol(name, type);
 		return symbol;
 	}(),
+    function(){
+        var CallGenerator = ProcCallGenerator.extend({
+            init: function OddProcCallGenerator(context, id, type){
+                ProcCallGenerator.prototype.init.call(this, context, id, type);
+            },
+            prolog: function(){return "(";},
+            epilog: function(){return " & 1)";}
+        });
+        var name = "ODD";
+        var args = [new Arg(Type.basic.int, false)];
+        var type = new Type.Procedure(new ProcType(
+            "predefined procedure ODD",
+            args,
+            Type.basic.bool,
+            function(context, id, type){
+                return new CallGenerator(context, id, type);
+            }));
+        var symbol = new Type.Symbol(name, type);
+        return symbol;
+    }(),
 	function(){
 		var AssertProcCallGenerator = ProcCallGenerator.extend({
 			init: function AssertProcCallGenerator(context, id, type){
@@ -287,7 +305,48 @@ exports.predefined = [
 		var type = new Type.Procedure(proc);
 		var symbol = new Type.Symbol("EXCL", type);
 		return symbol;
-	}()
+	}(),
+    function(){
+        var CallGenerator = ProcCallGenerator.extend({
+            init: function OrdProcCallGenerator(context, id, type){
+                ProcCallGenerator.prototype.init.call(this, context, id, type);
+            },
+            prolog: function(){return "";},
+            epilog: function(){return "";},
+            checkArgument: function(pos, type, designator){
+                if (type == Type.basic.char || type == Type.basic.set )
+                    return new CheckArgumentResult(type, false);
+                else if (type == Type.basic.bool)
+                    return new CheckArgumentResult(
+                        type,
+                        false,
+                        new Cast.Operation(function(context, code){return "((" + code + ") ? 1 : 0)";}));
+                else if (type instanceof Type.String){
+                    var ch = type.asChar();
+                    if (ch !== undefined)
+                        return new CheckArgumentResult(
+                            type,
+                            false,
+                            new Cast.Operation(function(){return ch;}));
+                }
+
+            // should throw error
+            ProcCallGenerator.prototype.checkArgument.call(this, pos, type, designator);
+            }
+        });
+        var name = "ORD";
+        var argType = new Type.Basic("CHAR or BOOLEAN or SET");
+        var args = [new Arg(argType, false)];
+        var type = new Type.Procedure(new ProcType(
+            "predefined procedure " + name,
+            args,
+            Type.basic.int,
+            function(context, id, type){
+                return new CallGenerator(context, id, type);
+            }));
+        var symbol = new Type.Symbol(name, type);
+        return symbol;
+    }()
 	];
 
 exports.CallGenerator = ProcCallGenerator;

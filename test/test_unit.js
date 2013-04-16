@@ -327,8 +327,28 @@ expression: function(){
 
 	test.parse("PROCEDURE p(a: ARRAY OF INTEGER): INTEGER; RETURN LEN(a) END p");
 	test.parse("PROCEDURE p(VAR a: ARRAY OF BOOLEAN): INTEGER; RETURN LEN(a) END p");
+	test.parse("PROCEDURE p(): INTEGER; RETURN LEN(\"abc\") END p");
 	test.expectError("PROCEDURE p(a: ARRAY OF INTEGER): INTEGER; RETURN LEN(a[0]) END p",
-					 "ARRAY expected, got 'INTEGER'");
+					 "type mismatch for argument 1: 'INTEGER' cannot be converted to 'ARRAY OF any type'");
+},
+"ODD": function(){
+	var test = setup(Grammar.statement);
+
+	test.parse("ODD(1)");
+	test.parse("ASSERT(ODD(123))");
+	test.expectError("ODD(1.2)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'");
+	test.expectError("ODD(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'");
+},
+"ORD": function(){
+	var test = setupWithContext(Grammar.statement, "VAR ch: CHAR;");
+
+	test.parse("ORD(ch)");
+	test.parse("ORD(TRUE)");
+	test.parse("ORD({1})");
+	test.parse("ORD(\"a\")");
+	test.parse("ASSERT(ORD(22X) = 022H)");
+	test.expectError("ORD(1.2)", "type mismatch for argument 1: 'REAL' cannot be converted to 'CHAR or BOOLEAN or SET'");
+	test.expectError("ORD(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'CHAR or BOOLEAN or SET'");
 },
 "assignment statement": function(){
 	var test = setupWithContext(
@@ -828,10 +848,12 @@ procedure: function(){
 		, "PROCEDURE p1(s: ARRAY OF CHAR); END p1;"
 		+ "PROCEDURE p2(VAR s: ARRAY OF CHAR); END p2;"
 		+ "PROCEDURE p3(i: INTEGER); END p3;"
+		+ "PROCEDURE p4(a: ARRAY OF INTEGER); END p4;"
 		);
 	test.parse("p1(\"abc\")");
 	test.expectError("p2(\"abc\")", "expression cannot be used as VAR parameter");
 	test.expectError("p3(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'INTEGER'");
+	test.expectError("p4(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'ARRAY OF INTEGER'");
 },
 "scope": function(){
 	var test = setup(Grammar.declarationSequence);

@@ -1221,7 +1221,9 @@ exports.Assignment = ChainedContext.extend({
 	init: function AssignmentContext(context){
 		ChainedContext.prototype.init.bind(this)(context);
 		this.__designator = undefined;
-		this.__leftOp = undefined;
+		this.__leftCode = undefined;
+        this.__rightCode = undefined;
+        this.__resultCode = undefined;
 		this.__type = undefined;
 		this.__code = new Code.SimpleGenerator();
 	},
@@ -1234,11 +1236,9 @@ exports.Assignment = ChainedContext.extend({
 		var d_info = d.info();
 		if (!(d_info instanceof Type.Variable) || d_info.isReadOnly())
 			throw new Errors.Error("cannot assign to " + d_info.idType());
-		this.__leftOp = d.code();
+		this.__leftCode = d.code();
+        this.__code = new Code.SimpleGenerator();
 		this.__type = d.type();
-		if (!(this.__type instanceof Type.Array)
-			&& !(this.__type instanceof Type.Record))
-			this.__code.write(this.__leftOp + (d_info.isVar() ? ".set(" : " = "));
 	},
 	handleExpression: function(type, value, designator){
 		var isArray = this.__type instanceof Type.Array;
@@ -1249,43 +1249,52 @@ exports.Assignment = ChainedContext.extend({
 				throw new Errors.Error("string cannot be assigned to open " + this.__type.description());
 			if (type.length() > this.__type.length())
 				throw new Errors.Error(
-					this.__type.length() + "-character ARRAY is too small for " 
+					this.__type.length() + "-character ARRAY is too small for "
 					+ type.length() + "-character string");
-			this.__code = new Code.SimpleGenerator(
-				this.rtl().assignArrayFromString(this.__leftOp, this.__code.result()));
+			this.__resultCode = this.rtl().assignArrayFromString(this.__leftCode, this.__code.result());
 			return;
 		}
-		
-		if (!Cast.implicit(type, this.__type))
-			throw new Errors.Error("type mismatch: '" + this.__leftOp
+
+		var castOperation = Cast.implicit(type, this.__type);
+		if (!castOperation)
+			throw new Errors.Error("type mismatch: '" + this.__leftCode
 								 + "' is '" + this.__type.description()
 								 + "' and cannot be assigned to '" + type.description() + "' expression");
 
 		if (isArray && type instanceof Type.Array)
 			if (this.__type.length() === undefined)
-				throw new Errors.Error("'" + this.__leftOp
+				throw new Errors.Error("'" + this.__leftCode
 									 + "' is open '" + this.__type.description()
 									 + "' and cannot be assigned");
 			else if (type.length() === undefined)
-				throw new Errors.Error("'" + this.__leftOp
+				throw new Errors.Error("'" + this.__leftCode
 									 + "' cannot be assigned to open '"
 									 + this.__type.description() + "'");
 			else if (this.__type.length() != type.length())
-				throw new Errors.Error("array size mismatch: '" + this.__leftOp
+				throw new Errors.Error("array size mismatch: '" + this.__leftCode
 									 + "' has size " + this.__type.length()
 									 + " and cannot be assigned to the array with size " + type.length());
 		
-		if (isArray || type instanceof Type.Record)
-			this.__code = new Code.SimpleGenerator(
-					this.rtl().copy(this.__code.result(), this.__leftOp));
+		if (isArray || type instanceof Type.Record){
+			this.__resultCode = this.rtl().copy(this.__code.result(), this.__leftCode);
+            return;
+        }
 
 		if (designator)
 			writeDerefDesignatorCode(designator, this.__code);
+
+        var castCode = castOperation.code();
+        this.__rightCode = castCode ? castCode : this.__code.result();
 	},
 	endParse: function(){
-		if (this.__designator.info().isVar())
-			this.__code.write(")");
-		this.parent().codeGenerator().write(this.__code.result());
+		var code = this.__resultCode;
+		if (!code)
+			code = this.__leftCode
+				 + (this.__designator.info().isVar()
+					? ".set(" + this.__rightCode + ")"
+					: " = " + this.__rightCode);
+
+		this.parent().codeGenerator().write(code);
 	}
 });
 

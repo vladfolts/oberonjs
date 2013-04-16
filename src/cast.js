@@ -1,18 +1,30 @@
+var Class = require("rtl.js").Class;
 var Type = require("type.js");
 var ArrayType = Type.Array;
 var PointerType = Type.Pointer;
 
+var Operation = Class.extend({
+	init: function Operation(convert){this.__convert = convert;},
+	code: function(context, code){return this.__convert ? this.__convert(context, code) : code;}
+});
+
+var doNoting = new Operation();
+
 function implicitCast(from, to){
-	if (from == to)
-		return true;
+	if (from === to)
+		return doNoting;
 
 	//if (from instanceof VarParameter)
 	//	return implicitCast(from.type(), (to instanceof VarParameter) ? to.type() : to);
 	
-	if ((to === Type.basic.char) && (from instanceof Type.String)){
-		var v = from.asChar();
-		if (v !== undefined)
-			return true;
+	if (from instanceof Type.String){
+		if (to === Type.basic.char){
+			var v = from.asChar();
+			if (v !== undefined)
+				return new Operation(function(){return v;});
+		}
+		else if (to instanceof Type.Array && to.elementsType() == Type.basic.char)
+			return new Operation(function(context, code){return context.rtl().strToArray(code);});
 	}
 	else if (from instanceof ArrayType && to instanceof ArrayType)
 		return implicitCast(from.elementsType(), to.elementsType());
@@ -23,11 +35,11 @@ function implicitCast(from, to){
 		while (fromR && fromR != toR)
 			fromR = fromR.baseType();
 		if (fromR)
-			return true;
+			return doNoting;
 	}
 	else if (from == Type.nil
 		&& (to instanceof PointerType || to.isProcedure()))
-		return true;
+		return doNoting;
 	else if (from.isProcedure() && to.isProcedure()){
 		var fromArgs = from.arguments();
 		var toArgs = to.arguments();
@@ -36,21 +48,22 @@ function implicitCast(from, to){
 				var fromArg = fromArgs[i];
 				var toArg = toArgs[i];
 				if (toArg.isVar != fromArg.isVar)
-					return false;
+					return undefined;
 				if ((toArg.type != to || fromArg.type != from)
 					&& !implicitCast(fromArg.type, toArg.type))
-					return false;
+					return undefined;
 			}
 
 			var fromResult = from.result();
 			var toResult = to.result();
 			if (toResult == to && fromResult == from)
-				return true;
+				return doNoting;
 			if (implicitCast(fromResult, toResult))
-				return true;
+				return doNoting;
 		}
 	}
-	return false;
+	return undefined;
 }
 
 exports.implicit = implicitCast;
+exports.Operation = Operation;

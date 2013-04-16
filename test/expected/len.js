@@ -24,6 +24,7 @@ var RTL$ = {
     }
 };
 var m = function (){
+var s1 = "\"";
 var a1 = RTL$.makeArray(10, 0);
 var a2 = RTL$.makeArray(15, false);
 var a3 = RTL$.makeArray(20, 0);
@@ -38,4 +39,6 @@ function p2(a/*VAR ARRAY OF BOOLEAN*/){
 p1(a1);
 p2(a2);
 RTL$.assert(a3.length == 20);
+RTL$.assert("\"".length == 1);
+RTL$.assert("abc".length == 3);
 }();

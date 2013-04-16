@@ -1,0 +1,15 @@
+MODULE m;
+
+VAR 
+	ch: CHAR;
+	set: SET;
+                
+BEGIN
+	ch := "a";
+	ASSERT(ORD(ch) = ORD("a"));
+
+	set := {1};
+	ASSERT(ORD({1}) = ORD(set));
+	ASSERT(ORD(TRUE) = 1);
+	ASSERT(ORD(FALSE) = 0)
+END m.

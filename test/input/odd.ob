@@ -1,0 +1,10 @@
+MODULE m;
+
+VAR i: INTEGER;
+                
+BEGIN
+	ASSERT(ODD(1));
+	i := 4;
+	ASSERT(ODD(1 + i));
+	ASSERT(~ODD(2))
+END m.
