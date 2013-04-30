@@ -38,6 +38,8 @@ BEGIN
 	INCL(s2, 3);
 	INCL(s1, ci * 2 + 3);
 	INCL(s1, ci * 2 - i1 + 3);
+	INCL(s1, ORD(b));
 
-	EXCL(s2, 3)
+	EXCL(s2, 3);
+	EXCL(s2, ORD(b))
 END m.

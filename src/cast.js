@@ -1,14 +1,9 @@
-var Class = require("rtl.js").Class;
+var Code = require("code.js");
 var Type = require("type.js");
 var ArrayType = Type.Array;
 var PointerType = Type.Pointer;
 
-var Operation = Class.extend({
-	init: function Operation(convert){this.__convert = convert;},
-	code: function(context, code){return this.__convert ? this.__convert(context, code) : code;}
-});
-
-var doNoting = new Operation();
+function doNoting(context, e){return e;}
 
 function implicitCast(from, to){
 	if (from === to)
@@ -21,10 +16,12 @@ function implicitCast(from, to){
 		if (to === Type.basic.char){
 			var v = from.asChar();
 			if (v !== undefined)
-				return new Operation(function(){return v;});
+				return function(){return new Code.Expression(v, to);};
 		}
 		else if (to instanceof Type.Array && to.elementsType() == Type.basic.char)
-			return new Operation(function(context, code){return context.rtl().strToArray(code);});
+			return function(context, e){
+				return new Code.Expression(context.rtl().strToArray(e.code()), to);
+			};
 	}
 	else if (from instanceof ArrayType && to instanceof ArrayType)
 		return implicitCast(from.elementsType(), to.elementsType());
@@ -66,4 +63,3 @@ function implicitCast(from, to){
 }
 
 exports.implicit = implicitCast;
-exports.Operation = Operation;

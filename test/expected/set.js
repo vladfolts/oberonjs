@@ -32,11 +32,11 @@ var RTL$ = {
 };
 var m = function (){
 var ci = 3;
-var cs1 = 6;
-var cs2 = 12;
-var cs3 = 2;
-var cs4 = 28;
-var cs5 = -3;
+var cs1 = 2 | 4;
+var cs2 = 14 & ~18;
+var cs3 = 14 & 18;
+var cs4 = 14 ^ 18;
+var cs5 = ~2;
 var s1 = 0;var s2 = 0;
 var i1 = 0;
 var b = false;
@@ -58,7 +58,9 @@ s1 = s1 & s2;
 s1 = s1 ^ s2;
 s1 = ~s2;
 s2 |= 1 << 3;
-s1 |= 1 << 9;
+s1 |= 1 << ci * 2 + 3;
 s1 |= 1 << ci * 2 - i1 + 3;
+s1 |= 1 << (b ? 1 : 0);
 s2 &= ~(1 << 3);
+s2 &= ~(1 << (b ? 1 : 0));
 }();

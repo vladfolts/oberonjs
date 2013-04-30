@@ -44,9 +44,9 @@ function p1(s/*ARRAY OF CHAR*/){
 function p2(c/*CHAR*/){
 }
 ch1 = 34;
-RTL$.assignArrayFromString(a2, "\"");
-RTL$.assignArrayFromString(a2, "ABC");
-p1(RTL$.strToArray("\""));
-p1(RTL$.strToArray("ABC"));
+RTL$.assignArrayFromString(a2, s1);
+RTL$.assignArrayFromString(a2, s2);
+p1(RTL$.strToArray(s1));
+p1(RTL$.strToArray(s2));
 p2(34);
 }();

@@ -3,6 +3,7 @@ var Code = require("code.js");
 var Errors = require("errors.js");
 var Lexer = require("lexer.js");
 var Module = require("module.js");
+var precedence = require("operator.js").precedence;
 var Parser = require("parser.js");
 var Procedure = require("procedure.js");
 var ImportRTL = require("rtl.js");
@@ -20,6 +21,11 @@ function getSymbol(context, id){
 	if (!s)
 		throw new Errors.Error("undeclared identifier: '" + id + "'");
 	return s;
+}
+
+function checkImplicitCast(from, to){
+	if (!Cast.implicit(from, to))
+		throw new Errors.Error("type mismatch: expected '" + to.name() + "', got '" + from.name() + "'");
 }
 
 function checkTypeCast(from, to, msg){
@@ -45,9 +51,9 @@ var ChainedContext = Class.extend({
 	popScope: function(){this.__parent.popScope();},
 	setType: function(type){this.__parent.setType(type);},
 	setDesignator: function(d){this.__parent.setDesignator(d);},
-	handleExpression: function(type, value, designator){this.__parent.handleExpression(type, value, designator);},
+	handleExpression: function(e){this.__parent.handleExpression(e);},
 	handleLiteral: function(s){this.__parent.handleLiteral(s);},
-	handleConst: function(type, value){this.__parent.handleConst(type, value);},
+	handleConst: function(type, value, code){this.__parent.handleConst(type, value, code);},
 	genTypeName: function(){return this.__parent.genTypeName();},
 	genVarName: function(id){return this.__parent.genVarName(id);},
 	rtl: function(){return this.__parent.rtl();}
@@ -65,8 +71,7 @@ exports.Integer = ChainedContext.extend({
 	toInt: function(s){return parseInt(this.__result);},
 	endParse: function(){
 		var n = this.toInt();
-		this.parent().codeGenerator().write(n.toString());
-		this.parent().handleConst(basicTypes.int, n);
+		this.parent().handleConst(basicTypes.int, n, n.toString());
 	}
 });
 
@@ -91,8 +96,7 @@ exports.Real = ChainedContext.extend({
 	},
 	endParse: function(){
 		var n = Number(this.__result);
-		this.parent().codeGenerator().write(n.toString());
-		this.parent().handleConst(basicTypes.real, n);
+		this.parent().handleConst(basicTypes.real, n, n.toString());
 	}
 });
 
@@ -117,8 +121,7 @@ exports.String = ChainedContext.extend({
 	toStr: function(s){return s;},
 	endParse: function(){
 		var s = this.toStr(this.__result);
-		this.parent().codeGenerator().write(escapeString(s));
-		this.parent().handleConst(new Type.String(s), s);
+		this.parent().handleConst(new Type.String(s), s, escapeString(s));
 		}
 });
 
@@ -188,19 +191,22 @@ exports.Designator = ChainedContext.extend({
 		this.__code.write(id);
 	},
 	codeGenerator: function(){return this.__code;},
-	handleExpression: function(expType, value, designator){
+	handleExpression: function(e){
+        var expType = e.type();
 		if (expType != basicTypes.int)
 			throw new Errors.Error("'INTEGER' expression expected, got '" + expType.name() + "'");
 
 		var type = this.__currentType;
 		if (!(type instanceof Type.Array))
 			throw new Errors.Error("ARRAY expected, got '" + type.name() + "'");
+        var value = e.constValue();
 		if (value !== undefined && value >= type.length())
 			throw new Errors.Error("index out of bounds: maximum possible index is "
 								 + (type.length() - 1)
 								 + ", got " + value );
 		this.__currentType = type.elementsType();
 		this.__info = new Type.Variable(this.__currentType, false, this.__info.isReadOnly());
+        var designator = e.designator();
 		if (designator)
 			writeDerefDesignatorCode(designator, this.__code);
 	},
@@ -419,8 +425,9 @@ exports.Return = ChainedContext.extend({
 		this.__code = new Code.SimpleGenerator();
 	},
 	codeGenerator: function(){return this.__code;},
-	handleExpression: function(type, value, designator){
-		this.__type = type;
+	handleExpression: function(e){
+		this.__type = e.type();
+        var designator = e.designator();
 		if (designator)
 			writeDerefDesignatorCode(designator, this.__code);
 	},
@@ -516,9 +523,11 @@ exports.ArrayDimensions = ChainedContext.extend({
 		this.__dimensions = [];
 	},
 	codeGenerator: function(){return Code.nullGenerator;},
-	handleExpression: function(type, value){
+	handleExpression: function(e){
+        var type = e.type();
 		if (type !== basicTypes.int)
 			throw new Errors.Error("'INTEGER' constant expression expected, got '" + type.name() + "'");
+        var value = e.constValue();
 		if (value === undefined)
 			throw new Errors.Error("constant expression expected as ARRAY size");
 		if (value <= 0)
@@ -530,6 +539,33 @@ exports.ArrayDimensions = ChainedContext.extend({
 	}
 });
 
+function makeUnaryOperator(op, code){
+	return function(e){
+		var type = e.type();
+        var value = e.constValue();
+        if (value !== undefined)
+            value = op(value, type) ;
+        var expCode = ((typeof code == "function") ? code(type) : code) + e.deref().code();
+		return new Code.Expression(expCode, type, undefined, value);
+	};
+}
+
+function makeBinaryOperator(op, code){
+	return function(left, right){
+		var leftValue = left.constValue();
+		var rightValue = right.constValue();
+		var value = (leftValue !== undefined && rightValue !== undefined)
+			? op(leftValue, rightValue) : undefined;
+
+        var leftCode = left.deref().code();
+        var rightCode = right.deref().code();
+        var expCode = (typeof code == "function")
+                    ? code(leftCode, rightCode)
+                    : leftCode + code + rightCode;
+		return new Code.Expression(expCode,	left.type(), undefined,	value);
+	};
+}
+
 exports.AddOperator = ChainedContext.extend({
 	init: function AddOperatorContext(context){
 		ChainedContext.prototype.init.bind(this)(context);
@@ -537,36 +573,52 @@ exports.AddOperator = ChainedContext.extend({
 	handleLiteral: function(s){
 		var parent = this.parent();
 		if (s == "+"){
-			if (parent.type() == basicTypes.set){
-				parent.handleBinaryOperator(function(x, y){return x | y;});
-				parent.codeGenerator().write(" | ");
-			}
-			else {
-				parent.handleBinaryOperator(function(x, y){return x + y;});
-				parent.codeGenerator().write(" + ");
-			}
+			if (parent.type() == basicTypes.set)
+				parent.handleBinaryOperator(
+					makeBinaryOperator(function(x, y){return x | y;}, " | "));
+			else
+				parent.handleBinaryOperator(
+					makeBinaryOperator(function(x, y){return x + y;}, " + "));
 		}
 		else if (s == "-"){
-			if (parent.type() == basicTypes.set){
-				parent.handleBinaryOperator(function(x, y){return x & ~y;});
-				parent.codeGenerator().write(" & ~");
-			}
-			else {
-				parent.handleBinaryOperator(function(x, y){return x - y;});
-				parent.codeGenerator().write(" - ");
-			}
+			if (parent.type() == basicTypes.set)
+				parent.handleBinaryOperator(
+					makeBinaryOperator(function(x, y){return x & ~y;}, " & ~"));
+			else
+				parent.handleBinaryOperator(
+					makeBinaryOperator(function(x, y){return x - y;}, " - "));
 		}
 		else if (s == "OR"){
 			var type = parent.type();
 			if (type != basicTypes.bool)
 				throw new Errors.Error("BOOLEAN expected as operand of 'OR', got '"
 									 + type.name() + "'");
-			parent.handleBinaryOperator(function(x, y){return x || y;});
-			this.codeGenerator().write(" || ");
+			parent.handleBinaryOperator(
+				makeBinaryOperator(function(x, y){return x || y;}, " || "));
 		}
 	}
 });
-
+/*
+var Operator = Class.extend({
+	init: function Operator(eval, code){
+		this.__eval = eval;
+		this.__code = code;
+	},
+	eval: function(x, y){return this.__eval(x, y);},
+	code: function(x, y){return this.__code(x, y);},
+	expression: function(x, y){
+		var xValue = x ? x.constValue() : undefined;
+		var yValue = y.constValue();
+		var value = ((!x || xValue) && yValue) ? this.__eval(xValue, yValue) : undefined;
+		return new Code.Expression(
+			this.__code(x ? x.code() : undefined, y.code()),
+			y.type(),
+			undefined,
+			value
+			);
+	}
+});
+*/
 exports.MulOperator = ChainedContext.extend({
 	init: function MulOperatorContext(context){
 		ChainedContext.prototype.init.bind(this)(context);
@@ -575,45 +627,33 @@ exports.MulOperator = ChainedContext.extend({
 		var parent = this.parent();
 		if (s == "*")
 			if (parent.type() == basicTypes.set)
-				parent.handleOperator({
-					  eval: function(x, y){return x & y;}
-					, code: function(x, y){return x + " & " + y;}
-					});
+				parent.handleOperator(makeBinaryOperator(
+					  function(x, y){return x & y;}, " & "));
 			else
-				parent.handleOperator({
-					  eval: function(x, y){return x * y;}
-					, code: function(x, y){return x + " * " + y;}
-					});
+				parent.handleOperator(makeBinaryOperator(
+					  function(x, y){return x * y;}, " * "));
 		else if (s == "/")
 			if (parent.type() == basicTypes.set)
-				parent.handleOperator({
-					  eval: function(x, y){return x ^ y;}
-					, code: function(x, y){return x + " ^ " + y;}
-					});
+				parent.handleOperator(makeBinaryOperator(
+					  function(x, y){return x ^ y;}, " ^ "));
 			else
-				parent.handleOperator({
-					  eval: function(x, y){return x / y;}
-					, code: function(x, y){return x + " / " + y;}
-					});
+				parent.handleOperator(makeBinaryOperator(
+					  function(x, y){return x / y;}, " / "));
 		else if (s == "DIV")
-			parent.handleOperator({
-				  eval: function(x, y){return (x / y) >> 0;}
-				, code: function(x, y){return "(" + x + " / " + y + ") >> 0";}
-				});
+			parent.handleOperator(makeBinaryOperator(
+				  function(x, y){return (x / y) >> 0;}
+				, function(x, y){return "(" + x + " / " + y + ") >> 0";}
+				));
 		else if (s == "MOD")
-			parent.handleOperator({
-				  eval: function(x, y){return x % y;}
-				, code: function(x, y){return x + " % " + y;}
-				});
+			parent.handleOperator(makeBinaryOperator(
+				  function(x, y){return x % y;}, " % "));
 		else if (s == "&"){
 			var type = parent.type();
 			if (type != basicTypes.bool)
 				throw new Errors.Error("BOOLEAN expected as operand of '&', got '"
 									 + type.name() + "'");
-			parent.handleOperator({
-				  eval: function(x, y){return x && y;}
-				, code: function(x, y){return x + " && " + y;}
-				});
+			parent.handleOperator(makeBinaryOperator(
+				  function(x, y){return x && y;}, " && "));
 		}
 	}
 });
@@ -633,6 +673,7 @@ exports.Term = ChainedContext.extend({
 		this.__isConst = true;
 		this.__value = undefined;
 		this.__designator = undefined;
+		this.__expression = undefined;
 	},
 	codeGenerator: function(){return this.__code;},
 	type: function(){return this.parent().type();},
@@ -640,42 +681,50 @@ exports.Term = ChainedContext.extend({
 		var type = d.type();
 		this.parent().setType(type);
 
+		var value;
 		var info = d.info();
 		if (!(info instanceof Type.Const))
 			this.__isConst = false;
-		else
-			this.handleConst(type, info.value());
+		else {
+			value = info.value();
+			this.handleConst(type, info.value(), d.code());
+		}
 		
+		this.__handleExpression(
+			new Code.Expression(d.code(), d.type(), d, value));
+
 		this.__code.write(d.code());
 		this.__designator = d;
-		if (this.__operator)
-			this.__derefDesignator();
+		//if (this.__operator)
+		//	this.__derefDesignator();
 	},
 	handleOperator: function(o){
 		this.__derefDesignator();
-		this.__left = this.__operator
-			? this.__operator.code(this.__left, this.__code.result())
-			: this.__code.result();
+		//this.__left = this.__operator
+		//	? this.__operator.code(this.__left, this.__code.result())
+		//	: this.__code.result();
 		this.__operator = o;
 		this.__code = new Code.SimpleGenerator();
 	},
-	handleConst: function(type, value){
+	handleConst: function(type, value, code){
 		this.parent().setType(type);
-		if (value === undefined)
-			this.__isConst = false;
-		else if (this.__isConst)
-			this.__value = this.__operator ? this.__operator.eval(this.__value, value)
-										   : value;
+		//if (value === undefined)
+		//	this.__isConst = false;
+		//else if (this.__isConst)
+		//	this.__value = this.__operator ? this.__operator.eval(this.__value, value)
+		//								   : value;
+		this.__handleExpression(new Code.Expression(
+			code, type, undefined, value));
 	},
-	procCalled: function(type){this.parent().procCalled(type);},
-	endParse: function(){
-		var code = this.__operator ? this.__operator.code(this.__left, this.__code.result())
-								   : this.__code.result();
-		this.parent().handleTerm(
-			  code
-			, this.__isConst ? this.__value : undefined
-			, this.__operator ? undefined : this.__designator);
+	handleFactor: function(e){
+		var type = e.type();
+		if (!type)
+			throw new Errors.Error("procedure returning no result cannot be used in an expression");
+		this.setType(type);
+		this.__handleExpression(e);
+		this.__code.write(e.code());
 	},
+	endParse: function(){this.parent().handleTerm(this.__expression);},
 	__derefDesignator: function(){
 		var designator = this.__designator;
 		if (!designator)
@@ -683,6 +732,12 @@ exports.Term = ChainedContext.extend({
 
 		writeDerefDesignatorCode(designator, this.__code);
 		this.__designator = undefined;
+	},
+	__handleExpression: function(e){
+		if (this.__operator)
+			e = this.__expression ? this.__operator(this.__expression, e)
+                                  : this.__operator(e);
+		this.__expression = e;
 	}
 });
 
@@ -693,27 +748,19 @@ exports.Factor = ChainedContext.extend({
 	type: function(){return this.parent().type();},
 	handleLiteral: function(s){
 		var parent = this.parent();
-		if (s == "NIL"){
-			parent.handleConst(Type.nil, undefined);
-			this.codeGenerator().write("null");
-		}
-		else if (s == "TRUE"){
-			parent.handleConst(basicTypes.bool, true);
-			this.codeGenerator().write("true");
-		}
-		else if (s == "FALSE"){
-			parent.handleConst(basicTypes.bool, false);
-			this.codeGenerator().write("false");
-		}
+		if (s == "NIL")
+			parent.handleConst(Type.nil, undefined, "null");
+		else if (s == "TRUE")
+			parent.handleConst(basicTypes.bool, true, "true");
+		else if (s == "FALSE")
+			parent.handleConst(basicTypes.bool, false, "false");
 		else if (s == "~"){
 			parent.setType(basicTypes.bool);
-			parent.handleOperator({
-				  eval: function(x, y){return !y;}
-				, code: function(x, y){return "!" + y;}
-				});
+			parent.handleOperator(makeUnaryOperator(
+				  function(x){return !x;}, "!"));
 		}
 	},
-	procCalled: function(type){this.parent().procCalled(type);}
+	handleFactor: function(e){this.parent().handleFactor(e);}
 });
 
 exports.Set = ChainedContext.extend({
@@ -739,16 +786,15 @@ exports.Set = ChainedContext.extend({
 		}
 	},
 	endParse: function(){
-		var gen = this.codeGenerator();
-		if (!this.__expr.length){
-			gen.write(this.__value.toString());
-			this.parent().handleConst(basicTypes.set, this.__value);
-		}
+		var parent = this.parent();
+		if (!this.__expr.length)
+			parent.handleConst(basicTypes.set, this.__value, this.__value.toString());
 		else{
-			this.parent().setType(basicTypes.set);
-			gen.write(this.rtl().makeSet(this.__expr));
+			var code = this.rtl().makeSet(this.__expr);
 			if (this.__value)
-				gen.write(" | " + this.__value);
+				code += " | " + this.__value;
+			var e = new Code.Expression(code, basicTypes.set);
+			parent.handleFactor(e);
 		}
 	}
 });
@@ -763,7 +809,8 @@ exports.SetElement = ChainedContext.extend({
 		this.__expr = new Code.SimpleGenerator();
 	},
 	codeGenerator: function(){return this.__expr;},
-	handleExpression: function(type, value){
+	handleExpression: function(e){
+        var value = e.constValue();
 		if (!this.__from)
 			{
 			this.__from = this.__expr.result();
@@ -789,169 +836,107 @@ function constValueCode(value){
 exports.SimpleExpression = ChainedContext.extend({
 	init: function SimpleExpressionContext(context){
 		ChainedContext.prototype.init.bind(this)(context);
-		//this.__type = undefined;
+		this.__unaryOperator = undefined;
 		this.__binaryOperator = undefined;
-		this.__unaryMinus = false;
-		this.__unaryPlus = false;
-		this.__isConst = true;
-		this.__constValue = undefined;
-		this.__designator = undefined;
-		this.__code = new Code.SimpleGenerator();
+		this.__type = undefined;
+		this.__exp = undefined;
 	},
-	codeGenerator: function(){return this.__code;},
-	handleTerm: function(code, value, designator){
-		if (value !== undefined)
-			this.__handleConst(value);
+	handleTerm: function(e){
+		if (this.__unaryOperator){
+			this.__exp = this.__unaryOperator(e);
+			this.__unaryOperator = undefined;
+		}
 		else
-			this.__isConst = false;
-		this.codeGenerator().write(code);
-		this.__designator = designator;
-		this.__derefDesignator();
+			this.__exp = this.__exp ? this.__binaryOperator(this.__exp, e) : e;
 	},
 	handleLiteral: function(s){
 		if (s == "-")
-			this.__unaryMinus = true;
+			this.__unaryOperator = makeUnaryOperator(
+				function(x, type){return type == basicTypes.set ? ~x : -x;},
+				function(type){return type == basicTypes.set ? "~" : "-";}
+				);
 		else if (s == "+")
-			this.__unaryPlus = true;
+			this.__unaryOperator = makeUnaryOperator(
+				function(x){return x;}, "");
 	},
-	type: function(){return this.parent().type();},
-	constValue: function(){return this.__isConst ? this.__constValue : undefined;},
-	handleBinaryOperator: function(o){
-		this.__binaryOperator = o;
-		this.__derefDesignator();
-	},
-	handleUnaryOperator: function(o){
-		this.__unary_operator = o;
-	},
-	procCalled: function(type){this.parent().procCalled(type);},
-	endParse: function(){
-		var parent = this.parent();
-		var code = parent.codeGenerator();
-		if (this.__unaryMinus)
-			if (this.type() == basicTypes.set){
-				if (this.__isConst)
-					this.__constValue = ~this.__constValue;
-				else
-					code.write('~');
-			}
-			else {
-				if (this.__isConst)
-					this.__constValue = -this.__constValue;
-				else
-					code.write('-');
-			}
-
-		code.write(this.__isConst ? constValueCode(this.__constValue) : this.__code.result());
-		parent.handleSimpleExpression(this.constValue(), this.__designator);
-	},
-	__handleConst: function(value){
-		if (!this.__isConst)
-			return;
-
-		if (this.__unary_operator){
-			value = this.__unary_operator(value);
-			this.__unary_operator = undefined;
-		}
-
-		if (!this.__binaryOperator)
-			this.__constValue = value;
+	type: function(){return this.__type;},
+	setType: function(type){
+		if (type === undefined || this.__type === undefined)
+			this.__type = type;
 		else
-			this.__constValue = this.__binaryOperator(this.__constValue, value);
+            checkImplicitCast(type, this.__type);
 	},
-	__derefDesignator: function(){
-		if (!this.__designator)
-			return;
-		if (!this.__binaryOperator && !this.__unary_operator
-			&& !this.__unaryMinus && !this.__unaryPlus)
-			return;
-
-		writeDerefDesignatorCode(this.__designator, this.__code);
-		this.__designator = undefined;
+	handleBinaryOperator: function(o){this.__binaryOperator = o;},
+	endParse: function(){
+		this.parent().handleSimpleExpression(this.__exp);
 	}
 });
 
 exports.Expression = ChainedContext.extend({
 	init: function ExpressionContext(context){
 		ChainedContext.prototype.init.bind(this)(context);
-		this.__leftParsed = false;
-		this.__type = undefined;
 		this.__relation = undefined;
-		this.__value = undefined;
-		this.__designator = undefined;
-		this.__code = new Code.SimpleGenerator();
+		this.__expression = undefined;
 	},
-	setType: function(type){
-		if (this.__relation == "IS"){
-			if (!(type instanceof Type.Record))
-				throw new Errors.Error("RECORD type expected after 'IS'");
-			
-			checkTypeCast(this.__type, type, "invalid type test");
-		}
-		else if (type === undefined || this.__type === undefined)
-			this.__type = type;
-		else if (!Cast.implicit(type, this.__type))
-			throw new Errors.Error("type mismatch: expected '" + this.__type.name()
-								 + "', got '" + type.name() + "'");
-	},
-	type: function(){return this.__type;},
-	codeGenerator: function(){return this.__code;},
-	handleSimpleExpression: function(value, designator){
-		if (!this.__leftParsed){
-			this.__leftParsed = true;
-			this.__value = value;
-			this.__designator = designator;
-		}
-		else {
-			if (this.__relation == "IS"){
-				if (!designator || !(designator.info() instanceof Type.Type))
-					throw new Errors.Error("type name expected");
-			}
-			this.__type = basicTypes.bool;
-			this.__value = undefined;
-			this.__designator = undefined;
-		}
-	},
-	procCalled: function(type){
-		if (!type)
-			throw new Errors.Error("procedure returning no result cannot be used in an expression");
-		this.__type = type;
-		this.__designator = undefined;
+	handleSimpleExpression: function(e){
+		if (!this.__expression){
+			this.__expression = e;
+            return;
+        }
+
+        var leftType = this.__expression.type();
+        var rightType = e.type();
+        var leftCode = this.__expression.code();
+        var leftExpression = this.__expression;
+        var rightCode = e.code();
+        var code;
+
+        if (this.__relation == "IN"){
+            if (leftType != basicTypes.int)
+                throw new Errors.Error("'INTEGER' expected as an element of SET, got '" + leftType.name() + "'");
+            checkImplicitCast(rightType, basicTypes.set);
+
+            code = "1 << " + leftCode + " & " + rightCode;
+        }
+        else if (this.__relation == "IS"){
+            if (!(leftType instanceof Type.Pointer))
+                throw new Errors.Error("POINTER to type expected before 'IS'");
+            else if (!(rightType instanceof Type.Record))
+                throw new Errors.Error("RECORD type expected after 'IS'");
+            else
+                checkTypeCast(leftType, rightType, "invalid type test");
+
+            var designator = e.designator();
+            if (!designator || !(designator.info() instanceof Type.Type))
+                throw new Errors.Error("type name expected");
+            code = leftCode + " instanceof " + rightCode;
+        }
+        else
+            checkImplicitCast(rightType, leftType);
+
+        if (this.__relation == "=")
+            code = Code.adjustPrecedence(leftExpression, precedence.equal) + " == " + rightCode;
+        else if (this.__relation == "#")
+            code = leftCode + " != " + rightCode;
+        else if (this.__relation == "<=")
+            code = this.rtl().setInclL(leftCode, rightCode);
+        else if (this.__relation == ">=")
+            code = this.rtl().setInclR(leftCode, rightCode);
+
+        this.__expression = new Code.Expression(code, basicTypes.bool);
 	},
 	handleLiteral: function(relation){
-		if (relation == "IS")
-			if (!(this.__type instanceof Type.Pointer))
-				throw new Errors.Error("POINTER to type expected before 'IS'");
-			else
-				this.codeGenerator().write(" instanceof ");
-		else if (relation == "IN"){
-			if (this.__type != basicTypes.int)
-				throw new Errors.Error("'INTEGER' expected as an element of SET, got '" + this.__type.name() + "'");
-			this.__type = basicTypes.set;
-			this.__code = new Code.SimpleGenerator("1 << " + this.__code.result() + " & ");
-		}
-		else if (relation == "=")
-			this.__code = new Code.SimpleGenerator(this.__code.result() + " == ");
-		else if (relation == "#")
-			this.__code = new Code.SimpleGenerator(this.__code.result() + " != ");
-		else if (relation == "<=" || relation == ">=")
-			this.__code.write(", ");
-
 		this.__relation = relation;
 	},
 	endParse: function(){
-		var parent = this.parent();
-		var code = parent.codeGenerator();
-		if (this.__relation == "<=")
-			code.write(this.rtl().setInclL(this.__code.result()));
-		else if (this.__relation == ">=")
-			code.write(this.rtl().setInclR(this.__code.result()));
-		else
-			code.write(this.__code.result());
-		parent.handleExpression(this.__type, this.__value, this.__designator);
+        var parent = this.parent();
+		parent.codeGenerator().write(this.__expression.code());
+		parent.handleExpression(this.__expression);
 	}
 });
 
-function handleIfExpression(type){
+function handleIfExpression(e){
+    var type = e.type();
 	if (type !== basicTypes.bool)
 		throw new Errors.Error("'BOOLEAN' expression expected, got '" + type.name() + "'");
 }
@@ -1008,7 +993,8 @@ exports.Case = ChainedContext.extend({
 		this.genVarName("$c");
 		this.codeGenerator().write("$c = ");
 	},
-	handleExpression: function(type){
+	handleExpression: function(e){
+        var type = e.type();
 		var gen = this.codeGenerator();
 		if (type instanceof Type.String){
 			var v = type.asChar();
@@ -1171,7 +1157,9 @@ exports.For = ChainedContext.extend({
 		this.codeGenerator().write("for (" + id + " = ");
 		this.__var = id;
 	},
-	handleExpression: function(type, value){
+	handleExpression: function(e){
+        var type = e.type();
+        var value = e.constValue();
 		if (type !== basicTypes.int)
 			throw new Errors.Error(
 				!this.__initExprParsed
@@ -1240,7 +1228,8 @@ exports.Assignment = ChainedContext.extend({
         this.__code = new Code.SimpleGenerator();
 		this.__type = d.type();
 	},
-	handleExpression: function(type, value, designator){
+	handleExpression: function(e){
+        var type = e.type();
 		var isArray = this.__type instanceof Type.Array;
 		if (isArray
 			&& this.__type.elementsType() == basicTypes.char
@@ -1280,10 +1269,7 @@ exports.Assignment = ChainedContext.extend({
             return;
         }
 
-		if (designator)
-			writeDerefDesignatorCode(designator, this.__code);
-
-        var castCode = castOperation.code();
+        var castCode = castOperation(this, e.deref()).code();
         this.__rightCode = castCode ? castCode : this.__code.result();
 	},
 	endParse: function(){
@@ -1309,10 +1295,11 @@ exports.ConstDecl = ChainedContext.extend({
 		this.__id = id;
 		this.codeGenerator().write("var " + id + " = ");
 	},
-	handleExpression: function(type, value){
+	handleExpression: function(e){
+        var value = e.constValue();
 		if (value === undefined)
 			throw new Errors.Error("constant expression expected");
-		this.__type = type;
+		this.__type = e.type();
 		this.__value = value;
 	},
 	endParse: function(){
@@ -1378,37 +1365,41 @@ exports.ActualParameters = ChainedContext.extend({
 	},
 });
 
-exports.ProcedureCall = ChainedContext.extend({
+var ProcedureCall = ChainedContext.extend({
 	init: function ProcedureCallContext(context){
 		ChainedContext.prototype.init.bind(this)(context);
 		this.__type = undefined;
 		this.__procCall = undefined;
-		this.__code = undefined;
+		this.__code = new Code.SimpleGenerator();
 	},
 	setDesignator: function(d){
 		var type = d.type();
 		assertProcType(type);
 		this.__type = type;
-		this.__code = new Code.SimpleGenerator();
 		this.__procCall = type.callGenerator(this, d.code());
+		this.__callExpression = undefined;
 	},
-	codeGenerator: function(){
-		return this.__code ? this.__code : this.parent().codeGenerator();
-	},
+	codeGenerator: function(){return this.__code;},
 	type: function(){return this.__type;},
-	setType: function(){},
 	hasActualParameters: function(){},
-	handleExpression: function(type, value, designator){
-		var code = this.__code.result();
-		this.__code = new Code.SimpleGenerator();
-		this.__procCall.handleArgument(type, designator, code);
-	},
-	endParse: function(){this.parent().codeGenerator().write(this.__procCall.end());}
+	handleExpression: function(e){this.__procCall.handleArgument(e);},
+	callExpression: function(){return this.__callExpression;},
+	endParse: function(){this.__callExpression = this.__procCall.end(); /*console.log(this.__callExpression.maxPrecedence())*/;}
 });
 
-exports.ExpressionProcedureCall = exports.ProcedureCall.extend({
+exports.StatementProcedureCall = ProcedureCall.extend({
+	init: function StatementProcedureCallContext(context){
+		ProcedureCall.prototype.init.bind(this)(context);
+	},
+	endParse: function(){
+		ProcedureCall.prototype.endParse.call(this);
+		this.parent().codeGenerator().write(this.callExpression().code());
+	}
+});
+
+exports.ExpressionProcedureCall = ProcedureCall.extend({
 	init: function ExpressionProcedureCallContext(context){
-		exports.ProcedureCall.prototype.init.bind(this)(context);
+		ProcedureCall.prototype.init.bind(this)(context);
 		this.__designator = undefined;
 		this.__hasActualParameters = false;
 	},
@@ -1416,13 +1407,13 @@ exports.ExpressionProcedureCall = exports.ProcedureCall.extend({
 		this.__designator = d;
 	},
 	hasActualParameters: function(){
-		exports.ProcedureCall.prototype.setDesignator.bind(this)(this.__designator);
+		ProcedureCall.prototype.setDesignator.bind(this)(this.__designator);
 		this.__hasActualParameters = true;
 	},
 	endParse: function(){
 		if (this.__hasActualParameters){
-			exports.ProcedureCall.prototype.endParse.bind(this)();
-			this.parent().procCalled(this.__type.result());
+			ProcedureCall.prototype.endParse.call(this);
+			this.parent().handleFactor(this.callExpression());
 		}
 		else
 			this.parent().setDesignator(this.__designator);

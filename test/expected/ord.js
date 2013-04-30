@@ -12,6 +12,6 @@ ch = 97;
 RTL$.assert(ch == 97);
 set = 2;
 RTL$.assert(2 == set);
-RTL$.assert(((true) ? 1 : 0) == 1);
-RTL$.assert(((false) ? 1 : 0) == 0);
+RTL$.assert((true ? 1 : 0) == 1);
+RTL$.assert((false ? 1 : 0) == 0);
 }();

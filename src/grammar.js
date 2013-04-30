@@ -76,7 +76,7 @@ var set = and("{", context(optional(and(element, repeat(and(",", element)))), Co
 var expList = and(expression, repeat(and(",", expression)));
 var actualParameters = and("(", context(optional(expList), Context.ActualParameters), ")");
 var procedureCall = context(and(designator, optional(actualParameters))
-						  , Context.ProcedureCall);
+						  , Context.StatementProcedureCall);
 
 var assignment = context(and(designator, ":=", required(expression, "expression expected"))
 					   , Context.Assignment);

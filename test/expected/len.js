@@ -39,6 +39,6 @@ function p2(a/*VAR ARRAY OF BOOLEAN*/){
 p1(a1);
 p2(a2);
 RTL$.assert(a3.length == 20);
-RTL$.assert("\"".length == 1);
+RTL$.assert(s1.length == 1);
 RTL$.assert("abc".length == 3);
 }();

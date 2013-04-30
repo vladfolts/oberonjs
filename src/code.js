@@ -1,4 +1,5 @@
 var Class = require("rtl.js").Class;
+var Type = require("type.js");
 
 var NullCodeGenerator = Class.extend({
 	init: function NullCodeGenerator(){},
@@ -34,4 +35,47 @@ exports.SimpleGenerator = Class.extend({
 	result: function(){return this.__result;}
 });
 
+var Expression = Class.extend({
+	init: function Expression(code, type, designator, constValue, maxPrecedence){
+        this.__code = code;
+        this.__type = type;
+        this.__designator = designator;
+        this.__constValue = constValue;
+        this.__maxPrecedence = maxPrecedence;
+    },
+    code: function(){return this.__code;},
+    type: function(){return this.__type;},
+    designator: function(){return this.__designator;},
+    constValue: function(){return this.__constValue;},
+    maxPrecedence: function(){return this.__maxPrecedence;},
+    deref: function(){
+        if (!this.__designator)
+            return this;
+        if (this.__type instanceof Type.Array || this.__type instanceof Type.Record)
+            return this;
+        var info = this.__designator.info();
+        if (!(info instanceof Type.Variable && info.isVar()))
+            return this;
+        return new Expression(this.__code + ".get()", this.__type);
+    },
+    ref: function(){
+        if (!this.__designator)
+            return this;
+        
+        var info = this.__designator.info();
+        if (info instanceof Type.Variable && info.isVar())
+            return this;
+
+        return new Expression(this.__designator.refCode(), this.__type);
+    }
+});
+
+exports.adjustPrecedence = function(e, precedence){
+    var code = e.code();
+    if (e.maxPrecedence() > precedence)
+        code = "(" + code + ")";
+    return code;
+};
+
 exports.nullGenerator = new NullCodeGenerator();
+exports.Expression = Expression;

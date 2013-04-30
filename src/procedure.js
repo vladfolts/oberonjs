@@ -3,6 +3,7 @@ var Cast = require("cast.js");
 var Class = require("rtl.js").Class;
 var Code = require("code.js");
 var Errors = require("errors.js");
+var precedence = require("operator.js").precedence;
 var Type = require("type.js");
 
 var Arg = Class.extend({
@@ -35,7 +36,7 @@ var ProcCallGenerator = Class.extend({
 	id: function(){return this.__id;},
 	context: function(){return this.__context;},
 	codeGenerator: function(){return this.__code;},
-	handleArgument: function(type, designator, code){
+	handleArgument: function(e){
 		var pos = this.__argumentsCount++;
 		var isVarArg = false;
 		var convert;
@@ -45,33 +46,25 @@ var ProcCallGenerator = Class.extend({
 				// ignore, handle error after parsing all arguments
 				return;
 			
-			var arg = this.checkArgument(pos, type, designator);
+			var arg = this.checkArgument(pos, e);
 			isVarArg = arg.isVar;
 			convert = arg.convert;
 		}
-		if (designator){
-			var info = designator.info();
-			if (info instanceof Type.Variable)
-				if (info.isVar() && !isVarArg 
-					&& !(type instanceof Type.Array)
-					&& !(type instanceof Type.Record)
-					)
-					code += ".get()";
-				else if (!info.isVar() && isVarArg)
-					code = designator.refCode();
-			}
-		
-		if (convert)
-			code = convert.code(this.__context, code);
-		
+
+		e = isVarArg ? e.ref() : e.deref();
+        var code = (convert ? convert(this.__context, e) : e).code();
 		var prefix = pos ? ", " : "";
 		this.writeCode(prefix + code);
 	},
 	end: function(){
 		if (this.__type)
 			this.checkArgumentsCount(this.__argumentsCount);
+        return this.callExpression();
+    },
+    callExpression: function(){
 		this.writeCode(this.epilog());
-		return this.codeGenerator().result();
+		return new Code.Expression(this.codeGenerator().result(),
+                                   this.__type ? this.__type.result() : undefined);
 	},
 	prolog: function(){return this.__id + "(";},
 	checkArgumentsCount: function(count){
@@ -80,17 +73,19 @@ var ProcCallGenerator = Class.extend({
 			throw new Errors.Error(procArgs.length + " argument(s) expected, got "
 								 + this.__argumentsCount);
 	},
-	checkArgument: function(pos, type, designator){
+	checkArgument: function(pos, e){
 		var arg = this.__type.arguments()[pos];
 		var castOperation;
 		var expectType = arg.type; // can be undefined for predefined functions (like NEW), dont check it in this case
 		if (expectType){
+            var type = e.type();
             castOperation = Cast.implicit(type, expectType);
             if (!castOperation)
 				throw new Errors.Error("type mismatch for argument " + (pos + 1) + ": '" + type.description()
-								 	 + "' cannot be converted to '" + expectType.description() + "'");
+                                     + "' cannot be converted to '" + expectType.description() + "'");
         }
 		if (arg.isVar){
+            var designator = e.designator();
 			if (!designator)
 				throw new Errors.Error("expression cannot be used as VAR parameter");
 			var info = designator.info();
@@ -151,23 +146,21 @@ var ProcType = Type.Basic.extend({
 var TwoArgToOperatorProcCallGenerator = ProcCallGenerator.extend({
 	init: function TwoArgToOperatorProcCallGenerator(context, id, type, operator){
 		ProcCallGenerator.prototype.init.call(this, context, id, type);
-		this.__code = context.codeGenerator();
 		this.__operator = operator;
-		this.__firstArgumentCode = undefined;
-		this.__secondArgumentCode = undefined;
+		this.__firstArgument = undefined;
+		this.__secondArgument = undefined;
 	},
-	codeGenerator: function(){return Code.nullGenerator;},
 	prolog: function(id){return "";},
-	handleArgument: function(type, designator, code){
-		if (!this.__firstArgumentCode)
-			this.__firstArgumentCode = code;
+	handleArgument: function(e){
+		if (!this.__firstArgument)
+			this.__firstArgument = e;
 		else
-			this.__secondArgumentCode = code;
-		ProcCallGenerator.prototype.handleArgument.call(this, type, designator, code);
+			this.__secondArgument = e;
+		ProcCallGenerator.prototype.handleArgument.call(this, e);
 	},
 	epilog: function(type){return "";},
 	end: function(){
-		return this.__operator(this.__firstArgumentCode, this.__secondArgumentCode);
+		return this.__operator(this.__firstArgument, this.__secondArgument);
 	}
 });
 
@@ -179,8 +172,10 @@ exports.predefined = [
 				this.__baseType = undefined;
 			},
 			prolog: function(id){return "";},
-			checkArgument: function(pos, type, designator){
-				ProcCallGenerator.prototype.checkArgument.call(this, pos, type, designator);
+			checkArgument: function(pos, e){
+				ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
+
+                var type = e.type();
 				if (!(type instanceof Type.Pointer))
 					throw new Errors.Error("POINTER variable expected, got '"
 										 + type.name() + "'");
@@ -208,12 +203,13 @@ exports.predefined = [
 				ProcCallGenerator.prototype.init.call(this, context, id, type);
 			},
 			prolog: function(id){return "";},
-			checkArgument: function(pos, type, designator){
+			checkArgument: function(pos, e){
+                var type = e.type();
 				if (type instanceof Type.Array || type instanceof Type.String)
                     return new CheckArgumentResult(type, false);
                 
                 // should throw error
-                ProcCallGenerator.prototype.checkArgument.call(this, pos, type, designator);
+                ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
 			},
 			epilog: function(){return ".length";}
 		});
@@ -277,7 +273,13 @@ exports.predefined = [
 	function(){
 		var args = [new Arg(Type.basic.set, true),
 					new Arg(Type.basic.int, false)];
-		function operator(x, y){return x + " |= 1 << " + y;}
+		function operator(x, y){
+            var code = Code.adjustPrecedence(x, precedence.assignment) +
+                       " |= 1 << " +
+                       Code.adjustPrecedence(y, precedence.shift);
+            return new Code.Expression(
+                code, Type.basic.set, undefined, undefined, precedence.assignment);
+        }
 		var proc = new ProcType(
 			"predefined procedure INCL",
 			args,
@@ -293,7 +295,14 @@ exports.predefined = [
 	function(){
 		var args = [new Arg(Type.basic.set, true),
 					new Arg(Type.basic.int, false)];
-		function operator(x, y){return x + " &= ~(1 << " + y + ")";}
+		function operator(x, y){
+            var code = Code.adjustPrecedence(x, precedence.assignment) +
+                       " &= ~(1 << " +
+                       Code.adjustPrecedence(y, precedence.shift) +
+                       ")";
+            return new Code.Expression(
+                code, Type.basic.set, undefined, undefined, precedence.assignment);
+        }
 		var proc = new ProcType(
 			"predefined procedure EXCL",
 			args,
@@ -310,29 +319,31 @@ exports.predefined = [
         var CallGenerator = ProcCallGenerator.extend({
             init: function OrdProcCallGenerator(context, id, type){
                 ProcCallGenerator.prototype.init.call(this, context, id, type);
+                this.__callExpression = undefined;
             },
             prolog: function(){return "";},
             epilog: function(){return "";},
-            checkArgument: function(pos, type, designator){
-                if (type == Type.basic.char || type == Type.basic.set )
-                    return new CheckArgumentResult(type, false);
-                else if (type == Type.basic.bool)
-                    return new CheckArgumentResult(
-                        type,
-                        false,
-                        new Cast.Operation(function(context, code){return "((" + code + ") ? 1 : 0)";}));
+            checkArgument: function(pos, e){
+                var type = e.type();
+                if (type == Type.basic.char || type == Type.basic.set)
+                    this.__callExpression = new Code.Expression(e.code(), Type.basic.int);
+                else if (type == Type.basic.bool){
+                    var code = Code.adjustPrecedence(e, precedence.conditional) + " ? 1 : 0";
+                    this.__callExpression = new Code.Expression(code, Type.basic.int, undefined, undefined, precedence.conditional);
+                }
                 else if (type instanceof Type.String){
                     var ch = type.asChar();
                     if (ch !== undefined)
-                        return new CheckArgumentResult(
-                            type,
-                            false,
-                            new Cast.Operation(function(){return ch;}));
+                        this.__callExpression = new Code.Expression("" + ch, Type.basic.int);
                 }
+                
+                if (this.__callExpression)
+                    return new CheckArgumentResult(type, false);
 
-            // should throw error
-            ProcCallGenerator.prototype.checkArgument.call(this, pos, type, designator);
-            }
+                // should throw error
+                ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
+            },
+            callExpression: function(){return this.__callExpression;}
         });
         var name = "ORD";
         var argType = new Type.Basic("CHAR or BOOLEAN or SET");
