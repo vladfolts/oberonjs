@@ -134,8 +134,17 @@ expression: function(){
 	test.expectError("FFX", "undeclared identifier: 'FFX'");
 	//assert(!parse("1 + \"a\""));
 	//assert(parse("\"a\" + \"b\""));
-}
-,identifier: function(){
+},
+"parentheses": function(){
+	var test = setup(Grammar.expression);
+
+	test.parse("(1)");
+	test.parse("(1 + 2)");
+	test.parse("(1 + 2) * 3");
+	test.parse("3 * (1 + 2)");
+	test.expectError("(1  + 2", "no matched ')'");
+},
+identifier: function(){
 	var IdentDeclarationContext = Class.extend({
 		init: function(){this.__ident = undefined;},
 		setIdent: function(id){this.__ident = id;},
@@ -350,6 +359,12 @@ expression: function(){
 	test.expectError("ORD(1.2)", "type mismatch for argument 1: 'REAL' cannot be converted to 'CHAR or BOOLEAN or SET'");
 	test.expectError("ORD(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'CHAR or BOOLEAN or SET'");
 },
+"CHR": function(){
+	var test = setupWithContext(Grammar.statement, "VAR i: INTEGER; ch: CHAR;");
+
+	test.parse("CHR(i)");
+	//test.expectError("CHR(ch)", "type mismatch for argument 1: 'CHAR' cannot be converted to 'INTEGER'");
+},
 "assignment statement": function(){
 	var test = setupWithContext(
 		  Grammar.statement
@@ -521,6 +536,8 @@ expression: function(){
 				   , "constant expression expected as 'BY' parameter");
 	test.expectError("FOR i := 0 TO 10 BY TRUE DO END"
 				   , "'INTEGER' expression expected as 'BY' parameter, got 'BOOLEAN'");
+	test.expectError("FOR i := 0 TO 10 DO - END"
+				   , "END expected (FOR)");
 },
 "logical operators": function(){
 	var test = setupWithContext(
@@ -613,7 +630,8 @@ expression: function(){
 	test.parse("VAR END");
 	test.parse("VAR i: INTEGER; END");
 	test.parse("VAR a: ARRAY 10 OF INTEGER; END");
-	test.expectError("VAR i: INTEGER;", "not parsed");
+	test.expectError("VAR i: INTEGER;", "END expected (PROCEDURE)");
+    test.expectError("VAR i: INTEGER; i := 1; END", "END expected (PROCEDURE)");
 	test.parse("VAR i: INTEGER; BEGIN i := 1 END");
 	test.parse("VAR b: BOOLEAN; BEGIN b := TRUE END");
 	test.expectError("VAR i: INTEGER; BEGIN j := 1 END", "undeclared identifier: 'j'");
@@ -864,6 +882,7 @@ module: function(){
 	test.parse("MODULE m; END m.");
 	test.expectError("MODULE m; END undeclared.",
 					 "original module name 'm' expected, got 'undeclared'");
+    test.expectError("MODULE m; BEGIN - END m.", "END expected (MODULE)");
 },
 assert: function(){
 	var test = setup(Grammar.statement);

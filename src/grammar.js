@@ -20,6 +20,7 @@ var context = Parser.context;
 var emit = Parser.emit;
 var required = Parser.required;
 
+var identdef = and(ident, optional("*"));
 var selector = or(and(point, ident)
 				// break recursive declaration of expList
 			    , and("[", function(stream, context){return expList(stream, context);}, "]")
@@ -52,7 +53,9 @@ var factor = context(
 				 , optional(function(stream, context){return actualParameters(stream, context);})
 				  )
 			 , Context.ExpressionProcedureCall)
-	 , and("~", function(stream, context){
+	 , and("(", function(stream, context){return expression(stream, context);}
+         , required(")", "no matched ')'"))
+     , and("~", function(stream, context){
 					return factor(stream, context);}) // break recursive declaration of factor
 	 )
 	, Context.Factor);
@@ -81,7 +84,8 @@ var procedureCall = context(and(designator, optional(actualParameters))
 var assignment = context(and(designator, ":=", required(expression, "expression expected"))
 					   , Context.Assignment);
 
-var statement = or(emit(assignment, Context.emitEndStatement)
+var statement = optional(or(
+                   emit(assignment, Context.emitEndStatement)
 				 , emit(procedureCall, Context.emitEndStatement)
 				   // break recursive declaration of ifStatement/caseStatement/whileStatement/repeatStatement
 				 , function(stream, context){return ifStatement(stream, context);}
@@ -89,7 +93,7 @@ var statement = or(emit(assignment, Context.emitEndStatement)
 				 , function(stream, context){return whileStatement(stream, context);}
 				 , function(stream, context){return repeatStatement(stream, context);}
 				 , function(stream, context){return forStatement(stream, context);}
-				 );
+				 ));
 var statementSequence = and(statement, repeat(and(";", statement)));
 
 var ifStatement = and("IF", context(expression, Context.If), "THEN", statementSequence
@@ -114,7 +118,8 @@ var repeatStatement = and("REPEAT", context(statementSequence, Context.Repeat)
 
 var forStatement = context(and("FOR", ident, ":=", expression, "TO", expression
 							 , optional(and("BY", constExpression))
-							 , emit("DO", Context.emitForBegin), statementSequence, "END")
+							 , emit("DO", Context.emitForBegin)
+                             , statementSequence, required("END", "END expected (FOR)"))
 						 , Context.For);
 
 var fieldList = context(and(identList, ":", type), Context.FieldListDeclaration);
@@ -146,7 +151,7 @@ var strucType = or(arrayType, recordType, pointerType, procedureType);
 var typeDeclaration = context(and(ident, "=", strucType), Context.TypeDeclaration);
 
 var procedureHeading = and("PROCEDURE"
-						 , ident
+						 , identdef
 						 , context(optional(formalParameters), Context.FormalParametersProcDecl));
 var procedureDeclaration = context(
 	  and(procedureHeading, ";"
@@ -164,7 +169,7 @@ var declarationSequence = and(optional(and("CONST", repeat(and(constantDeclarati
 var procedureBody = and(declarationSequence
 					  , optional(and("BEGIN", statementSequence))
 					  , optional(context(and("RETURN", expression), Context.Return))
-					  , "END");
+					  , required("END", "END expected (PROCEDURE)"));
 
 var imprt = and(ident, optional(and(":=", ident)));
 var importList = context(and("IMPORT", imprt, repeat(and(",", imprt))),
@@ -173,7 +178,7 @@ var module = context(and("MODULE", ident, ";",
 						 optional(and(importList, ";")),
 						 declarationSequence,
 						 optional(and("BEGIN", statementSequence)),
-						 "END", ident, point),
+						 required("END", "END expected (MODULE)"), ident, point),
 					 Context.ModuleDeclaration);
 
 exports.declarationSequence = declarationSequence;

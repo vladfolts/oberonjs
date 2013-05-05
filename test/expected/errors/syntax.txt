@@ -1,1 +1,1 @@
-line 4: syntax error
+line 4: END expected (MODULE)

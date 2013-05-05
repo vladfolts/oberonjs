@@ -357,6 +357,31 @@ exports.predefined = [
             }));
         var symbol = new Type.Symbol(name, type);
         return symbol;
+    }(),
+    function(){
+        var CallGenerator = ProcCallGenerator.extend({
+            init: function ChrProcCallGenerator(context, id, type){
+                ProcCallGenerator.prototype.init.call(this, context, id, type);
+                this.__callExpression = undefined;
+            },
+            prolog: function(){return "";},
+            epilog: function(){return "";},
+            checkArgument: function(pos, e){
+                this.__callExpression = new Code.Expression(e.code(), Type.basic.char);
+                return ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
+            },
+            callExpression: function(){return this.__callExpression;}
+        });
+        var name = "CHR";
+        var type = new Type.Procedure(new ProcType(
+            "predefined procedure " + name,
+            [new Arg(Type.basic.int, false)],
+            Type.basic.char,
+            function(context, id, type){
+                return new CallGenerator(context, id, type);
+            }));
+        var symbol = new Type.Symbol(name, type);
+        return symbol;
     }()
 	];
 

@@ -9,9 +9,6 @@ function implicitCast(from, to){
 	if (from === to)
 		return doNoting;
 
-	//if (from instanceof VarParameter)
-	//	return implicitCast(from.type(), (to instanceof VarParameter) ? to.type() : to);
-	
 	if (from instanceof Type.String){
 		if (to === Type.basic.char){
 			var v = from.asChar();

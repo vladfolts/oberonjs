@@ -3,8 +3,7 @@ TestError.prototype.toString = function(){return this.__s;};
 
 function runImpl(tests, stat, tab){
     for(var t in tests)
-        if (!runTest(t, tests, stat, tab))
-            ++stat.failCount;
+        runTest(t, tests, stat, tab);
 }
 
 function runTest(t, tests, stat, tab){
@@ -12,10 +11,9 @@ function runTest(t, tests, stat, tab){
 	if (typeof r != "function"){
         console.log(tab + t);
         runImpl(r, stat, tab + "\t");
-        return true;
+        return;
     }
 
-    var result = false;
 	var padding = "                           ";
 	var log = t;
 	if (log.length < padding.length)
@@ -27,16 +25,15 @@ function runTest(t, tests, stat, tab){
         ++stat.count;
 		r();
 		log += "OK";
-		result = true;
 	}
 	catch (x){
+        ++stat.failCount;
 		if (x instanceof TestError)
 			log += "Failed\n\t" + tab + x;
 		else
 			log += "Failed\n" + (x.stack ? x.stack : '\t' + tab + x);
 	}
 	console.log(tab + log);
-	return result;
 }
 
 function run(tests){

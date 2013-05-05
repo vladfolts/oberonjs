@@ -29,6 +29,11 @@ var RTL$ = {
         for(i = 0; i < s.length; ++i)
             result[i] = s.charCodeAt(i);
         return result;
+    },
+	assert: function (condition, code){
+        if (!condition)
+            throw new Error("assertion failed"
+                          + ((code !== undefined) ? " with code " + code : ""));
     }
 };
 var m = function (){
@@ -49,4 +54,6 @@ RTL$.assignArrayFromString(a2, s2);
 p1(RTL$.strToArray(s1));
 p1(RTL$.strToArray(s2));
 p2(34);
+RTL$.assert(ch1 == 34);
+RTL$.assert(34 == ch1);
 }();

@@ -1,0 +1,9 @@
+MODULE m;
+
+VAR ch: CHAR; i: INTEGER;
+
+BEGIN
+    i := 65;
+    ch := CHR(i);
+	ASSERT(CHR(ORD("a")) = "a")
+END m.

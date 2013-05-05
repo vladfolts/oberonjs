@@ -21,5 +21,8 @@ BEGIN
 
 	p1(s1);
 	p1(s2);
-    p2(s1)
+    p2(s1);
+
+    ASSERT(ch1 = s1);
+	ASSERT(s1 = ch1)
 END m.

@@ -64,6 +64,14 @@ function makeTests(test, dirs){
     return tests;
 }
 
+if (process.argv.length > 2){
+    var tests = {};
+    var name = process.argv[2];
+    tests[name] = function(){run(name);};
+    Test.run(tests);
+    return;
+}
+
 var okDirs = {input: "input", output: "output", expected: "expected"};
 var errDirs = {};
 var runDirs = {};

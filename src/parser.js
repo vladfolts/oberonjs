@@ -55,6 +55,8 @@ exports.repeat = function(p){
 
 exports.optional = function(p){
 	assert(arguments.length == 1);
+	if (typeof(p) === "string")
+		p = Lexer.literal(p);
 	return function(stream, context){
 		var savePos = stream.pos();
 		if ( !p(stream, context))

@@ -23,9 +23,43 @@ function getSymbol(context, id){
 	return s;
 }
 
+function throwTypeMismatch(from, to){
+	throw new Errors.Error("type mismatch: expected '" + to.description() +
+					       "', got '" + from.description() + "'");
+}
+
+function checkTypeMatch(from, to){
+	if (from !== to)
+		throwTypeMismatch(from, to);
+}
+
 function checkImplicitCast(from, to){
-	if (!Cast.implicit(from, to))
-		throw new Errors.Error("type mismatch: expected '" + to.name() + "', got '" + from.name() + "'");
+	var result = Cast.implicit(from, to);
+	if (!result)
+		throwTypeMismatch(from, to);
+	return result;
+}
+
+function promoteTypeInExpression(e, type){
+	var fromType = e.type();
+	if (type == Type.basic.char && fromType instanceof Type.String){
+		var v = fromType.asChar();
+		if (v !== undefined)
+			return new Code.Expression(v, type);
+	}
+    return e;
+}
+
+function promoteExpressionType(context, left, right){
+    var rightType = right.type();
+	if (!left)
+		return right;
+
+    var leftType = left.type();
+	if (rightType === undefined)
+		return right;
+	
+    return checkImplicitCast(rightType, leftType)(context, right);
 }
 
 function checkTypeCast(from, to, msg){
@@ -666,75 +700,34 @@ function writeDerefDesignatorCode(designator, code){
 
 exports.Term = ChainedContext.extend({
 	init: function TermContext(context){
-		ChainedContext.prototype.init.bind(this)(context);
+		ChainedContext.prototype.init.call(this, context);
 		this.__operator = undefined;
-		this.__code = new Code.SimpleGenerator();
-		this.__left = undefined;
-		this.__isConst = true;
-		this.__value = undefined;
-		this.__designator = undefined;
 		this.__expression = undefined;
 	},
-	codeGenerator: function(){return this.__code;},
-	type: function(){return this.parent().type();},
+	type: function(){return this.__expression.type();},
 	setDesignator: function(d){
-		var type = d.type();
-		this.parent().setType(type);
-
 		var value;
 		var info = d.info();
-		if (!(info instanceof Type.Const))
-			this.__isConst = false;
-		else {
+		if (info instanceof Type.Const)
 			value = info.value();
-			this.handleConst(type, info.value(), d.code());
-		}
-		
-		this.__handleExpression(
+		this.handleExpression(
 			new Code.Expression(d.code(), d.type(), d, value));
-
-		this.__code.write(d.code());
-		this.__designator = d;
-		//if (this.__operator)
-		//	this.__derefDesignator();
 	},
-	handleOperator: function(o){
-		this.__derefDesignator();
-		//this.__left = this.__operator
-		//	? this.__operator.code(this.__left, this.__code.result())
-		//	: this.__code.result();
-		this.__operator = o;
-		this.__code = new Code.SimpleGenerator();
-	},
+	handleOperator: function(o){this.__operator = o;},
 	handleConst: function(type, value, code){
-		this.parent().setType(type);
-		//if (value === undefined)
-		//	this.__isConst = false;
-		//else if (this.__isConst)
-		//	this.__value = this.__operator ? this.__operator.eval(this.__value, value)
-		//								   : value;
-		this.__handleExpression(new Code.Expression(
+		this.handleExpression(new Code.Expression(
 			code, type, undefined, value));
 	},
 	handleFactor: function(e){
 		var type = e.type();
 		if (!type)
 			throw new Errors.Error("procedure returning no result cannot be used in an expression");
-		this.setType(type);
-		this.__handleExpression(e);
-		this.__code.write(e.code());
+		this.handleExpression(e);
 	},
 	endParse: function(){this.parent().handleTerm(this.__expression);},
-	__derefDesignator: function(){
-		var designator = this.__designator;
-		if (!designator)
-			return;
-
-		writeDerefDesignatorCode(designator, this.__code);
-		this.__designator = undefined;
-	},
-	__handleExpression: function(e){
-		if (this.__operator)
+	handleExpression: function(e){
+		e = promoteExpressionType(this, this.__expression, e);
+        if (this.__operator)
 			e = this.__expression ? this.__operator(this.__expression, e)
                                   : this.__operator(e);
 		this.__expression = e;
@@ -842,6 +835,7 @@ exports.SimpleExpression = ChainedContext.extend({
 		this.__exp = undefined;
 	},
 	handleTerm: function(e){
+		this.setType(e.type());
 		if (this.__unaryOperator){
 			this.__exp = this.__unaryOperator(e);
 			this.__unaryOperator = undefined;
@@ -884,11 +878,12 @@ exports.Expression = ChainedContext.extend({
             return;
         }
 
-        var leftType = this.__expression.type();
-        var rightType = e.type();
-        var leftCode = this.__expression.code();
         var leftExpression = this.__expression;
-        var rightCode = e.code();
+        var leftType = leftExpression.type();
+        var leftCode = leftExpression.code();
+        var rightExpression = e;
+        var rightType = rightExpression.type();
+        var rightCode = rightExpression.code();
         var code;
 
         if (this.__relation == "IN"){
@@ -911,8 +906,13 @@ exports.Expression = ChainedContext.extend({
                 throw new Errors.Error("type name expected");
             code = leftCode + " instanceof " + rightCode;
         }
-        else
-            checkImplicitCast(rightType, leftType);
+        else{
+            leftExpression = promoteTypeInExpression(leftExpression, rightType);
+            rightExpression = promoteTypeInExpression(rightExpression, leftType);
+            leftCode = leftExpression.code();
+            rightCode = rightExpression.code();
+            checkImplicitCast(rightExpression.type(), leftExpression.type());
+        }
 
         if (this.__relation == "=")
             code = Code.adjustPrecedence(leftExpression, precedence.equal) + " == " + rightCode;
@@ -1384,7 +1384,7 @@ var ProcedureCall = ChainedContext.extend({
 	hasActualParameters: function(){},
 	handleExpression: function(e){this.__procCall.handleArgument(e);},
 	callExpression: function(){return this.__callExpression;},
-	endParse: function(){this.__callExpression = this.__procCall.end(); /*console.log(this.__callExpression.maxPrecedence())*/;}
+	endParse: function(){this.__callExpression = this.__procCall.end();}
 });
 
 exports.StatementProcedureCall = ProcedureCall.extend({
