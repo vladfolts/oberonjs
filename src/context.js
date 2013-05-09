@@ -3,7 +3,7 @@ var Code = require("code.js");
 var Errors = require("errors.js");
 var Lexer = require("lexer.js");
 var Module = require("module.js");
-var precedence = require("operator.js").precedence;
+var op = require("operator.js");
 var Parser = require("parser.js");
 var Procedure = require("procedure.js");
 var ImportRTL = require("rtl.js");
@@ -194,6 +194,7 @@ exports.Designator = ChainedContext.extend({
 		this.__currentType = undefined;
 		this.__info = undefined;
 		this.__code = new Code.SimpleGenerator();
+        this.__indexExpression = undefined;
 		this.__derefCode = undefined;
 		this.__propCode = undefined;
 	},
@@ -225,7 +226,9 @@ exports.Designator = ChainedContext.extend({
 		this.__code.write(id);
 	},
 	codeGenerator: function(){return this.__code;},
-	handleExpression: function(e){
+	handleExpression: function(e){this.__indexExpression = e;},
+    __handleIndexExpression: function(){
+        var e = this.__indexExpression;
         var expType = e.type();
 		if (expType != basicTypes.int)
 			throw new Errors.Error("'INTEGER' expression expected, got '" + expType.name() + "'");
@@ -240,13 +243,11 @@ exports.Designator = ChainedContext.extend({
 								 + ", got " + value );
 		this.__currentType = type.elementsType();
 		this.__info = new Type.Variable(this.__currentType, false, this.__info.isReadOnly());
-        var designator = e.designator();
-		if (designator)
-			writeDerefDesignatorCode(designator, this.__code);
 	},
 	handleLiteral: function(s){
 		if (s == "]" || s == ","){
-			var indexCode = this.__code.result();
+            this.__handleIndexExpression();
+			var indexCode = this.__indexExpression.deref().code();
 			this.__propCode = indexCode;
 			this.__code = new Code.SimpleGenerator(this.__derefCode + "[" + indexCode + "]");
 			}
@@ -584,111 +585,54 @@ function makeUnaryOperator(op, code){
 	};
 }
 
-function makeBinaryOperator(op, code){
-	return function(left, right){
-		var leftValue = left.constValue();
-		var rightValue = right.constValue();
-		var value = (leftValue !== undefined && rightValue !== undefined)
-			? op(leftValue, rightValue) : undefined;
-
-        var leftCode = left.deref().code();
-        var rightCode = right.deref().code();
-        var expCode = (typeof code == "function")
-                    ? code(leftCode, rightCode)
-                    : leftCode + code + rightCode;
-		return new Code.Expression(expCode,	left.type(), undefined,	value);
-	};
-}
-
 exports.AddOperator = ChainedContext.extend({
 	init: function AddOperatorContext(context){
 		ChainedContext.prototype.init.bind(this)(context);
 	},
 	handleLiteral: function(s){
 		var parent = this.parent();
-		if (s == "+"){
-			if (parent.type() == basicTypes.set)
-				parent.handleBinaryOperator(
-					makeBinaryOperator(function(x, y){return x | y;}, " | "));
-			else
-				parent.handleBinaryOperator(
-					makeBinaryOperator(function(x, y){return x + y;}, " + "));
-		}
-		else if (s == "-"){
-			if (parent.type() == basicTypes.set)
-				parent.handleBinaryOperator(
-					makeBinaryOperator(function(x, y){return x & ~y;}, " & ~"));
-			else
-				parent.handleBinaryOperator(
-					makeBinaryOperator(function(x, y){return x - y;}, " - "));
-		}
+        var type = parent.type();
+        var o;
+		if (s == "+")
+			o = (type == basicTypes.set) ? op.setUnion : op.add;
+		else if (s == "-")
+			o = (type == basicTypes.set) ? op.setDiff : op.sub;
 		else if (s == "OR"){
-			var type = parent.type();
 			if (type != basicTypes.bool)
 				throw new Errors.Error("BOOLEAN expected as operand of 'OR', got '"
 									 + type.name() + "'");
-			parent.handleBinaryOperator(
-				makeBinaryOperator(function(x, y){return x || y;}, " || "));
+			o = op.or;
 		}
+        if (o)
+            parent.handleBinaryOperator(o);
 	}
 });
-/*
-var Operator = Class.extend({
-	init: function Operator(eval, code){
-		this.__eval = eval;
-		this.__code = code;
-	},
-	eval: function(x, y){return this.__eval(x, y);},
-	code: function(x, y){return this.__code(x, y);},
-	expression: function(x, y){
-		var xValue = x ? x.constValue() : undefined;
-		var yValue = y.constValue();
-		var value = ((!x || xValue) && yValue) ? this.__eval(xValue, yValue) : undefined;
-		return new Code.Expression(
-			this.__code(x ? x.code() : undefined, y.code()),
-			y.type(),
-			undefined,
-			value
-			);
-	}
-});
-*/
+
 exports.MulOperator = ChainedContext.extend({
 	init: function MulOperatorContext(context){
 		ChainedContext.prototype.init.bind(this)(context);
 	},
 	handleLiteral: function(s){
 		var parent = this.parent();
+        var type = parent.type();
+        var o;
 		if (s == "*")
-			if (parent.type() == basicTypes.set)
-				parent.handleOperator(makeBinaryOperator(
-					  function(x, y){return x & y;}, " & "));
-			else
-				parent.handleOperator(makeBinaryOperator(
-					  function(x, y){return x * y;}, " * "));
+			o = (type == basicTypes.set) ? op.setIntersection : op.mul;
 		else if (s == "/")
-			if (parent.type() == basicTypes.set)
-				parent.handleOperator(makeBinaryOperator(
-					  function(x, y){return x ^ y;}, " ^ "));
-			else
-				parent.handleOperator(makeBinaryOperator(
-					  function(x, y){return x / y;}, " / "));
+			o = (type == basicTypes.set) ? op.setSymmetricDiff : op.divFloat;
 		else if (s == "DIV")
-			parent.handleOperator(makeBinaryOperator(
-				  function(x, y){return (x / y) >> 0;}
-				, function(x, y){return "(" + x + " / " + y + ") >> 0";}
-				));
+			o = op.div;
 		else if (s == "MOD")
-			parent.handleOperator(makeBinaryOperator(
-				  function(x, y){return x % y;}, " % "));
+			o = op.mod;
 		else if (s == "&"){
-			var type = parent.type();
 			if (type != basicTypes.bool)
 				throw new Errors.Error("BOOLEAN expected as operand of '&', got '"
 									 + type.name() + "'");
-			parent.handleOperator(makeBinaryOperator(
-				  function(x, y){return x && y;}, " && "));
+			o = op.and;
 		}
+
+        if (o)
+            parent.handleOperator(o);
 	}
 });
 
@@ -915,7 +859,7 @@ exports.Expression = ChainedContext.extend({
         }
 
         if (this.__relation == "=")
-            code = Code.adjustPrecedence(leftExpression, precedence.equal) + " == " + rightCode;
+            code = op.equal(leftExpression, rightExpression).code();
         else if (this.__relation == "#")
             code = leftCode + " != " + rightCode;
         else if (this.__relation == "<=")

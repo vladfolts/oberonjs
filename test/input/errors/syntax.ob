@@ -1,5 +1,6 @@
 MODULE m1;
 VAR i: INTEGER;
 BEGIN
-	i := 1; (* extra semicolon *)
+	i := 1;
+	!!!
 END m1.

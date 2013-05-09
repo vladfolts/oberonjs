@@ -1,0 +1,44 @@
+MODULE m;
+
+VAR ch: CHAR; i: INTEGER; b: BOOLEAN; r: REAL; s: SET; a: ARRAY 10 OF INTEGER;
+
+BEGIN
+    i := 65;
+    ch := CHR(i);
+	i := (ORD(ch) + i) / 2;
+    ASSERT(i = 65);
+
+	a[(i - 64) * 3] := i;
+
+    i := i + (i - 1);
+    i := (i - i) + 1;
+
+    i := (i * i) + 1;
+    i := i * (i + 1);
+
+    i := i DIV 2 + 1;
+    i := i DIV (2 + 1);
+
+    r := r / 2. + 1.;
+    r := r / (2. + 1.);
+
+    i := i MOD 2 + 1;
+    i := i MOD (2 + 1);
+
+    b := (b & b) OR b;
+    b := b & (b OR b);
+    b := b & b OR b;
+    b := b OR b & b;
+    
+    b := (b = b) OR b;
+    b := b = (b OR b);
+
+    s := (s + s) - s;
+    s := s + (s - s);
+
+    s := (s * s) / s;
+    s := s * (s / s);
+
+    s := s * s + s;
+    s := s * (s + s);
+END m.
