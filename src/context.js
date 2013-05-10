@@ -574,17 +574,6 @@ exports.ArrayDimensions = ChainedContext.extend({
 	}
 });
 
-function makeUnaryOperator(op, code){
-	return function(e){
-		var type = e.type();
-        var value = e.constValue();
-        if (value !== undefined)
-            value = op(value, type) ;
-        var expCode = ((typeof code == "function") ? code(type) : code) + e.deref().code();
-		return new Code.Expression(expCode, type, undefined, value);
-	};
-}
-
 exports.AddOperator = ChainedContext.extend({
 	init: function AddOperatorContext(context){
 		ChainedContext.prototype.init.bind(this)(context);
@@ -693,8 +682,7 @@ exports.Factor = ChainedContext.extend({
 			parent.handleConst(basicTypes.bool, false, "false");
 		else if (s == "~"){
 			parent.setType(basicTypes.bool);
-			parent.handleOperator(makeUnaryOperator(
-				  function(x){return !x;}, "!"));
+			parent.handleOperator(op.not);
 		}
 	},
 	handleFactor: function(e){this.parent().handleFactor(e);}
@@ -779,24 +767,26 @@ exports.SimpleExpression = ChainedContext.extend({
 		this.__exp = undefined;
 	},
 	handleTerm: function(e){
-		this.setType(e.type());
-		if (this.__unaryOperator){
-			this.__exp = this.__unaryOperator(e);
+        var type = e.type();
+		this.setType(type);
+
+        var o;
+        switch(this.__unaryOperator){
+            case "-":
+                o = (type == basicTypes.set) ? op.setComplement : op.negate;
+                break;
+            case "+":
+                o = op.unaryPlus;
+                break;
+            }
+        if (o){
+			this.__exp = o(e);
 			this.__unaryOperator = undefined;
-		}
+        }
 		else
 			this.__exp = this.__exp ? this.__binaryOperator(this.__exp, e) : e;
 	},
-	handleLiteral: function(s){
-		if (s == "-")
-			this.__unaryOperator = makeUnaryOperator(
-				function(x, type){return type == basicTypes.set ? ~x : -x;},
-				function(type){return type == basicTypes.set ? "~" : "-";}
-				);
-		else if (s == "+")
-			this.__unaryOperator = makeUnaryOperator(
-				function(x){return x;}, "");
-	},
+	handleLiteral: function(s){this.__unaryOperator = s;},
 	type: function(){return this.__type;},
 	setType: function(type){
 		if (type === undefined || this.__type === undefined)
@@ -861,7 +851,7 @@ exports.Expression = ChainedContext.extend({
         if (this.__relation == "=")
             code = op.equal(leftExpression, rightExpression).code();
         else if (this.__relation == "#")
-            code = leftCode + " != " + rightCode;
+            code = op.notEqual(leftExpression, rightExpression).code();
         else if (this.__relation == "<=")
             code = this.rtl().setInclL(leftCode, rightCode);
         else if (this.__relation == ">=")

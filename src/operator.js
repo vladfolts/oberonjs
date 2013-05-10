@@ -1,6 +1,9 @@
+"use strict";
+
 var Code = require("code.js");
 
 var precedence = {
+    unary: 4,
     mulDivMod: 5,
     addSub: 6,
     shift: 7,
@@ -14,7 +17,7 @@ var precedence = {
     assignment: 17
 };
 
-function make(op, code, precedence, resultPrecedence){
+function makeBinary(op, code, precedence, resultPrecedence){
     return function(left, right){
         var leftValue = left.constValue();
         var rightValue = right.constValue();
@@ -22,7 +25,9 @@ function make(op, code, precedence, resultPrecedence){
             ? op(leftValue, rightValue) : undefined;
 
         var leftCode = Code.adjustPrecedence(left.deref(), precedence);
-        var rightCode = Code.adjustPrecedence(right.deref(), precedence);
+
+        // right code needs parentheses even if it has the same percedence 
+        var rightCode = Code.adjustPrecedence(right.deref(), precedence - 1);
         var expCode = (typeof code == "function")
                     ? code(leftCode, rightCode)
                     : leftCode + code + rightCode;
@@ -30,22 +35,39 @@ function make(op, code, precedence, resultPrecedence){
     };
 }
 
+function makeUnary(op, code){
+    return function(e){
+        var type = e.type();
+        var value = e.constValue();
+        if (value !== undefined)
+            value = op(value, type) ;
+        var expCode = code + Code.adjustPrecedence(e.deref(), precedence.unary);
+        return new Code.Expression(expCode, type, undefined, value);
+    };
+}
+
 var operators = {
-    add: make(function(x, y){return x + y;}, " + ", precedence.addSub),
-    sub: make(function(x, y){return x - y;}, " - ", precedence.addSub),
-    mul: make(function(x, y){return x * y;}, " * ", precedence.mulDivMod),
-    div: make(function(x, y){return (x / y) >> 0;},
+    add: makeBinary(function(x, y){return x + y;}, " + ", precedence.addSub),
+    sub: makeBinary(function(x, y){return x - y;}, " - ", precedence.addSub),
+    mul: makeBinary(function(x, y){return x * y;}, " * ", precedence.mulDivMod),
+    div: makeBinary(function(x, y){return (x / y) >> 0;},
               function(x, y){return x + " / " + y + " >> 0";},
               precedence.mulDivMod, precedence.shift),
-    divFloat: make(function(x, y){return x / y;}, " / ", precedence.mulDivMod),
-    mod: make(function(x, y){return x % y;}, " % ", precedence.mulDivMod),
-    setUnion: make(function(x, y){return x | y;}, " | ", precedence.bitOr),
-    setDiff: make(function(x, y){return x & ~y;}, " & ~", precedence.bitAnd),
-    setIntersection: make(function(x, y){return x & y;}, " & ", precedence.bitAnd),
-    setSymmetricDiff: make(function(x, y){return x ^ y;}, " ^ ", precedence.bitXor),
-    or: make(function(x, y){return x || y;}, " || ", precedence.or),
-    and: make(function(x, y){return x && y;}, " && ", precedence.and),
-    equal: make(function(x, y){return x && y;}, " == ", precedence.equal)
+    divFloat:   makeBinary(function(x, y){return x / y;}, " / ", precedence.mulDivMod),
+    mod:        makeBinary(function(x, y){return x % y;}, " % ", precedence.mulDivMod),
+    setUnion:   makeBinary(function(x, y){return x | y;}, " | ", precedence.bitOr),
+    setDiff:    makeBinary(function(x, y){return x & ~y;}, " & ~", precedence.bitAnd),
+    setIntersection: makeBinary(function(x, y){return x & y;}, " & ", precedence.bitAnd),
+    setSymmetricDiff: makeBinary(function(x, y){return x ^ y;}, " ^ ", precedence.bitXor),
+    or:         makeBinary(function(x, y){return x || y;}, " || ", precedence.or),
+    and:        makeBinary(function(x, y){return x && y;}, " && ", precedence.and),
+    equal:      makeBinary(function(x, y){return x == y;}, " == ", precedence.equal),
+    notEqual:   makeBinary(function(x, y){return x != y;}, " != ", precedence.equal),
+
+    not:        makeUnary(function(x){return !x;}, "!"),
+    negate:     makeUnary(function(x){return -x;}, "-"),
+    unaryPlus:  makeUnary(function(x){return x;}, ""),
+    setComplement: makeUnary(function(x){return ~x;}, "~")
 };
 
 for(var p in operators)
