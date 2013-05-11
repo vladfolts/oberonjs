@@ -17,6 +17,7 @@ END test.
 </p>
 
 <p id="compileErrors" style="color:red"></p>
+<p id="compileTime"></p>
 
 <textarea id="result" rows="10" cols="80">
 </textarea>
@@ -24,6 +25,8 @@ END test.
 <button onclick="run()">Run</button>
 </p>
 <p id="runErrors" style="color:red"></p>
+<p id="runTime"></p>
+<a href="http://oberspace.dyndns.org">Home</a>
 
 <script>
 function require(){}
@@ -36,6 +39,7 @@ function compile(){
 	var src = document.getElementById("source").value;
 	var result;
 	var errors = "";
+	var start = new Date();
 	try {
 		result = require("oc.js").compile(src, function(e){
 			errors += e;
@@ -44,16 +48,19 @@ function compile(){
 	catch (e) {
 		errors += e;
 		}
+	var compileTime = (new Date() - start) / 1000;
 
 	if (!result)
 		result = "";
 	document.getElementById("result").value = result;
 	document.getElementById("compileErrors").textContent = errors;
+	document.getElementById("compileTime").textContent = "compile time (seconds): " + compileTime;
 }
 
 function run(){
 	var errElement = document.getElementById("runErrors");
 	errElement.textContent = "";
+	var start = new Date();
 	try{
 		eval(document.getElementById("result").value);
 	}
@@ -61,6 +68,8 @@ function run(){
 		var errors = "" + e;
 		errElement.textContent = errors;
 	}
+	var runTime = (new Date() - start) / 1000;
+	document.getElementById("runTime").textContent = "rune time (seconds): " + runTime;
 }
 </script>
 
