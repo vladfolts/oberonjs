@@ -25,7 +25,7 @@ var RTL$ = {
         }
         else
             for(i = 0; i < result.length; ++i)
-                result[i] = RTLMakeArray.apply(this, forward);
+                result[i] = this.makeArray.apply(this, forward);
         return result;
     },
 	makeRef: function (obj, prop){

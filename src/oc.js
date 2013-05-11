@@ -8,6 +8,7 @@ var Stream = require("stream.js").Stream;
 exports.compile = function(text, handleErrors){
 	var stream = new Stream(text);
 	var context = new Context.Context();
+	Lexer.skipSpaces(stream, context);	
 	try {
 		if (!Grammar.module(stream, context))
 			throw new Errors.Error("syntax error");

@@ -1,0 +1,11 @@
+MODULE m;
+
+VAR
+    a1: ARRAY 5, 10 OF INTEGER;
+
+BEGIN
+    a1[0, 1] := 1;
+    ASSERT(a1[0, 1] = 1);
+    a1[1, 0] := a1[0, 1];
+    ASSERT(a1[1, 0] = 1);
+END m.

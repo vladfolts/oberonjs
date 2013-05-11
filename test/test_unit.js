@@ -82,6 +82,7 @@ comment: function(){
 	var test = setup(Grammar.expression);
 	test.parse("(**)123");
 	test.parse("(*abc*)123");
+	test.parse("(*abc*)(*def*)123");
 	test.parse("(*a(*b*)c*)123");
 	test.expectError("(*123", "comment was not closed");
 },
@@ -896,6 +897,9 @@ IMPORT: function(){
 	test.parse("MODULE m; IMPORT JS; END m.");
 	test.parse("MODULE m; IMPORT JS; BEGIN JS.alert(\"test\") END m.");
 	test.parse("MODULE m; IMPORT JS; BEGIN JS.console.info(123) END m.");
+	test.expectError("MODULE m; IMPORT unknown; END m.", "module(s) not found: unknown");
+	test.expectError("MODULE m; IMPORT unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2");
+	test.expectError("MODULE m; IMPORT u1 := unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2");
 }};
 
 Test.run(testSuite);

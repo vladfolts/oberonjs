@@ -100,8 +100,9 @@ exports.skipSpaces = function(stream, context){
 	if (context.isLexem && context.isLexem())
 		return;
 
-	stream.read(function(c){return ' \t\n\r'.indexOf(c) != -1;});
-	skipComment(stream);
+	do
+		stream.read(function(c){return ' \t\n\r'.indexOf(c) != -1;});
+	while (skipComment(stream));
 }
 
 exports.separator = function(stream, context){
