@@ -1,0 +1,54 @@
+(*
+http://oberspace.dyndns.org/index.php/topic,484.msg15835.html#msg15835
+*)
+MODULE Blur;
+
+  (*IMPORT dt := DateTime, In, Out, RTL;*)
+
+  CONST
+    W = 640; W1 = 640 - 3;
+    H = 480; H1 = 480 - 3;
+    N = 13;
+    Frames = 1;
+
+  TYPE
+    Plane = ARRAY W*3, H OF CHAR;
+
+  VAR
+    a, b:  Plane;
+    time: LONGREAL;
+
+  PROCEDURE Blur2DArray*;
+  VAR
+    f, n : INTEGER;
+    x, y : INTEGER;
+    color : INTEGER;
+  BEGIN
+    FOR f:=1 TO Frames DO
+      FOR n:=1 TO N DO
+        FOR y:=1 TO H-2 DO
+          FOR x:=1 TO W-2 DO
+            FOR color:=0 TO 2 DO
+              b[x*3+color,y] := CHR((ORD(a[x*3+color,y+1])+ORD(a[x*3+color,y-1])+ORD(a[(x-1)*3,y])+ORD(a[(x+1)*3,y])) DIV 4);
+            END
+          END
+        END;
+        FOR y:=1 TO H-2 DO
+          FOR x:=1 TO W-2 DO
+            FOR color:=0 TO 2 DO
+              a[x*3+color,y] := CHR((ORD(b[x*3+color,y+1])+ORD(b[x*3+color,y-1])+ORD(b[(x-1)*3,y])+ORD(b[(x+1)*3,y])) DIV 4);
+            END
+          END
+        END
+      END
+    END;
+  END Blur2DArray;
+
+BEGIN
+  (*In.Open;
+  Out.Open;
+  time := dt.Now();*)
+  Blur2DArray;
+  (*Out.FixReal(LONG(FLT(Frames))/((dt.Now() - time) * 86400.D0), 20, 5);
+  In.Ln;*)
+END Blur.
