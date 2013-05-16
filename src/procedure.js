@@ -326,10 +326,13 @@ exports.predefined = [
             checkArgument: function(pos, e){
                 var type = e.type();
                 if (type == Type.basic.char || type == Type.basic.set)
-                    this.__callExpression = new Code.Expression(e.code(), Type.basic.int);
+                    this.__callExpression = new Code.Expression(e.code(), Type.basic.int, undefined, e.constValue());
                 else if (type == Type.basic.bool){
                     var code = Code.adjustPrecedence(e, precedence.conditional) + " ? 1 : 0";
-                    this.__callExpression = new Code.Expression(code, Type.basic.int, undefined, undefined, precedence.conditional);
+                    var value = e.constValue();
+                    if (value !== undefined)
+                        value = value ? 1 : 0;
+                    this.__callExpression = new Code.Expression(code, Type.basic.int, undefined, value, precedence.conditional);
                 }
                 else if (type instanceof Type.String){
                     var ch = type.asChar();

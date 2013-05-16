@@ -1,5 +1,5 @@
 var RTL$ = {
-	makeSet: function (/*...*/){
+    makeSet: function (/*...*/){
         var result = 0;
         
         function checkBit(b){
@@ -27,8 +27,8 @@ var RTL$ = {
         }
         return result;
     },
-	setInclL: function (l, r){return l & r == l;},
-	setInclR: function (l, r){return l & r == r;}
+    setInclL: function (l, r){return (l & r) == l;},
+    setInclR: function (l, r){return (l & r) == r;}
 };
 var m = function (){
 var ci = 3;
@@ -40,6 +40,14 @@ var cs5 = ~2;
 var s1 = 0;var s2 = 0;
 var i1 = 0;
 var b = false;
+
+function getSet1(){
+	return 2;
+}
+
+function getSet2(){
+	return 4;
+}
 s1 = 0;
 s1 = 61;
 s1 = 8;
@@ -50,6 +58,14 @@ s2 = RTL$.makeSet(i1) | 4;
 b = 1 << i1 & s1;
 b = RTL$.setInclL(s1, s2);
 b = RTL$.setInclR(s1, s2);
+b = RTL$.setInclL(getSet1(), getSet2());
+b = RTL$.setInclR(getSet1(), getSet2());
+b = RTL$.setInclL(cs1, cs2);
+b = RTL$.setInclR(cs1, cs2);
+b = RTL$.setInclL(cs1 | cs2, cs1 | cs2);
+b = RTL$.setInclR(cs1 | cs2, cs2 | cs1);
+b = RTL$.setInclL(2 | 4, 2 | 4);
+b = RTL$.setInclR(2 | 4, 4 | 2);
 b = s1 == s2;
 b = s1 != s2;
 s1 = s1 | s2;

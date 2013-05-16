@@ -1,5 +1,5 @@
 var RTL$ = {
-	makeArray: function (/*dimensions, initializer*/){
+    makeArray: function (/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
         var result = new Array(forward.shift());
         var i;
@@ -17,7 +17,7 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-	assert: function (condition, code){
+    assert: function (condition, code){
         if (!condition)
             throw new Error("assertion failed"
                           + ((code !== undefined) ? " with code " + code : ""));

@@ -1,3 +1,5 @@
+"use strict";
+
 function Class(){}
 Class.extend = function extend(methods){
         methods.__proto__ = this.prototype; // make instanceof work
@@ -67,8 +69,8 @@ var impl = {
         return {set: function(v){ obj[prop] = v; },
                 get: function(){ return obj[prop]; }};
     },
-    setInclL: function(l, r){return l & r == l;},
-    setInclR: function(l, r){return l & r == r;},
+    setInclL: function(l, r){return (l & r) == l;},
+    setInclR: function(l, r){return (l & r) == r;},
     assignArrayFromString: function(a, s){
         var i;
         for(i = 0; i < s.length; ++i)
@@ -124,7 +126,7 @@ exports.RTL = Class.extend({
                 result += ",\n";
             else
                 firstEntry = false;
-            result += "\t" + name + ": " + this.__entries[name].toString();
+            result += "    " + name + ": " + this.__entries[name].toString();
         }
         if (!firstEntry)
             result += "\n};\n";

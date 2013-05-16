@@ -1,3 +1,5 @@
+"use strict";
+
 var Class = require("rtl.js").Class;
 var Type = require("type.js");
 
@@ -70,12 +72,13 @@ var Expression = Class.extend({
     }
 });
 
-exports.adjustPrecedence = function(e, precedence){
+function adjustPrecedence(e, precedence){
     var code = e.code();
     if (e.maxPrecedence() > precedence)
         code = "(" + code + ")";
     return code;
-};
+}
 
 exports.nullGenerator = new NullCodeGenerator();
 exports.Expression = Expression;
+exports.adjustPrecedence = adjustPrecedence;

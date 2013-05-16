@@ -13,6 +13,14 @@ VAR
 	i1: INTEGER;
 	b: BOOLEAN;
 
+PROCEDURE getSet1(): SET;
+	RETURN {1}
+END getSet1;
+
+PROCEDURE getSet2(): SET;
+	RETURN {2}
+END getSet2;
+
 BEGIN
 	s1 := {};
 	s1 := {0, 2..5};
@@ -26,6 +34,14 @@ BEGIN
 	b := i1 IN s1;
 	b := s1 <= s2;
 	b := s1 >= s2;
+	b := getSet1() <= getSet2();
+	b := getSet1() >= getSet2();
+    b := cs1 <= cs2;
+    b := cs1 >= cs2;
+    b := cs1 + cs2 <= cs1 + cs2;
+    b := cs1 + cs2 >= cs2 + cs1;
+    b := {1} + {2} <= {1} + {2};
+    b := {1} + {2} >= {2} + {1};
 	b := s1 = s2;
 	b := s1 # s2;
 

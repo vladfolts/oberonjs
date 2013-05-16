@@ -1,5 +1,5 @@
 var RTL$ = {
-	extend: function extend(methods){
+    extend: function extend(methods){
         methods.__proto__ = this.prototype; // make instanceof work
 
         // to see constructor name in diagnostic
@@ -10,7 +10,7 @@ var RTL$ = {
         result.extend = extend;
         return result;
     },
-	makeArray: function (/*dimensions, initializer*/){
+    makeArray: function (/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
         var result = new Array(forward.shift());
         var i;
@@ -28,7 +28,7 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-	makeRef: function (obj, prop){
+    makeRef: function (obj, prop){
         return {set: function(v){ obj[prop] = v; },
                 get: function(){ return obj[prop]; }};
     }

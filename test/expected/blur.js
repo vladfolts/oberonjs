@@ -1,5 +1,5 @@
 var RTL$ = {
-	makeArray: function (/*dimensions, initializer*/){
+    makeArray: function (/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
         var result = new Array(forward.shift());
         var i;

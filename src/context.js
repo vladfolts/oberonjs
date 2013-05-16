@@ -1,3 +1,5 @@
+"use strict";
+
 var Cast = require("cast.js");
 var Code = require("code.js");
 var Errors = require("errors.js");
@@ -848,16 +850,35 @@ exports.Expression = ChainedContext.extend({
             checkImplicitCast(rightExpression.type(), leftExpression.type());
         }
 
-        if (this.__relation == "=")
-            code = op.equal(leftExpression, rightExpression).code();
-        else if (this.__relation == "#")
-            code = op.notEqual(leftExpression, rightExpression).code();
-        else if (this.__relation == "<=")
-            code = this.rtl().setInclL(leftCode, rightCode);
-        else if (this.__relation == ">=")
-            code = this.rtl().setInclR(leftCode, rightCode);
+        var o;
+        switch (this.__relation){
+            case "=":
+                o = op.equal;
+                break;
+            case "#":
+                o = op.notEqual;
+                break;
+            case "<":
+                o = op.less;
+                break;
+            case ">":
+                o = op.greater;
+                break;
+            case "<=":
+                o = (leftType == basicTypes.set) ? op.setInclL : op.eqLess;
+                break;
+            case ">=":
+                o = (leftType == basicTypes.set) ? op.setInclR : op.eqGreater;
+                break;
+            }
+        var value;
+        if (o){
+            var oResult = o(leftExpression, rightExpression, this);
+            code = oResult.code();
+            value = oResult.constValue();
+        }
 
-        this.__expression = new Code.Expression(code, basicTypes.bool);
+        this.__expression = new Code.Expression(code, basicTypes.bool, undefined, value);
     },
     handleLiteral: function(relation){
         this.__relation = relation;
@@ -875,30 +896,32 @@ function handleIfExpression(e){
         throw new Errors.Error("'BOOLEAN' expression expected, got '" + type.name() + "'");
 }
 
-function endIfParse(){
-    var gen = this.codeGenerator();
-    gen.write(")");
-    gen.openScope();
-}
+var IfContextBase = ChainedContext.extend({
+    init: function(context){
+        ChainedContext.prototype.init.call(this, context);
+    },
+    endParse: function(){
+        var gen = this.codeGenerator();
+        gen.write(")");
+        gen.openScope();
+    },
+    handleExpression: handleIfExpression
+});
 
-exports.If = ChainedContext.extend({
+exports.If = IfContextBase.extend({
     init: function IfContext(context){
         ChainedContext.prototype.init.bind(this)(context);
         this.codeGenerator().write("if (");
-    },
-    handleExpression: handleIfExpression,
-    endParse: endIfParse
+    }
 });
 
-exports.ElseIf = ChainedContext.extend({
+exports.ElseIf = IfContextBase.extend({
     init: function ElseIfContext(context){
         ChainedContext.prototype.init.bind(this)(context);
         var gen = this.codeGenerator();
         gen.closeScope();
         gen.write("else if (");
-    },
-    handleExpression: handleIfExpression,
-    endParse: endIfParse
+    }
 });
 
 exports.Else = ChainedContext.extend({

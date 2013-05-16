@@ -1,5 +1,5 @@
 var RTL$ = {
-	makeArray: function (/*dimensions, initializer*/){
+    makeArray: function (/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
         var result = new Array(forward.shift());
         var i;
@@ -17,7 +17,7 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-	extend: function extend(methods){
+    extend: function extend(methods){
         methods.__proto__ = this.prototype; // make instanceof work
 
         // to see constructor name in diagnostic
@@ -28,7 +28,7 @@ var RTL$ = {
         result.extend = extend;
         return result;
     },
-	copy: function (from, to){
+    copy: function (from, to){
         for(var prop in to){
             if (to.hasOwnProperty(prop)){
                 var v = from[prop];

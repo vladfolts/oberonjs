@@ -1,5 +1,5 @@
 var RTL$ = {
-	extend: function extend(methods){
+    extend: function extend(methods){
         methods.__proto__ = this.prototype; // make instanceof work
 
         // to see constructor name in diagnostic
@@ -10,7 +10,7 @@ var RTL$ = {
         result.extend = extend;
         return result;
     },
-	copy: function (from, to){
+    copy: function (from, to){
         for(var prop in to){
             if (to.hasOwnProperty(prop)){
                 var v = from[prop];

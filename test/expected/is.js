@@ -1,5 +1,5 @@
 var RTL$ = {
-	extend: function extend(methods){
+    extend: function extend(methods){
         methods.__proto__ = this.prototype; // make instanceof work
 
         // to see constructor name in diagnostic

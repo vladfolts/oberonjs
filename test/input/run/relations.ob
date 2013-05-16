@@ -1,0 +1,6 @@
+MODULE test;
+VAR x: INTEGER;
+BEGIN
+    x := 10;
+    ASSERT(x >= 0)
+END test.

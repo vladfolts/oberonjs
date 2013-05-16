@@ -1,0 +1,16 @@
+MODULE m;
+
+VAR 
+	i1, i2: INTEGER;
+	r1, r2: REAL;
+	b: BOOLEAN;
+
+BEGIN
+    b := i1 = i2;
+    b := i1 # i2;
+	b := i1 > i2;
+    b := i1 < i2;
+    b := i1 >= i2;
+    b := i1 <= i2;
+    IF i1 > i2 THEN END;
+END m.

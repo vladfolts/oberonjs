@@ -180,7 +180,10 @@ identifier: function(){
 	test.parse("CONST i = 1 + 2;");
 	test.parse("CONST i = ci + 2;");
 	test.parse("CONST i = ci * 2;");
+	test.parse("CONST i = ORD({0..5});");
+	test.parse("CONST i = ORD({0..5} <= {0..8});");
 	test.parse("CONST b = TRUE;");
+	test.parse("CONST b = {0..5} <= {0..8};");
 	test.parse("CONST c = \"a\";");
 	test.parse("CONST s = \"abc\";");
 	test.parse("CONST s0 = \"\";");
@@ -219,8 +222,10 @@ identifier: function(){
 				   , "'INTEGER' constant expression expected, got 'BOOLEAN'");
 	test.parse("T = ARRAY 1 + 2 OF INTEGER");
 	test.parse("T = ARRAY c1 OF INTEGER");
+	test.parse("T = ARRAY ORD({0..5} <= {0..8}) OF INTEGER");
 	test.expectError("T = ARRAY v1 OF INTEGER", "constant expression expected as ARRAY size");
 	test.expectError("T = ARRAY c1 - 10 OF INTEGER", "array size must be greater than 0, got -5");
+	test.expectError("T = ARRAY ORD({0..5} >= {0..8}) OF INTEGER", "array size must be greater than 0, got 0");
 },
 "multi-dimensional array declaration": function(){
 	var test = setup(Grammar.typeDeclaration);
@@ -581,6 +586,7 @@ identifier: function(){
 	test.parse("b := set1 <= set2");
 	test.parse("b := i1 IN set2");
 	test.parse("b := i1 < i2");
+	test.parse("IF i1 > i2 THEN END");
 	test.parse("b := c1 > c2");
 	test.parse("b := ca1 <= ca2");
 	test.parse("b := r1 >= r2");

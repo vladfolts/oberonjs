@@ -1,5 +1,5 @@
 var RTL$ = {
-	makeArray: function (/*dimensions, initializer*/){
+    makeArray: function (/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
         var result = new Array(forward.shift());
         var i;
@@ -17,20 +17,20 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-	assignArrayFromString: function (a, s){
+    assignArrayFromString: function (a, s){
         var i;
         for(i = 0; i < s.length; ++i)
             a[i] = s.charCodeAt(i);
         for(i = s.length; i < a.length; ++i)
             a[i] = 0;
     },
-	strToArray: function (s){
+    strToArray: function (s){
         var result = new Array(s.length);
         for(i = 0; i < s.length; ++i)
             result[i] = s.charCodeAt(i);
         return result;
     },
-	assert: function (condition, code){
+    assert: function (condition, code){
         if (!condition)
             throw new Error("assertion failed"
                           + ((code !== undefined) ? " with code " + code : ""));

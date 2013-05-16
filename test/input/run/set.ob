@@ -1,0 +1,7 @@
+MODULE test;
+VAR s1, s2: SET;
+BEGIN
+    s1 := {0..5};
+    s2 := {0..8};
+    ASSERT(s1 <= s2)
+END test.

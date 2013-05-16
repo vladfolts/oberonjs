@@ -1,5 +1,5 @@
 var RTL$ = {
-	extend: function extend(methods){
+    extend: function extend(methods){
         methods.__proto__ = this.prototype; // make instanceof work
 
         // to see constructor name in diagnostic
@@ -10,7 +10,7 @@ var RTL$ = {
         result.extend = extend;
         return result;
     },
-	typeGuard: function (from, to){
+    typeGuard: function (from, to){
         if (!(from instanceof to))
             throw new Error("typeguard assertion failed");
         return from;
