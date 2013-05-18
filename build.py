@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 def run(cmd):
-    p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+    p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, shell = True)
     return p.stdout.read().decode()
 
 def build(out, use_git):
