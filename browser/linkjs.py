@@ -40,9 +40,18 @@ def process(path, out, resolved, resolving, dir):
 	out.write(result)
 	resolved += [path]
 
-def link(input_path, output_path, dir):
+def encode_to_js_string(s):
+	escape = [('\n', '\\n'), ('\r', '\\r'), ('"', '""')]
+	for e in escape:
+		s = s.replace(e[0], e[1])
+	return '"%s"' % s
+
+def link(input_path, output_path, dir, version = None):
 	with open(output_path, "w") as out:
-		prolog = "var imports = {};\n"
+		prolog = ""
+		if not version is None:
+			prolog += 'var buildVersion = %s;\n' % encode_to_js_string(version)
+		prolog += "var imports = {};\n"
 		prolog += 'function require(module){return imports[module];}\n'
 		out.write(prolog)
 		process(input_path, out, [], [], dir)

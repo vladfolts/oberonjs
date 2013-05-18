@@ -28,6 +28,7 @@ END test.
 <p id="runTime"></p>
 <p><a href="http://oberspace.dyndns.org">Home</a></p>
 <p><a href="https://github.com/vladfolts/oberonjs">Development</a></p>
+<p id="version"></p>
 
 <script>
 function require(){}
@@ -36,6 +37,9 @@ function require(){}
 <script src="oc.js"></script>
 
 <script>
+if (typeof buildVersion != "undefined")
+	document.getElementById("version").textContent = buildVersion;
+
 function compile(){
 	var src = document.getElementById("source").value;
 	var result;
