@@ -37,14 +37,14 @@ function Blur2DArray(){
 			for (y = 1; y <= H - 2; ++y){
 				for (x = 1; x <= W - 2; ++x){
 					for (color = 0; color <= 2; ++color){
-						b[x * 3 + color][y] = (a[x * 3 + color][y + 1] + a[x * 3 + color][y - 1] + a[(x - 1) * 3][y] + a[(x + 1) * 3][y]) / 4 >> 0;
+						b[x * 3 + color][y] = (a[x * 3 + color][y + 1] + a[x * 3 + color][y - 1] + a[(x - 1) * 3][y] + a[(x + 1) * 3][y]) / 4 | 0;
 					}
 				}
 			}
 			for (y = 1; y <= H - 2; ++y){
 				for (x = 1; x <= W - 2; ++x){
 					for (color = 0; color <= 2; ++color){
-						a[x * 3 + color][y] = (b[x * 3 + color][y + 1] + b[x * 3 + color][y - 1] + b[(x - 1) * 3][y] + b[(x + 1) * 3][y]) / 4 >> 0;
+						a[x * 3 + color][y] = (b[x * 3 + color][y + 1] + b[x * 3 + color][y - 1] + b[(x - 1) * 3][y] + b[(x + 1) * 3][y]) / 4 | 0;
 					}
 				}
 			}

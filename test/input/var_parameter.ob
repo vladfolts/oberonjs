@@ -32,7 +32,7 @@ VAR j: INTEGER;
 BEGIN
 	j := i + 1;
 	j := 2 * i;
-	j := i / 2;
+	j := i DIV 2;
 	j := -i;
 	b := ~b;
 	a[i] := i;

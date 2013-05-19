@@ -5,7 +5,7 @@ VAR ch: CHAR; i: INTEGER; b: BOOLEAN; r: REAL; s: SET; a: ARRAY 10 OF INTEGER;
 BEGIN
     i := 65;
     ch := CHR(i);
-	i := (ORD(ch) + i) / 2;
+	i := (ORD(ch) + i) DIV 2;
     ASSERT(i = 65);
 
 	a[(i - 64) * 3] := i;

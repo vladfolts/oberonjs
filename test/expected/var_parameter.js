@@ -67,7 +67,7 @@ function p3(i/*VAR INTEGER*/, b/*VAR BOOLEAN*/){
 	var ai = RTL$.makeArray(5, 0);
 	j = i.get() + 1;
 	j = 2 * i.get();
-	j = i.get() / 2;
+	j = i.get() / 2 | 0;
 	j = -i.get();
 	b.set(!b.get());
 	a[i.get()] = i.get();

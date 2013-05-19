@@ -567,6 +567,7 @@ identifier: function(){
 	test.parse("i1 := i1 * i2");
 	test.parse("i1 := i1 DIV i2");
 	test.parse("i1 := i1 MOD i2");
+	test.expectError("i1 := i1 / i2", "operator DIV expected for integer division");
 	test.parse("r1 := r1 + r2");
 	test.parse("r1 := r1 - r2");
 	test.parse("r1 := r1 * r2");

@@ -609,8 +609,14 @@ exports.MulOperator = ChainedContext.extend({
         var o;
         if (s == "*")
             o = (type == basicTypes.set) ? op.setIntersection : op.mul;
-        else if (s == "/")
-            o = (type == basicTypes.set) ? op.setSymmetricDiff : op.divFloat;
+        else if (s == "/"){
+            if (type == basicTypes.set)
+                o = op.setSymmetricDiff;
+            else if (type == basicTypes.int)
+                throw new Errors.Error("operator DIV expected for integer division");
+            else
+                o = op.divFloat;
+        }
         else if (s == "DIV")
             o = op.div;
         else if (s == "MOD")

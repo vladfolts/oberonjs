@@ -52,10 +52,10 @@ var operators = {
     sub: makeBinary(function(x, y){return x - y;}, " - ", precedence.addSub),
     mul: makeBinary(function(x, y){return x * y;}, " * ", precedence.mulDivMod),
     div: makeBinary(
-            function(x, y){return (x / y) >> 0;},
-            function(x, y){return x + " / " + y + " >> 0";},
+            function(x, y){return (x / y) | 0;},
+            function(x, y){return x + " / " + y + " | 0";},
             precedence.mulDivMod,
-            precedence.shift),
+            precedence.bitOr),
     divFloat:   makeBinary(function(x, y){return x / y;}, " / ", precedence.mulDivMod),
     mod:        makeBinary(function(x, y){return x % y;}, " % ", precedence.mulDivMod),
     setUnion:   makeBinary(function(x, y){return x | y;}, " | ", precedence.bitOr),
