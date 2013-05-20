@@ -576,6 +576,23 @@ exports.ArrayDimensions = ChainedContext.extend({
     }
 });
 
+function assertOpType(type, types, expected, literal, op){
+    if (types.indexOf(type) != -1)
+        return op;
+    throw new Errors.Error(
+        "operator '" + literal +
+        "' type mismatch: " + expected + " expected, got '" +
+        type.description() + "'");
+}
+
+function assertNumericOp(type, literal, op){
+    return assertOpType(type, [basicTypes.int, basicTypes.real], "numeric type", literal, op);
+}
+
+function assertIntOp(type, literal, op){
+    return assertOpType(type, [basicTypes.int], "INTEGER", literal, op);
+}
+
 exports.AddOperator = ChainedContext.extend({
     init: function AddOperatorContext(context){
         ChainedContext.prototype.init.bind(this)(context);
@@ -585,9 +602,11 @@ exports.AddOperator = ChainedContext.extend({
         var type = parent.type();
         var o;
         if (s == "+")
-            o = (type == basicTypes.set) ? op.setUnion : op.add;
+            o = (type == basicTypes.set) ? op.setUnion
+                                         : assertNumericOp(type, s, op.add);
         else if (s == "-")
-            o = (type == basicTypes.set) ? op.setDiff : op.sub;
+            o = (type == basicTypes.set) ? op.setDiff
+                                         : assertNumericOp(type, s, op.sub);
         else if (s == "OR"){
             if (type != basicTypes.bool)
                 throw new Errors.Error("BOOLEAN expected as operand of 'OR', got '"
@@ -608,23 +627,24 @@ exports.MulOperator = ChainedContext.extend({
         var type = parent.type();
         var o;
         if (s == "*")
-            o = (type == basicTypes.set) ? op.setIntersection : op.mul;
+            o = (type == basicTypes.set) ? op.setIntersection
+                                         : assertNumericOp(type, s, op.mul);
         else if (s == "/"){
             if (type == basicTypes.set)
                 o = op.setSymmetricDiff;
             else if (type == basicTypes.int)
                 throw new Errors.Error("operator DIV expected for integer division");
             else
-                o = op.divFloat;
+                o = assertNumericOp(type, s, op.divFloat);
         }
         else if (s == "DIV")
-            o = op.div;
+            o = assertIntOp(type, s, op.div);
         else if (s == "MOD")
-            o = op.mod;
+            o = assertIntOp(type, s, op.mod);
         else if (s == "&"){
             if (type != basicTypes.bool)
                 throw new Errors.Error("BOOLEAN expected as operand of '&', got '"
-                                     + type.name() + "'");
+                                     + type.description() + "'");
             o = op.and;
         }
 
@@ -781,10 +801,11 @@ exports.SimpleExpression = ChainedContext.extend({
         var o;
         switch(this.__unaryOperator){
             case "-":
-                o = (type == basicTypes.set) ? op.setComplement : op.negate;
+                o = (type == basicTypes.set) ? op.setComplement
+                                             : assertNumericOp(type, this.__unaryOperator, op.negate);
                 break;
             case "+":
-                o = op.unaryPlus;
+                o = assertNumericOp(type, this.__unaryOperator, op.unaryPlus);
                 break;
             }
         if (o){
