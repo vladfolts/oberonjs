@@ -1,3 +1,4 @@
+"use strict";
 var Code = require("code.js");
 var Type = require("type.js");
 var ArrayType = Type.Array;
@@ -5,58 +6,92 @@ var PointerType = Type.Pointer;
 
 function doNoting(context, e){return e;}
 
-function implicitCast(from, to){
-	if (from === to)
-		return doNoting;
-
-	if (from instanceof Type.String){
-		if (to === Type.basic.char){
-			var v = from.asChar();
-			if (v !== undefined)
-				return function(){return new Code.Expression(v, to);};
-		}
-		else if (to instanceof Type.Array && to.elementsType() == Type.basic.char)
-			return function(context, e){
-				return new Code.Expression(context.rtl().strToArray(e.code()), to);
-			};
-	}
-	else if (from instanceof ArrayType && to instanceof ArrayType)
-		return implicitCast(from.elementsType(), to.elementsType());
-	else if ((from instanceof PointerType && to instanceof PointerType)
-		|| (from instanceof Type.Record && to instanceof Type.Record)){
-		var toR = to instanceof PointerType ? to.baseType() : to;
-		var fromR = from.baseType();
-		while (fromR && fromR != toR)
-			fromR = fromR.baseType();
-		if (fromR)
-			return doNoting;
-	}
-	else if (from == Type.nil
-		&& (to instanceof PointerType || to.isProcedure()))
-		return doNoting;
-	else if (from.isProcedure() && to.isProcedure()){
-		var fromArgs = from.arguments();
-		var toArgs = to.arguments();
-		if (fromArgs.length == toArgs.length){
-			for(var i = 0; i < fromArgs.length; ++i){
-				var fromArg = fromArgs[i];
-				var toArg = toArgs[i];
-				if (toArg.isVar != fromArg.isVar)
-					return undefined;
-				if ((toArg.type != to || fromArg.type != from)
-					&& !implicitCast(fromArg.type, toArg.type))
-					return undefined;
-			}
-
-			var fromResult = from.result();
-			var toResult = to.result();
-			if (toResult == to && fromResult == from)
-				return doNoting;
-			if (implicitCast(fromResult, toResult))
-				return doNoting;
-		}
-	}
-	return undefined;
+function findBaseType(base, type){
+    while (type && type != base)
+        type = type.baseType();
+    return type;
 }
 
+function findPointerBaseType(pBase, pType){
+    if (!findBaseType(pBase.baseType(), pType.baseType()))
+        return undefined;
+    return pBase;
+}
+
+function matchesToNIL(t){
+    return t instanceof PointerType || t.isProcedure();
+}
+
+function areTypesMatch(t1, t2){
+    if (t1 == t2)
+        return true;
+    if (t1 instanceof PointerType && t2 instanceof PointerType)
+        return areTypesMatch(t1.baseType(), t2.baseType());
+    if (t1.isProcedure() && t2.isProcedure())
+        return areProceduresMatch(t1, t2);
+    if (t1 == Type.nil && matchesToNIL(t2)
+        || t2 == Type.nil && matchesToNIL(t1))
+        return true;
+    return false;
+}
+
+function areProceduresMatch(p1, p2){
+    var args1 = p1.arguments();
+    var args2 = p2.arguments();
+    if (args1.length != args2.length)
+        return false;
+
+    for(var i = 0; i < args1.length; ++i){
+        var a1 = args1[i];
+        var a2 = args2[i];
+        if (a1.isVar != a2.isVar)
+            return false;
+        if (a1.type != p1 && a2.type != p2
+            &&!areTypesMatch(a1.type, a2.type))
+            return false;
+    }
+
+    var r1 = p1.result();
+    var r2 = p2.result();
+    if (r1 == p1 && r2 == p2)
+        return true;
+    return areTypesMatch(r1, r2);
+}
+
+function implicitCast(from, to){
+    if (from === to)
+        return doNoting;
+
+    if (from instanceof Type.String){
+        if (to === Type.basic.char){
+            var v = from.asChar();
+            if (v !== undefined)
+                return function(){return new Code.Expression(v, to);};
+        }
+        else if (to instanceof Type.Array && to.elementsType() == Type.basic.char)
+            return function(context, e){
+                return new Code.Expression(context.rtl().strToArray(e.code()), to);
+            };
+    }
+    else if (from instanceof ArrayType && to instanceof ArrayType)
+        return implicitCast(from.elementsType(), to.elementsType());
+    else if (from instanceof PointerType && to instanceof PointerType){
+        if (findPointerBaseType(to, from))
+            return doNoting;
+    }
+    else if (from instanceof Type.Record && to instanceof Type.Record){
+        if (findBaseType(to, from))
+            return doNoting;
+    }
+    else if (from == Type.nil && matchesToNIL(to))
+        return doNoting;
+    else if (from.isProcedure() && to.isProcedure()){
+        if (areProceduresMatch(from, to))
+            return doNoting;
+    }
+    return undefined;
+}
+
+exports.areTypesMatch = areTypesMatch;
 exports.implicit = implicitCast;
+exports.findPointerBaseType = findPointerBaseType;

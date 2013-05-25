@@ -31,7 +31,7 @@ function throwTypeMismatch(from, to){
 }
 
 function checkTypeMatch(from, to){
-    if (from !== to)
+    if (!Cast.areTypesMatch(from, to))
         throwTypeMismatch(from, to);
 }
 
@@ -576,21 +576,106 @@ exports.ArrayDimensions = ChainedContext.extend({
     }
 });
 
-function assertOpType(type, types, expected, literal, op){
-    if (types.indexOf(type) != -1)
-        return op;
-    throw new Errors.Error(
-        "operator '" + literal +
-        "' type mismatch: " + expected + " expected, got '" +
-        type.description() + "'");
+var numericOpTypeCheck = {
+    expect: "numeric type",
+    check: function(t){return [basicTypes.int, basicTypes.real].indexOf(t) != -1;}
+};
+
+var intOpTypeCheck = {
+    expect: "INTEGER",
+    check: function(t){return t == basicTypes.int;}
+};
+
+var orderOpTypeCheck = {
+    expect: "numeric type or CHAR or character array",
+    check: function(t){
+        return [basicTypes.int, basicTypes.real, basicTypes.char].indexOf(t) != -1
+            || (t instanceof Type.Array && t.elementsType() == basicTypes.char);
+    }
+};
+
+var equalOpTypeCheck = {
+    expect: "numeric type or SET or BOOLEAN OR CHAR or character array or POINTER or PROCEDURE",
+    check: function(t){
+        return [basicTypes.int, basicTypes.real, basicTypes.set, basicTypes.bool, basicTypes.char].indexOf(t) != -1
+            || (t instanceof Type.Array && t.elementsType() == basicTypes.char)
+            || t instanceof Type.Pointer
+            || t.isProcedure()
+            || t == Type.nil;
+    }
+};
+
+function assertOpType(type, check, literal){
+    if (!check.check(type))
+        throw new Errors.Error(
+            "operator '" + literal +
+            "' type mismatch: " + check.expect + " expected, got '" +
+            type.description() + "'");
 }
 
 function assertNumericOp(type, literal, op){
-    return assertOpType(type, [basicTypes.int, basicTypes.real], "numeric type", literal, op);
+    assertOpType(type, numericOpTypeCheck, literal);
+    return op;
 }
 
 function assertIntOp(type, literal, op){
-    return assertOpType(type, [basicTypes.int], "INTEGER", literal, op);
+    assertOpType(type, intOpTypeCheck, literal);
+    return op;
+}
+
+function useTypeInRelation(leftType, rightType){
+    if (leftType instanceof Type.Pointer && rightType instanceof Type.Pointer){
+        var type = Cast.findPointerBaseType(leftType, rightType);
+        if (!type)
+            type = Cast.findPointerBaseType(rightType, leftType);
+        if (type)
+            return type;
+    }
+    checkTypeMatch(rightType, leftType);
+    return leftType;
+}
+
+function relationOp(leftType, rightType, literal){
+    var o;
+    var check;
+    var type = useTypeInRelation(leftType, rightType);
+    switch (literal){
+        case "=":
+            o = op.equal;
+            check = equalOpTypeCheck;
+            break;
+        case "#":
+            o = op.notEqual;
+            check = equalOpTypeCheck;
+            break;
+        case "<":
+            o = op.less;
+            check = orderOpTypeCheck;
+            break;
+        case ">":
+            o = op.greater;
+            check = orderOpTypeCheck;
+            break;
+        case "<=":
+            if (type == basicTypes.set)
+                o = op.setInclL;
+            else {
+                o = op.eqLess;
+                check = orderOpTypeCheck;
+            }
+            break;
+        case ">=":
+            if (type == basicTypes.set)
+                o = op.setInclR;
+            else {
+                o = op.eqGreater;
+                check = orderOpTypeCheck;
+            }
+            break;
+        }
+    if (check)
+        assertOpType(type, check, literal);
+    return o;
 }
 
 exports.AddOperator = ChainedContext.extend({
@@ -869,37 +954,17 @@ exports.Expression = ChainedContext.extend({
                 throw new Errors.Error("type name expected");
             code = leftCode + " instanceof " + rightCode;
         }
-        else{
+        else {
             leftExpression = promoteTypeInExpression(leftExpression, rightType);
             rightExpression = promoteTypeInExpression(rightExpression, leftType);
             leftCode = leftExpression.code();
             rightCode = rightExpression.code();
-            checkImplicitCast(rightExpression.type(), leftExpression.type());
+            //checkImplicitCast(rightExpression.type(), leftExpression.type());
         }
 
-        var o;
-        switch (this.__relation){
-            case "=":
-                o = op.equal;
-                break;
-            case "#":
-                o = op.notEqual;
-                break;
-            case "<":
-                o = op.less;
-                break;
-            case ">":
-                o = op.greater;
-                break;
-            case "<=":
-                o = (leftType == basicTypes.set) ? op.setInclL : op.eqLess;
-                break;
-            case ">=":
-                o = (leftType == basicTypes.set) ? op.setInclR : op.eqGreater;
-                break;
-            }
         var value;
-        if (o){
+        if (!code){
+            var o = relationOp(leftExpression.type(), rightExpression.type(), this.__relation);
             var oResult = o(leftExpression, rightExpression, this);
             code = oResult.code();
             value = oResult.constValue();

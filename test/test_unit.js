@@ -79,6 +79,27 @@ function setupWithContext(grammar, source){
     return setup(grammar, makeContext);
 }
 
+function context(grammar, source){
+    return {grammar: grammar, source: source};
+}
+
+function pass(/*...*/){return Array.prototype.slice.call(arguments);}
+
+function fail(/*...*/){return Array.prototype.slice.call(arguments);}
+
+function testWithContext(context, pass, fail){
+    return function(){
+        var test = setupWithContext(context.grammar, context.source);
+        var i;
+        for(i = 0; i < pass.length; ++i)
+            test.parse(pass[i]);
+        for(i = 0; i < fail.length; ++i){
+            var f = fail[i];
+            test.expectError(f[0], f[1]);
+        }
+    };
+}
+
 var testSuite = {
 comment: function(){
     var test = setup(Grammar.expression);
@@ -298,6 +319,22 @@ identifier: function(){
     test.expectError("i(Derived)"
                    , "invalid type cast: 'Derived' is not an extension of 'INTEGER'");
 },
+"POINTER relations": testWithContext(
+    context(Grammar.expression,
+            "TYPE B = RECORD END; D = RECORD(B) END;"
+          + "VAR p1, p2: POINTER TO RECORD END; pb: POINTER TO B; pd: POINTER TO D;"),
+    pass("p1 = p2",
+         "p1 # p2",
+         "pb = pd",
+         "pd # pb"
+         ),
+    fail(["p1 < p2", "operator '<' type mismatch: numeric type or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
+         ["p1 <= p2", "operator '<=' type mismatch: numeric type or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
+         ["p1 > p2", "operator '>' type mismatch: numeric type or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
+         ["p1 >= p2", "operator '>=' type mismatch: numeric type or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
+         ["p1 = pb", "type mismatch: expected 'POINTER TO anonymous RECORD', got 'POINTER TO B'"]
+         )
+    ),
 "IS expression": function(){
     var test = setupWithContext(
           Grammar.expression
@@ -714,6 +751,16 @@ procedure: function(){
     test.expectError("PROCEDURE p(): INTEGER; RETURN TRUE END p"
                    , "RETURN 'INTEGER' expected, got 'BOOLEAN'");
 },
+"PROCEDURE relations": testWithContext(
+    context(Grammar.expression,
+            "VAR p1: PROCEDURE; p2: PROCEDURE;"),
+    pass("p1 = p2",
+         "p1 # p2",
+         "p1 = NIL",
+         "NIL # p1"
+         ),
+    fail()
+    ),
 "pass VAR argument as VAR parameter": function(){
     var test = setupWithContext(Grammar.procedureDeclaration,
                                 "PROCEDURE p1(VAR i: INTEGER); END p1;"
@@ -838,6 +885,15 @@ procedure: function(){
     test.expectError("intArray := \"abcd\""
                    , "type mismatch: 'intArray' is 'ARRAY OF INTEGER' and cannot be assigned to 'multi-character string' expression");
 },
+"string relations": testWithContext(
+    context(Grammar.expression,
+            "VAR ch: CHAR;"),
+    pass("ch = \"a\"",
+         "\"a\" = ch",
+         "ch # \"a\"",
+         "\"a\" # ch"
+        ),
+    fail(["ch = \"ab\"", "type mismatch: expected 'CHAR', got 'multi-character string'"])),
 "array assignment": function(){
     var test = setupWithContext(
           Grammar.statement
@@ -867,7 +923,7 @@ procedure: function(){
     test.expectError("r1 := r2", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'T2' expression");
     test.expectError("r1 := b1", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'Base1' expression");
 },
-"open array assignment fails": function(){
+"open Array assignment fails": function(){
     var test = setup(Grammar.procedureDeclaration);
     test.expectError("PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p"
                    , "cannot assign to read-only variable");
