@@ -54,4 +54,11 @@ function p4(){
 function p5(){
 	return p5;
 }
+
+function emptyBegin(){
+}
+
+function emptyBeginWithReturn(){
+	return 0;
+}
 }();

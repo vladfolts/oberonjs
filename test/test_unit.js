@@ -778,19 +778,20 @@ procedure: function(){
 
     test.parse("PROCEDURE p(): ProcType; RETURN p END p");
 },
-"procedure RETURN": function(){
-    var test = setupWithContext(Grammar.procedureDeclaration
-                              , "VAR i: INTEGER; PROCEDURE int(): INTEGER; RETURN 1 END int;");
-    test.parse("PROCEDURE p(): BOOLEAN; RETURN TRUE END p");
-    test.parse("PROCEDURE p(): BOOLEAN; RETURN int() = 1 END p");
-    test.expectError("PROCEDURE p; RETURN TRUE END p"
-                   , "unexpected RETURN in PROCEDURE declared with no result type");
-    test.expectError("PROCEDURE p(): BOOLEAN; END p", "RETURN expected at the end of PROCEDURE declared with 'BOOLEAN' result type");
-    test.expectError("PROCEDURE p(): undeclared; END p", "undeclared identifier: 'undeclared'");
-    test.expectError("PROCEDURE p(): i; END p", "type name expected");
-    test.expectError("PROCEDURE p(): INTEGER; RETURN TRUE END p"
-                   , "RETURN 'INTEGER' expected, got 'BOOLEAN'");
-},
+"procedure RETURN": testWithContext(
+    context(Grammar.procedureDeclaration,
+            "VAR i: INTEGER; PROCEDURE int(): INTEGER; RETURN 1 END int;"),
+    pass("PROCEDURE p(): BOOLEAN; RETURN TRUE END p",
+         "PROCEDURE p(): BOOLEAN; RETURN int() = 1 END p",
+         "PROCEDURE p; BEGIN END p",
+         "PROCEDURE p(): INTEGER; BEGIN RETURN 0 END p"),
+    fail(["PROCEDURE p; RETURN TRUE END p", "unexpected RETURN in PROCEDURE declared with no result type"],
+         ["PROCEDURE p(): BOOLEAN; END p", "RETURN expected at the end of PROCEDURE declared with 'BOOLEAN' result type"],
+         ["PROCEDURE p(): undeclared; END p", "undeclared identifier: 'undeclared'"],
+         ["PROCEDURE p(): i; END p", "type name expected"],
+         ["PROCEDURE p(): INTEGER; RETURN TRUE END p", "RETURN 'INTEGER' expected, got 'BOOLEAN'"]
+         )
+),
 "PROCEDURE relations": testWithContext(
     context(Grammar.expression,
             "VAR p1: PROCEDURE; p2: PROCEDURE;"),

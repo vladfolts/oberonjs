@@ -41,4 +41,10 @@ PROCEDURE p5(): P2;
 	RETURN p5
 END p5;
 
+PROCEDURE emptyBegin; BEGIN END emptyBegin;
+PROCEDURE emptyBeginWithReturn(): INTEGER;
+BEGIN 
+	RETURN 0 
+END emptyBeginWithReturn;
+
 END m.

@@ -72,7 +72,7 @@ exports.ident = function(stream, context){
 		return true;
 	});
 
-	var keywords = ["ARRAY", "END", "VAR", "TYPE", "IF", "CASE", "WHILE", "REPEAT", "FOR", "NIL", "TRUE", "FALSE", "IS"];
+	var keywords = ["ARRAY", "END", "VAR", "TYPE", "IF", "CASE", "WHILE", "REPEAT", "FOR", "RETURN", "NIL", "TRUE", "FALSE", "IS"];
 	if (keywords.indexOf(result) != -1){
 		stream.setPos(savePos);
 		return false;
