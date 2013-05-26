@@ -1,0 +1,13 @@
+MODULE test;
+VAR
+   a : INTEGER;
+   r : INTEGER;
+BEGIN
+    a := 257;
+    ASSERT(ABS(a) = 257);
+    ASSERT(LSL(a,1) = 514);
+    ASSERT(ASR(a,1) = 128);
+    ASSERT(ROR(a,1) = 128);
+    ASSERT(ASR(-3,1) = -2);
+    ASSERT(ROR(-3,1) = 2147483646);
+END test.
