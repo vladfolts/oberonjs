@@ -1,3 +1,5 @@
+"use strict";
+
 var Class = require("rtl.js").Class;
 var Errors = require("errors.js");
 
@@ -114,13 +116,15 @@ var NilType = Type.extend({
 	description: function(){return "NIL";}
 });
 
-exports.basic = {
+var basic = {
 	bool: new BasicType("BOOLEAN", false),
 	char: new BasicType("CHAR", 0),
 	int: new BasicType("INTEGER", 0),
 	real: new BasicType("REAL", 0),
 	set: new BasicType("SET", 0)
 };
+exports.basic = basic;
+exports.numeric = [basic.int, basic.real];
 
 exports.nil = new NilType();
 

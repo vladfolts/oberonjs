@@ -1,0 +1,9 @@
+MODULE m;
+
+VAR i, j, r: INTEGER;
+
+BEGIN
+	i := 1;
+	j := 2;
+    r := ROR(i, j);
+END m.

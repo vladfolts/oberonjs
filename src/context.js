@@ -578,7 +578,7 @@ exports.ArrayDimensions = ChainedContext.extend({
 
 var numericOpTypeCheck = {
     expect: "numeric type",
-    check: function(t){return [basicTypes.int, basicTypes.real].indexOf(t) != -1;}
+    check: function(t){return Type.numeric.indexOf(t) != -1;}
 };
 
 var intOpTypeCheck = {

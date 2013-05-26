@@ -1,0 +1,7 @@
+MODULE m;
+
+VAR i: INTEGER;
+
+BEGIN
+    i := ABS(i);
+END m.

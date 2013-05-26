@@ -82,7 +82,11 @@ var operators = {
     not:        makeUnary(function(x){return !x;}, "!"),
     negate:     makeUnary(function(x){return -x;}, "-"),
     unaryPlus:  makeUnary(function(x){return x;}, ""),
-    setComplement: makeUnary(function(x){return ~x;}, "~")
+    setComplement: makeUnary(function(x){return ~x;}, "~"),
+
+    lsl:        makeBinary(function(x, y){return x << y;}, " << ", precedence.shift),
+    asr:        makeBinary(function(x, y){return x >> y;}, " >> ", precedence.shift),
+    ror:        makeBinary(function(x, y){return x >>> y;}, " >>> ", precedence.shift)
 };
 
 for(var p in operators)

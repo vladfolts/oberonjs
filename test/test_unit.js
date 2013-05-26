@@ -385,6 +385,46 @@ identifier: function(){
     test.expectError("PROCEDURE p(a: ARRAY OF INTEGER): INTEGER; RETURN LEN(a[0]) END p",
                      "type mismatch for argument 1: 'INTEGER' cannot be converted to 'ARRAY OF any type'");
 },
+"ABS": testWithContext(
+    context(Grammar.statement,
+            "VAR i: INTEGER; r: REAL; c: CHAR;"),
+    pass("i := ABS(i)",
+         "r := ABS(r)"),
+    fail(["i := ABS(r)", "type mismatch: 'i' is 'INTEGER' and cannot be assigned to 'REAL' expression"],
+         ["i := ABS(c)", "type mismatch: expected numeric type, got 'CHAR'"],
+         ["i := ABS(i, i)", "1 argument(s) expected, got 2"]
+         )
+    ),
+"LSL": testWithContext(
+    context(Grammar.statement,
+            "VAR i: INTEGER; r: REAL; c: CHAR;"),
+    pass("i := LSL(i, i)"),
+    fail(["i := LSL(i, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
+         ["i := LSL(r, i)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'"],
+         ["r := LSL(i, i)", "type mismatch: 'r' is 'REAL' and cannot be assigned to 'INTEGER' expression"],
+         ["i := LSL(i)", "2 argument(s) expected, got 1"]
+         )
+    ),
+"ASR": testWithContext(
+    context(Grammar.statement,
+            "VAR i: INTEGER; r: REAL; c: CHAR;"),
+    pass("i := ASR(i, i)"),
+    fail(["i := ASR(i, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
+         ["i := ASR(r, i)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'"],
+         ["r := ASR(i, i)", "type mismatch: 'r' is 'REAL' and cannot be assigned to 'INTEGER' expression"],
+         ["i := ASR(i)", "2 argument(s) expected, got 1"]
+         )
+    ),
+"ROR": testWithContext(
+    context(Grammar.statement,
+            "VAR i: INTEGER; r: REAL; c: CHAR;"),
+    pass("i := ROR(i, i)"),
+    fail(["i := ROR(i, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
+         ["i := ROR(r, i)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'"],
+         ["r := ROR(i, i)", "type mismatch: 'r' is 'REAL' and cannot be assigned to 'INTEGER' expression"],
+         ["i := ROR(i)", "2 argument(s) expected, got 1"]
+         )
+    ),
 "ODD": function(){
     var test = setup(Grammar.statement);
 
