@@ -12,6 +12,8 @@ VAR
 	s1, s2: SET;
 	i1: INTEGER;
 	b: BOOLEAN;
+	aSet: ARRAY 1 OF SET;
+	aInt: ARRAY 1 OF INTEGER;
 
 PROCEDURE getSet1(): SET;
 	RETURN {1}
@@ -55,7 +57,9 @@ BEGIN
 	INCL(s1, ci * 2 + 3);
 	INCL(s1, ci * 2 - i1 + 3);
 	INCL(s1, ORD(b));
+	INCL(aSet[0], aInt[0]);
 
 	EXCL(s2, 3);
-	EXCL(s2, ORD(b))
+	EXCL(s2, ORD(b));
+	EXCL(aSet[0], aInt[0]);
 END m.

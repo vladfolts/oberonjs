@@ -1,4 +1,22 @@
 var RTL$ = {
+    makeArray: function (/*dimensions, initializer*/){
+        var forward = Array.prototype.slice.call(arguments);
+        var result = new Array(forward.shift());
+        var i;
+        if (forward.length == 1){
+            var init = forward[0];
+            if (typeof init == "function")
+                for(i = 0; i < result.length; ++i)
+                    result[i] = init();
+            else
+                for(i = 0; i < result.length; ++i)
+                    result[i] = init;
+        }
+        else
+            for(i = 0; i < result.length; ++i)
+                result[i] = this.makeArray.apply(this, forward);
+        return result;
+    },
     makeSet: function (/*...*/){
         var result = 0;
         
@@ -40,6 +58,8 @@ var cs5 = ~2;
 var s1 = 0;var s2 = 0;
 var i1 = 0;
 var b = false;
+var aSet = RTL$.makeArray(1, 0);
+var aInt = RTL$.makeArray(1, 0);
 
 function getSet1(){
 	return 2;
@@ -77,6 +97,8 @@ s2 |= 1 << 3;
 s1 |= 1 << ci * 2 + 3;
 s1 |= 1 << ci * 2 - i1 + 3;
 s1 |= 1 << (b ? 1 : 0);
+aSet[0] |= 1 << aInt[0];
 s2 &= ~(1 << 3);
 s2 &= ~(1 << (b ? 1 : 0));
+aSet[0] &= ~(1 << aInt[0]);
 }();
