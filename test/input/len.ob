@@ -7,6 +7,7 @@ VAR
     a1: ARRAY 10 OF INTEGER;
     a2: ARRAY 15 OF BOOLEAN;
     a3: ARRAY 20 OF CHAR;
+	i: INTEGER;
 
 PROCEDURE p1(a: ARRAY OF INTEGER): INTEGER;
     RETURN LEN(a)
@@ -17,8 +18,8 @@ PROCEDURE p2(VAR a: ARRAY OF BOOLEAN): INTEGER;
 END p2;
 
 BEGIN
-	p1(a1);
-	p2(a2);
+	i := p1(a1);
+	i := p2(a2);
 	ASSERT(LEN(a3) = 20);
     ASSERT(LEN(s1) = 1);
     ASSERT(LEN("abc") = 3)

@@ -167,6 +167,28 @@ var TwoArgToOperatorProcCallGenerator = ProcCallGenerator.extend({
 	}
 });
 
+function setBitImpl(name, op){
+    var args = [new Arg(Type.basic.set, true),
+                new Arg(Type.basic.int, false)];
+    function operator(x, y){
+        var code = op(Code.adjustPrecedence(x, precedence.assignment),
+                      Code.adjustPrecedence(y, precedence.shift));
+        return new Code.Expression(
+            code, undefined, undefined, undefined, precedence.assignment);
+    }
+    var proc = new ProcType(
+        "predefined procedure " + name,
+        args,
+        undefined,
+        function(context, id, type){
+            return new TwoArgToOperatorProcCallGenerator(
+                context, id, type, operator);
+            });
+    var type = new Type.Procedure(proc);
+    var symbol = new Type.Symbol(name, type);
+    return symbol;
+}
+
 function bitShiftImpl(name, op){
     var CallGenerator = ProcCallGenerator.extend({
         init: function SgiftProcCallGenerator(context, id, type){
@@ -304,51 +326,8 @@ exports.predefined = [
 		var symbol = new Type.Symbol("ASSERT", type);
 		return symbol;
 	}(),
-	function(){
-		var args = [new Arg(Type.basic.set, true),
-					new Arg(Type.basic.int, false)];
-		function operator(x, y){
-            var code = Code.adjustPrecedence(x, precedence.assignment) +
-                       " |= 1 << " +
-                       Code.adjustPrecedence(y, precedence.shift);
-            return new Code.Expression(
-                code, Type.basic.set, undefined, undefined, precedence.assignment);
-        }
-		var proc = new ProcType(
-			"predefined procedure INCL",
-			args,
-			undefined,
-			function(context, id, type){
-				return new TwoArgToOperatorProcCallGenerator(
-					context, id, type, operator);
-				});
-		var type = new Type.Procedure(proc);
-		var symbol = new Type.Symbol("INCL", type);
-		return symbol;
-	}(),
-	function(){
-		var args = [new Arg(Type.basic.set, true),
-					new Arg(Type.basic.int, false)];
-		function operator(x, y){
-            var code = Code.adjustPrecedence(x, precedence.assignment) +
-                       " &= ~(1 << " +
-                       Code.adjustPrecedence(y, precedence.shift) +
-                       ")";
-            return new Code.Expression(
-                code, Type.basic.set, undefined, undefined, precedence.assignment);
-        }
-		var proc = new ProcType(
-			"predefined procedure EXCL",
-			args,
-			undefined,
-			function(context, id, type){
-				return new TwoArgToOperatorProcCallGenerator(
-					context, id, type, operator);
-				});
-		var type = new Type.Procedure(proc);
-		var symbol = new Type.Symbol("EXCL", type);
-		return symbol;
-	}(),
+    setBitImpl("INCL", function(x, y){return x + " |= 1 << " + y;}),
+    setBitImpl("EXCL", function(x, y){return x + " &= ~(1 << " + y + ")";}),
     function(){
         var CallGenerator = ProcCallGenerator.extend({
             init: function AbsProcCallGenerator(context, id, type){

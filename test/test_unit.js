@@ -425,31 +425,31 @@ identifier: function(){
          ["i := ROR(i)", "2 argument(s) expected, got 1"]
          )
     ),
-"ODD": function(){
-    var test = setup(Grammar.statement);
-
-    test.parse("ODD(1)");
-    test.parse("ASSERT(ODD(123))");
-    test.expectError("ODD(1.2)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'");
-    test.expectError("ODD(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'");
-},
-"ORD": function(){
-    var test = setupWithContext(Grammar.statement, "VAR ch: CHAR;");
-
-    test.parse("ORD(ch)");
-    test.parse("ORD(TRUE)");
-    test.parse("ORD({1})");
-    test.parse("ORD(\"a\")");
-    test.parse("ASSERT(ORD(22X) = 022H)");
-    test.expectError("ORD(1.2)", "type mismatch for argument 1: 'REAL' cannot be converted to 'CHAR or BOOLEAN or SET'");
-    test.expectError("ORD(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'CHAR or BOOLEAN or SET'");
-},
-"CHR": function(){
-    var test = setupWithContext(Grammar.statement, "VAR i: INTEGER; ch: CHAR;");
-
-    test.parse("CHR(i)");
-    //test.expectError("CHR(ch)", "type mismatch for argument 1: 'CHAR' cannot be converted to 'INTEGER'");
-},
+"ODD": testWithContext(
+    context(Grammar.statement, "VAR b: BOOLEAN;"),
+    pass("b := ODD(1)",
+         "b := ODD(123)"
+         ),
+    fail(["b := ODD(1.2)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'"],
+         ["b := ODD(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"]
+         )
+),
+"ORD": testWithContext(
+    context(Grammar.statement, "VAR ch: CHAR; i: INTEGER; b: BOOLEAN;"),
+    pass("i := ORD(ch)",
+         "i := ORD(TRUE)",
+         "i := ORD({1})",
+         "i := ORD(\"a\")",
+         "b := ORD(22X) = 022H"),
+    fail(["i := ORD(1.2)", "type mismatch for argument 1: 'REAL' cannot be converted to 'CHAR or BOOLEAN or SET'"],
+         ["i := ORD(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'CHAR or BOOLEAN or SET'"]
+         )
+),
+"CHR": testWithContext(
+    context(Grammar.statement, "VAR i: INTEGER; ch: CHAR;"),
+    pass("ch := CHR(i)"),
+    fail(["ch := CHR(ch)", "type mismatch for argument 1: 'CHAR' cannot be converted to 'INTEGER'"])
+),
 "assignment statement": function(){
     var test = setupWithContext(
           Grammar.statement
@@ -783,7 +783,7 @@ procedure: function(){
             "VAR i: INTEGER; PROCEDURE int(): INTEGER; RETURN 1 END int;"),
     pass("PROCEDURE p(): BOOLEAN; RETURN TRUE END p",
          "PROCEDURE p(): BOOLEAN; RETURN int() = 1 END p",
-         "PROCEDURE p; BEGIN END p",
+         "PROCEDURE p; BEGIN END p" ,
          "PROCEDURE p(): INTEGER; BEGIN RETURN 0 END p"),
     fail(["PROCEDURE p; RETURN TRUE END p", "unexpected RETURN in PROCEDURE declared with no result type"],
          ["PROCEDURE p(): BOOLEAN; END p", "RETURN expected at the end of PROCEDURE declared with 'BOOLEAN' result type"],
@@ -852,27 +852,27 @@ procedure: function(){
     test.expectError("PROCEDURE p(a: ARRAY OF T); BEGIN varInteger(a[0].i) END p",
                      "read-only variable cannot be used as VAR parameter");
 },
-"procedure call": function(){
-    var test = setupWithContext(Grammar.statement
-                              , "TYPE ProcType = PROCEDURE;"
-                              + "VAR notProcedure: INTEGER;"
-                              + "PROCEDURE p; END p;"
-                              + "PROCEDURE p1(i: INTEGER); END p1;"
-                              + "PROCEDURE p2(i: INTEGER; b: BOOLEAN); END p2;"
-                              + "PROCEDURE p3(): ProcType; RETURN p END p3;"
-                               );
-    test.parse("p");
-    test.parse("p()");
-
-    test.parse("p1(1)");
-    test.parse("p1(1 + 2)");
-
-    test.parse("p2(1, TRUE)");
-    test.expectError("notProcedure", "PROCEDURE expected, got 'INTEGER'");
-    test.expectError("p2(TRUE, 1)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'");
-    test.expectError("p2(1, 1)", "type mismatch for argument 2: 'INTEGER' cannot be converted to 'BOOLEAN'");
-    test.expectError("p3()()", "not parsed");
-},
+"procedure call": testWithContext(
+    context(Grammar.statement,
+            "TYPE ProcType = PROCEDURE;" +
+            "VAR notProcedure: INTEGER;" +
+            "PROCEDURE p; END p;" +
+            "PROCEDURE p1(i: INTEGER); END p1;" +
+            "PROCEDURE p2(i: INTEGER; b: BOOLEAN); END p2;" +
+            "PROCEDURE p3(): ProcType; RETURN p END p3;"),
+    pass("p",
+         "p()",
+         "p1(1)",
+         "p1(1 + 2)",
+         "p2(1, TRUE)"),
+    fail(["notProcedure", "PROCEDURE expected, got 'INTEGER'"],
+         ["p2(TRUE, 1)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
+         ["p2(1, 1)", "type mismatch for argument 2: 'INTEGER' cannot be converted to 'BOOLEAN'"],
+         ["p()()", "not parsed"],
+         ["p3", "procedure returning a result cannot be used as a statement"],
+         ["p3()", "procedure returning a result cannot be used as a statement"]
+         )
+),
 "procedure assignment": function(){
     var test = setupWithContext(
           Grammar.statement

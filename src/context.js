@@ -1442,7 +1442,10 @@ exports.StatementProcedureCall = ProcedureCall.extend({
     },
     endParse: function(){
         ProcedureCall.prototype.endParse.call(this);
-        this.parent().codeGenerator().write(this.callExpression().code());
+        var e = this.callExpression();
+        if  (e.type())
+            throw new Errors.Error("procedure returning a result cannot be used as a statement");
+        this.parent().codeGenerator().write(e.code());
     }
 });
 
