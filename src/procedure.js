@@ -174,8 +174,14 @@ function setBitImpl(name, op){
     var args = [new Arg(Type.basic.set, true),
                 new Arg(Type.basic.int, false)];
     function operator(x, y){
+        var value = y.constValue();
+        if (value === undefined || value < 0 || value > 31)
+            throw new Errors.Error("constant (0..31) expected as second argument of " + name);
+        var comment = "bit: " + (y.isTerm() ? value : Code.adjustPrecedence(y, precedence.shift));
+        value = 1 << value;
+        var valueCode = value + "/*" + comment + "*/";
         var code = op(Code.adjustPrecedence(x, precedence.assignment),
-                      Code.adjustPrecedence(y, precedence.shift));
+                      valueCode);
         return new Code.Expression(
             code, undefined, undefined, undefined, precedence.assignment);
     }
@@ -329,8 +335,8 @@ exports.predefined = [
         var symbol = new Type.Symbol("ASSERT", type);
         return symbol;
     }(),
-    setBitImpl("INCL", function(x, y){return x + " |= 1 << " + y;}),
-    setBitImpl("EXCL", function(x, y){return x + " &= ~(1 << " + y + ")";}),
+    setBitImpl("INCL", function(x, y){return x + " |= " + y;}),
+    setBitImpl("EXCL", function(x, y){return x + " &= ~(" + y + ")";}),
     function(){
         var CallGenerator = ProcCallGenerator.extend({
             init: function AbsProcCallGenerator(context, id, type){

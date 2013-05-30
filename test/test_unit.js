@@ -713,15 +713,18 @@ identifier: function(){
     test.expectError("set1 * b", "type mismatch: expected 'SET', got 'BOOLEAN'");
     test.expectError("set1 / b", "type mismatch: expected 'SET', got 'BOOLEAN'");
 },
-"SET functions": function(){
-    var test = setupWithContext(
-          Grammar.statement
-        , "VAR set1, set2: SET; b: BOOLEAN; i: INTEGER;");
-
-    test.parse("INCL(set1, i)");
-    test.parse("EXCL(set1, i)");
-    test.expectError("INCL({}, i)", "expression cannot be used as VAR parameter");
-},
+"SET functions": testWithContext(
+    context(Grammar.statement,
+            "VAR set1, set2: SET; b: BOOLEAN; i: INTEGER;"),
+    pass("INCL(set1, 0)",
+         "EXCL(set1, 3)"),
+    fail(["INCL({}, i)", "expression cannot be used as VAR parameter"],
+         ["INCL(set1, i)", "constant (0..31) expected as second argument of INCL"],
+         ["EXCL(set1, i)", "constant (0..31) expected as second argument of EXCL"],
+         ["INCL(set1, 32)", "constant (0..31) expected as second argument of INCL"],
+         ["EXCL(set1, -1)", "constant (0..31) expected as second argument of EXCL"]
+        )
+),
 "procedure body": function(){
     var test = setup(Grammar.procedureBody);
     test.parse("END");

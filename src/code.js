@@ -50,6 +50,7 @@ var Expression = Class.extend({
     designator: function(){return this.__designator;},
     constValue: function(){return this.__constValue;},
     maxPrecedence: function(){return this.__maxPrecedence;},
+    isTerm: function(){return !this.__designator && this.__maxPrecedence == undefined;},
     deref: function(){
         if (!this.__designator)
             return this;

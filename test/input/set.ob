@@ -2,6 +2,7 @@ MODULE m;
 
 CONST
 	ci = 3;
+	cb = TRUE;
 	
 	cs1 = {1} + {2};
 	cs2 = {1, 2, 3} - {1, 4};
@@ -55,11 +56,10 @@ BEGIN
 
 	INCL(s2, 3);
 	INCL(s1, ci * 2 + 3);
-	INCL(s1, ci * 2 - i1 + 3);
-	INCL(s1, ORD(b));
-	INCL(aSet[0], aInt[0]);
+	INCL(s1, ORD(cb));
+	INCL(aSet[0], 3);
 
 	EXCL(s2, 3);
-	EXCL(s2, ORD(b));
-	EXCL(aSet[0], aInt[0]);
+	EXCL(s2, ORD(~cb));
+	EXCL(aSet[0], 3);
 END m.
