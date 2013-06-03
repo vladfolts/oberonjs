@@ -395,6 +395,34 @@ identifier: function(){
          ["i := ABS(i, i)", "1 argument(s) expected, got 2"]
          )
     ),
+"FLOOR": testWithContext(
+    context(Grammar.statement, "VAR i: INTEGER; r: REAL;"),
+    pass("i := FLOOR(r)"),
+    fail(["i := FLOOR(i)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'REAL'"],
+         ["i := FLOOR(r, r)", "1 argument(s) expected, got 2"]
+         )
+    ),
+"FLT": testWithContext(
+    context(Grammar.statement, "VAR i: INTEGER; r: REAL;"),
+    pass("r := FLT(i)"),
+    fail(["r := FLT(r)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'"],
+         ["i := FLT(i, i)", "1 argument(s) expected, got 2"]
+         )
+    ),
+"LONG": testWithContext(
+    context(Grammar.statement, "VAR i: INTEGER; r: REAL; lr: LONGREAL;"),
+    pass("lr := LONG(r)"),
+    fail(["lr := LONG(i)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'REAL'"],
+         ["lr := LONG(r, r)", "1 argument(s) expected, got 2"]
+         )
+    ),
+"SHORT": testWithContext(
+    context(Grammar.statement, "VAR i: INTEGER; r: REAL; lr: LONGREAL;"),
+    pass("r := SHORT(lr)"),
+    fail(["r := SHORT(i)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'REAL'"],
+         ["r := SHORT(lr, lr)", "1 argument(s) expected, got 2"]
+         )
+    ),
 "LSL": testWithContext(
     context(Grammar.statement,
             "VAR i: INTEGER; r: REAL; c: CHAR;"),
@@ -449,6 +477,26 @@ identifier: function(){
     context(Grammar.statement, "VAR i: INTEGER; ch: CHAR;"),
     pass("ch := CHR(i)"),
     fail(["ch := CHR(ch)", "type mismatch for argument 1: 'CHAR' cannot be converted to 'INTEGER'"])
+),
+"INC": testWithContext(
+    context(Grammar.statement, "VAR i: INTEGER;"),
+    pass("INC(i)",
+         "INC(i, 3)"),
+    fail(["INC(i + i)", "expression cannot be used as VAR parameter"],
+         ["INC(i, i)", "constant expected as second argument of INC"],
+         ["INC()", "at least 1 argument expected, got 0"],
+         ["INC(i, 1, 2)", "at most 2 arguments expected, got 3"]
+         )
+),
+"DEC": testWithContext(
+    context(Grammar.statement, "VAR i: INTEGER;"),
+    pass("DEC(i)",
+         "DEC(i, 3)"),
+    fail(["DEC(i + i)", "expression cannot be used as VAR parameter"],
+         ["DEC(i, i)", "constant expected as second argument of DEC"],
+         ["DEC()", "at least 1 argument expected, got 0"],
+         ["DEC(i, 1, 2)", "at most 2 arguments expected, got 3"]
+         )
 ),
 "assignment statement": function(){
     var test = setupWithContext(
@@ -1009,7 +1057,7 @@ assert: function(){
     var test = setup(Grammar.statement);
     test.parse("ASSERT(TRUE)");
     test.parse("ASSERT(TRUE, 123)");
-    test.expectError("ASSERT()", "1 or 2 arguments expected, got 0");
+    test.expectError("ASSERT()", "at least 1 argument expected, got 0");
     test.expectError("ASSERT(123, TRUE)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'BOOLEAN'");
 },
 IMPORT: function(){

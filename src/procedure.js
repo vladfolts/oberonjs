@@ -35,9 +35,8 @@ var ProcCallGenerator = Class.extend({
         this.__code = new Code.SimpleGenerator();
         this.writeCode(this.prolog());
     },
-    id: function(){return this.__id;},
+    //id: function(){return this.__id;},
     context: function(){return this.__context;},
-    codeGenerator: function(){return this.__code;},
     handleArgument: function(e){
         var pos = this.__argumentsCount++;
         var isVarArg = false;
@@ -67,7 +66,7 @@ var ProcCallGenerator = Class.extend({
     },
     callExpression: function(){
         this.writeCode(this.epilog());
-        return new Code.Expression(this.codeGenerator().result(),
+        return new Code.Expression(this.__code.result(),
                                    this.resultType());
     },
     resultType: function(){return this.__type ? this.__type.result() : undefined;},
@@ -102,21 +101,15 @@ var ProcCallGenerator = Class.extend({
         return new CheckArgumentResult(arg.type, arg.isVar, castOperation);
     },
     epilog: function(){return ")";},
-    writeCode: function(s){this.codeGenerator().write(s);}
+    writeCode: function(s){this.__code.write(s);}
 });
 
-var ProcType = Type.Basic.extend({
-    init: function ProcType(name, args, result, callGeneratorFactory){
-        Type.Basic.prototype.init.bind(this)(name, "null");
-        this.__arguments = args;
-        this.__result = result;
-        this.__callGeneratorFactory = callGeneratorFactory
-            ? callGeneratorFactory
-            : function(context, id, type){
-                return new ProcCallGenerator(context, id, type);
-            };
+var DefinedProc = Type.Procedure.extend({
+    init: function DefinedProc(name){
+        Type.Procedure.prototype.init.call(this, name);
+        this.__arguments = undefined;
+        this.__result = undefined;
     },
-    isProcedure: function(){return true;},
     define: function(args, result){
         this.__arguments = args;
         this.__result = result;
@@ -131,7 +124,7 @@ var ProcType = Type.Basic.extend({
             + (this.__result ? ": " + this.__result.name() : "");
         },
     callGenerator: function(context, id){
-        return this.__callGeneratorFactory(context, id, this);
+        return new ProcCallGenerator(context, id, this);
     },
     __dumpProcArgs: function(){
         if (!this.__arguments.length)
@@ -145,6 +138,20 @@ var ProcType = Type.Basic.extend({
         }
         result += ")";
         return result;
+    }
+});
+
+var ProcType = Type.Procedure.extend({
+    init: function ProcType(name, args, result, callGeneratorFactory){
+        Type.Procedure.prototype.init.call(this, name);
+        this.__arguments = args;
+        this.__result = result;
+        this.__callGeneratorFactory = callGeneratorFactory;
+    },
+    arguments: function(){return this.__arguments;},
+    result: function(){return this.__result;},
+    callGenerator: function(context, id){
+        return this.__callGeneratorFactory(context, id, this);
     }
 });
 
@@ -193,8 +200,62 @@ function setBitImpl(name, op){
             return new TwoArgToOperatorProcCallGenerator(
                 context, id, type, operator);
             });
-    var type = new Type.Procedure(proc);
-    var symbol = new Type.Symbol(name, type);
+    var symbol = new Type.Symbol(name, proc);
+    return symbol;
+}
+
+function incImpl(name, unary, op){
+    var args = [new Arg(Type.basic.int, true), new Arg(Type.basic.int, false)];
+    function operator(x, y){
+        if (!y){
+            code = unary + x.code();
+            return new Code.Expression(
+                code, undefined, undefined, undefined, precedence.prefix);
+        }
+        else {
+            var value = y.constValue();
+            if (value === undefined)
+                throw new Errors.Error("constant expected as second argument of " + name);
+            var comment = y.isTerm() ? "" : "/*" + y.code() + "*/";
+            var valueCode = value + comment;
+            var code = op(x.code(), valueCode);
+            return new Code.Expression(
+                code, undefined, undefined, undefined, precedence.assignment);
+        }
+    }
+    var CallGenerator = ProcCallGenerator.extend({
+        init: function IncProcCallGenerator(context, id, type, operator){
+            ProcCallGenerator.prototype.init.call(this, context, id, type);
+            this.__operator = operator;
+            this.__firstArgument = undefined;
+            this.__secondArgument = undefined;
+        },
+        prolog: function(id){return "";},
+        handleArgument: function(e){
+            if (!this.__firstArgument)
+                this.__firstArgument = e;
+            else
+                this.__secondArgument = e;
+            ProcCallGenerator.prototype.handleArgument.call(this, e);
+        },
+        writeArgumentCode: function(){},
+        checkArgumentsCount: function(count){
+            checkVariableArgumentsCount(1, 2, count);
+        },
+        epilog: function(type){return "";},
+        callExpression: function(){
+            return operator(this.__firstArgument, this.__secondArgument);
+        }
+    });
+    var proc = new ProcType(
+        "predefined procedure " + name,
+        args,
+        undefined,
+        function(context, id, type){
+            return new CallGenerator(
+                context, id, type, operator);
+            });
+    var symbol = new Type.Symbol(name, proc);
     return symbol;
 }
 
@@ -224,9 +285,42 @@ function bitShiftImpl(name, op){
         function(context, id, type){
             return new CallGenerator(context, id, type);
         });
-    var type = new Type.Procedure(proc);
-    var symbol = new Type.Symbol(name, type);
+    var symbol = new Type.Symbol(name, proc);
     return symbol;
+}
+
+function longShort(name){
+    var CallGenerator = ProcCallGenerator.extend({
+        init: function FloorProcCallGenerator(context, id, type){
+            ProcCallGenerator.prototype.init.call(this, context, id, type);
+            this.__callExpression = undefined;
+        },
+        prolog: function(){return "";},
+        epilog: function(){return "";},
+        checkArgument: function(pos, e){
+            var result = ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
+            this.__callExpression = e;
+            return result;
+        },
+        callExpression: function(){return this.__callExpression;}
+    });
+    var args = [new Arg(Type.basic.real, false)];
+    var proc = new ProcType(
+        "predefined procedure " + name,
+        args,
+        Type.basic.real,
+        function(context, id, type){
+            return new CallGenerator(context, id, type);
+        });
+    var symbol = new Type.Symbol(name, proc);
+    return symbol;
+}
+
+function checkVariableArgumentsCount(min, max, actual){
+    if (actual < min)
+        throw new Errors.Error("at least " + min + " argument expected, got " + actual);
+    if (actual > max )
+        throw new Errors.Error("at most " + max + " arguments expected, got " + actual);
 }
 
 exports.predefined = [
@@ -252,13 +346,13 @@ exports.predefined = [
 
         var name = "NEW";
         var args = [new Arg(undefined, true)];
-        var type = new Type.Procedure(new ProcType(
+        var type = new ProcType(
             "predefined procedure NEW",
             args,
             undefined,
             function(context, id, type){
                 return new NewProcCallGenerator(context, id, type);
-            }));
+            });
         var symbol = new Type.Symbol(name, type);
         return symbol;
     }(),
@@ -281,13 +375,13 @@ exports.predefined = [
 
         var name = "LEN";
         var args = [new Arg(new Type.Array("ARRAY OF any type"), false)];
-        var type = new Type.Procedure(new ProcType(
+        var type = new ProcType(
             "predefined procedure LEN",
             args,
             Type.basic.int,
             function(context, id, type){
                 return new LenProcCallGenerator(context, id, type);
-            }));
+            });
         var symbol = new Type.Symbol(name, type);
         return symbol;
     }(),
@@ -301,13 +395,13 @@ exports.predefined = [
         });
         var name = "ODD";
         var args = [new Arg(Type.basic.int, false)];
-        var type = new Type.Procedure(new ProcType(
+        var type = new ProcType(
             "predefined procedure ODD",
             args,
             Type.basic.bool,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
-            }));
+            });
         var symbol = new Type.Symbol(name, type);
         return symbol;
     }(),
@@ -318,8 +412,7 @@ exports.predefined = [
             },
             prolog: function(){return this.context().rtl().assertId() + "(";},
             checkArgumentsCount: function(count){
-                if (count != 1 && count != 2 )
-                    throw new Errors.Error("1 or 2 arguments expected, got " + this.__argumentsCount);
+                checkVariableArgumentsCount(1, 2, count);
             }
         });
 
@@ -331,12 +424,13 @@ exports.predefined = [
             function(context, id, type){
                 return new AssertProcCallGenerator(context, id, type);
             });
-        var type = new Type.Procedure(proc);
-        var symbol = new Type.Symbol("ASSERT", type);
+        var symbol = new Type.Symbol("ASSERT", proc);
         return symbol;
     }(),
     setBitImpl("INCL", function(x, y){return x + " |= " + y;}),
     setBitImpl("EXCL", function(x, y){return x + " &= ~(" + y + ")";}),
+    incImpl("INC", "++", function(x, y){return x + " += " + y;}),
+    incImpl("DEC", "--", function(x, y){return x + " -= " + y;}),
     function(){
         var CallGenerator = ProcCallGenerator.extend({
             init: function AbsProcCallGenerator(context, id, type){
@@ -362,10 +456,55 @@ exports.predefined = [
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
-        var type = new Type.Procedure(proc);
-        var symbol = new Type.Symbol("ABS", type);
+        var symbol = new Type.Symbol("ABS", proc);
         return symbol;
     }(),
+    function(){
+        var CallGenerator = ProcCallGenerator.extend({
+            init: function FloorProcCallGenerator(context, id, type){
+                ProcCallGenerator.prototype.init.call(this, context, id, type);
+            },
+            prolog: function(){return "Math.floor(";},
+        });
+        var args = [new Arg(Type.basic.real, false)];
+        var proc = new ProcType(
+            "predefined procedure FLOOR",
+            args,
+            Type.basic.int,
+            function(context, id, type){
+                return new CallGenerator(context, id, type);
+            });
+        var symbol = new Type.Symbol("FLOOR", proc);
+        return symbol;
+    }(),
+    function(){
+        var CallGenerator = ProcCallGenerator.extend({
+            init: function FloorProcCallGenerator(context, id, type){
+                ProcCallGenerator.prototype.init.call(this, context, id, type);
+                this.__callExpression = undefined;
+            },
+            prolog: function(){return "";},
+            epilog: function(){return "";},
+            checkArgument: function(pos, e){
+                var result = ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
+                this.__callExpression = new Code.Expression(e.code(), Type.basic.real, undefined, e.constValue());
+                return result;
+            },
+            callExpression: function(){return this.__callExpression;}
+        });
+        var args = [new Arg(Type.basic.int, false)];
+        var proc = new ProcType(
+            "predefined procedure FLT",
+            args,
+            Type.basic.real,
+            function(context, id, type){
+                return new CallGenerator(context, id, type);
+            });
+        var symbol = new Type.Symbol("FLT", proc);
+        return symbol;
+    }(),
+    longShort("LONG"),
+    longShort("SHORT"),
     bitShiftImpl("LSL", op.lsl),
     bitShiftImpl("ASR", op.asr),
     bitShiftImpl("ROR", op.ror),
@@ -405,13 +544,13 @@ exports.predefined = [
         var name = "ORD";
         var argType = new Type.Basic("CHAR or BOOLEAN or SET");
         var args = [new Arg(argType, false)];
-        var type = new Type.Procedure(new ProcType(
+        var type = new ProcType(
             "predefined procedure " + name,
             args,
             Type.basic.int,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
-            }));
+            });
         var symbol = new Type.Symbol(name, type);
         return symbol;
     }(),
@@ -430,17 +569,17 @@ exports.predefined = [
             callExpression: function(){return this.__callExpression;}
         });
         var name = "CHR";
-        var type = new Type.Procedure(new ProcType(
+        var type = new ProcType(
             "predefined procedure " + name,
             [new Arg(Type.basic.int, false)],
             Type.basic.char,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
-            }));
+            });
         var symbol = new Type.Symbol(name, type);
         return symbol;
     }()
     ];
 
 exports.CallGenerator = ProcCallGenerator;
-exports.Type = ProcType;
+exports.Type = DefinedProc;

@@ -1,0 +1,10 @@
+MODULE m;
+
+VAR r: REAL; lr: LONGREAL;
+
+BEGIN
+    r := SHORT(lr);
+    lr := LONG(r);
+    r := SHORT(1.23);
+    lr := LONG(1.23);
+END m.

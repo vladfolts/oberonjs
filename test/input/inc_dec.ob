@@ -1,0 +1,16 @@
+MODULE m;
+
+CONST ic = 10;
+VAR i: INTEGER;
+
+BEGIN
+	INC(i);
+	INC(i, 2);
+	INC(i, 3 * 5);
+	INC(i, ic);
+
+	DEC(i);
+	DEC(i, 2);
+	DEC(i, 3 * 5);
+	DEC(i, ic);
+END m.

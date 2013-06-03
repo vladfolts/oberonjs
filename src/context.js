@@ -205,9 +205,9 @@ exports.Designator = ChainedContext.extend({
         if ( t === undefined){
             var s = getSymbol(this.parent(), id);
             var info = s.info();
-            if (s.isType())
+            if (s.isType() || s.isProcedure())
                 this.__currentType = info;
-            else if (s.isVariable() || s.isConst() || s.isProcedure()){
+            else if (s.isVariable() || s.isConst()){
                 this.__currentType = info.type();
             }
             else
@@ -414,7 +414,7 @@ exports.ProcDecl = ChainedContext.extend({
     },
     typeName: function(){return undefined;},
     setType: function(type){
-        var procSymbol = new Symbol(this.__name, new Type.Procedure(type));
+        var procSymbol = new Symbol(this.__name, type);
         this.__outerScope.addSymbol(procSymbol);
         this.__type = type;
     },
@@ -600,7 +600,7 @@ var equalOpTypeCheck = {
         return [basicTypes.int, basicTypes.real, basicTypes.set, basicTypes.bool, basicTypes.char].indexOf(t) != -1
             || (t instanceof Type.Array && t.elementsType() == basicTypes.char)
             || t instanceof Type.Pointer
-            || t.isProcedure()
+            || t instanceof Type.Procedure
             || t == Type.nil;
     }
 };
@@ -1403,7 +1403,7 @@ exports.FieldListDeclaration = ChainedContext.extend({
 });
 
 function assertProcType(type){
-    if (!(type instanceof Procedure.Type) && !(type instanceof Module.AnyType))
+    if (!(type instanceof Type.Procedure) && !(type instanceof Module.AnyType))
         throw new Errors.Error("PROCEDURE expected, got '" + type.name() + "'");
 }
 

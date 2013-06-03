@@ -4,15 +4,14 @@ var Class = require("rtl.js").Class;
 var Errors = require("errors.js");
 
 var Id = Class.extend({
-	init: function Id(){},
+	init: function Id(){}
 });
 
 var Type = Id.extend({
 	init: function Type(){
-		Id.prototype.init.bind(this)();
+		Id.prototype.init.call(this);
 	},
 	idType: function(){return "type";},
-	isProcedure: function(){return false;},
 });
 
 exports.Type = Type;
@@ -31,7 +30,7 @@ exports.String = Type.extend({
 
 var BasicType = Type.extend({
 	init: function BasicType(name, initValue){
-		Type.prototype.init.bind(this)();
+		Type.prototype.init.call(this);
 		this.__name = name;
 		this.__initValue = initValue;
 	},
@@ -152,13 +151,11 @@ exports.Variable = Id.extend({
 	isReadOnly: function(){return this.__isReadOnly;}
 });
 
-exports.Procedure = Id.extend({
-	init: function Procedure(type){
-		Id.prototype.init.bind(this)();
-		this.__type = type;
+exports.Procedure = BasicType.extend({
+	init: function Procedure(name){
+		BasicType.prototype.init.call(this, name, "null");
 	},
-	idType: function(){return "procedure";},
-	type: function(){return this.__type;}
+	idType: function(){return "procedure";}
 });
 
 var Symbol = Class.extend({

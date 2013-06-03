@@ -3,6 +3,7 @@ var Code = require("code.js");
 var Type = require("type.js");
 var ArrayType = Type.Array;
 var PointerType = Type.Pointer;
+var ProcedureType = Type.Procedure;
 
 function doNoting(context, e){return e;}
 
@@ -19,7 +20,7 @@ function findPointerBaseType(pBase, pType){
 }
 
 function matchesToNIL(t){
-    return t instanceof PointerType || t.isProcedure();
+    return t instanceof PointerType || t instanceof ProcedureType;
 }
 
 function areTypesMatch(t1, t2){
@@ -27,7 +28,7 @@ function areTypesMatch(t1, t2){
         return true;
     if (t1 instanceof PointerType && t2 instanceof PointerType)
         return areTypesMatch(t1.baseType(), t2.baseType());
-    if (t1.isProcedure() && t2.isProcedure())
+    if (t1 instanceof ProcedureType && t2 instanceof ProcedureType)
         return areProceduresMatch(t1, t2);
     if (t1 == Type.nil && matchesToNIL(t2)
         || t2 == Type.nil && matchesToNIL(t1))
@@ -85,7 +86,7 @@ function implicitCast(from, to){
     }
     else if (from == Type.nil && matchesToNIL(to))
         return doNoting;
-    else if (from.isProcedure() && to.isProcedure()){
+    else if (from instanceof ProcedureType && to instanceof ProcedureType){
         if (areProceduresMatch(from, to))
             return doNoting;
     }

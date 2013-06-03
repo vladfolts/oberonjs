@@ -1,0 +1,7 @@
+MODULE m;
+
+VAR r: REAL;
+
+BEGIN
+    r := FLT(123);
+END m.

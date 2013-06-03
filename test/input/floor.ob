@@ -1,0 +1,7 @@
+MODULE m;
+
+VAR i: INTEGER;
+
+BEGIN
+    i := FLOOR(1.23);
+END m.
