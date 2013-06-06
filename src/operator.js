@@ -1,6 +1,9 @@
 "use strict";
 
+var Cast = require("cast.js");
 var Code = require("code.js");
+var Errors = require("errors.js");
+var Type = require("type.js");
 
 var precedence = {
     unary: 4,
@@ -47,6 +50,61 @@ function makeUnary(op, code){
     };
 }
 
+function assign(left, right, context){
+    var d_info = left.designator().info();
+    if (!(d_info instanceof Type.Variable) || d_info.isReadOnly())
+        throw new Errors.Error("cannot assign to " + d_info.idType());
+
+    var leftCode = left.code();
+    var leftType = left.type();
+    var rightCode = right.code();
+    var rightType = right.type();
+
+    var isArray = leftType instanceof Type.Array;
+    if (isArray
+        && leftType.elementsType() == Type.basic.char
+        && rightType instanceof Type.String){
+        if (leftType.length() === undefined)
+            throw new Errors.Error("string cannot be assigned to open " + leftType.description());
+        if (rightType.length() > leftType.length())
+            throw new Errors.Error(
+                leftType.length() + "-character ARRAY is too small for "
+                + rightType.length() + "-character string");
+        return context.rtl().assignArrayFromString(leftCode, rightCode);
+    }
+
+    var castOperation = Cast.implicit(rightType, leftType);
+    if (!castOperation)
+        throw new Errors.Error("type mismatch: '" + leftCode
+                             + "' is '" + leftType.description()
+                             + "' and cannot be assigned to '" + rightType.description() + "' expression");
+
+    if (isArray && rightType instanceof Type.Array)
+        if (leftType.length() === undefined)
+            throw new Errors.Error("'" + leftCode
+                                 + "' is open '" + leftType.description()
+                                 + "' and cannot be assigned");
+        else if (rightType.length() === undefined)
+            throw new Errors.Error("'" + leftCode
+                                 + "' cannot be assigned to open '"
+                                 + rightType.description() + "'");
+        else if (leftType.length() != rightType.length())
+            throw new Errors.Error("array size mismatch: '" + leftCode
+                                 + "' has size " + leftType.length()
+                                 + " and cannot be copied to the array with size "
+                                 + rightType.length());
+    
+    if (isArray || rightType instanceof Type.Record)
+        return context.rtl().copy(rightCode, leftCode);
+
+    var castCode = castOperation(context, right.deref()).code();
+    rightCode = castCode ? castCode : rightCode;
+    return leftCode
+         + (left.designator().info().isVar()
+            ? ".set(" + rightCode + ")"
+            : " = " + rightCode);
+}
+
 var operators = {
     add: makeBinary(function(x, y){return x + y;}, " + ", precedence.addSub),
     sub: makeBinary(function(x, y){return x - y;}, " - ", precedence.addSub),
@@ -86,7 +144,9 @@ var operators = {
 
     lsl:        makeBinary(function(x, y){return x << y;}, " << ", precedence.shift),
     asr:        makeBinary(function(x, y){return x >> y;}, " >> ", precedence.shift),
-    ror:        makeBinary(function(x, y){return x >>> y;}, " >>> ", precedence.shift)
+    ror:        makeBinary(function(x, y){return x >>> y;}, " >>> ", precedence.shift),
+
+    assign:     assign
 };
 
 for(var p in operators)

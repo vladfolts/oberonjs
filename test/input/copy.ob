@@ -1,0 +1,13 @@
+MODULE m;
+
+CONST
+	s1 = 22X;
+	s2 = "ABC";
+VAR
+	ac3: ARRAY 3 OF CHAR;
+
+BEGIN
+    COPY(s1, ac3);
+    COPY(s2, ac3);
+    COPY(ac3, ac3);
+END m.

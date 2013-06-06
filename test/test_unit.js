@@ -498,6 +498,16 @@ identifier: function(){
          ["DEC(i, 1, 2)", "at most 2 arguments expected, got 3"]
          )
 ),
+"COPY": testWithContext(
+    context(Grammar.statement, "VAR ac3: ARRAY 3 OF CHAR; ac4: ARRAY 4 OF CHAR;"),
+    pass("COPY(\"abc\", ac3)",
+         "COPY(ac3, ac3)"
+        ),
+    fail(["COPY(ac3, \"abc\")", "expression cannot be used as VAR parameter"],
+         ["COPY(\"abcd\", ac3)", "3-character ARRAY is too small for 4-character string"],
+         ["COPY(ac3, ac4)", "array size mismatch: 'ac4' has size 4 and cannot be copied to the array with size 3"]
+         )
+),
 "assignment statement": function(){
     var test = setupWithContext(
           Grammar.statement
@@ -998,7 +1008,7 @@ procedure: function(){
     test.expectError("intArray := charArray"
                    , "type mismatch: 'intArray' is 'ARRAY OF INTEGER' and cannot be assigned to 'ARRAY OF CHAR' expression");
     test.expectError("intArray2 := intArray3"
-                   , "array size mismatch: 'intArray2' has size 10 and cannot be assigned to the array with size 5");
+                   , "array size mismatch: 'intArray2' has size 10 and cannot be copied to the array with size 5");
     test.expectError("intArray3 := charArray"
                    , "type mismatch: 'intArray3' is 'ARRAY OF INTEGER' and cannot be assigned to 'ARRAY OF CHAR' expression");
 },
