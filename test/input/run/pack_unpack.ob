@@ -1,0 +1,15 @@
+MODULE m;
+
+VAR i: INTEGER; r: REAL;
+
+BEGIN
+    r := 1.23;
+    i := 7;
+    PACK(r, i);
+    ASSERT(r = 1.23 * FLT(LSL(1, i)));
+
+    i := 0;
+    UNPACK(r, i);
+    ASSERT(r = 1.23);
+    ASSERT(i = 7);
+END m.

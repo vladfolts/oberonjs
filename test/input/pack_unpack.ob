@@ -1,0 +1,14 @@
+MODULE m;
+
+VAR i: INTEGER; r: REAL;
+
+PROCEDURE p(VAR r: REAL; VAR i: INTEGER);
+BEGIN
+    PACK(r, i);
+    UNPACK(r, i);
+END p;
+
+BEGIN
+    PACK(r, i);
+    UNPACK(r, i);
+END m.

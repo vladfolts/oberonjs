@@ -508,6 +508,20 @@ identifier: function(){
          ["COPY(ac3, ac4)", "array size mismatch: 'ac4' has size 4 and cannot be copied to the array with size 3"]
          )
 ),
+"PACK": testWithContext(
+    context(Grammar.statement, "VAR r: REAL; i: INTEGER;"),
+    pass("PACK(r, i)",
+         "PACK(r, 3)"),
+    fail(["PACK(r, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"])
+),
+"UNPACK": testWithContext(
+    context(Grammar.statement, "VAR r: REAL; i: INTEGER;"),
+    pass("UNPACK(r, i)"),
+    fail(["UNPACK(r, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
+         ["UNPACK(r, 3)", "expression cannot be used as VAR parameter"],
+         ["UNPACK(123.456, i)", "expression cannot be used as VAR parameter"]
+         )
+),
 "assignment statement": function(){
     var test = setupWithContext(
           Grammar.statement

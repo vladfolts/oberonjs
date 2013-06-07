@@ -4,4 +4,5 @@ VAR r: REAL;
 
 BEGIN
     r := FLT(123);
+    r := 1.23 * FLT(1 + 2);
 END m.

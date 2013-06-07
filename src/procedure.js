@@ -449,7 +449,7 @@ exports.predefined = [
             },
             callExpression: function(){
                 var e = this.args()[0];
-                return new Code.Expression(e.code(), Type.basic.real, undefined, e.constValue());
+                return new Code.Expression(e.code(), Type.basic.real, undefined, e.constValue(), e.maxPrecedence());
             }
         });
         var args = [new Arg(Type.basic.int, false)];
@@ -539,10 +539,6 @@ exports.predefined = [
             init: function CopyProcCallGenerator(context, id, type){
                 ExpCallGenerator.prototype.init.call(this, context, id, type);
             },
-            checkArgument: function(pos, e){
-                //this.__callExpression = new Code.Expression(e.code(), Type.basic.char);
-                return ExpCallGenerator.prototype.checkArgument.call(this, pos, e);
-            },
             callExpression: function(){
                 var args = this.args();
                 return new Code.Expression(op.assign(args[1], args[0], this.context()));
@@ -558,6 +554,44 @@ exports.predefined = [
                 return new CallGenerator(context, id, type);
             });
         var symbol = new Type.Symbol(name, type);
+        return symbol;
+    }(),
+    function(){
+        var args = [new Arg(Type.basic.real, true),
+                    new Arg(Type.basic.int, false)];
+        function operator(x, y){
+            return op.mulInplace(x, op.pow2(y));
+        }
+        var name = "PACK";
+        var proc = new ProcType(
+            "predefined procedure " + name,
+            args,
+            undefined,
+            function(context, id, type){
+                return new TwoArgToOperatorProcCallGenerator(
+                    context, id, type, operator);
+                });
+        var symbol = new Type.Symbol(name, proc);
+        return symbol;
+    }(),
+    function(){
+        var args = [new Arg(Type.basic.real, true),
+                    new Arg(Type.basic.int, true)];
+        function operator(x, y){
+            return op.assign(y, op.log2(x)) +
+                   "; " +
+                   op.divInplace(x, op.pow2(y));
+        }
+        var name = "UNPACK";
+        var proc = new ProcType(
+            "predefined procedure " + name,
+            args,
+            undefined,
+            function(context, id, type){
+                return new TwoArgToOperatorProcCallGenerator(
+                    context, id, type, operator);
+                });
+        var symbol = new Type.Symbol(name, proc);
         return symbol;
     }()
     ];

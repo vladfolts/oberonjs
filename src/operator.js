@@ -50,10 +50,23 @@ function makeUnary(op, code){
     };
 }
 
+var mul = makeBinary(function(x, y){return x * y;}, " * ", precedence.mulDivMod);
+var divFloat = makeBinary(function(x, y){return x / y;}, " / ", precedence.mulDivMod);
+
+function pow2(e){
+    return new Code.Expression("Math.pow(2, " + e.deref().code() + ")",
+                               Type.basic.real);
+}
+
+function log2(e){
+    return new Code.Expression("(Math.log(" + e.deref().code() + ") / Math.LN2) | 0",
+                               Type.basic.int, undefined, undefined, precedence.bitOr);
+}
+
 function assign(left, right, context){
-    var d_info = left.designator().info();
-    if (!(d_info instanceof Type.Variable) || d_info.isReadOnly())
-        throw new Errors.Error("cannot assign to " + d_info.idType());
+    var info = left.designator().info();
+    if (!(info instanceof Type.Variable) || info.isReadOnly())
+        throw new Errors.Error("cannot assign to " + info.idType());
 
     var leftCode = left.code();
     var leftType = left.type();
@@ -99,22 +112,29 @@ function assign(left, right, context){
 
     var castCode = castOperation(context, right.deref()).code();
     rightCode = castCode ? castCode : rightCode;
-    return leftCode
-         + (left.designator().info().isVar()
-            ? ".set(" + rightCode + ")"
-            : " = " + rightCode);
+    return leftCode + (info.isVar() ? ".set(" + rightCode + ")"
+                                    : " = " + rightCode);
+}
+
+function makeInplace(code, altOp){
+    return function(left, right){
+        var info = left.designator().info();
+        if (info.isVar())
+            return assign(left, altOp(left, right));
+        return left.code() + code + right.deref().code();
+    };
 }
 
 var operators = {
     add: makeBinary(function(x, y){return x + y;}, " + ", precedence.addSub),
     sub: makeBinary(function(x, y){return x - y;}, " - ", precedence.addSub),
-    mul: makeBinary(function(x, y){return x * y;}, " * ", precedence.mulDivMod),
+    mul: mul,
     div: makeBinary(
             function(x, y){return (x / y) | 0;},
             function(x, y){return x + " / " + y + " | 0";},
             precedence.mulDivMod,
             precedence.bitOr),
-    divFloat:   makeBinary(function(x, y){return x / y;}, " / ", precedence.mulDivMod),
+    divFloat:   divFloat,
     mod:        makeBinary(function(x, y){return x % y;}, " % ", precedence.mulDivMod),
     setUnion:   makeBinary(function(x, y){return x | y;}, " | ", precedence.bitOr),
     setDiff:    makeBinary(function(x, y){return x & ~y;}, " & ~", precedence.bitAnd),
@@ -146,7 +166,12 @@ var operators = {
     asr:        makeBinary(function(x, y){return x >> y;}, " >> ", precedence.shift),
     ror:        makeBinary(function(x, y){return x >>> y;}, " >>> ", precedence.shift),
 
-    assign:     assign
+    assign:     assign,
+    mulInplace: makeInplace(" *= ", mul),
+    divInplace: makeInplace(" /= ", divFloat),
+    
+    pow2:       pow2,
+    log2:       log2
 };
 
 for(var p in operators)
