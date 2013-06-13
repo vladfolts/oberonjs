@@ -10,11 +10,17 @@ var Id = Class.extend({
 var Type = Id.extend({
 	init: function Type(){
 		Id.prototype.init.call(this);
-	},
-	idType: function(){return "type";},
+	}
 });
 
-exports.Type = Type;
+var TypeId = Id.extend({
+	init: function TypeId(type){
+		Id.prototype.init.call(this);
+		this.__type = type;
+	},
+	type: function(){return this.__type;},
+	description: function(){return 'type ' + this.__type.description();}
+});
 
 exports.String = Type.extend({
 	init: function TypeString(s){
@@ -34,6 +40,7 @@ var BasicType = Type.extend({
 		this.__name = name;
 		this.__initValue = initValue;
 	},
+	idType: function(){return "type";},
 	name: function() {return this.__name;},
 	description: function(){return this.name();},
 	initializer: function() {return this.__initValue;}
@@ -70,7 +77,7 @@ exports.Pointer = BasicType.extend({
 });
 
 exports.ForwardRecord = Type.extend({
-	init: function(resolve){
+	init: function ForwardRecord(resolve){
 		Type.prototype.init.bind(this)();
 		this.__resolve = resolve;
 	},
@@ -167,8 +174,10 @@ var Symbol = Class.extend({
 	info: function(){return this.__info;},
 	isVariable: function(){return this.__info instanceof exports.Variable;},
 	isConst: function(){return this.__info instanceof exports.Const;},
-	isType: function(){return this.__info instanceof Type;},
+	isType: function(){return this.__info instanceof TypeId;},
 	isProcedure: function(){return this.__info instanceof exports.Procedure;},
 });
 
 exports.Symbol = Symbol;
+exports.Type = Type;
+exports.TypeId = TypeId;

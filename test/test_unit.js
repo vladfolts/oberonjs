@@ -25,7 +25,7 @@ function parseUsingGrammar(grammar, s, cxFactory, handlerError){
     }
     catch (x){
         if (!(x instanceof Errors.Error))
-            throw x;//console.log(x.stack);
+            throw new Error("'" + s + '":\n' + x.stack);
         
         if (handlerError)
             handlerError(x);
@@ -342,8 +342,8 @@ identifier: function(){
         + "VAR p: POINTER TO RECORD END; pBase: POINTER TO Base; pDerived: POINTER TO Derived; vDerived: Derived; i: INTEGER;");
 
     test.parse("pBase IS Derived");
-    test.expectError("pBase IS pDerived", "RECORD type expected after 'IS'");
-    test.expectError("pBase IS TRUE", "RECORD type expected after 'IS'");
+    test.expectError("pBase IS pDerived", "type name expected");
+    test.expectError("pBase IS TRUE", "type name expected");
     test.expectError("pBase IS vDerived", "type name expected");
     test.expectError("Derived IS Derived", "POINTER to type expected before 'IS'");
     test.expectError("i IS Derived", "POINTER to type expected before 'IS'");
@@ -364,7 +364,7 @@ identifier: function(){
         );
 
     test.parse("NEW(p)");
-    test.expectError("NEW.NEW(p)", "cannot designate 'predefined procedure NEW'");
+    test.expectError("NEW.NEW(p)", "cannot designate 'standard procedure NEW'");
     test.expectError("NEW(i)", "POINTER variable expected, got 'INTEGER'");
     test.expectError("NEW()", "1 argument(s) expected, got 0");
     test.expectError("NEW(p, p)", "1 argument(s) expected, got 2");
@@ -522,6 +522,11 @@ identifier: function(){
          ["UNPACK(123.456, i)", "expression cannot be used as VAR parameter"]
          )
 ),
+"standard procedure cannot be referenced" : testWithContext(
+    context(Grammar.expression, "VAR chr: PROCEDURE(c: CHAR): INTEGER;"),
+    pass(),
+    fail(["CHR", "standard procedure CHR cannot be referenced"])
+    ),
 "assignment statement": function(){
     var test = setupWithContext(
           Grammar.statement
@@ -544,6 +549,8 @@ identifier: function(){
     test.expectError("c := i", "cannot assign to constant");
     test.expectError("ch := \"AB\""
                    , "type mismatch: 'ch' is 'CHAR' and cannot be assigned to 'multi-character string' expression");
+    test.expectError("ch := CHAR"
+                   , "type mismatch: 'ch' is 'CHAR' and cannot be assigned to 'type CHAR' expression");
     test.expectError("i := .1", "expression expected");
     test.expectError("proc1 := proc2"
                    , "type mismatch: 'proc1' is 'PROCEDURE' and cannot be assigned to 'PROCEDURE(): INTEGER' expression");
@@ -980,7 +987,7 @@ procedure: function(){
         , "type mismatch: 'v3' is 'PROCEDURE(INTEGER): ProcType1' and cannot be assigned to 'PROCEDURE(BOOLEAN): ProcType1' expression");
     test.expectError(
           "v10 := NEW"
-        , "type mismatch: 'v10' is 'ProcType6' and cannot be assigned to 'predefined procedure NEW' expression");
+        , "standard procedure NEW cannot be referenced");
     test.expectError("v10 := v11", "type mismatch: 'v10' is 'ProcType6' and cannot be assigned to 'ProcType7' expression" );
     test.expectError("v8 := v8VAR", "type mismatch: 'v8' is 'ProcType4' and cannot be assigned to 'ProcType4VAR' expression" );
 },

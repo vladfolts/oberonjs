@@ -205,13 +205,10 @@ exports.Designator = ChainedContext.extend({
         if ( t === undefined){
             var s = getSymbol(this.parent(), id);
             var info = s.info();
-            if (s.isType() || s.isProcedure())
+            if (info instanceof Type.Type || s.isType() || s.isProcedure())
                 this.__currentType = info;
-            else if (s.isVariable() || s.isConst()){
+            else if (s.isVariable() || s.isConst())
                 this.__currentType = info.type();
-            }
-            else
-                throw new Errors.Error("variable, constant or procedure name expected");
             this.__info = info;
         }
         else if (t instanceof Type.Pointer){
@@ -308,20 +305,24 @@ exports.Designator = ChainedContext.extend({
     }
 });
 
+function unwrapType(type){
+    if (!(type instanceof Type.TypeId))
+        throw new Errors.Error("type name expected");
+    return type.type();
+}
+
 exports.Type = ChainedContext.extend({
     init: function TypeContext(context){ChainedContext.prototype.init.bind(this)(context);},
     setIdent: function(id){
         var s = this.findSymbol(id);
         if (!s)
             throw new Errors.Error("undeclared type: '" + id + "'");
-        if (s instanceof Type.Type)
-            throw new Errors.Error("type name expected");
-        this.setType(s.info());
+        this.setType(unwrapType(s.info()));
     }
 });
 
 exports.FormalType = exports.Type.extend({
-    init: function FormatlTypeContext(context){
+    init: function FormalType(context){
         exports.Type.prototype.init.bind(this)(context);
         this.__arrayDimension = 0;
     },
@@ -365,9 +366,7 @@ exports.FormalParameters = ChainedContext.extend({
     setIdent: function(id){
         var parent = this.parent();
         var s = getSymbol(parent, id);
-        if (!s.isType())
-            throw new Errors.Error("type name expected");
-        this.__result = s.info();
+        this.__result = unwrapType(s.info());
     },
     endParse: function(){
         this.__type.define(this.__arguments, this.__result);
@@ -498,7 +497,7 @@ exports.ProcParams = ChainedContext.extend({
 });
 
 exports.PointerDecl = ChainedContext.extend({
-    init: function PointerDeclContext(context){
+    init: function PointerDecl(context){
         ChainedContext.prototype.init.bind(this)(context);
         this.__base = undefined;
         this.__name = this.parent().genTypeName();
@@ -514,8 +513,9 @@ exports.PointerDecl = ChainedContext.extend({
         if (existing)
             return existing;
 
-        var resolve = function(){return getSymbol(this.__parent, id).info();};
-        return new Symbol(id, new Type.ForwardRecord(resolve.bind(this)));
+        var resolve = function(){return getSymbol(this.__parent, id).info().type();};
+        var type = new Type.ForwardRecord(resolve.bind(this));
+        return new Symbol(id, new Type.TypeId(type));
     },
     genTypeName: function(){
         return this.__name + "$base";
@@ -944,14 +944,13 @@ exports.Expression = ChainedContext.extend({
         else if (this.__relation == "IS"){
             if (!(leftType instanceof Type.Pointer))
                 throw new Errors.Error("POINTER to type expected before 'IS'");
-            else if (!(rightType instanceof Type.Record))
-                throw new Errors.Error("RECORD type expected after 'IS'");
-            else
-                checkTypeCast(leftType, rightType, "invalid type test");
 
-            var designator = e.designator();
-            if (!designator || !(designator.info() instanceof Type.Type))
-                throw new Errors.Error("type name expected");
+            rightType = unwrapType(rightType);
+            if (!(rightType instanceof Type.Record))
+                throw new Errors.Error("RECORD type expected after 'IS'");
+
+            checkTypeCast(leftType, rightType, "invalid type test");
+
             code = leftCode + " instanceof " + rightCode;
         }
         else {
@@ -1385,7 +1384,7 @@ exports.StatementProcedureCall = ProcedureCall.extend({
 });
 
 exports.ExpressionProcedureCall = ProcedureCall.extend({
-    init: function ExpressionProcedureCallContext(context){
+    init: function ExpressionProcedureCall(context){
         ProcedureCall.prototype.init.bind(this)(context);
         this.__designator = undefined;
         this.__hasActualParameters = false;
@@ -1398,12 +1397,18 @@ exports.ExpressionProcedureCall = ProcedureCall.extend({
         this.__hasActualParameters = true;
     },
     endParse: function(){
+        var parent = this.parent();
         if (this.__hasActualParameters){
             ProcedureCall.prototype.endParse.call(this);
-            this.parent().handleFactor(this.callExpression());
+            parent.handleFactor(this.callExpression());
         }
-        else
-            this.parent().setDesignator(this.__designator);
+        else{
+            var d = this.__designator;
+            var info = d.info();
+            if (info instanceof Procedure.Std)
+                throw new Errors.Error(info.description() + " cannot be referenced");
+            parent.setDesignator(d);
+        }
     }
 });
 
@@ -1418,9 +1423,7 @@ exports.RecordDecl = ChainedContext.extend({
     addField: function(name, type) {this.__type.addField(name, type);},
     setBaseType: function(id){
         var s = getSymbol(this.parent(), id);
-        if (!s.isType())
-            throw new Errors.Error("type name expected");
-        this.__type.setBaseType(s.info());
+        this.__type.setBaseType(unwrapType(s.info()));
     },
     endParse: function(){
         var type = this.__type;
@@ -1449,7 +1452,7 @@ exports.TypeDeclaration = ChainedContext.extend({
     },
     setIdent: function(id){this.__ident = id;},
     setType: function(type){
-        this.addSymbol(new Symbol(this.__ident, type));
+        this.addSymbol(new Symbol(this.__ident, new Type.TypeId(type)));
     },
     typeName: function(){return this.__ident;},
     genTypeName: function(){return this.__ident;},
@@ -1465,7 +1468,7 @@ exports.TypeCast = ChainedContext.extend({
         var s = getSymbol(this.parent(), id);
         if (!s.isType())
             return; // this is not a type cast, may be procedure call
-        this.__type = s.info();
+        this.__type = s.info().type();
     },
     endParse: function(){
         if (this.__type === undefined)
@@ -1523,9 +1526,9 @@ var Scope = Class.extend({
         var symbols = {};
         for(var t in basicTypes){
             var type = basicTypes[t];
-            symbols[type.name()] = new Symbol(type.name(), type);
+            symbols[type.name()] = new Symbol(type.name(), new Type.TypeId(type));
         }
-        symbols["LONGREAL"] = new Symbol("LONGREAL", basicTypes.real);
+        symbols["LONGREAL"] = new Symbol("LONGREAL", new Type.TypeId(basicTypes.real));
         
         var predefined = Procedure.predefined;
         for(var i = 0; i < predefined.length; ++i){

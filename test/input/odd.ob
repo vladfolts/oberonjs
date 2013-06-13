@@ -6,5 +6,6 @@ BEGIN
 	ASSERT(ODD(1));
 	i := 4;
 	ASSERT(ODD(1 + i));
-	ASSERT(~ODD(2))
+	ASSERT(~ODD(2));
+	ASSERT(ODD(ORD(TRUE OR FALSE)));
 END m.

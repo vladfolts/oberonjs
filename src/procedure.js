@@ -141,13 +141,14 @@ var DefinedProc = Type.Procedure.extend({
     }
 });
 
-var ProcType = Type.Procedure.extend({
-    init: function ProcType(name, args, result, callGeneratorFactory){
+var Std = Type.Procedure.extend({
+    init: function Std(name, args, result, callGeneratorFactory){
         Type.Procedure.prototype.init.call(this, name);
         this.__arguments = args;
         this.__result = result;
         this.__callGeneratorFactory = callGeneratorFactory;
     },
+    description: function(){return "standard procedure " + this.name();},
     arguments: function(){return this.__arguments;},
     result: function(){return this.__result;},
     callGenerator: function(context, id){
@@ -193,8 +194,8 @@ function setBitImpl(name, op){
         var valueCode = value + "/*" + comment + "*/";
         return op(Code.adjustPrecedence(x, precedence.assignment), valueCode);
     }
-    var proc = new ProcType(
-        "predefined procedure " + name,
+    var proc = new Std(
+        name,
         args,
         undefined,
         function(context, id, type){
@@ -226,8 +227,8 @@ function incImpl(name, unary, op){
             checkVariableArgumentsCount(1, 2, count);
         }
     });
-    var proc = new ProcType(
-        "predefined procedure " + name,
+    var proc = new Std(
+        name,
         args,
         undefined,
         function(context, id, type){
@@ -251,8 +252,8 @@ function bitShiftImpl(name, op){
     var args = [new Arg(Type.basic.int, false),
                 new Arg(Type.basic.int, false)
                ];
-    var proc = new ProcType(
-        "predefined procedure " + name,
+    var proc = new Std(
+        name,
         args,
         Type.basic.int,
         function(context, id, type){
@@ -270,8 +271,8 @@ function longShort(name){
         callExpression: function(){return this.args()[0];}
     });
     var args = [new Arg(Type.basic.real, false)];
-    var proc = new ProcType(
-        "predefined procedure " + name,
+    var proc = new Std(
+        name,
         args,
         Type.basic.real,
         function(context, id, type){
@@ -311,8 +312,8 @@ exports.predefined = [
 
         var name = "NEW";
         var args = [new Arg(undefined, true)];
-        var type = new ProcType(
-            "predefined procedure NEW",
+        var type = new Std(
+            "NEW",
             args,
             undefined,
             function(context, id, type){
@@ -340,8 +341,8 @@ exports.predefined = [
 
         var name = "LEN";
         var args = [new Arg(new Type.Array("ARRAY OF any type"), false)];
-        var type = new ProcType(
-            "predefined procedure LEN",
+        var type = new Std(
+            "LEN",
             args,
             Type.basic.int,
             function(context, id, type){
@@ -351,17 +352,20 @@ exports.predefined = [
         return symbol;
     }(),
     function(){
-        var CallGenerator = ProcCallGenerator.extend({
+        var CallGenerator = ExpCallGenerator.extend({
             init: function OddProcCallGenerator(context, id, type){
-                ProcCallGenerator.prototype.init.call(this, context, id, type);
+                ExpCallGenerator.prototype.init.call(this, context, id, type);
             },
-            prolog: function(){return "(";},
-            epilog: function(){return " & 1)";}
+            callExpression: function(){
+                var e = this.args()[0];
+                var code = Code.adjustPrecedence(e, precedence.bitAnd);
+                return new Code.Expression(code + " & 1", Type.basic.bool, undefined, e.constValue(), precedence.bitAnd);
+            }
         });
         var name = "ODD";
         var args = [new Arg(Type.basic.int, false)];
-        var type = new ProcType(
-            "predefined procedure ODD",
+        var type = new Std(
+            "ODD",
             args,
             Type.basic.bool,
             function(context, id, type){
@@ -382,8 +386,8 @@ exports.predefined = [
         });
 
         var args = [new Arg(Type.basic.bool), new Arg(Type.basic.int)];
-        var proc = new ProcType(
-            "predefined procedure ASSERT",
+        var proc = new Std(
+            "ASSERT",
             args,
             undefined,
             function(context, id, type){
@@ -414,8 +418,8 @@ exports.predefined = [
             resultType: function(){return this.__argType;}
         });
         var args = [new Arg(undefined, false)];
-        var proc = new ProcType(
-            "predefined procedure ABS",
+        var proc = new Std(
+            "ABS",
             args,
             undefined,
             function(context, id, type){
@@ -432,8 +436,8 @@ exports.predefined = [
             prolog: function(){return "Math.floor(";},
         });
         var args = [new Arg(Type.basic.real, false)];
-        var proc = new ProcType(
-            "predefined procedure FLOOR",
+        var proc = new Std(
+            "FLOOR",
             args,
             Type.basic.int,
             function(context, id, type){
@@ -453,8 +457,8 @@ exports.predefined = [
             }
         });
         var args = [new Arg(Type.basic.int, false)];
-        var proc = new ProcType(
-            "predefined procedure FLT",
+        var proc = new Std(
+            "FLT",
             args,
             Type.basic.real,
             function(context, id, type){
@@ -504,8 +508,8 @@ exports.predefined = [
         var name = "ORD";
         var argType = new Type.Basic("CHAR or BOOLEAN or SET");
         var args = [new Arg(argType, false)];
-        var type = new ProcType(
-            "predefined procedure " + name,
+        var type = new Std(
+            name,
             args,
             Type.basic.int,
             function(context, id, type){
@@ -524,8 +528,8 @@ exports.predefined = [
             }
         });
         var name = "CHR";
-        var type = new ProcType(
-            "predefined procedure " + name,
+        var type = new Std(
+            name,
             [new Arg(Type.basic.int, false)],
             Type.basic.char,
             function(context, id, type){
@@ -545,8 +549,8 @@ exports.predefined = [
             }
         });
         var name = "COPY";
-        var type = new ProcType(
-            "predefined procedure " + name,
+        var type = new Std(
+            name,
             [new Arg(undefined, false),
              new Arg(new Type.Array("ARRAY OF CHAR", undefined, Type.basic.char), true)],
             undefined,
@@ -563,8 +567,8 @@ exports.predefined = [
             return op.mulInplace(x, op.pow2(y));
         }
         var name = "PACK";
-        var proc = new ProcType(
-            "predefined procedure " + name,
+        var proc = new Std(
+            name,
             args,
             undefined,
             function(context, id, type){
@@ -583,8 +587,8 @@ exports.predefined = [
                    op.divInplace(x, op.pow2(y));
         }
         var name = "UNPACK";
-        var proc = new ProcType(
-            "predefined procedure " + name,
+        var proc = new Std(
+            name,
             args,
             undefined,
             function(context, id, type){
@@ -598,3 +602,4 @@ exports.predefined = [
 
 exports.CallGenerator = ProcCallGenerator;
 exports.Type = DefinedProc;
+exports.Std = Std;
