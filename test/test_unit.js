@@ -116,7 +116,7 @@ comment: function(){
     test.expectError("T = ARRAY10 OF ARRAY 5 OF INTEGER", "not parsed");
     test.expectError("T = ARRAY 10OF ARRAY 5 OF INTEGER", "not parsed");
     test.expectError("T = ARRAY 10 OFARRAY 5 OF INTEGER", "not parsed");
-    test.expectError("T = ARRAY 10 OF ARRAY5 OF INTEGER", "undeclared type: 'ARRAY5'");
+    test.expectError("T = ARRAY 10 OF ARRAY5 OF INTEGER", "undeclared identifier: 'ARRAY5'");
     test.expectError("T = ARRAY 10 OF ARRAY 5OF INTEGER", "not parsed");
     test.expectError("T = ARRAY 10 OF ARRAY 5 OFINTEGER", "not parsed");
 },
@@ -955,6 +955,20 @@ procedure: function(){
          ["p3()", "procedure returning a result cannot be used as a statement"]
          )
 ),
+"local procedure": testWithContext(
+    context(Grammar.procedureDeclaration,
+            "TYPE ProcType = PROCEDURE;" +
+            "VAR procVar: ProcType;" +
+            "PROCEDURE procWithProcArg(p: ProcType); END procWithProcArg;"),
+    pass("PROCEDURE p; PROCEDURE innerP; END innerP; END p",
+         "PROCEDURE p; PROCEDURE innerP; END innerP; BEGIN innerP() END p"),
+    fail(["PROCEDURE p; PROCEDURE innerP; END innerP; BEGIN procVar := innerP END p",
+          "local procedure 'innerP' cannot be referenced"],
+         ["PROCEDURE p; PROCEDURE innerP; END innerP; BEGIN procWithProcArg(innerP) END p",
+          "local procedure 'innerP' cannot be referenced"],
+         ["PROCEDURE p; PROCEDURE innerP; VAR innerV: INTEGER; END innerP; BEGIN innerV := 0 END p",
+          "undeclared identifier: 'innerV'"])
+    ),
 "procedure assignment": function(){
     var test = setupWithContext(
           Grammar.statement

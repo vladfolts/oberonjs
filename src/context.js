@@ -18,11 +18,34 @@ var Class = ImportRTL.Class;
 var basicTypes = Type.basic;
 var Symbol = Type.Symbol;
 
-function getSymbol(context, id){
+var FoundSymbol = Class.extend({
+    init: function(symbol, scope){
+        this.__symbol = symbol;
+        this.__scope = scope;
+    },
+    symbol: function(){return this.__symbol;},
+    scope: function(){return this.__scope;}
+});
+
+function getSymbolAndScope(context, id){
     var s = context.findSymbol(id);
     if (!s)
         throw new Errors.Error("undeclared identifier: '" + id + "'");
     return s;
+}
+
+function getSymbol(context, id){
+    return getSymbolAndScope(context, id).symbol();
+}
+
+function unwrapType(type){
+    if (!(type instanceof Type.TypeId))
+        throw new Errors.Error("type name expected");
+    return type.type();
+}
+
+function getTypeSymbol(context, id){
+    return unwrapType(getSymbol(context, id).info());
 }
 
 function throwTypeMismatch(from, to){
@@ -83,7 +106,7 @@ var ChainedContext = Class.extend({
     findSymbol: function(id){return this.__parent.findSymbol(id);},
     addSymbol: function(s){this.__parent.addSymbol(s);},
     currentScope: function(s){return this.__parent.currentScope();},
-    pushScope: function(){this.__parent.pushScope();},
+    pushScope: function(id){this.__parent.pushScope(id);},
     popScope: function(){this.__parent.popScope();},
     setType: function(type){this.__parent.setType(type);},
     setDesignator: function(d){this.__parent.setDesignator(d);},
@@ -178,16 +201,18 @@ exports.BaseType = ChainedContext.extend({
 });
 
 var DesignatorInfo = Class.extend({
-    init: function(code, refCode, type, info){
+    init: function(code, refCode, type, info, scope){
         this.__code = code;
         this.__refCode = refCode;
         this.__type = type;
         this.__info = info;
+        this.__scope = scope;
     },
     code: function(){return this.__code;},
     refCode: function(){return this.__refCode(this.__code);},
     type: function(){return this.__type;},
-    info: function(){return this.__info;}
+    info: function(){return this.__info;},
+    scope: function(){return this.__scope;}
 });
 
 exports.Designator = ChainedContext.extend({
@@ -195,15 +220,19 @@ exports.Designator = ChainedContext.extend({
         ChainedContext.prototype.init.bind(this)(context);
         this.__currentType = undefined;
         this.__info = undefined;
+        this.__scope = undefined;
         this.__code = new Code.SimpleGenerator();
         this.__indexExpression = undefined;
         this.__derefCode = undefined;
         this.__propCode = undefined;
     },
     setIdent: function(id){
+        var scope;
         var t = this.__currentType;
         if ( t === undefined){
-            var s = getSymbol(this.parent(), id);
+            var found = getSymbolAndScope(this.parent(), id);
+            scope = found.scope();
+            var s = found.symbol();
             var info = s.info();
             if (info instanceof Type.Type || s.isType() || s.isProcedure())
                 this.__currentType = info;
@@ -215,13 +244,14 @@ exports.Designator = ChainedContext.extend({
             this.__handleDeref();
             this.__denote(id);
         }
-        else if (!(t instanceof Type.Record)
-              && !(t instanceof Module.Type)
-              && !(t instanceof Module.AnyType))
-            throw new Errors.Error("cannot designate '" + t.description() + "'");
-        else
+        else if (t instanceof Type.Record
+              || t instanceof Module.Type
+              || t instanceof Module.AnyType)
             this.__denote(id);
+        else
+            throw new Errors.Error("cannot designate '" + t.description() + "'");
 
+        this.__scope = scope;
         this.__code.write(id);
     },
     codeGenerator: function(){return this.__code;},
@@ -291,8 +321,9 @@ exports.Designator = ChainedContext.extend({
     },
     endParse: function(){
         var code = this.__code.result();
+        var refCode = this.__makeRefCode.bind(this);
         this.parent().setDesignator(
-            new DesignatorInfo(code, this.__makeRefCode.bind(this), this.__currentType, this.__info));
+            new DesignatorInfo(code, refCode, this.__currentType, this.__info, this.__scope));
     },
     __makeRefCode: function(code){
         if (this.__derefCode)
@@ -305,20 +336,11 @@ exports.Designator = ChainedContext.extend({
     }
 });
 
-function unwrapType(type){
-    if (!(type instanceof Type.TypeId))
-        throw new Errors.Error("type name expected");
-    return type.type();
-}
-
 exports.Type = ChainedContext.extend({
-    init: function TypeContext(context){ChainedContext.prototype.init.bind(this)(context);},
-    setIdent: function(id){
-        var s = this.findSymbol(id);
-        if (!s)
-            throw new Errors.Error("undeclared type: '" + id + "'");
-        this.setType(unwrapType(s.info()));
-    }
+    init: function TypeContext(context){
+        ChainedContext.prototype.init.bind(this)(context);
+    },
+    setIdent: function(id){this.setType(getTypeSymbol(this, id));}
 });
 
 exports.FormalType = exports.Type.extend({
@@ -364,9 +386,7 @@ exports.FormalParameters = ChainedContext.extend({
         this.__arguments.push(arg);
     },
     setIdent: function(id){
-        var parent = this.parent();
-        var s = getSymbol(parent, id);
-        this.__result = unwrapType(s.info());
+        this.__result = getTypeSymbol(this.parent(), id);
     },
     endParse: function(){
         this.__type.define(this.__arguments, this.__result);
@@ -401,7 +421,7 @@ exports.ProcDecl = ChainedContext.extend({
         if (this.__name === undefined){ // first call
             this.__name = id;
             gen.write("\nfunction " + id + "(");
-            this.parent().pushScope();
+            this.parent().pushScope("procedure");
         }
         else if (this.__name === id){
             gen.closeScope();
@@ -509,13 +529,17 @@ exports.PointerDecl = ChainedContext.extend({
         this.__base = type;
     },
     findSymbol: function(id){
-        var existing = this.parent().findSymbol(id);
+        var parent = this.parent();
+        var existing = parent.findSymbol(id);
         if (existing)
             return existing;
 
-        var resolve = function(){return getSymbol(this.__parent, id).info().type();};
-        var type = new Type.ForwardRecord(resolve.bind(this));
-        return new Symbol(id, new Type.TypeId(type));
+        var resolve = function(){return getSymbol(parent, id).info().type();};
+        var type = new Type.ForwardRecord(resolve);
+        return new FoundSymbol(
+            new Symbol(id, new Type.TypeId(type)),
+            this.currentScope()
+            );
     },
     genTypeName: function(){
         return this.__name + "$base";
@@ -1405,8 +1429,13 @@ exports.ExpressionProcedureCall = ProcedureCall.extend({
         else{
             var d = this.__designator;
             var info = d.info();
-            if (info instanceof Procedure.Std)
-                throw new Errors.Error(info.description() + " cannot be referenced");
+            if (info instanceof Type.Procedure){
+                if (info instanceof Procedure.Std)
+                    throw new Errors.Error(info.description() + " cannot be referenced");
+                var scope = d.scope();
+                if (scope && scope.id() == "procedure")
+                    throw new Errors.Error("local procedure '" + d.code() + "' cannot be referenced");
+            }
             parent.setDesignator(d);
         }
     }
@@ -1422,8 +1451,7 @@ exports.RecordDecl = ChainedContext.extend({
     },
     addField: function(name, type) {this.__type.addField(name, type);},
     setBaseType: function(id){
-        var s = getSymbol(this.parent(), id);
-        this.__type.setBaseType(unwrapType(s.info()));
+        this.__type.setBaseType(getTypeSymbol(this.parent(), id));
     },
     endParse: function(){
         var type = this.__type;
@@ -1521,23 +1549,30 @@ var ModuleImport = ChainedContext.extend({
 });
 exports.ModuleImport = ModuleImport;
 
+var stdSymbols = function(){
+    var symbols = {};
+    for(var t in basicTypes){
+        var type = basicTypes[t];
+        symbols[type.name()] = new Symbol(type.name(), new Type.TypeId(type));
+    }
+    symbols["LONGREAL"] = new Symbol("LONGREAL", new Type.TypeId(basicTypes.real));
+    
+    var predefined = Procedure.predefined;
+    for(var i = 0; i < predefined.length; ++i){
+        var s = predefined[i];
+        symbols[s.id()] = s;
+    }
+    return symbols;
+}();
+
 var Scope = Class.extend({
-    init: function Scope(){
-        var symbols = {};
-        for(var t in basicTypes){
-            var type = basicTypes[t];
-            symbols[type.name()] = new Symbol(type.name(), new Type.TypeId(type));
-        }
-        symbols["LONGREAL"] = new Symbol("LONGREAL", new Type.TypeId(basicTypes.real));
-        
-        var predefined = Procedure.predefined;
-        for(var i = 0; i < predefined.length; ++i){
-            var s = predefined[i];
-            symbols[s.id()] = s;
-        }
-            
-        this.__symbols = symbols;
+    init: function Scope(id){
+        this.__id = id;
+        this.__symbols = {};
+        for(var p in stdSymbols)
+            this.__symbols[p] = stdSymbols[p];
     },
+    id: function(){return this.__id;},
     addSymbol: function(symbol){
         var id = symbol.id();
         if (this.findSymbol(id))
@@ -1573,14 +1608,15 @@ exports.Context = Class.extend({
     addSymbol: function(symbol){this.currentScope().addSymbol(symbol);},
     findSymbol: function(ident){
         for(var i = this.__scopes.length; i--;){
-            var s = this.__scopes[i].findSymbol(ident);
+            var scope = this.__scopes[i];
+            var s = scope.findSymbol(ident);
             if (s)
-                return s;
+                return new FoundSymbol(s, scope);
         }
         return undefined;
     },
     currentScope: function(){return this.__scopes[this.__scopes.length - 1];},
-    pushScope: function(){this.__scopes.push(new Scope());},
+    pushScope: function(id){this.__scopes.push(new Scope(id));},
     popScope: function(){this.__scopes.pop();},
     handleExpression: function(){},
     handleLiteral: function(){},
