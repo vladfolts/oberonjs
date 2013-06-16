@@ -1,3 +1,5 @@
+"use strict";
+
 var Context = require("context.js");
 var Lexer = require("lexer.js");
 var Parser = require("parser.js");
@@ -163,7 +165,7 @@ var procedureDeclaration = context(
 var constantDeclaration = context(and(ident, "=", constExpression), Context.ConstDecl);
 
 var declarationSequence = and(optional(and("CONST", repeat(and(constantDeclaration, ";"))))
-							, optional(and("TYPE", repeat(and(typeDeclaration, ";"))))
+							, optional(and("TYPE", context(repeat(and(typeDeclaration, ";")), Context.TypeSection)))
 							, optional(and("VAR", repeat(and(variableDeclaration, ";"))))
 							, repeat(and(procedureDeclaration, ";")));
 var procedureBody = and(declarationSequence

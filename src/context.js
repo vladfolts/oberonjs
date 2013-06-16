@@ -534,11 +534,14 @@ exports.PointerDecl = ChainedContext.extend({
         if (existing)
             return existing;
 
+        var scope = this.currentScope();
+        scope.addUnresolved(id);
         var resolve = function(){return getSymbol(parent, id).info().type();};
+
         var type = new Type.ForwardRecord(resolve);
         return new FoundSymbol(
             new Symbol(id, new Type.TypeId(type)),
-            this.currentScope()
+            scope
             );
     },
     genTypeName: function(){
@@ -1487,6 +1490,17 @@ exports.TypeDeclaration = ChainedContext.extend({
     type: function(){return this.parent().type();}
 });
 
+exports.TypeSection = ChainedContext.extend({
+    init: function TypeSection(context){
+        ChainedContext.prototype.init.bind(this)(context);
+    },
+    endParse: function(){
+        var unresolved = this.currentScope().unresolved();
+        if (unresolved.length)
+            throw new Errors.Error("no declaration found for '" + unresolved.join("', '") + "'");
+    }
+});
+
 exports.TypeCast = ChainedContext.extend({
     init: function TypeCastContext(context){
         ChainedContext.prototype.init.bind(this)(context);
@@ -1571,6 +1585,7 @@ var Scope = Class.extend({
         this.__symbols = {};
         for(var p in stdSymbols)
             this.__symbols[p] = stdSymbols[p];
+        this.__unresolved = [];
     },
     id: function(){return this.__id;},
     addSymbol: function(symbol){
@@ -1578,8 +1593,19 @@ var Scope = Class.extend({
         if (this.findSymbol(id))
             throw new Errors.Error( "'" + id + "' already declared");
         this.__symbols[id] = symbol;
+
+        var i = this.__unresolved.indexOf(id);
+        if (i != -1){
+            var info = symbol.info();
+            if (!(info.type() instanceof Type.Record))
+                throw new Errors.Error(
+                    "'" + id + "' must be of RECORD type because it was used before in the declation of POINTER");
+            this.__unresolved.splice(i, 1);
+        }
     },
-    findSymbol: function(ident){return this.__symbols[ident];}
+    findSymbol: function(ident){return this.__symbols[ident];},
+    addUnresolved: function(id){this.__unresolved.push(id);},
+    unresolved: function(){return this.__unresolved;}
 });
 
 exports.Context = Class.extend({
@@ -1626,5 +1652,5 @@ exports.Context = Class.extend({
     codeGenerator: function(){return this.__code;},
     rtl: function(){
         return this.__rtl;
-    }
+    },
 });

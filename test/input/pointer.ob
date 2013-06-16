@@ -1,0 +1,11 @@
+MODULE m;
+TYPE
+	T = RECORD p: POINTER TO T; i: INTEGER END;
+VAR
+	r: T;
+
+BEGIN
+	NEW(r.p);
+    NEW(r.p.p);
+    r.p.i := 123;
+END m.

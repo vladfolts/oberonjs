@@ -269,13 +269,22 @@ identifier: function(){
     var test = setup(Grammar.typeDeclaration);
 
     test.parse("T = POINTER TO RECORD END");
-    test.parse("T = POINTER TO NotDeclaredYet");
-    test.parse("T = POINTER TO RECORD p: POINTER TO T END");
+    test.parse("T = RECORD p: POINTER TO T END");
     test.expectError("T = POINTER TO INTEGER"
                    , "RECORD is expected as a POINTER base type, got 'INTEGER'");
     test.expectError("T = POINTER TO POINTER TO RECORD END"
                    , "RECORD is expected as a POINTER base type, got 'POINTER TO anonymous RECORD'");
 },
+"POINTER forward declaration": testWithContext(
+    context(Grammar.module, ""),
+    pass("MODULE m; TYPE T = POINTER TO NotDeclaredYet; NotDeclaredYet = RECORD END; END m."),
+    fail(["MODULE m; TYPE T = POINTER TO NotDeclaredYet; END m.",
+          "no declaration found for 'NotDeclaredYet'"],
+         ["MODULE m; TYPE T1 = POINTER TO NotDeclaredYet1; T2 = POINTER TO NotDeclaredYet2; END m.",
+          "no declaration found for 'NotDeclaredYet1', 'NotDeclaredYet2'"],
+         ["MODULE m; TYPE T1 = POINTER TO Forward; Forward = PROCEDURE; END m.",
+          "'Forward' must be of RECORD type because it was used before in the declation of POINTER"])
+    ),
 "POINTER dereference": function(){
     var test = setupWithContext(
           Grammar.statement
