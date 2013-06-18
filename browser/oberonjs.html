@@ -1,9 +1,23 @@
 <!DOCTYPE html>
 <html>
+	<head>
+		<meta charset="utf-8">
+		<title>Oberon online compiler</title>
+		<link rel="stylesheet" href="http://codemirror.net/lib/codemirror.css">
+		<link rel="stylesheet" href="http://codemirror.net/doc/docs.css">
+		<script src="http://codemirror.net/lib/codemirror.js"></script>
+		<script src="http://codemirror.net/lib/mode/javascript/javascript.js"></script>
+		<script src="../codemirror/oberon07.js"></script>
+		<style type="text/css">
+		.code {
+			display: inline-block;
+		}
+		</style>
+	</head>
 <body>
-<p>
-Oberon module:
-</p>
+	<p>Oberon module:</p>
+
+<div class="code">
 <textarea id="source" rows="10" cols="80">
 MODULE test;
 IMPORT JS;
@@ -11,32 +25,49 @@ BEGIN
     JS.alert("Hello, World!")
 END test.
 </textarea>
-<p>
-<button onclick="compile()">Compile</button>
-<button onclick="compile(); run()">Compile &amp; Run</button>
-</p>
+</div>
+
+	<p>
+		<button onclick="compile()">Compile</button>
+		<button onclick="compile(); run()">Compile &amp; Run</button>
+	</p>
+
+<div class="code">
 <textarea id="result" rows="10" cols="80">
 </textarea>
-<p>
-<button onclick="run()">Run</button>
-</p>
-<script>
-function require(){}
-</script>
+</div>
 
-<script src="oc.js"></script>
+	<p>
+		<button onclick="run()">Run</button>
+	</p>
 
-<script>
-function compile(){
-	var src = document.getElementById("source").value;
-	var result = require("oc.js").compile(src);
-	document.getElementById("result").value = result;
-}
+	<script>
+		function require(){}
+	</script>
 
-function run(){
-	eval(document.getElementById("result").value);
-}
-</script>
+	<script src="oc.js"></script>
+
+	<script>
+		function compile(){
+			var src = document.getElementById("source").value;
+			var result = require("oc.js").compile(src);
+			document.getElementById("result").value = result;
+		}
+
+		function run(){
+			eval(document.getElementById("result").value);
+		}
+
+		var oberonEditor = CodeMirror.fromTextArea(document.getElementById('source'), {
+				lineNumbers: true,
+				mode: "text/x-oberon07"
+			}),
+			javascriptEditpr = CodeMirror.fromTextArea(document.getElementById('result'), {
+				lineNumbers: true,
+				mode: "text/javascript"
+			});
+	</script>
 
 </body>
+
 </html>
