@@ -1,0 +1,1 @@
+YUI.add('ui-page-libs', function (Y) {}, '1.0', {});
