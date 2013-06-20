@@ -1,1 +1,0 @@
-YUI.add('ui-page-runtime', function (Y) {}, '1.0', {});

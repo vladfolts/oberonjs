@@ -1,1 +1,0 @@
-YUI.add('ui-page-projects', function (Y) {}, '1.0', {});
