@@ -1,9 +1,23 @@
 <!DOCTYPE html>
 <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Oberon online compiler</title>
+        <link rel="stylesheet" href="http://codemirror.net/lib/codemirror.css">
+        <link rel="stylesheet" href="http://codemirror.net/doc/docs.css">
+        <script src="http://codemirror.net/lib/codemirror.js"></script>
+        <script src="http://codemirror.net/lib/mode/javascript/javascript.js"></script>
+        <script src="../codemirror/oberon07.js"></script>
+        <style type="text/css">
+        .code {
+            display: inline-block;
+        }
+        </style>
+    </head>
 <body>
-<p>
-Oberon module:
-</p>
+    <p>Oberon module:</p>
+
+<div class="code">
 <textarea id="source" rows="10" cols="80">
 MODULE test;
 IMPORT JS;
@@ -11,19 +25,24 @@ BEGIN
     JS.alert("Hello, World!")
 END test.
 </textarea>
-<p>
-<button onclick="compile()">Compile</button>
-<button onclick="compile(); run()">Compile &amp; Run</button>
-</p>
+</div>
+
+    <p>
+        <button onclick="compile()">Compile</button>
+        <button onclick="compile(); run()">Compile &amp; Run</button>
+    </p>
 
 <p id="compileErrors" style="color:red"></p>
 <p id="compileTime"></p>
 
+<div class="code">
 <textarea id="result" rows="10" cols="80">
 </textarea>
-<p>
-<button onclick="run()">Run</button>
-</p>
+</div>
+
+    <p>
+        <button onclick="run()">Run</button>
+    </p>
 <p id="runErrors" style="color:red"></p>
 <p id="runTime"></p>
 <p><a href="http://oberspace.dyndns.org">Home</a></p>
@@ -31,52 +50,62 @@ END test.
 <p id="version"></p>
 
 <script>
-function require(){}
+    function require(){}
 </script>
 
 <script src="oc.js"></script>
 
 <script>
-if (typeof buildVersion != "undefined")
-	document.getElementById("version").textContent = buildVersion;
+    var oberonEditor = CodeMirror.fromTextArea(document.getElementById('source'), {
+            lineNumbers: true,
+            mode: "text/x-oberon07"
+        }),
+    javascriptEditor = CodeMirror.fromTextArea(document.getElementById('result'), {
+        lineNumbers: true,
+        mode: "text/javascript"
+    });
 
-function compile(){
-	var src = document.getElementById("source").value;
-	var result;
-	var errors = "";
-	var start = new Date();
-	try {
-		result = require("oc.js").compile(src, function(e){
-			errors += e;
-		});
-		}
-	catch (e) {
-		errors += e;
-		}
-	var compileTime = (new Date() - start) / 1000;
+    if (typeof buildVersion != "undefined")
+        document.getElementById("version").textContent = buildVersion;
 
-	if (!result)
-		result = "";
-	document.getElementById("result").value = result;
-	document.getElementById("compileErrors").textContent = errors;
-	document.getElementById("compileTime").textContent = "compile time (seconds): " + compileTime;
-}
+    function compile(){
+        var src = document.getElementById("source").value;
+        var result;
+        var errors = "";
+        var start = new Date();
+        try {
+            result = require("oc.js").compile(src, function(e){
+                errors += e;
+            });
+            }
+        catch (e) {
+            errors += e;
+            }
+        var compileTime = (new Date() - start) / 1000;
 
-function run(){
-	var errElement = document.getElementById("runErrors");
-	errElement.textContent = "";
-	var start = new Date();
-	try{
-		eval(document.getElementById("result").value);
-	}
-	catch (e){
-		var errors = "" + e;
-		errElement.textContent = errors;
-	}
-	var runTime = (new Date() - start) / 1000;
-	document.getElementById("runTime").textContent = "run time (seconds): " + runTime;
-}
+        if (!result)
+            result = "";
+        javascriptEditor.setValue(result);
+        document.getElementById("compileErrors").textContent = errors;
+        document.getElementById("compileTime").textContent = "compile time (seconds): " + compileTime;
+            }
+
+            function run(){
+        var errElement = document.getElementById("runErrors");
+        errElement.textContent = "";
+        var start = new Date();
+        try{
+            eval(javascriptEditor.getValue());
+        }
+        catch (e){
+            var errors = "" + e;
+            errElement.textContent = errors;
+        }
+        var runTime = (new Date() - start) / 1000;
+        document.getElementById("runTime").textContent = "run time (seconds): " + runTime;
+    }
 </script>
 
 </body>
+
 </html>
