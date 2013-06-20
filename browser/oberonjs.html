@@ -59,8 +59,8 @@ END test.
     var oberonEditor = CodeMirror.fromTextArea(document.getElementById('source'), {
             lineNumbers: true,
             mode: "text/x-oberon07"
-        }),
-    javascriptEditor = CodeMirror.fromTextArea(document.getElementById('result'), {
+        });
+    var javascriptEditor = CodeMirror.fromTextArea(document.getElementById('result'), {
         lineNumbers: true,
         mode: "text/javascript"
     });
@@ -69,7 +69,7 @@ END test.
         document.getElementById("version").textContent = buildVersion;
 
     function compile(){
-        var src = document.getElementById("source").value;
+        var src = oberonEditor.getValue();
         var result;
         var errors = "";
         var start = new Date();
