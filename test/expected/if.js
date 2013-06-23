@@ -28,4 +28,7 @@ if (b1){
 else {
 	b1 = true;
 }
+if (i1 == 1 || i1 == 2){
+	b1 = true;
+}
 }();

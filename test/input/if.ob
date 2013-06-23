@@ -12,6 +12,10 @@ BEGIN
 		IF b1 THEN i1 := 0; b1 := FALSE END
 	ELSE
 		b1 := TRUE
-	END
+	END;
 	
+	IF (i1 = 1) OR (i1 = 2) THEN
+		b1 := TRUE
+	END;
+
 END m.

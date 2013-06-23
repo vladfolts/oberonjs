@@ -165,6 +165,12 @@ exports.Procedure = BasicType.extend({
 	idType: function(){return "procedure";}
 });
 
+var Module = Id.extend({
+	init: function Module(){
+		Id.prototype.init.call(this);
+	}
+});
+
 var Symbol = Class.extend({
 	init: function Symbol(id, info){
 		this.__id = id;
@@ -172,6 +178,7 @@ var Symbol = Class.extend({
 	},
 	id: function(){return this.__id;},
 	info: function(){return this.__info;},
+	isModule: function(){return this.__info instanceof Module;},
 	isVariable: function(){return this.__info instanceof exports.Variable;},
 	isConst: function(){return this.__info instanceof exports.Const;},
 	isType: function(){return this.__info instanceof TypeId;},

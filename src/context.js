@@ -197,7 +197,9 @@ exports.BaseType = ChainedContext.extend({
     init: function BaseTypeContext(context){
         ChainedContext.prototype.init.bind(this)(context);
     },
-    setIdent: function(id){this.parent().setBaseType(id);}
+    handleSymbol: function(s){
+        this.parent().setBaseType(unwrapType(s.symbol().info()));
+    }
 });
 
 var DesignatorInfo = Class.extend({
@@ -215,6 +217,27 @@ var DesignatorInfo = Class.extend({
     scope: function(){return this.__scope;}
 });
 
+exports.QualifiedIdentificator = ChainedContext.extend({
+    init: function QualifiedIdentificator(context){
+        ChainedContext.prototype.init.bind(this)(context);
+        this.__module = undefined;
+        this.__id = undefined;
+    },
+    setIdent: function(id){
+        this.__id = id;
+    },
+    handleLiteral: function(){
+        var s = getSymbol(this, this.__id);
+        if (!s.isModule())
+            return false; // stop parsing
+        this.__module = s.info();
+    },
+    endParse: function(){
+        var s = getSymbolAndScope(this.__module ? this.__module : this, this.__id);
+        this.parent().handleSymbol(s);
+    }
+});
+
 exports.Designator = ChainedContext.extend({
     init: function DesignatorContext(context){
         ChainedContext.prototype.init.bind(this)(context);
@@ -226,21 +249,20 @@ exports.Designator = ChainedContext.extend({
         this.__derefCode = undefined;
         this.__propCode = undefined;
     },
+    handleSymbol: function(found){
+        this.__scope = found.scope();
+        var s = found.symbol();
+        var info = s.info();
+        if (info instanceof Type.Type || s.isType() || s.isProcedure())
+            this.__currentType = info;
+        else if (s.isVariable() || s.isConst())
+            this.__currentType = info.type();
+        this.__info = info;
+        this.__code.write(s.id());
+    },
     setIdent: function(id){
-        var scope;
         var t = this.__currentType;
-        if ( t === undefined){
-            var found = getSymbolAndScope(this.parent(), id);
-            scope = found.scope();
-            var s = found.symbol();
-            var info = s.info();
-            if (info instanceof Type.Type || s.isType() || s.isProcedure())
-                this.__currentType = info;
-            else if (s.isVariable() || s.isConst())
-                this.__currentType = info.type();
-            this.__info = info;
-        }
-        else if (t instanceof Type.Pointer){
+        if (t instanceof Type.Pointer){
             this.__handleDeref();
             this.__denote(id);
         }
@@ -251,8 +273,7 @@ exports.Designator = ChainedContext.extend({
         else
             throw new Errors.Error("cannot designate '" + t.description() + "'");
 
-        this.__scope = scope;
-        this.__code.write(id);
+        this.__scope = undefined;
     },
     codeGenerator: function(){return this.__code;},
     handleExpression: function(e){this.__indexExpression = e;},
@@ -316,7 +337,7 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error("Type '" + t.name() + "' has no '" + id + "' field");
         this.__derefCode = this.__code.result();
         this.__propCode = "\"" + id + "\"";
-        this.__code.write(".");
+        this.__code.write("." + id);
         this.__currentType = fieldType;
     },
     endParse: function(){
@@ -340,7 +361,7 @@ exports.Type = ChainedContext.extend({
     init: function TypeContext(context){
         ChainedContext.prototype.init.bind(this)(context);
     },
-    setIdent: function(id){this.setType(getTypeSymbol(this, id));}
+    handleSymbol: function(s){this.setType(unwrapType(s.symbol().info()));}
 });
 
 exports.FormalType = exports.Type.extend({
@@ -385,8 +406,8 @@ exports.FormalParameters = ChainedContext.extend({
     addArgument: function(name, arg){
         this.__arguments.push(arg);
     },
-    setIdent: function(id){
-        this.__result = getTypeSymbol(this.parent(), id);
+    handleSymbol: function(s){
+        this.__result = unwrapType(s.symbol().info());
     },
     endParse: function(){
         this.__type.define(this.__arguments, this.__result);
@@ -1001,6 +1022,7 @@ exports.Expression = ChainedContext.extend({
     handleLiteral: function(relation){
         this.__relation = relation;
     },
+    codeGenerator: function(){return Code.nullGenerator;},
     endParse: function(){
         var parent = this.parent();
         parent.codeGenerator().write(this.__expression.code());
@@ -1453,9 +1475,7 @@ exports.RecordDecl = ChainedContext.extend({
         gen.write("var " + id + " = ");
     },
     addField: function(name, type) {this.__type.addField(name, type);},
-    setBaseType: function(id){
-        this.__type.setBaseType(getTypeSymbol(this.parent(), id));
-    },
+    setBaseType: function(type){this.__type.setBaseType(type);},
     endParse: function(){
         var type = this.__type;
         var baseType = type.baseType();
@@ -1506,8 +1526,8 @@ exports.TypeCast = ChainedContext.extend({
         ChainedContext.prototype.init.bind(this)(context);
         this.__type = undefined;
     },
-    setIdent: function(id){
-        var s = getSymbol(this.parent(), id);
+    handleSymbol: function(s){
+        s = s.symbol();
         if (!s.isType())
             return; // this is not a type cast, may be procedure call
         this.__type = s.info().type();

@@ -22,17 +22,20 @@ var context = Parser.context;
 var emit = Parser.emit;
 var required = Parser.required;
 
+var qualident = context(and(optional(and(ident, ".")), ident),
+						Context.QualifiedIdentificator);
 var identdef = and(ident, optional("*"));
 var selector = or(and(point, ident)
 				// break recursive declaration of expList
 			    , and("[", function(stream, context){return expList(stream, context);}, "]")
 				, "^"
-				, context(and("(", ident, ")"), Context.TypeCast)
+				, context(and("(", qualident, ")"), Context.TypeCast)
 			    );
-var designator = context(and(ident, repeat(selector)), Context.Designator);
-var type = or(function(stream, context){return strucType(stream, context);} // break recursive declaration of strucType
-			, context(ident, Context.Type));
-var identList = and(ident, repeat(and(",", ident)));
+var designator = context(and(qualident, repeat(selector)), Context.Designator);
+var type = or(context(qualident, Context.Type),
+			  function(stream, context){return strucType(stream, context);} // break recursive declaration of strucType
+			 );
+var identList = and(identdef, repeat(and(",", ident)));
 var variableDeclaration = context(and(identList, ":", type), Context.VariableDeclaration);
 
 var integer = or(context(and(digit, repeat(hexDigit), "H", separator), Context.HexInteger)
@@ -132,25 +135,25 @@ var arrayType = and("ARRAY", context(and(
 							  , Context.ArrayDimensions)
 				  , "OF", type), Context.ArrayDecl));
 
-var baseType = context(ident, Context.BaseType);
+var baseType = context(qualident, Context.BaseType);
 var recordType = and("RECORD", context(and(optional(and("(", baseType, ")")), optional(fieldListSequence)
 									 , "END"), Context.RecordDecl));
 
 var pointerType = and("POINTER", "TO", context(type, Context.PointerDecl));
 
-var formalType = context(and(repeat(and("ARRAY", "OF")), ident), Context.FormalType);
+var formalType = context(and(repeat(and("ARRAY", "OF")), qualident), Context.FormalType);
 var fpSection = and(optional(literal("VAR")), ident, repeat(and(",", ident)), ":", formalType);
 var formalParameters = and(
 		  "("
 		, optional(context(and(fpSection, repeat(and(";", fpSection))), Context.ProcParams))
 		, ")"
-		, optional(and(":", ident)));
+		, optional(and(":", qualident)));
 
 var procedureType = and("PROCEDURE"
 					  , context(optional(formalParameters), Context.FormalParameters)
 					    );
 var strucType = or(arrayType, recordType, pointerType, procedureType);
-var typeDeclaration = context(and(ident, "=", strucType), Context.TypeDeclaration);
+var typeDeclaration = context(and(identdef, "=", strucType), Context.TypeDeclaration);
 
 var procedureHeading = and("PROCEDURE"
 						 , identdef
@@ -162,7 +165,7 @@ var procedureDeclaration = context(
 	    , ident)
 	, Context.ProcDecl);
 
-var constantDeclaration = context(and(ident, "=", constExpression), Context.ConstDecl);
+var constantDeclaration = context(and(identdef, "=", constExpression), Context.ConstDecl);
 
 var declarationSequence = and(optional(and("CONST", repeat(and(constantDeclaration, ";"))))
 							, optional(and("TYPE", context(repeat(and(typeDeclaration, ";")), Context.TypeSection)))

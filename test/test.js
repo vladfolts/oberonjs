@@ -24,7 +24,7 @@ function runTest(t, tests, stat, tab){
 	try {
         ++stat.count;
 		r();
-		log += "OK";
+		//log += "OK";
 	}
 	catch (x){
         ++stat.failCount;
@@ -32,13 +32,14 @@ function runTest(t, tests, stat, tab){
 			log += "Failed\n\t" + tab + x;
 		else
 			log += "Failed\n" + (x.stack ? x.stack : '\t' + tab + x);
+        console.log(tab + log);
 	}
-	console.log(tab + log);
 }
 
 function run(tests){
     var stat = {count: 0, failCount: 0};
 
+    console.log("Running..." );
     var start = Date.now();
     if (typeof process != "undefined" && process.argv.length > 2)
         runTest(process.argv[2], tests, stat, "");
