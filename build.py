@@ -1,8 +1,40 @@
+
 #!/usr/bin/python
 from browser.linkjs import link
 import os
+import shutil
+import stat
 import subprocess
 import sys
+
+# http://stackoverflow.com/questions/1889597/deleting-directory-in-python
+def remove_readonly(fn, path, excinfo):
+    if fn is os.rmdir:
+        os.chmod(path, stat.S_IWRITE)
+        os.rmdir(path)
+    elif fn is os.remove:
+        os.chmod(path, stat.S_IWRITE)
+        os.remove(path)
+
+def norm_path(path):
+    return os.path.normcase(os.path.normpath(os.path.realpath(os.path.abspath(path))))
+
+def is_parent_for(parent, child):
+    parent = norm_path(parent)
+    child = norm_path(child)
+    while True:
+        if parent == child:
+            return True
+        next = os.path.dirname(child)
+        if next == child:
+            return False
+        child = next
+
+def cleanup(dir):
+    this_dir = os.path.dirname(__file__)
+    if is_parent_for(dir, this_dir):
+        raise Exception("cannot delete itself: %s" % this_dir)
+    shutil.rmtree(dir, onerror=remove_readonly)
 
 def run(cmd):
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, shell = True)
@@ -26,13 +58,13 @@ def build(out, use_git):
         print("current html is up to date, do nothing")
         return
 
-    if not os.path.exists(out):
-        os.mkdir(out)
-    link('oc.js', os.path.join(out, 'oc.js'), 'src', version)
+    if os.path.exists(out):
+        cleanup(out)
+    os.mkdir(out)
 
-    with open('browser/oberonjs.html') as input:
-        with open(os.path.join(out, 'oberonjs.html'), 'w') as output:
-            output.write(input.read())
+    link('oc.js', os.path.join(out, 'oc.js'), 'src', version)
+    shutil.copy('browser/oberonjs.html', out)
+    shutil.copytree('browser/codemirror', os.path.join(out, 'codemirror'))
     
     if version is None:
         if os.path.exists(build_version_path):
