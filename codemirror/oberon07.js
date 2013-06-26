@@ -203,7 +203,7 @@ CodeMirror.defineMode("oberon07", function () {
                         _str += _ch;
                         _ch = stream.next();
                     }
-                    if (stream.eol()) {
+                    if (stream.eol() && _ch != sym) {
                         state.error = 'string.not.close';
                         return ED_ERROR;
                     }
