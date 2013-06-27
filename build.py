@@ -36,6 +36,19 @@ def cleanup(dir):
         raise Exception("cannot delete itself: %s" % this_dir)
     shutil.rmtree(dir, onerror=remove_readonly)
 
+def copy(src, dst_dir):
+    dst = os.path.join(dst_dir, os.path.basename(src))
+    if os.path.exists(dst):
+        os.chmod(dst, stat.S_IWRITE)
+    print('%s -> %s' % (src, dst))
+    shutil.copy(src, dst)
+
+def copytree(src, dst):
+    if os.path.exists(dst):
+        cleanup(dst)
+    print('%s -> %s' % (src, dst))
+    shutil.copytree(src, dst)
+
 def run(cmd):
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, shell = True)
     return p.stdout.read().decode()
@@ -58,13 +71,12 @@ def build(out, use_git):
         print("current html is up to date, do nothing")
         return
 
-    if os.path.exists(out):
-        cleanup(out)
-    os.mkdir(out)
+    if not os.path.exists(out):
+        os.mkdir(out)
 
     link('oc.js', os.path.join(out, 'oc.js'), 'src', version)
-    shutil.copy('browser/oberonjs.html', out)
-    shutil.copytree('browser/codemirror', os.path.join(out, 'codemirror'))
+    copy('browser/oberonjs.html', out)
+    copytree('browser/codemirror', os.path.join(out, 'codemirror'))
     
     if version is None:
         if os.path.exists(build_version_path):
