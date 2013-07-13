@@ -6,6 +6,7 @@ var Code = require("code.js");
 var Errors = require("errors.js");
 var op = require("operator.js");
 var precedence = require("operator.js").precedence;
+var Symbol = require("symbol.js");
 var Type = require("type.js");
 
 var Arg = Class.extend({
@@ -202,7 +203,7 @@ function setBitImpl(name, op){
             return new TwoArgToOperatorProcCallGenerator(
                 context, id, type, operator);
             });
-    var symbol = new Type.Symbol(name, proc);
+    var symbol = new Symbol.Symbol(name, proc);
     return symbol;
 }
 
@@ -235,7 +236,7 @@ function incImpl(name, unary, op){
             return new CallGenerator(
                 context, id, type, operator);
             });
-    var symbol = new Type.Symbol(name, proc);
+    var symbol = new Symbol.Symbol(name, proc);
     return symbol;
 }
 
@@ -259,7 +260,7 @@ function bitShiftImpl(name, op){
         function(context, id, type){
             return new CallGenerator(context, id, type);
         });
-    var symbol = new Type.Symbol(name, proc);
+    var symbol = new Symbol.Symbol(name, proc);
     return symbol;
 }
 
@@ -278,7 +279,7 @@ function longShort(name){
         function(context, id, type){
             return new CallGenerator(context, id, type);
         });
-    var symbol = new Type.Symbol(name, proc);
+    var symbol = new Symbol.Symbol(name, proc);
     return symbol;
 }
 
@@ -319,7 +320,7 @@ exports.predefined = [
             function(context, id, type){
                 return new NewProcCallGenerator(context, id, type);
             });
-        var symbol = new Type.Symbol(name, type);
+        var symbol = new Symbol.Symbol(name, type);
         return symbol;
     }(),
     function(){
@@ -348,7 +349,7 @@ exports.predefined = [
             function(context, id, type){
                 return new LenProcCallGenerator(context, id, type);
             });
-        var symbol = new Type.Symbol(name, type);
+        var symbol = new Symbol.Symbol(name, type);
         return symbol;
     }(),
     function(){
@@ -371,7 +372,7 @@ exports.predefined = [
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
-        var symbol = new Type.Symbol(name, type);
+        var symbol = new Symbol.Symbol(name, type);
         return symbol;
     }(),
     function(){
@@ -393,7 +394,7 @@ exports.predefined = [
             function(context, id, type){
                 return new AssertProcCallGenerator(context, id, type);
             });
-        var symbol = new Type.Symbol("ASSERT", proc);
+        var symbol = new Symbol.Symbol("ASSERT", proc);
         return symbol;
     }(),
     setBitImpl("INCL", function(x, y){return x + " |= " + y;}),
@@ -425,7 +426,7 @@ exports.predefined = [
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
-        var symbol = new Type.Symbol("ABS", proc);
+        var symbol = new Symbol.Symbol("ABS", proc);
         return symbol;
     }(),
     function(){
@@ -443,7 +444,7 @@ exports.predefined = [
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
-        var symbol = new Type.Symbol("FLOOR", proc);
+        var symbol = new Symbol.Symbol("FLOOR", proc);
         return symbol;
     }(),
     function(){
@@ -464,7 +465,7 @@ exports.predefined = [
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
-        var symbol = new Type.Symbol("FLT", proc);
+        var symbol = new Symbol.Symbol("FLT", proc);
         return symbol;
     }(),
     longShort("LONG"),
@@ -515,7 +516,7 @@ exports.predefined = [
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
-        var symbol = new Type.Symbol(name, type);
+        var symbol = new Symbol.Symbol(name, type);
         return symbol;
     }(),
     function(){
@@ -535,7 +536,7 @@ exports.predefined = [
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
-        var symbol = new Type.Symbol(name, type);
+        var symbol = new Symbol.Symbol(name, type);
         return symbol;
     }(),
     function(){
@@ -557,7 +558,7 @@ exports.predefined = [
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
-        var symbol = new Type.Symbol(name, type);
+        var symbol = new Symbol.Symbol(name, type);
         return symbol;
     }(),
     function(){
@@ -575,7 +576,7 @@ exports.predefined = [
                 return new TwoArgToOperatorProcCallGenerator(
                     context, id, type, operator);
                 });
-        var symbol = new Type.Symbol(name, proc);
+        var symbol = new Symbol.Symbol(name, proc);
         return symbol;
     }(),
     function(){
@@ -595,7 +596,7 @@ exports.predefined = [
                 return new TwoArgToOperatorProcCallGenerator(
                     context, id, type, operator);
                 });
-        var symbol = new Type.Symbol(name, proc);
+        var symbol = new Symbol.Symbol(name, proc);
         return symbol;
     }()
     ];

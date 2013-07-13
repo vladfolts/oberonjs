@@ -52,4 +52,7 @@ function Blur2DArray(){
 	}
 }
 Blur2DArray();
+return {
+	Blur2DArray: Blur2DArray
+}
 }();

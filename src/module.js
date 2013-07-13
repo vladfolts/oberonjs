@@ -1,4 +1,7 @@
+"use strict";
+
 var Procedure = require("procedure.js");
+var Symbol = require("symbol.js");
 var Type = require("type.js");
 
 var AnyType = Type.Basic.extend({
@@ -13,21 +16,14 @@ var AnyType = Type.Basic.extend({
 
 var any = new AnyType();
 
-var Module = Type.Basic.extend({
+var JSModule = Type.Module.extend({
 	init: function(){
-		Type.Basic.prototype.init.call(this, "MODULE");
-	}
-});
-
-var JSModule = Module.extend({
-	init: function(){
-		Module.prototype.init.call(this);
+		Type.Module.prototype.init.call(this);
 	},
 	findSymbol: function(id){
-		return any;
+		return new Symbol.Found(new Symbol.Symbol("JS." + id, any));
 	}
 });
 
 exports.AnyType = AnyType;
 exports.JS = JSModule;
-exports.Type = Module;

@@ -89,14 +89,14 @@ exports.Record = BasicType.extend({
 		BasicType.prototype.init.bind(this)(name, "new " + name + "()");
 		this.__fields = {};
 		this.__base = undefined;
-		this.__finalized = false;
 	},
 	addField: function(field, type){
-		if (this.__fields.hasOwnProperty(field))
-			throw new Errors.Error("duplicated field: '" + field + "'");
-		if (this.__base && this.__base.findSymbol(field))
-			throw new Errors.Error("base record already has field: '" + field + "'");
-		this.__fields[field] = type;
+		var name = field.id();
+		if (this.__fields.hasOwnProperty(name))
+			throw new Errors.Error("duplicated field: '" + name + "'");
+		if (this.__base && this.__base.findSymbol(name))
+			throw new Errors.Error("base record already has field: '" + name + "'");
+		this.__fields[name] = type;
 	},
 	ownFields: function() {return this.__fields;},
 	findSymbol: function(field){
@@ -107,7 +107,6 @@ exports.Record = BasicType.extend({
 	},
 	baseType: function() {return this.__base;},
 	setBaseType: function(type) {this.__base = type;},
-	finalize: function(){this.__finalized = true;},
 	description: function(){
 		var name = this.name();
 		if (name.indexOf("$") != -1)
@@ -171,20 +170,6 @@ var Module = Id.extend({
 	}
 });
 
-var Symbol = Class.extend({
-	init: function Symbol(id, info){
-		this.__id = id;
-		this.__info = info;
-	},
-	id: function(){return this.__id;},
-	info: function(){return this.__info;},
-	isModule: function(){return this.__info instanceof Module;},
-	isVariable: function(){return this.__info instanceof exports.Variable;},
-	isConst: function(){return this.__info instanceof exports.Const;},
-	isType: function(){return this.__info instanceof TypeId;},
-	isProcedure: function(){return this.__info instanceof exports.Procedure;},
-});
-
-exports.Symbol = Symbol;
+exports.Module = Module;
 exports.Type = Type;
 exports.TypeId = TypeId;

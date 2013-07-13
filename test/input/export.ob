@@ -1,0 +1,16 @@
+MODULE m;
+CONST
+    ci* = 123;
+TYPE
+    T1* = RECORD END;
+    T2* = PROCEDURE;
+    T3* = ARRAY 5 OF INTEGER;
+VAR
+    pr1*: POINTER TO T1;
+    p2*: T2;
+    vi*: INTEGER;
+
+PROCEDURE p1*;
+END p1;
+
+END m.

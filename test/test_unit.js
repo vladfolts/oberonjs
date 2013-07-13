@@ -87,9 +87,9 @@ function pass(/*...*/){return Array.prototype.slice.call(arguments);}
 
 function fail(/*...*/){return Array.prototype.slice.call(arguments);}
 
-function testWithContext(context, pass, fail){
+function testWithSetup(setup, pass, fail){
     return function(){
-        var test = setupWithContext(context.grammar, context.source);
+        var test = setup();
         var i;
         for(i = 0; i < pass.length; ++i)
             test.parse(pass[i]);
@@ -98,6 +98,20 @@ function testWithContext(context, pass, fail){
             test.expectError(f[0], f[1]);
         }
     };
+}
+
+function testWithContext(context, pass, fail){
+    return testWithSetup(
+        function(){return setupWithContext(context.grammar, context.source);},
+        pass,
+        fail);
+}
+
+function testWithGrammar(grammar, pass, fail){
+    return testWithSetup(
+        function(){return setup(grammar);},
+        pass,
+        fail);
 }
 
 var testSuite = {
@@ -1114,6 +1128,30 @@ assert: function(){
     test.expectError("ASSERT()", "at least 1 argument expected, got 0");
     test.expectError("ASSERT(123, TRUE)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'BOOLEAN'");
 },
+"export": testWithGrammar(
+    Grammar.declarationSequence,
+    pass("CONST i* = 1;",
+         "TYPE T* = RECORD END;",
+         "TYPE PT* = POINTER TO RECORD f*: INTEGER END;",
+         "VAR i*: INTEGER;",
+         "VAR i*: POINTER TO RECORD f*: INTEGER END;",
+         "VAR i*: POINTER TO RECORD r*: RECORD f*: INTEGER END END;",
+         "PROCEDURE p*; END p;"
+         ),
+    fail(["VAR r*: RECORD END;",
+          "only scalar type variables can be exported"],
+         ["VAR a*: ARRAY 5 OF INTEGER;",
+          "only scalar type variables can be exported"],
+         ["TYPE T = RECORD f*: INTEGER END;",
+          "field 'f' can be exported only if record 'T' itself is exported too"],
+         ["VAR p: POINTER TO RECORD f*: INTEGER END;",
+          "field 'f' can be exported only if variable 'p' itself is exported too"],
+         ["VAR p*: POINTER TO RECORD r: RECORD f*: INTEGER END END;",
+          "field 'f' can be exported only if field 'r' itself is exported too"],
+         ["PROCEDURE p*; VAR i*: INTEGER; END p;",
+          "cannot export from within procedure: variable 'i'"]
+         )
+    ),
 IMPORT: function(){
     var test = setup(Grammar.module);
     test.parse("MODULE m; IMPORT JS; END m.");

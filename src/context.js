@@ -9,23 +9,15 @@ var op = require("operator.js");
 var Parser = require("parser.js");
 var Procedure = require("procedure.js");
 var ImportRTL = require("rtl.js");
+var Scope = require("scope.js");
 var Stream = require("stream.js").Stream;
+var Symbol = require("symbol.js");
 var Type = require("type.js");
 
 var RTL = ImportRTL.RTL;
 var Class = ImportRTL.Class;
 
 var basicTypes = Type.basic;
-var Symbol = Type.Symbol;
-
-var FoundSymbol = Class.extend({
-    init: function(symbol, scope){
-        this.__symbol = symbol;
-        this.__scope = scope;
-    },
-    symbol: function(){return this.__symbol;},
-    scope: function(){return this.__scope;}
-});
 
 function getSymbolAndScope(context, id){
     var s = context.findSymbol(id);
@@ -104,9 +96,8 @@ var ChainedContext = Class.extend({
     parent: function(){return this.__parent;},
     codeGenerator: function(){return this.__parent.codeGenerator();},
     findSymbol: function(id){return this.__parent.findSymbol(id);},
-    addSymbol: function(s){this.__parent.addSymbol(s);},
     currentScope: function(s){return this.__parent.currentScope();},
-    pushScope: function(id){this.__parent.pushScope(id);},
+    pushScope: function(scope){this.__parent.pushScope(scope);},
     popScope: function(){this.__parent.popScope();},
     setType: function(type){this.__parent.setType(type);},
     setDesignator: function(d){this.__parent.setDesignator(d);},
@@ -127,7 +118,7 @@ exports.Integer = ChainedContext.extend({
     isLexem: function(){return true;},
     handleChar: function(c){this.__result += c;},
     handleLiteral: function(){this.__isHex = true;},
-    toInt: function(s){return parseInt(this.__result);},
+    toInt: function(s){return parseInt(this.__result, 10);},
     endParse: function(){
         var n = this.toInt();
         this.parent().handleConst(basicTypes.int, n, n.toString());
@@ -238,6 +229,28 @@ exports.QualifiedIdentificator = ChainedContext.extend({
     }
 });
 
+var Identdef = Class.extend({
+    init: function Identdef(id, exported){
+        this.__id = id;
+        this.__exported = exported;
+    },
+    id: function(){return this.__id;},
+    exported: function(){return this.__exported;}
+});
+
+exports.Identdef = ChainedContext.extend({
+    init: function IdentdefContext(context){
+        ChainedContext.prototype.init.bind(this)(context);
+        this.__id = undefined;
+        this.__export = false;
+    },
+    setIdent: function(id){this.__id = id;},
+    handleLiteral: function(){this.__export = true;},
+    endParse: function(){
+        this.parent().handleIdentef(new Identdef(this.__id, this.__export));
+    }
+});
+
 exports.Designator = ChainedContext.extend({
     init: function DesignatorContext(context){
         ChainedContext.prototype.init.bind(this)(context);
@@ -267,7 +280,7 @@ exports.Designator = ChainedContext.extend({
             this.__denote(id);
         }
         else if (t instanceof Type.Record
-              || t instanceof Module.Type
+              || t instanceof Type.Module
               || t instanceof Module.AnyType)
             this.__denote(id);
         else
@@ -431,39 +444,36 @@ exports.FormalParametersProcDecl = exports.FormalParameters.extend({
 exports.ProcDecl = ChainedContext.extend({
     init: function ProcDeclContext(context){
         ChainedContext.prototype.init.bind(this)(context);
-        this.__name = undefined;
+        this.__id = undefined;
         this.__firstArgument = true;
         this.__type = undefined;
         this.__returnParsed = false;
         this.__outerScope = this.parent().currentScope();
     },
+    handleIdentef: function(id){
+        this.__id = id;
+        this.codeGenerator().write("\nfunction " + id.id() + "(");
+        this.parent().pushScope(new Scope.Procedure());
+    },
     setIdent: function(id){
-        var gen = this.codeGenerator();
-        if (this.__name === undefined){ // first call
-            this.__name = id;
-            gen.write("\nfunction " + id + "(");
-            this.parent().pushScope("procedure");
-        }
-        else if (this.__name === id){
-            gen.closeScope();
-            this.parent().popScope();
-        }
-        else
-            throw new Errors.Error("mismatched procedure names: '" + this.__name
+        if (this.__id.id() != id)
+            throw new Errors.Error("mismatched procedure names: '" + this.__id.id()
                                  + "' at the begining and '" + id + "' at the end");
+        this.codeGenerator().closeScope();
+        this.parent().popScope();
     },
     typeName: function(){return undefined;},
     setType: function(type){
-        var procSymbol = new Symbol(this.__name, type);
-        this.__outerScope.addSymbol(procSymbol);
+        var procSymbol = new Symbol.Symbol(this.__id.id(), type);
+        this.__outerScope.addSymbol(procSymbol, this.__id.exported());
         this.__type = type;
     },
     addArgument: function(name, arg){
-        if (name == this.__name)
+        if (name == this.__id.id())
             throw new Errors.Error("argument '" + name + "' has the same name as procedure");
         var readOnly = !arg.isVar && (arg.type instanceof Type.Array);
-        var s = new Symbol(name, new Type.Variable(arg.type, arg.isVar, readOnly));
-        this.parent().addSymbol(s);
+        var s = new Symbol.Symbol(name, new Type.Variable(arg.type, arg.isVar, readOnly));
+        this.currentScope().addSymbol(s);
 
         var code = this.codeGenerator();
         if (!this.__firstArgument)
@@ -542,7 +552,7 @@ exports.PointerDecl = ChainedContext.extend({
         ChainedContext.prototype.init.bind(this)(context);
         this.__base = undefined;
         this.__name = this.parent().genTypeName();
-    },
+   } ,
     setType: function(type){
         if (!(type instanceof Type.ForwardRecord) && !(type instanceof Type.Record))
             throw new Errors.Error(
@@ -560,14 +570,15 @@ exports.PointerDecl = ChainedContext.extend({
         var resolve = function(){return getSymbol(parent, id).info().type();};
 
         var type = new Type.ForwardRecord(resolve);
-        return new FoundSymbol(
-            new Symbol(id, new Type.TypeId(type)),
+        return new Symbol.Found(
+            new Symbol.Symbol(id, new Type.TypeId(type)),
             scope
             );
     },
     genTypeName: function(){
         return this.__name + "$base";
     },
+    exportField: function(field){this.parent().exportField(field);},
     endParse: function(){
         var type = new Type.Pointer(this.__name, this.__base);
         this.parent().setType(type);
@@ -1323,9 +1334,9 @@ exports.ConstDecl = ChainedContext.extend({
         this.__type = undefined;
         this.__value = undefined;
     },
-    setIdent: function(id){
+    handleIdentef: function(id){
         this.__id = id;
-        this.codeGenerator().write("var " + id + " = ");
+        this.codeGenerator().write("var " + id.id() + " = ");
     },
     handleExpression: function(e){
         var value = e.constValue();
@@ -1336,10 +1347,20 @@ exports.ConstDecl = ChainedContext.extend({
     },
     endParse: function(){
         var c = new Type.Const(this.__type, this.__value);
-        this.addSymbol(new Symbol(this.__id, c));
+        this.currentScope().addSymbol(new Symbol.Symbol(this.__id.id(), c), this.__id.exported());
         this.codeGenerator().write(";\n");
     }
 });
+
+function checkIfFFieldCanBeExported(name, idents, hint){
+    for(var i = 0; i < idents.length; ++i){
+        var id = idents[i];
+        if (!id.exported())
+            throw new Errors.Error(
+                "field '" + name + "' can be exported only if " + hint + " '" +
+                id.id() + "' itself is exported too");
+    }
+}
 
 exports.VariableDeclaration = ChainedContext.extend({
     init: function VariableDeclarationContext(context){
@@ -1347,17 +1368,24 @@ exports.VariableDeclaration = ChainedContext.extend({
         this.__idents = [];
         this.__type = undefined;
     },
-    setIdent: function(id) {this.__idents.push(id);},
-    setType: function(type) {this.__type = type;},
+    handleIdentef: function(id){this.__idents.push(id);},
+    exportField: function(name){
+        checkIfFFieldCanBeExported(name, this.__idents, "variable");
+    },
+    setType: function(type){this.__type = type;},
     typeName: function(){return undefined;},
     endParse: function(){
         var v = new Type.Variable(this.__type);
         var idents = this.__idents;
         var gen = this.codeGenerator();
-        for(var i = 0; i < idents.length; ++i)
-        {
-            var varName = idents[i];
-            this.addSymbol(new Symbol(varName, v));
+        for(var i = 0; i < idents.length; ++i){
+            var id = idents[i];
+            if (id.exported()
+                && (this.__type instanceof Type.Record
+                    || this.__type instanceof Type.Array))
+                throw new Errors.Error("only scalar type variables can be exported");
+            var varName = id.id();
+            this.currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
             var t = v.type();
             gen.write("var " + varName + " = " + t.initializer() + ";");
         }
@@ -1373,15 +1401,16 @@ exports.FieldListDeclaration = ChainedContext.extend({
         this.__type = undefined;
     },
     typeName: function(){return undefined;},
-    setIdent: function(id) {this.__idents.push(id);},
+    handleIdentef: function(id) {this.__idents.push(id);},
+    exportField: function(name){
+        checkIfFFieldCanBeExported(name, this.__idents, "field");
+    },
     setType: function(type) {this.__type = type;},
     endParse: function(){
         var idents = this.__idents;
-        for(var i = 0; i < idents.length; ++i){
-            var fieldName = idents[i];
-            var fieldType = this.__type;
-            this.parent().addField(fieldName, fieldType);
-        }
+        var parent = this.parent();
+        for(var i = 0; i < idents.length; ++i)
+            parent.addField(idents[i], this.__type);
     }
 });
 
@@ -1394,7 +1423,7 @@ exports.ActualParameters = ChainedContext.extend({
     init: function ActualParametersContext(context){
         ChainedContext.prototype.init.bind(this)(context);
         this.parent().hasActualParameters();
-    },
+    }
 });
 
 var ProcedureCall = ChainedContext.extend({
@@ -1474,7 +1503,11 @@ exports.RecordDecl = ChainedContext.extend({
         var gen = this.codeGenerator();
         gen.write("var " + id + " = ");
     },
-    addField: function(name, type) {this.__type.addField(name, type);},
+    addField: function(field, type){
+        this.__type.addField(field, type);
+        if (field.exported())
+            this.parent().exportField(field.id());
+    },
     setBaseType: function(type){this.__type.setBaseType(type);},
     endParse: function(){
         var type = this.__type;
@@ -1501,13 +1534,18 @@ exports.TypeDeclaration = ChainedContext.extend({
         ChainedContext.prototype.init.bind(this)(context);
         this.__id = undefined;
     },
-    setIdent: function(id){this.__ident = id;},
+    handleIdentef: function(id){this.__id = id;},
     setType: function(type){
-        this.addSymbol(new Symbol(this.__ident, new Type.TypeId(type)));
+        this.currentScope().addSymbol(
+            new Symbol.Symbol(this.__id.id(), new Type.TypeId(type)),
+            this.__id.exported());
     },
-    typeName: function(){return this.__ident;},
-    genTypeName: function(){return this.__ident;},
-    type: function(){return this.parent().type();}
+    typeName: function(){return this.__id.id();},
+    genTypeName: function(){return this.__id.id();},
+    type: function(){return this.parent().type();},
+    exportField: function(name){
+        checkIfFFieldCanBeExported(name, [this.__id], "record");
+    }
 });
 
 exports.TypeSection = ChainedContext.extend({
@@ -1540,6 +1578,20 @@ exports.TypeCast = ChainedContext.extend({
     }
 });
 
+function genExports(exports, gen){
+    if (!exports.length)
+        return;
+    gen.write("return {\n");
+    for(var i = 0; i < exports.length; ++i){
+        var e = exports[i];
+        var access = e.id();
+        if (e.isVariable() && !(e.info().type() instanceof Type.Pointer))
+            access = "function(){return " + access + ";}";
+        gen.write("\t" + e.id() + ": " + access + "\n");
+    }
+    gen.write("}\n");
+}
+
 exports.ModuleDeclaration = ChainedContext.extend({
     init: function ModuleDeclarationContext(context){
         ChainedContext.prototype.init.bind(this)(context);
@@ -1549,11 +1601,14 @@ exports.ModuleDeclaration = ChainedContext.extend({
         var gen = this.codeGenerator();
         if (this.__name === undefined ) {
             this.__name = id;
-            this.addSymbol(new Symbol(id, Type.module));
+            this.currentScope().addSymbol(new Symbol.Symbol(id, Type.module));
             gen.write("var " + id + " = function " + "(){\n");
         }
-        else if (id === this.__name)
+        else if (id === this.__name){
+            var exports = this.parent().currentScope().exports();
+            genExports(exports, gen);
             gen.write("}();");
+        }
         else
             throw new Errors.Error("original module name '" + this.__name + "' expected, got '" + id + "'" );
     }
@@ -1569,7 +1624,7 @@ var ModuleImport = ChainedContext.extend({
             this.__import.push(id);
         else {
             this.rtl().supportJS();
-            this.addSymbol(new Symbol("JS", new Module.JS()));
+            this.currentScope().addSymbol(new Symbol.Symbol("JS", new Module.JS()));
         }
     },
     handleLiteral: function(s){
@@ -1583,57 +1638,12 @@ var ModuleImport = ChainedContext.extend({
 });
 exports.ModuleImport = ModuleImport;
 
-var stdSymbols = function(){
-    var symbols = {};
-    for(var t in basicTypes){
-        var type = basicTypes[t];
-        symbols[type.name()] = new Symbol(type.name(), new Type.TypeId(type));
-    }
-    symbols["LONGREAL"] = new Symbol("LONGREAL", new Type.TypeId(basicTypes.real));
-    
-    var predefined = Procedure.predefined;
-    for(var i = 0; i < predefined.length; ++i){
-        var s = predefined[i];
-        symbols[s.id()] = s;
-    }
-    return symbols;
-}();
-
-var Scope = Class.extend({
-    init: function Scope(id){
-        this.__id = id;
-        this.__symbols = {};
-        for(var p in stdSymbols)
-            this.__symbols[p] = stdSymbols[p];
-        this.__unresolved = [];
-    },
-    id: function(){return this.__id;},
-    addSymbol: function(symbol){
-        var id = symbol.id();
-        if (this.findSymbol(id))
-            throw new Errors.Error( "'" + id + "' already declared");
-        this.__symbols[id] = symbol;
-
-        var i = this.__unresolved.indexOf(id);
-        if (i != -1){
-            var info = symbol.info();
-            if (!(info.type() instanceof Type.Record))
-                throw new Errors.Error(
-                    "'" + id + "' must be of RECORD type because it was used before in the declation of POINTER");
-            this.__unresolved.splice(i, 1);
-        }
-    },
-    findSymbol: function(ident){return this.__symbols[ident];},
-    addUnresolved: function(id){this.__unresolved.push(id);},
-    unresolved: function(){return this.__unresolved;}
-});
-
 exports.Context = Class.extend({
     init: function Context(){
         this.__code = new Code.Generator();
         this.__designator = undefined;
         this.__type = undefined;
-        this.__scopes = [new Scope()];
+        this.__scopes = [new Scope.Module()];
         this.__gen = 0;
         this.__vars = [];
         this.__rtl = new RTL();
@@ -1651,18 +1661,17 @@ exports.Context = Class.extend({
             this.__vars.push(id);
         }
     },
-    addSymbol: function(symbol){this.currentScope().addSymbol(symbol);},
     findSymbol: function(ident){
         for(var i = this.__scopes.length; i--;){
             var scope = this.__scopes[i];
             var s = scope.findSymbol(ident);
             if (s)
-                return new FoundSymbol(s, scope);
+                return new Symbol.Found(s, scope);
         }
         return undefined;
     },
     currentScope: function(){return this.__scopes[this.__scopes.length - 1];},
-    pushScope: function(id){this.__scopes.push(new Scope(id));},
+    pushScope: function(scope){this.__scopes.push(scope);},
     popScope: function(){this.__scopes.pop();},
     handleExpression: function(){},
     handleLiteral: function(){},
@@ -1672,5 +1681,5 @@ exports.Context = Class.extend({
     codeGenerator: function(){return this.__code;},
     rtl: function(){
         return this.__rtl;
-    },
+    }
 });
