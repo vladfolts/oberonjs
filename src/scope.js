@@ -36,11 +36,14 @@ var Scope = Class.extend({
         if (this.findSymbol(id))
             throw new Errors.Error( "'" + id + "' already declared");
         this.__symbols[id] = symbol;
-
+    },
+    resolve: function(symbol){
+        var id = symbol.id();
         var i = this.__unresolved.indexOf(id);
         if (i != -1){
             var info = symbol.info();
-            if (!(info.type() instanceof Type.Record))
+            var type = info.type();
+            if (type !== undefined && !(type instanceof Type.Record))
                 throw new Errors.Error(
                     "'" + id + "' must be of RECORD type because it was used before in the declation of POINTER");
             this.__unresolved.splice(i, 1);
@@ -70,9 +73,16 @@ var Module = Scope.extend({
     },
     addSymbol: function(symbol, exported){
         if (exported)
-            if (!symbol.isType() || symbol.info().type() instanceof Type.Record)
-                this.__exports.push(symbol);
+            this.__exports.push(symbol);
         Scope.prototype.addSymbol.call(this, symbol, exported);
+    },
+    resolve: function(symbol){
+        var i = this.__exports.indexOf(symbol);
+        if (i != -1)
+            // remove non-record types from generated exports
+            if (symbol.isType() && !(symbol.info().type() instanceof Type.Record))
+                this.__exports.splice(i, 1);
+        Scope.prototype.resolve.call(this, symbol);
     },
     exports: function(){return this.__exports;}
 });

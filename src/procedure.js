@@ -43,7 +43,7 @@ var ProcCallGenerator = Class.extend({
         var isVarArg = false;
         var convert;
         if (this.__type){
-            var expectedArguments = this.__type.arguments();
+            var expectedArguments = this.__type.args();
             if (pos >= expectedArguments.length )
                 // ignore, handle error after parsing all arguments
                 return;
@@ -73,13 +73,13 @@ var ProcCallGenerator = Class.extend({
     resultType: function(){return this.__type ? this.__type.result() : undefined;},
     prolog: function(){return this.__id + "(";},
     checkArgumentsCount: function(count){
-        var procArgs = this.__type.arguments();
+        var procArgs = this.__type.args();
         if (count != procArgs.length)
             throw new Errors.Error(procArgs.length + " argument(s) expected, got "
                                  + this.__argumentsCount);
     },
     checkArgument: function(pos, e){
-        var arg = this.__type.arguments()[pos];
+        var arg = this.__type.args()[pos];
         var castOperation;
         var expectType = arg.type; // can be undefined for predefined functions (like NEW), dont check it in this case
         if (expectType){
@@ -115,7 +115,7 @@ var DefinedProc = Type.Procedure.extend({
         this.__arguments = args;
         this.__result = result;
     },
-    arguments: function(){return this.__arguments;},
+    args: function(){return this.__arguments;},
     result: function(){return this.__result;},
     description: function(){
         var name = this.name();
@@ -150,7 +150,7 @@ var Std = Type.Procedure.extend({
         this.__callGeneratorFactory = callGeneratorFactory;
     },
     description: function(){return "standard procedure " + this.name();},
-    arguments: function(){return this.__arguments;},
+    args: function(){return this.__arguments;},
     result: function(){return this.__result;},
     callGenerator: function(context, id){
         return this.__callGeneratorFactory(context, id, this);
@@ -185,7 +185,7 @@ var TwoArgToOperatorProcCallGenerator = ExpCallGenerator.extend({
 
 function setBitImpl(name, op){
     var args = [new Arg(Type.basic.set, true),
-                new Arg(Type.basic.int, false)];
+                new Arg(Type.basic.integer, false)];
     function operator(x, y){
         var value = y.constValue();
         if (value === undefined || value < 0 || value > 31)
@@ -208,7 +208,8 @@ function setBitImpl(name, op){
 }
 
 function incImpl(name, unary, op){
-    var args = [new Arg(Type.basic.int, true), new Arg(Type.basic.int, false)];
+    var args = [new Arg(Type.basic.integer, true),
+                new Arg(Type.basic.integer, false)];
     function operator(x, y){
         if (!y)
             return unary + x.code();
@@ -250,13 +251,13 @@ function bitShiftImpl(name, op){
             return op(args[0], args[1]);
         }
     });
-    var args = [new Arg(Type.basic.int, false),
-                new Arg(Type.basic.int, false)
+    var args = [new Arg(Type.basic.integer, false),
+                new Arg(Type.basic.integer, false)
                ];
     var proc = new Std(
         name,
         args,
-        Type.basic.int,
+        Type.basic.integer,
         function(context, id, type){
             return new CallGenerator(context, id, type);
         });
@@ -335,7 +336,7 @@ exports.predefined = [
                     return new CheckArgumentResult(type, false);
                 
                 // should throw error
-                ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
+                return ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
             },
             epilog: function(){return ".length";}
         });
@@ -345,7 +346,7 @@ exports.predefined = [
         var type = new Std(
             "LEN",
             args,
-            Type.basic.int,
+            Type.basic.integer,
             function(context, id, type){
                 return new LenProcCallGenerator(context, id, type);
             });
@@ -364,7 +365,7 @@ exports.predefined = [
             }
         });
         var name = "ODD";
-        var args = [new Arg(Type.basic.int, false)];
+        var args = [new Arg(Type.basic.integer, false)];
         var type = new Std(
             "ODD",
             args,
@@ -386,7 +387,7 @@ exports.predefined = [
             }
         });
 
-        var args = [new Arg(Type.basic.bool), new Arg(Type.basic.int)];
+        var args = [new Arg(Type.basic.bool), new Arg(Type.basic.integer)];
         var proc = new Std(
             "ASSERT",
             args,
@@ -434,13 +435,13 @@ exports.predefined = [
             init: function FloorProcCallGenerator(context, id, type){
                 ProcCallGenerator.prototype.init.call(this, context, id, type);
             },
-            prolog: function(){return "Math.floor(";},
+            prolog: function(){return "Math.floor(";}
         });
         var args = [new Arg(Type.basic.real, false)];
         var proc = new Std(
             "FLOOR",
             args,
-            Type.basic.int,
+            Type.basic.integer,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
@@ -457,7 +458,7 @@ exports.predefined = [
                 return new Code.Expression(e.code(), Type.basic.real, undefined, e.constValue(), e.maxPrecedence());
             }
         });
-        var args = [new Arg(Type.basic.int, false)];
+        var args = [new Arg(Type.basic.integer, false)];
         var proc = new Std(
             "FLT",
             args,
@@ -483,26 +484,29 @@ exports.predefined = [
             epilog: function(){return "";},
             checkArgument: function(pos, e){
                 var type = e.type();
-                if (type == Type.basic.char || type == Type.basic.set)
-                    this.__callExpression = new Code.Expression(e.code(), Type.basic.int, undefined, e.constValue());
+                if (type == Type.basic.ch || type == Type.basic.set)
+                    this.__callExpression = new Code.Expression(
+                        e.code(), Type.basic.integer, undefined, e.constValue());
                 else if (type == Type.basic.bool){
                     var code = Code.adjustPrecedence(e, precedence.conditional) + " ? 1 : 0";
                     var value = e.constValue();
                     if (value !== undefined)
                         value = value ? 1 : 0;
-                    this.__callExpression = new Code.Expression(code, Type.basic.int, undefined, value, precedence.conditional);
+                    this.__callExpression = new Code.Expression(
+                        code, Type.basic.integer, undefined, value, precedence.conditional);
                 }
                 else if (type instanceof Type.String){
                     var ch = type.asChar();
                     if (ch !== undefined)
-                        this.__callExpression = new Code.Expression("" + ch, Type.basic.int);
+                        this.__callExpression = new Code.Expression(
+                            "" + ch, Type.basic.integer);
                 }
                 
                 if (this.__callExpression)
                     return new CheckArgumentResult(type, false);
 
                 // should throw error
-                ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
+                return ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
             },
             callExpression: function(){return this.__callExpression;}
         });
@@ -512,7 +516,7 @@ exports.predefined = [
         var type = new Std(
             name,
             args,
-            Type.basic.int,
+            Type.basic.integer,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
@@ -525,14 +529,14 @@ exports.predefined = [
                 ExpCallGenerator.prototype.init.call(this, context, id, type);
             },
             callExpression: function(){
-                return new Code.Expression(this.args()[0].code(), Type.basic.char);
+                return new Code.Expression(this.args()[0].code(), Type.basic.ch);
             }
         });
         var name = "CHR";
         var type = new Std(
             name,
-            [new Arg(Type.basic.int, false)],
-            Type.basic.char,
+            [new Arg(Type.basic.integer, false)],
+            Type.basic.ch,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
@@ -553,7 +557,7 @@ exports.predefined = [
         var type = new Std(
             name,
             [new Arg(undefined, false),
-             new Arg(new Type.Array("ARRAY OF CHAR", undefined, Type.basic.char), true)],
+             new Arg(new Type.Array("ARRAY OF CHAR", undefined, Type.basic.ch), true)],
             undefined,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
@@ -563,7 +567,7 @@ exports.predefined = [
     }(),
     function(){
         var args = [new Arg(Type.basic.real, true),
-                    new Arg(Type.basic.int, false)];
+                    new Arg(Type.basic.integer, false)];
         function operator(x, y){
             return op.mulInplace(x, op.pow2(y));
         }
@@ -581,7 +585,7 @@ exports.predefined = [
     }(),
     function(){
         var args = [new Arg(Type.basic.real, true),
-                    new Arg(Type.basic.int, true)];
+                    new Arg(Type.basic.integer, true)];
         function operator(x, y){
             return op.assign(y, op.log2(x)) +
                    "; " +

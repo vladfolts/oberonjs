@@ -1,0 +1,77 @@
+(*http://www.chilton-computing.org.uk/acl/applications/algol/p006.htm*)
+
+MODULE test;
+IMPORT JS;
+
+TYPE
+    PState = POINTER TO State;
+    Function = PROCEDURE(s: PState): INTEGER;
+    State = RECORD
+        f: Function;
+        k: INTEGER;
+        x1, x2, x3, x4, x5: PState
+    END;
+
+VAR
+    pB: Function;
+
+PROCEDURE call(s: PState): INTEGER;
+    RETURN s.f(s)
+END call;
+
+PROCEDURE makeEmptyState(f: Function): PState;
+VAR
+    result: PState;
+BEGIN
+    NEW(result);
+    result.f := f;
+    RETURN result
+END makeEmptyState;
+
+PROCEDURE makeState(f: Function; k: INTEGER; x1, x2, x3, x4, x5: PState): PState;
+VAR
+    result: PState;
+BEGIN
+    result := makeEmptyState(f);
+    result.k := k;
+    result.x1 := x1;
+    result.x2 := x2;
+    result.x3 := x3;
+    result.x4 := x4;
+    result.x5 := x5;
+    RETURN result
+END makeState;
+
+PROCEDURE F0(s: PState):  INTEGER; BEGIN RETURN  0 END F0;
+PROCEDURE F1(s: PState):  INTEGER; BEGIN RETURN  1 END F1;
+PROCEDURE Fn1(s: PState): INTEGER; BEGIN RETURN -1 END Fn1;
+
+PROCEDURE A(s: PState): INTEGER;
+VAR
+    res: INTEGER;
+BEGIN
+  IF s.k <= 0 THEN
+    res := call(s.x4) + call(s.x5);
+  ELSE
+    res := call(makeState(pB, s.k, s.x1, s.x2, s.x3, s.x4, s.x5));
+  END;
+  RETURN res
+END A;
+
+PROCEDURE B(s: PState): INTEGER;
+BEGIN
+    DEC(s.k);
+    RETURN call(makeState(A, s.k, s, s.x1, s.x2, s.x3, s.x4))
+END B;
+
+BEGIN
+    pB := B;
+    JS.alert(call(makeState(
+        A,
+        10,
+        makeEmptyState(F1),
+        makeEmptyState(Fn1),
+        makeEmptyState(Fn1),
+        makeEmptyState(F1),
+        makeEmptyState(F0))))
+END test.

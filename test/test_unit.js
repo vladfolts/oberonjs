@@ -240,14 +240,24 @@ identifier: function(){
     test.expectError("CONST s = {1..v1};", "constant expression expected");
     test.expectError("CONST s = {10 - v1..15};", "constant expression expected");
 },
-"record declaration": function(){
-    var parse = function(s) { return parseUsingGrammar(Grammar.typeDeclaration, s); };
-    assert(parse("t = RECORD END"));
-    assert(parse("t = RECORD i: INTEGER END"));
-    assert(parse("t = RECORD i, j: INTEGER END"));
-    assert(!parse("t = RECORD i, j, i: INTEGER END"));
-    assert(parse("t = RECORD i, j: INTEGER; b: BOOLEAN END"));
-},
+"record declaration": testWithGrammar(
+    Grammar.typeDeclaration,
+    pass("T = RECORD END",
+         "T = RECORD i: INTEGER END",
+         "T = RECORD i, j: INTEGER END",
+         "T = RECORD i, j: INTEGER; b: BOOLEAN END",
+         "T = RECORD p: PROCEDURE(r: T) END",
+         "T = RECORD p: PROCEDURE(): T END"
+         ),
+    fail(["T = RECORD i, j, i: INTEGER END", "duplicated field: 'i'"],
+         ["T = RECORD r: T END", "recursive field definition: 'r'"],
+         ["T = RECORD a: ARRAY 10 OF T END", "recursive field definition: 'a'"],
+         ["T = RECORD a: ARRAY 3 OF ARRAY 5 OF T END", "recursive field definition: 'a'"],
+         ["T = RECORD r: RECORD rr: T END END", "recursive field definition: 'r'"],
+         ["T = RECORD (T) END", "recursive inheritance: 'T'"],
+         ["T = RECORD r: RECORD (T) END END", "recursive field definition: 'r'"]
+         )
+    ),
 "array declaration": function(){
     var test = setupWithContext(
           Grammar.typeDeclaration

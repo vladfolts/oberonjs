@@ -60,7 +60,7 @@ function pow2(e){
 
 function log2(e){
     return new Code.Expression("(Math.log(" + e.deref().code() + ") / Math.LN2) | 0",
-                               Type.basic.int, undefined, undefined, precedence.bitOr);
+                               Type.basic.integer, undefined, undefined, precedence.bitOr);
 }
 
 function assign(left, right, context){
@@ -75,7 +75,7 @@ function assign(left, right, context){
 
     var isArray = leftType instanceof Type.Array;
     if (isArray
-        && leftType.elementsType() == Type.basic.char
+        && leftType.elementsType() == Type.basic.ch
         && rightType instanceof Type.String){
         if (leftType.length() === undefined)
             throw new Errors.Error("string cannot be assigned to open " + leftType.description());

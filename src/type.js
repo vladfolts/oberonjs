@@ -16,10 +16,17 @@ var Type = Id.extend({
 var TypeId = Id.extend({
 	init: function TypeId(type){
 		Id.prototype.init.call(this);
-		this.__type = type;
+		this._type = type;
 	},
-	type: function(){return this.__type;},
-	description: function(){return 'type ' + this.__type.description();}
+	type: function(){return this._type;},
+	description: function(){return 'type ' + this._type.description();}
+});
+
+var LazyTypeId = TypeId.extend({
+	init: function LazyTypeId(){
+		TypeId.prototype.init.call(this);
+	},
+	define: function(type){return this._type = type;}
 });
 
 exports.String = Type.extend({
@@ -123,13 +130,13 @@ var NilType = Type.extend({
 
 var basic = {
 	bool: new BasicType("BOOLEAN", false),
-	char: new BasicType("CHAR", 0),
-	int: new BasicType("INTEGER", 0),
+	ch: new BasicType("CHAR", 0),
+	integer: new BasicType("INTEGER", 0),
 	real: new BasicType("REAL", 0),
 	set: new BasicType("SET", 0)
 };
 exports.basic = basic;
-exports.numeric = [basic.int, basic.real];
+exports.numeric = [basic.integer, basic.real];
 
 exports.nil = new NilType();
 
@@ -173,3 +180,4 @@ var Module = Id.extend({
 exports.Module = Module;
 exports.Type = Type;
 exports.TypeId = TypeId;
+exports.LazyTypeId = LazyTypeId;

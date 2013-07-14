@@ -37,8 +37,8 @@ function areTypesMatch(t1, t2){
 }
 
 function areProceduresMatch(p1, p2){
-    var args1 = p1.arguments();
-    var args2 = p2.arguments();
+    var args1 = p1.args();
+    var args2 = p2.args();
     if (args1.length != args2.length)
         return false;
 
@@ -64,12 +64,12 @@ function implicitCast(from, to){
         return doNoting;
 
     if (from instanceof Type.String){
-        if (to === Type.basic.char){
+        if (to === Type.basic.ch){
             var v = from.asChar();
             if (v !== undefined)
                 return function(){return new Code.Expression(v, to);};
         }
-        else if (to instanceof Type.Array && to.elementsType() == Type.basic.char)
+        else if (to instanceof Type.Array && to.elementsType() == Type.basic.ch)
             return function(context, e){
                 return new Code.Expression(context.rtl().strToArray(e.code()), to);
             };

@@ -59,7 +59,7 @@ function checkImplicitCast(from, to){
 
 function promoteTypeInExpression(e, type){
     var fromType = e.type();
-    if (type == Type.basic.char && fromType instanceof Type.String){
+    if (type == Type.basic.ch && fromType instanceof Type.String){
         var v = fromType.asChar();
         if (v !== undefined)
             return new Code.Expression(v, type);
@@ -121,7 +121,7 @@ exports.Integer = ChainedContext.extend({
     toInt: function(s){return parseInt(this.__result, 10);},
     endParse: function(){
         var n = this.toInt();
-        this.parent().handleConst(basicTypes.int, n, n.toString());
+        this.parent().handleConst(basicTypes.integer, n, n.toString());
     }
 });
 
@@ -293,7 +293,7 @@ exports.Designator = ChainedContext.extend({
     __handleIndexExpression: function(){
         var e = this.__indexExpression;
         var expType = e.type();
-        if (expType != basicTypes.int)
+        if (expType != basicTypes.integer)
             throw new Errors.Error("'INTEGER' expression expected, got '" + expType.name() + "'");
 
         var type = this.__currentType;
@@ -621,7 +621,7 @@ exports.ArrayDimensions = ChainedContext.extend({
     codeGenerator: function(){return Code.nullGenerator;},
     handleExpression: function(e){
         var type = e.type();
-        if (type !== basicTypes.int)
+        if (type !== basicTypes.integer)
             throw new Errors.Error("'INTEGER' constant expression expected, got '" + type.name() + "'");
         var value = e.constValue();
         if (value === undefined)
@@ -642,22 +642,22 @@ var numericOpTypeCheck = {
 
 var intOpTypeCheck = {
     expect: "INTEGER",
-    check: function(t){return t == basicTypes.int;}
+    check: function(t){return t == basicTypes.integer;}
 };
 
 var orderOpTypeCheck = {
     expect: "numeric type or CHAR or character array",
     check: function(t){
-        return [basicTypes.int, basicTypes.real, basicTypes.char].indexOf(t) != -1
-            || (t instanceof Type.Array && t.elementsType() == basicTypes.char);
+        return [basicTypes.integer, basicTypes.real, basicTypes.ch].indexOf(t) != -1
+            || (t instanceof Type.Array && t.elementsType() == basicTypes.ch);
     }
 };
 
 var equalOpTypeCheck = {
     expect: "numeric type or SET or BOOLEAN OR CHAR or character array or POINTER or PROCEDURE",
     check: function(t){
-        return [basicTypes.int, basicTypes.real, basicTypes.set, basicTypes.bool, basicTypes.char].indexOf(t) != -1
-            || (t instanceof Type.Array && t.elementsType() == basicTypes.char)
+        return [basicTypes.integer, basicTypes.real, basicTypes.set, basicTypes.bool, basicTypes.ch].indexOf(t) != -1
+            || (t instanceof Type.Array && t.elementsType() == basicTypes.ch)
             || t instanceof Type.Pointer
             || t instanceof Type.Procedure
             || t == Type.nil;
@@ -776,7 +776,7 @@ exports.MulOperator = ChainedContext.extend({
         else if (s == "/"){
             if (type == basicTypes.set)
                 o = op.setSymmetricDiff;
-            else if (type == basicTypes.int)
+            else if (type == basicTypes.integer)
                 throw new Errors.Error("operator DIV expected for integer division");
             else
                 o = assertNumericOp(type, s, op.divFloat);
@@ -994,7 +994,7 @@ exports.Expression = ChainedContext.extend({
         var code;
 
         if (this.__relation == "IN"){
-            if (leftType != basicTypes.int)
+            if (leftType != basicTypes.integer)
                 throw new Errors.Error("'INTEGER' expected as an element of SET, got '" + leftType.name() + "'");
             checkImplicitCast(rightType, basicTypes.set);
 
@@ -1108,10 +1108,10 @@ exports.Case = ChainedContext.extend({
             var v = type.asChar();
             if (v !== undefined){
                 gen.write(v);
-                type = basicTypes.char;
+                type = basicTypes.ch;
             }
         }
-        if (type != basicTypes.int && type != basicTypes.char)
+        if (type != basicTypes.integer && type != basicTypes.ch)
             throw new Errors.Error("'INTEGER' or 'CHAR' expected as CASE expression");
         this.__type = type;
         gen.write(";\n");
@@ -1186,7 +1186,7 @@ exports.CaseRange = ChainedContext.extend({
             value = type.asChar();
             if (value === undefined)
                 throw new Errors.Error("single-character string expected");
-            type = basicTypes.char;
+            type = basicTypes.ch;
         }
         this.handleLabel(type, value);
     },
@@ -1259,7 +1259,7 @@ exports.For = ChainedContext.extend({
         var s = getSymbol(this.parent(), id);
         if (!s.isVariable())
             throw new Errors.Error("'" + s.id() + "' is not a variable");
-        if (s.info().type() !== basicTypes.int)
+        if (s.info().type() !== basicTypes.integer)
             throw new Errors.Error(
                 "'" + s.id() + "' is a 'BOOLEAN' variable, 'FOR' control variable must be 'INTEGER'");
         this.codeGenerator().write("for (" + id + " = ");
@@ -1268,7 +1268,7 @@ exports.For = ChainedContext.extend({
     handleExpression: function(e){
         var type = e.type();
         var value = e.constValue();
-        if (type !== basicTypes.int)
+        if (type !== basicTypes.integer)
             throw new Errors.Error(
                 !this.__initExprParsed
                     ? "'INTEGER' expression expected to assign '" + this.__var
@@ -1352,7 +1352,7 @@ exports.ConstDecl = ChainedContext.extend({
     }
 });
 
-function checkIfFFieldCanBeExported(name, idents, hint){
+function checkIfFieldCanBeExported(name, idents, hint){
     for(var i = 0; i < idents.length; ++i){
         var id = idents[i];
         if (!id.exported())
@@ -1370,7 +1370,7 @@ exports.VariableDeclaration = ChainedContext.extend({
     },
     handleIdentef: function(id){this.__idents.push(id);},
     exportField: function(name){
-        checkIfFFieldCanBeExported(name, this.__idents, "variable");
+        checkIfFieldCanBeExported(name, this.__idents, "variable");
     },
     setType: function(type){this.__type = type;},
     typeName: function(){return undefined;},
@@ -1403,7 +1403,7 @@ exports.FieldListDeclaration = ChainedContext.extend({
     typeName: function(){return undefined;},
     handleIdentef: function(id) {this.__idents.push(id);},
     exportField: function(name){
-        checkIfFFieldCanBeExported(name, this.__idents, "field");
+        checkIfFieldCanBeExported(name, this.__idents, "field");
     },
     setType: function(type) {this.__type = type;},
     endParse: function(){
@@ -1495,20 +1495,46 @@ exports.ExpressionProcedureCall = ProcedureCall.extend({
     }
 });
 
+function isTypeRecursive(type, base){
+    if (type == base)
+        return true;
+    if (type instanceof Type.Record){
+        if (isTypeRecursive(type.baseType(), base))
+            return true;
+        var fields = type.ownFields();
+        for(var fieldName in fields){
+            if (isTypeRecursive(fields[fieldName], base))
+                return true;
+        }
+    }
+    else if (type instanceof Type.Array)
+        return isTypeRecursive(type.elementsType(), base);
+    return false;
+}
+
 exports.RecordDecl = ChainedContext.extend({
     init: function RecordDeclContext(context){
         ChainedContext.prototype.init.bind(this)(context);
         var id = this.genTypeName();
         this.__type = new Type.Record(id);
+        this.parent().setType(this.__type);
         var gen = this.codeGenerator();
         gen.write("var " + id + " = ");
     },
     addField: function(field, type){
+        if (isTypeRecursive(type, this.__type))
+            throw new Errors.Error("recursive field definition: '"
+                + field.id() + "'");
         this.__type.addField(field, type);
         if (field.exported())
             this.parent().exportField(field.id());
     },
-    setBaseType: function(type){this.__type.setBaseType(type);},
+    setBaseType: function(type){
+        if (isTypeRecursive(type, this.__type))
+            throw new Errors.Error("recursive inheritance: '"
+                + this.__type.name() + "'");
+        this.__type.setBaseType(type);
+    },
     endParse: function(){
         var type = this.__type;
         var baseType = type.baseType();
@@ -1523,7 +1549,6 @@ exports.RecordDecl = ChainedContext.extend({
         for(var f in ownFields)
             gen.write("this." + f + " = " + ownFields[f].initializer() + ";\n");
 
-        this.parent().setType(type);
         gen.closeScope();
         gen.closeScope(");\n");
     }
@@ -1533,18 +1558,24 @@ exports.TypeDeclaration = ChainedContext.extend({
     init: function TypeDeclarationContext(context){
         ChainedContext.prototype.init.bind(this)(context);
         this.__id = undefined;
+        this.__typeId = undefined;
+        this.__symbol = undefined;
     },
-    handleIdentef: function(id){this.__id = id;},
+    handleIdentef: function(id){
+        this.__id = id;
+        this.__typeId = new Type.LazyTypeId();
+        this.__symbol = new Symbol.Symbol(this.__id.id(), this.__typeId);
+        this.currentScope().addSymbol(this.__symbol, this.__id.exported());
+    },
     setType: function(type){
-        this.currentScope().addSymbol(
-            new Symbol.Symbol(this.__id.id(), new Type.TypeId(type)),
-            this.__id.exported());
+        this.__typeId.define(type);
+        this.currentScope().resolve(this.__symbol);
     },
     typeName: function(){return this.__id.id();},
     genTypeName: function(){return this.__id.id();},
     type: function(){return this.parent().type();},
     exportField: function(name){
-        checkIfFFieldCanBeExported(name, [this.__id], "record");
+        checkIfFieldCanBeExported(name, [this.__id], "record");
     }
 });
 
