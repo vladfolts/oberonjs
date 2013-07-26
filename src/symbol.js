@@ -15,7 +15,7 @@ var Symbol = Class.extend({
 	isVariable: function(){return this.__info instanceof Type.Variable;},
 	isConst: function(){return this.__info instanceof Type.Const;},
 	isType: function(){return this.__info instanceof Type.TypeId;},
-	isProcedure: function(){return this.__info instanceof Type.Procedure;},
+	isProcedure: function(){return this.__info instanceof Type.Procedure;}
 });
 
 var FoundSymbol = Class.extend({

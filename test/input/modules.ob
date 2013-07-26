@@ -1,0 +1,12 @@
+MODULE m1;
+
+PROCEDURE p*();
+END p;
+
+END m1.
+
+MODULE m2;
+IMPORT m1;
+BEGIN
+	m1.p();
+END m2.

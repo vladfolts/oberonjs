@@ -8,14 +8,11 @@ var Module = require("module.js");
 var op = require("operator.js");
 var Parser = require("parser.js");
 var Procedure = require("procedure.js");
-var ImportRTL = require("rtl.js");
+var Class = require("rtl.js").Class;
 var Scope = require("scope.js");
 var Stream = require("stream.js").Stream;
 var Symbol = require("symbol.js");
 var Type = require("type.js");
-
-var RTL = ImportRTL.RTL;
-var Class = ImportRTL.Class;
 
 var basicTypes = Type.basic;
 
@@ -213,6 +210,7 @@ exports.QualifiedIdentificator = ChainedContext.extend({
         ChainedContext.prototype.init.bind(this)(context);
         this.__module = undefined;
         this.__id = undefined;
+        this.__code = "";
     },
     setIdent: function(id){
         this.__id = id;
@@ -222,10 +220,12 @@ exports.QualifiedIdentificator = ChainedContext.extend({
         if (!s.isModule())
             return false; // stop parsing
         this.__module = s.info();
+        this.__code = this.__id + ".";
+        return undefined;
     },
     endParse: function(){
         var s = getSymbolAndScope(this.__module ? this.__module : this, this.__id);
-        this.parent().handleSymbol(s);
+        this.parent().handleSymbol(s, this.__code + this.__id);
     }
 });
 
@@ -262,7 +262,7 @@ exports.Designator = ChainedContext.extend({
         this.__derefCode = undefined;
         this.__propCode = undefined;
     },
-    handleSymbol: function(found){
+    handleSymbol: function(found, code){
         this.__scope = found.scope();
         var s = found.symbol();
         var info = s.info();
@@ -271,7 +271,7 @@ exports.Designator = ChainedContext.extend({
         else if (s.isVariable() || s.isConst())
             this.__currentType = info.type();
         this.__info = info;
-        this.__code.write(s.id());
+        this.__code.write(code);
     },
     setIdent: function(id){
         var t = this.__currentType;
@@ -867,12 +867,13 @@ exports.Set = ChainedContext.extend({
         this.__expr = "";
     },
     handleElement: function(from, fromValue, to, toValue){
-        if (fromValue !== undefined && (!to || toValue !== undefined))
+        if (fromValue !== undefined && (!to || toValue !== undefined)){
             if (to)
                 for(var i = fromValue; i <= toValue; ++i)
                     this.__value |= 1 << i;
             else
                 this.__value |= 1 << fromValue;
+        }
         else{
             if (this.__expr.length)
                 this.__expr += ", ";
@@ -1610,17 +1611,16 @@ exports.TypeCast = ChainedContext.extend({
 });
 
 function genExports(exports, gen){
-    if (!exports.length)
-        return;
-    gen.write("return {\n");
-    for(var i = 0; i < exports.length; ++i){
-        var e = exports[i];
-        var access = e.id();
+    var result = "";
+    for(var access in exports){
+        var e = exports[access];
         if (e.isVariable() && !(e.info().type() instanceof Type.Pointer))
             access = "function(){return " + access + ";}";
-        gen.write("\t" + e.id() + ": " + access + "\n");
+        result += "\t" + e.id() + ": " + access + "\n";
     }
-    gen.write("}\n");
+    if (!result.length)
+        return;
+    gen.write("return {\n" + result + "}\n");
 }
 
 exports.ModuleDeclaration = ChainedContext.extend({
@@ -1632,56 +1632,80 @@ exports.ModuleDeclaration = ChainedContext.extend({
         var gen = this.codeGenerator();
         if (this.__name === undefined ) {
             this.__name = id;
-            this.currentScope().addSymbol(new Symbol.Symbol(id, Type.module));
+            this.parent().pushScope(new Scope.Module(id));
             gen.write("var " + id + " = function " + "(){\n");
         }
         else if (id === this.__name){
-            var exports = this.parent().currentScope().exports();
+            var scope = this.parent().currentScope();
+            var exports = scope.exports();
+            scope.module().info().defineExports(exports);
             genExports(exports, gen);
-            gen.write("}();");
+            gen.write("}();\n");
         }
         else
             throw new Errors.Error("original module name '" + this.__name + "' expected, got '" + id + "'" );
-    }
+    },
+    findModule: function(name){return this.parent().findModule(name);}
 });
 
 var ModuleImport = ChainedContext.extend({
     init: function ModuleImport(context){
         ChainedContext.prototype.init.bind(this)(context);
-        this.__import = [];
+        this.__import = {};
+        this.__currentModule = undefined;
+        this.__currentAlias = undefined;
     },
     setIdent: function(id){
-        if (id != "JS")
-            this.__import.push(id);
-        else {
-            this.rtl().supportJS();
-            this.currentScope().addSymbol(new Symbol.Symbol("JS", new Module.JS()));
-        }
+        this.__currentModule = id;
     },
     handleLiteral: function(s){
         if (s == ":=")
-            this.__import.pop();
+            this.__currentAlias = this.__currentModule;
+        else if (s == ",")
+            this.__handleImport();
     },
     endParse: function(){
-        if (this.__import.length)
-            throw new Errors.Error("module(s) not found: " + this.__import.join(", "));
+        this.__handleImport();
+
+        var unresolved  = [];
+        for(var alias in this.__import){
+            var moduleName = this.__import[alias];
+            var module = this.parent().findModule(moduleName);
+            if (!module)
+                unresolved.push(moduleName);
+            else
+                this.currentScope().addSymbol(new Symbol.Symbol(alias, module));
+        }
+        if (unresolved.length)
+            throw new Errors.Error("module(s) not found: " + unresolved.join(", "));
+    },
+    __handleImport: function(){
+        var alias = this.__currentAlias;
+        if (!alias)
+            alias = this.__currentModule;
+        else
+            this.__currentAlias = undefined;
+        
+        for(var a in this.__import){
+            if (a == alias)
+                throw new Errors.Error("duplicated alias: '" + alias +"'");
+            if (this.__import[a] == this.__currentModule)
+                throw new Errors.Error("module already imported: '" + this.__currentModule +"'");
+        }
+        this.__import[alias] = this.__currentModule;
     }
 });
 exports.ModuleImport = ModuleImport;
 
 exports.Context = Class.extend({
-    init: function Context(){
-        this.__code = new Code.Generator();
-        this.__designator = undefined;
-        this.__type = undefined;
-        this.__scopes = [new Scope.Module()];
+    init: function Context(code, rtl, moduleResolver){
+        this.__code = code;
+        this.__scopes = [];
         this.__gen = 0;
         this.__vars = [];
-        this.__rtl = new RTL();
+        this.__rtl = rtl;
+        this.__moduleResolver = moduleResolver;
     },
-    setDesignator: function(d){this.__designator = d;},
-    //designator: function(id){return this.__designator;},
-    type: function(){return this.__type;},
     genTypeName: function(){
         ++this.__gen;
         return "anonymous$" + this.__gen;
@@ -1696,6 +1720,7 @@ exports.Context = Class.extend({
         for(var i = this.__scopes.length; i--;){
             var scope = this.__scopes[i];
             var s = scope.findSymbol(ident);
+
             if (s)
                 return new Symbol.Found(s, scope);
         }
@@ -1706,11 +1731,13 @@ exports.Context = Class.extend({
     popScope: function(){this.__scopes.pop();},
     handleExpression: function(){},
     handleLiteral: function(){},
-    getResult: function(){
-        return this.__rtl.generate() + this.__code.getResult();
-    },
     codeGenerator: function(){return this.__code;},
-    rtl: function(){
-        return this.__rtl;
+    rtl: function(){return this.__rtl;},
+    findModule: function(name){
+        if (name == "JS"){
+            this.rtl().supportJS();
+            return new Module.JS();
+        }
+        return this.__moduleResolver ? this.__moduleResolver(name) : undefined;
     }
 });

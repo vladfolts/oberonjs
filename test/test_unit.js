@@ -1,15 +1,19 @@
 "use strict";
 
 var assert = require("assert.js").ok;
+var Code = require("code.js");
 var Context = require("context.js");
 var Errors = require("errors.js");
 var Grammar = require("grammar.js");
 var oc = require("oc.js");
-var Class = require("rtl.js").Class;
+var ImportRTL = require("rtl.js");
+var Scope = require("scope.js");
 var Stream = require("stream.js").Stream;
 var Test = require("test.js");
 
 var TestError = Test.TestError;
+var RTL = ImportRTL.RTL;
+var Class = ImportRTL.Class;
 
 function parseInContext(grammar, s, context){
     var stream = new Stream(s);
@@ -17,8 +21,14 @@ function parseInContext(grammar, s, context){
         throw new Errors.Error("not parsed");
 }
 
+function makeContext(){
+    var result = new Context.Context(Code.nullGenerator, new RTL());
+    result.pushScope(new Scope.Module("test"));
+    return result;
+}
+
 function parseUsingGrammar(grammar, s, cxFactory, handlerError){
-    var baseContext = new Context.Context();
+    var baseContext = makeContext();
     var context = cxFactory ? cxFactory(baseContext) : baseContext;
     try {
         parseInContext(grammar, s, context);
@@ -63,8 +73,8 @@ function setup(parser, contextFactory){
 }
 
 function setupWithContext(grammar, source){
-    function makeContext(){
-        var context = new Context.Context();
+    function innerMakeContext(){
+        var context = makeContext();
         try {
             parseInContext(Grammar.declarationSequence, source, context);
         }
@@ -76,7 +86,7 @@ function setupWithContext(grammar, source){
         return context;
     }
 
-    return setup(grammar, makeContext);
+    return setup(grammar, innerMakeContext);
 }
 
 function context(grammar, source){
@@ -863,8 +873,8 @@ identifier: function(){
                    , "base record already has field: 'field1'");
 },
 "procedure heading": function(){
-    function makeContext(cx){return new Context.ProcDecl(new Context.Context(cx));}
-    var test = setup(Grammar.procedureHeading, makeContext);
+    function innerMakeContext(cx){return new Context.ProcDecl(makeContext());}
+    var test = setup(Grammar.procedureHeading, innerMakeContext);
 
     test.parse("PROCEDURE p");
     test.parse("PROCEDURE p(a1: INTEGER)");
@@ -1162,14 +1172,21 @@ assert: function(){
           "cannot export from within procedure: variable 'i'"]
          )
     ),
-IMPORT: function(){
-    var test = setup(Grammar.module);
-    test.parse("MODULE m; IMPORT JS; END m.");
-    test.parse("MODULE m; IMPORT JS; BEGIN JS.alert(\"test\") END m.");
-    test.parse("MODULE m; IMPORT JS; BEGIN JS.console.info(123) END m.");
-    test.expectError("MODULE m; IMPORT unknown; END m.", "module(s) not found: unknown");
-    test.expectError("MODULE m; IMPORT unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2");
-    test.expectError("MODULE m; IMPORT u1 := unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2");
-}};
+"IMPORT": testWithGrammar(
+    Grammar.module,
+    pass("MODULE m; IMPORT JS; END m.",
+         "MODULE m; IMPORT JS; BEGIN JS.alert(\"test\") END m.",
+         "MODULE m; IMPORT JS; BEGIN JS.console.info(123) END m.",
+         "MODULE m; IMPORT J := JS; END m.",
+         "MODULE m; IMPORT J := JS; BEGIN J.alert(\"test\") END m."),
+    fail(["MODULE m; IMPORT unknown; END m.", "module(s) not found: unknown"],
+         ["MODULE m; IMPORT unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2"],
+         ["MODULE m; IMPORT u1 := unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2"],
+         ["MODULE m; IMPORT a1 := m1, a2 := m1; END m.", "module already imported: 'm1'"],
+         ["MODULE m; IMPORT a1 := u1, a1 := u2; END m.", "duplicated alias: 'a1'"],
+         ["MODULE m; IMPORT J := JS; BEGIN JS.alert(\"test\") END m.", "undeclared identifier: 'JS'"]
+         )
+    )
+};
 
 Test.run(testSuite);

@@ -66,22 +66,40 @@ var ProcedureScope = Scope.extend({
     }
 });
 
-var Module = Scope.extend({
+var CompiledModule = Type.Module.extend({
     init: function Module(){
-        Scope.prototype.init.call(this, "module");
-        this.__exports = [];
+        Type.Module.prototype.init.call(this);
+        this.__exports = undefined;
     },
+    defineExports: function(exports){
+        this.__exports = exports;
+    },  
+    findSymbol: function(id){
+        return new Symbol.Found(this.__exports[id]);
+    }
+});
+
+var Module = Scope.extend({
+    init: function Module(name){
+        Scope.prototype.init.call(this, "module");
+        this.__name = name;
+        this.__exports = {};
+        this.__symbol = new Symbol.Symbol(name, new CompiledModule());
+        this.addSymbol(this.__symbol);
+    },
+    module: function(){return this.__symbol;},
     addSymbol: function(symbol, exported){
-        if (exported)
-            this.__exports.push(symbol);
         Scope.prototype.addSymbol.call(this, symbol, exported);
+        if (exported)
+            this.__exports[symbol.id()] = symbol;
     },
     resolve: function(symbol){
-        var i = this.__exports.indexOf(symbol);
-        if (i != -1)
+        var id = symbol.id();
+        var exported = this.__exports[id];
+        if (exported)
             // remove non-record types from generated exports
             if (symbol.isType() && !(symbol.info().type() instanceof Type.Record))
-                this.__exports.splice(i, 1);
+                delete this.__exports[id];
         Scope.prototype.resolve.call(this, symbol);
     },
     exports: function(){return this.__exports;}

@@ -5,7 +5,7 @@ var Errors = require("errors.js");
 function isDigit(c) {return c >= '0' && c <= '9';}
 
 exports.digit = function(stream, context){
-    var c = stream.char();
+    var c = stream.getChar();
     if (!isDigit(c))
         return false;
     context.handleChar(c);
@@ -13,7 +13,7 @@ exports.digit = function(stream, context){
 };
 
 exports.hexDigit = function(stream, context){
-    var c = stream.char();
+    var c = stream.getChar();
     if (!isDigit(c) && (c < 'A' || c > 'F'))
         return false;
     context.handleChar(c);
@@ -21,7 +21,7 @@ exports.hexDigit = function(stream, context){
 };
 
 exports.point = function(stream, context){
-    if (stream.char() != '.'
+    if (stream.getChar() != '.'
         || stream.peekChar() == '.') // not a diapason ".."
         return false;
     context.handleLiteral(".");
@@ -29,7 +29,7 @@ exports.point = function(stream, context){
 };
 
 exports.character = function(stream, context){
-    var c = stream.char();
+    var c = stream.getChar();
     if (c == '"')
         return false;
     context.handleChar(c);
@@ -37,7 +37,7 @@ exports.character = function(stream, context){
 };
 
 function string(stream, context){
-    var c = stream.char();
+    var c = stream.getChar();
     if (c != '"')
         return false;
 
@@ -107,7 +107,7 @@ function skipComment(stream){
 function readSpaces(c){return ' \t\n\r'.indexOf(c) != -1;}
 
 exports.skipSpaces = function(stream, context){
-    if (context.isLexem && context.isLexem())
+    if (context && context.isLexem && context.isLexem())
         return;
 
     do {

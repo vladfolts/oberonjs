@@ -1,3 +1,5 @@
+"use strict";
+
 var assert = require("assert.js").ok;
 var Class = require("rtl.js").Class;
 
@@ -7,7 +9,7 @@ exports.Stream = Class.extend({
 		this.__pos = 0;
 	},
 	str: function(n){return this.__s.substr(this.__pos, n);},
-	char: function(){
+	getChar: function(){
 		if (this.eof())
 			return undefined;
 		return this.__s.charAt(this.__pos++);

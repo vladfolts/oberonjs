@@ -21,7 +21,7 @@ var JSModule = Type.Module.extend({
 		Type.Module.prototype.init.call(this);
 	},
 	findSymbol: function(id){
-		return new Symbol.Found(new Symbol.Symbol("JS." + id, any));
+		return new Symbol.Found(new Symbol.Symbol(id, any));
 	}
 });
 

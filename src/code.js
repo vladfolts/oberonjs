@@ -5,7 +5,9 @@ var Type = require("type.js");
 
 var NullCodeGenerator = Class.extend({
 	init: function NullCodeGenerator(){},
-	write: function(){}
+	write: function(){},
+    openScope: function(){},
+    closeScope: function(){}
 });
 
 exports.Generator = Class.extend({
@@ -50,7 +52,7 @@ var Expression = Class.extend({
     designator: function(){return this.__designator;},
     constValue: function(){return this.__constValue;},
     maxPrecedence: function(){return this.__maxPrecedence;},
-    isTerm: function(){return !this.__designator && this.__maxPrecedence == undefined;},
+    isTerm: function(){return !this.__designator && this.__maxPrecedence === undefined;},
     deref: function(){
         if (!this.__designator)
             return this;
