@@ -11,8 +11,7 @@ var RTL$ = {
         return result;
     }
 };
-var JS = function(){return this;}();
-var test = function (){
+var test = function (JS){
 var State = RTL$.extend({
 	init: function State(){
 		this.f = null;
@@ -78,4 +77,4 @@ function B(s/*PState*/){
 }
 pB = B;
 JS.alert(call(makeState(A, 10, makeEmptyState(F1), makeEmptyState(Fn1), makeEmptyState(Fn1), makeEmptyState(F1), makeEmptyState(F0))));
-}();
+}(this);

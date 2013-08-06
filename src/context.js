@@ -1627,25 +1627,48 @@ exports.ModuleDeclaration = ChainedContext.extend({
     init: function ModuleDeclarationContext(context){
         ChainedContext.prototype.init.bind(this)(context);
         this.__name = undefined;
+        this.__imports = [];
     },
     setIdent: function(id){
-        var gen = this.codeGenerator();
         if (this.__name === undefined ) {
             this.__name = id;
             this.parent().pushScope(new Scope.Module(id));
-            gen.write("var " + id + " = function " + "(){\n");
         }
         else if (id === this.__name){
             var scope = this.parent().currentScope();
             var exports = scope.exports();
             scope.module().info().defineExports(exports);
+            var gen = this.codeGenerator();
             genExports(exports, gen);
-            gen.write("}();\n");
+            gen.write("}(");
+
+            var modules = this.__imports;
+            for(var i = 0; i < modules.length; ++i){
+                var s = modules[i];
+                if (i)
+                    gen.write(", ");
+                gen.write(s.info().id());
+            }
+            gen.write(");\n");
         }
         else
             throw new Errors.Error("original module name '" + this.__name + "' expected, got '" + id + "'" );
     },
-    findModule: function(name){return this.parent().findModule(name);}
+    findModule: function(name){return this.parent().findModule(name);},
+    handleImport: function(modules){
+        var gen = this.codeGenerator();
+        gen.write("var " + this.__name + " = function " + "(");
+        var scope = this.currentScope();
+        for(var i = 0; i < modules.length; ++i){
+            var s = modules[i];
+            scope.addSymbol(s);
+            if (i)
+                gen.write(", ");
+            gen.write(s.id());
+        }
+        gen.write("){\n");
+        this.__imports = modules;
+    }
 });
 
 var ModuleImport = ChainedContext.extend({
@@ -1665,8 +1688,10 @@ var ModuleImport = ChainedContext.extend({
             this.__handleImport();
     },
     endParse: function(){
-        this.__handleImport();
+        if (this.__currentModule)
+            this.__handleImport();
 
+        var modules = [];
         var unresolved  = [];
         for(var alias in this.__import){
             var moduleName = this.__import[alias];
@@ -1674,10 +1699,12 @@ var ModuleImport = ChainedContext.extend({
             if (!module)
                 unresolved.push(moduleName);
             else
-                this.currentScope().addSymbol(new Symbol.Symbol(alias, module));
+                modules.push(new Symbol.Symbol(alias, module));
         }
         if (unresolved.length)
             throw new Errors.Error("module(s) not found: " + unresolved.join(", "));
+        
+        this.parent().handleImport(modules);
     },
     __handleImport: function(){
         var alias = this.__currentAlias;
@@ -1735,7 +1762,6 @@ exports.Context = Class.extend({
     rtl: function(){return this.__rtl;},
     findModule: function(name){
         if (name == "JS"){
-            this.rtl().supportJS();
             return new Module.JS();
         }
         return this.__moduleResolver ? this.__moduleResolver(name) : undefined;

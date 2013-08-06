@@ -1,4 +1,3 @@
-var JS = function(){return this;}();
-var m = function (){
+var m = function (JS){
 JS.console.info("test");
-}();
+}(this);

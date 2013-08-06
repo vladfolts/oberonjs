@@ -1,3 +1,5 @@
+"use strict";
+
 var oc = require("oc");
 var fs = require("fs");
 var path = require("path");
@@ -64,30 +66,35 @@ function makeTests(test, dirs){
     return tests;
 }
 
-if (process.argv.length > 2){
-    var tests = {};
-    var name = process.argv[2];
-    tests[name] = function(){run(name);};
-    Test.run(tests);
-    return;
+function main(){
+    if (process.argv.length > 2){
+        var tests = {};
+        var name = process.argv[2];
+        tests[name] = function(){run(name);};
+        Test.run(tests);
+        return;
+    }
+
+    var okDirs = {input: "input", output: "output", expected: "expected"};
+    var errDirs = {};
+    var runDirs = {};
+    var p;
+    for(p in okDirs)
+        errDirs[p] = okDirs[p] + "/errors";
+    for(p in okDirs)
+        runDirs[p] = okDirs[p] + "/run";
+
+    if (!fs.existsSync(okDirs.output))
+        fs.mkdirSync(okDirs.output);
+    if (!fs.existsSync(errDirs.output))
+        fs.mkdirSync(errDirs.output);
+    if (!fs.existsSync(runDirs.output))
+        fs.mkdirSync(runDirs.output);
+
+    Test.run({"expect OK": makeTests(expectOk, okDirs),
+              "expect compile error": makeTests(expectError, errDirs),
+              "run": makeTests(run, runDirs)}
+            );
 }
 
-var okDirs = {input: "input", output: "output", expected: "expected"};
-var errDirs = {};
-var runDirs = {};
-for(var p in okDirs)
-    errDirs[p] = okDirs[p] + "/errors";
-for(var p in okDirs)
-    runDirs[p] = okDirs[p] + "/run";
-
-if (!fs.existsSync(okDirs.output))
-    fs.mkdirSync(okDirs.output);
-if (!fs.existsSync(errDirs.output))
-    fs.mkdirSync(errDirs.output);
-if (!fs.existsSync(runDirs.output))
-    fs.mkdirSync(runDirs.output);
-
-Test.run({"expect OK": makeTests(expectOk, okDirs),
-          "expect compile error": makeTests(expectError, errDirs),
-          "run": makeTests(run, runDirs)}
-        );
+main();

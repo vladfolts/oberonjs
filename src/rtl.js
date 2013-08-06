@@ -80,7 +80,7 @@ var impl = {
     },
     strToArray: function(s){
         var result = new Array(s.length);
-        for(i = 0; i < s.length; ++i)
+        for(var i = 0; i < s.length; ++i)
             result[i] = s.charCodeAt(i);
         return result;
     },
@@ -106,13 +106,11 @@ exports.Class = Class;
 exports.RTL = Class.extend({
     init: function RTL(){
         this.__entries = {};
-        this.__supportJS = false;
         for(var fName in impl){
             this[fName] = this.__makeOnDemand(fName);
             this[fName + "Id"] = this.__makeIdOnDemand(fName);
         }
     },
-    supportJS: function(){this.__supportJS = true;},
     baseClass: function(){
         if (!this.__entries["extend"])
             this.__entries.extend = Class.extend;
@@ -133,8 +131,6 @@ exports.RTL = Class.extend({
         else
             result = "";
         
-        if (this.__supportJS)
-            result += "var JS = function(){return this;}();\n";
         return result;
     },
     __makeIdOnDemand: function(name){

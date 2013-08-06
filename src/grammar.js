@@ -178,13 +178,12 @@ var procedureBody = and(declarationSequence
                       , required("END", "END expected (PROCEDURE)"));
 
 var imprt = and(ident, optional(and(":=", ident)));
-var importList = context(and("IMPORT", imprt, repeat(and(",", imprt))),
-                         Context.ModuleImport);
+var importList = and("IMPORT", imprt, repeat(and(",", imprt)));
 var modul = context(and("MODULE", ident, ";",
-                         optional(and(importList, ";")),
-                         declarationSequence,
-                         optional(and("BEGIN", statementSequence)),
-                         required("END", "END expected (MODULE)"), ident, point),
+                        context(optional(and(importList, ";")), Context.ModuleImport),
+                        declarationSequence,
+                        optional(and("BEGIN", statementSequence)),
+                        required("END", "END expected (MODULE)"), ident, point),
                      Context.ModuleDeclaration);
 
 exports.declarationSequence = declarationSequence;

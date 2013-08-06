@@ -26,7 +26,7 @@ var RTL$ = {
     },
     strToArray: function (s){
         var result = new Array(s.length);
-        for(i = 0; i < s.length; ++i)
+        for(var i = 0; i < s.length; ++i)
             result[i] = s.charCodeAt(i);
         return result;
     },

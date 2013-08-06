@@ -10,3 +10,9 @@ IMPORT m1;
 BEGIN
 	m1.p();
 END m2.
+
+MODULE m3;
+IMPORT m1 := m2, m2 := m1;
+BEGIN
+    m2.p();
+END m3.

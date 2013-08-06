@@ -67,10 +67,12 @@ var ProcedureScope = Scope.extend({
 });
 
 var CompiledModule = Type.Module.extend({
-    init: function Module(){
+    init: function Scope$CompiledModule(id){
         Type.Module.prototype.init.call(this);
+        this.__id = id;
         this.__exports = undefined;
     },
+    id: function(){return this.__id;},
     defineExports: function(exports){
         this.__exports = exports;
     },  
@@ -80,11 +82,11 @@ var CompiledModule = Type.Module.extend({
 });
 
 var Module = Scope.extend({
-    init: function Module(name){
+    init: function Scope$Module(name){
         Scope.prototype.init.call(this, "module");
         this.__name = name;
         this.__exports = {};
-        this.__symbol = new Symbol.Symbol(name, new CompiledModule());
+        this.__symbol = new Symbol.Symbol(name, new CompiledModule(name));
         this.addSymbol(this.__symbol);
     },
     module: function(){return this.__symbol;},

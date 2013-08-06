@@ -172,7 +172,7 @@ exports.Procedure = BasicType.extend({
 });
 
 var Module = Id.extend({
-    init: function Module(){
+    init: function Type$Module(){
         Id.prototype.init.call(this);
     }
 });
