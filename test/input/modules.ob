@@ -1,14 +1,31 @@
 MODULE m1;
+CONST
+    ci* = 123;
+VAR
+    i*: INTEGER;
+    pr*: POINTER TO RECORD i: INTEGER END;
 
 PROCEDURE p*();
 END p;
 
+BEGIN
+    NEW(pr);
 END m1.
 
 MODULE m2;
 IMPORT m1;
+
+PROCEDURE p(i: INTEGER);
+END p;
+
+PROCEDURE ref(VAR i: INTEGER);
+END ref;
+
 BEGIN
 	m1.p();
+    p(m1.i);
+    p(m1.ci);
+    ref(m1.pr.i);
 END m2.
 
 MODULE m3;

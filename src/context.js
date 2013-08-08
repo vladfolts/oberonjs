@@ -225,7 +225,10 @@ exports.QualifiedIdentificator = ChainedContext.extend({
     },
     endParse: function(){
         var s = getSymbolAndScope(this.__module ? this.__module : this, this.__id);
-        this.parent().handleSymbol(s, this.__code + this.__id);
+        var code = this.__code + this.__id;
+        if (this.__module && s.symbol().isVariable())
+            code += "()";
+        this.parent().handleSymbol(s, code);
     }
 });
 
@@ -275,17 +278,14 @@ exports.Designator = ChainedContext.extend({
     },
     setIdent: function(id){
         var t = this.__currentType;
-        if (t instanceof Type.Pointer){
+        if (t instanceof Type.Pointer)
             this.__handleDeref();
-            this.__denote(id);
-        }
-        else if (t instanceof Type.Record
-              || t instanceof Type.Module
-              || t instanceof Module.AnyType)
-            this.__denote(id);
-        else
+        else if (!(t instanceof Type.Record
+                || t instanceof Type.Module
+                || t instanceof Module.AnyType))
             throw new Errors.Error("cannot designate '" + t.description() + "'");
 
+        this.__denote(id);
         this.__scope = undefined;
     },
     codeGenerator: function(){return this.__code;},
@@ -1614,7 +1614,7 @@ function genExports(exports, gen){
     var result = "";
     for(var access in exports){
         var e = exports[access];
-        if (e.isVariable() && !(e.info().type() instanceof Type.Pointer))
+        if (e.isVariable())
             access = "function(){return " + access + ";}";
         result += "\t" + e.id() + ": " + access + "\n";
     }
