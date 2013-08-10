@@ -19,7 +19,10 @@ var basicTypes = Type.basic;
 function getSymbolAndScope(context, id){
     var s = context.findSymbol(id);
     if (!s)
-        throw new Errors.Error("undeclared identifier: '" + id + "'");
+        throw new Errors.Error(
+            context instanceof Type.Module
+                ? "identifier '" + id + "' is not exported by module '" + context.name() + "'"
+                : "undeclared identifier: '" + id + "'");
     return s;
 }
 
@@ -1647,7 +1650,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
                 var s = modules[i];
                 if (i)
                     gen.write(", ");
-                gen.write(s.info().id());
+                gen.write(s.info().name());
             }
             gen.write(");\n");
         }

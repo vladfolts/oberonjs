@@ -68,16 +68,17 @@ var ProcedureScope = Scope.extend({
 
 var CompiledModule = Type.Module.extend({
     init: function Scope$CompiledModule(id){
-        Type.Module.prototype.init.call(this);
-        this.__id = id;
+        Type.Module.prototype.init.call(this, id);
         this.__exports = undefined;
     },
-    id: function(){return this.__id;},
     defineExports: function(exports){
         this.__exports = exports;
     },  
     findSymbol: function(id){
-        return new Symbol.Found(this.__exports[id]);
+        var s = this.__exports[id];
+        if (!s)
+            return undefined;
+        return new Symbol.Found(s);
     }
 });
 

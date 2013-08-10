@@ -20,7 +20,7 @@ var JSModule = Type.Module.extend({
 	init: function Module$JSModule(){
 		Type.Module.prototype.init.call(this);
 	},
-	id: function(){return "this";},
+	name: function(){return "this";},
 	findSymbol: function(id){
 		return new Symbol.Found(new Symbol.Symbol(id, any));
 	}

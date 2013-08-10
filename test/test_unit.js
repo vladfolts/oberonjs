@@ -27,11 +27,9 @@ function makeContext(){
     return result;
 }
 
-function parseUsingGrammar(grammar, s, cxFactory, handlerError){
-    var baseContext = makeContext();
-    var context = cxFactory ? cxFactory(baseContext) : baseContext;
+function runAndHandleErrors(action, s, handlerError){
     try {
-        parseInContext(grammar, s, context);
+        action(s);
     }
     catch (x){
         if (!(x instanceof Errors.Error))
@@ -47,16 +45,18 @@ function parseUsingGrammar(grammar, s, cxFactory, handlerError){
     return true;
 }
 
-function setup(parser, contextFactory){
-    function parseImpl(s, handleError){
-        return parseUsingGrammar(parser, s, contextFactory, handleError);
-    }
+function parseUsingGrammar(grammar, s, cxFactory){
+    var baseContext = makeContext();
+    var context = cxFactory ? cxFactory(baseContext) : baseContext;
+    parseInContext(grammar, s, context);
+}
 
+function setup(run){
     return {
         parse: function(s){
             function handleError(e){throw new TestError(s + "\n\t" + e);}
 
-            if (!parseImpl(s, handleError))
+            if (!runAndHandleErrors(run, s, handleError))
                 throw new TestError(s + ": not parsed");
         },
         expectError: function(s, error){
@@ -66,10 +66,17 @@ function setup(parser, contextFactory){
                     throw new TestError(s + "\n\texpected error: " + error + "\n\tgot: " + sErr );
             }
 
-            if (parseImpl(s, handleError))
+            if (runAndHandleErrors(run, s, handleError))
                 throw new TestError(s + ": should not be parsed, expect error: " + error);
         }
     };
+}
+
+function setupParser(parser, contextFactory){
+    function parseImpl(s){
+        return parseUsingGrammar(parser, s, contextFactory);
+    }
+    return setup(parseImpl);
 }
 
 function setupWithContext(grammar, source){
@@ -86,7 +93,7 @@ function setupWithContext(grammar, source){
         return context;
     }
 
-    return setup(grammar, innerMakeContext);
+    return setupParser(grammar, innerMakeContext);
 }
 
 function context(grammar, source){
@@ -103,10 +110,12 @@ function testWithSetup(setup, pass, fail){
         var i;
         for(i = 0; i < pass.length; ++i)
             test.parse(pass[i]);
-        for(i = 0; i < fail.length; ++i){
-            var f = fail[i];
-            test.expectError(f[0], f[1]);
-        }
+    
+        if (fail)
+            for(i = 0; i < fail.length; ++i){
+                var f = fail[i];
+                test.expectError(f[0], f[1]);
+            }
     };
 }
 
@@ -119,14 +128,14 @@ function testWithContext(context, pass, fail){
 
 function testWithGrammar(grammar, pass, fail){
     return testWithSetup(
-        function(){return setup(grammar);},
+        function(){return setupParser(grammar);},
         pass,
         fail);
 }
 
 var testSuite = {
 comment: function(){
-    var test = setup(Grammar.expression);
+    var test = setupParser(Grammar.expression);
     test.parse("(**)123");
     test.parse("(*abc*)123");
     test.parse("(*abc*)(*def*)123");
@@ -134,7 +143,7 @@ comment: function(){
     test.expectError("(*123", "comment was not closed");
 },
 "spaces are required to separate keywords and integers": function(){
-    var test = setup(Grammar.typeDeclaration);
+    var test = setupParser(Grammar.typeDeclaration);
 
     test.expectError("T = ARRAY10OFARRAY5OFINTEGER", "not parsed");
     test.expectError("T = ARRAY10 OF ARRAY 5 OF INTEGER", "not parsed");
@@ -169,7 +178,7 @@ expression: function(){
     test.expectError("noResult()", "procedure returning no result cannot be used in an expression");
 },
 "string expression": function(){
-    var test = setup(Grammar.expression);
+    var test = setupParser(Grammar.expression);
 
     test.parse("\"\"");
     test.parse("\"a\"");
@@ -184,7 +193,7 @@ expression: function(){
     //assert(parse("\"a\" + \"b\""));
 },
 "parentheses": function(){
-    var test = setup(Grammar.expression);
+    var test = setupParser(Grammar.expression);
 
     test.parse("(1)");
     test.parse("(1 + 2)");
@@ -200,25 +209,28 @@ identifier: function(){
         getResult: function() {return this.__ident;}
     });
     function makeContext() {return new IdentDeclarationContext();}
-    var parse = function(s) { return parseUsingGrammar(Grammar.ident, s, makeContext); };
-    assert(!parse(""));
-    assert(parse("i"));
-    assert(!parse("1"));
-    assert(parse("abc1"));
+
+    testWithSetup(
+        function(){return setupParser(Grammar.ident, makeContext);},
+        pass("i", "abc1"),
+        fail(["", "not parsed"],
+             ["1", "not parsed"]
+             )
+        )();
 },
-"variable declaration": function(){
-    var parse = function(s) { return parseUsingGrammar(Grammar.variableDeclaration, s); };
-    assert(parse("i: INTEGER"));
-    assert(parse("i, j: INTEGER"));
-    assert(!parse("i: T"));
-},
-"procedure VAR section": function(){
-    var parse = function(s) { return parseUsingGrammar(Grammar.declarationSequence, s); };
-    assert(parse("VAR"));
-    assert(parse("VAR i: INTEGER;"));
-    assert(parse("VAR i, j: INTEGER;"));
-    assert(parse("VAR i, j: INTEGER; b: BOOLEAN;"));
-},
+"variable declaration": testWithGrammar(
+    Grammar.variableDeclaration,
+    pass("i: INTEGER",
+         "i, j: INTEGER"),
+    fail(["i: T", "undeclared identifier: 'T'"])
+    ),
+"procedure VAR section": testWithGrammar(
+    Grammar.declarationSequence,
+    pass("VAR",
+         "VAR i: INTEGER;",
+         "VAR i, j: INTEGER;",
+         "VAR i, j: INTEGER; b: BOOLEAN;")
+    ),
 "const declaration": function(){
     var test = setupWithContext(
           Grammar.declarationSequence
@@ -285,13 +297,13 @@ identifier: function(){
     test.expectError("T = ARRAY ORD({0..5} >= {0..8}) OF INTEGER", "array size must be greater than 0, got 0");
 },
 "multi-dimensional array declaration": function(){
-    var test = setup(Grammar.typeDeclaration);
+    var test = setupParser(Grammar.typeDeclaration);
 
     test.parse("T = ARRAY 10 OF ARRAY 5 OF INTEGER");
     test.parse("T = ARRAY 10, 5 OF INTEGER");
 },
 "PROCEDURE type declaration": function(){
-    var test = setup(Grammar.typeDeclaration);
+    var test = setupParser(Grammar.typeDeclaration);
 
     test.parse("T = PROCEDURE");
     test.parse("T = PROCEDURE()");
@@ -300,7 +312,7 @@ identifier: function(){
     test.parse("T = PROCEDURE(): T");
 },
 "POINTER declaration": function(){
-    var test = setup(Grammar.typeDeclaration);
+    var test = setupParser(Grammar.typeDeclaration);
 
     test.parse("T = POINTER TO RECORD END");
     test.parse("T = RECORD p: POINTER TO T END");
@@ -420,7 +432,7 @@ identifier: function(){
                      "read-only variable cannot be used as VAR parameter");
 },
 "LEN": function(){
-    var test = setup(Grammar.procedureDeclaration);
+    var test = setupParser(Grammar.procedureDeclaration);
 
     test.parse("PROCEDURE p(a: ARRAY OF INTEGER): INTEGER; RETURN LEN(a) END p");
     test.parse("PROCEDURE p(VAR a: ARRAY OF BOOLEAN): INTEGER; RETURN LEN(a) END p");
@@ -600,7 +612,7 @@ identifier: function(){
     test.expectError("i := noResult()", "procedure returning no result cannot be used in an expression");
     },
 "array expression": function(){
-    var test = setup(Grammar.procedureBody);
+    var test = setupParser(Grammar.procedureBody);
     test.parse("VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := 1 END");
     test.parse("VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := 1; a[1] := a[0] END");
     test.expectError("VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := TRUE END"
@@ -621,13 +633,13 @@ identifier: function(){
                    , "index out of bounds: maximum possible index is 9, got 15");
 },
 "multi-dimensional array expression": function(){
-    var test = setup(Grammar.procedureBody);
+    var test = setupParser(Grammar.procedureBody);
     test.parse("VAR a: ARRAY 10 OF ARRAY 5 OF INTEGER; BEGIN a[0][0] := 1 END");
     test.parse("VAR a: ARRAY 10, 5 OF BOOLEAN; BEGIN a[0][0] := TRUE END");
     test.parse("VAR a: ARRAY 10, 5 OF BOOLEAN; BEGIN a[0, 0] := TRUE END");
 },
 "INTEGER number": function(){
-    var test = setup(Grammar.expression);
+    var test = setupParser(Grammar.expression);
     test.parse("0");
     test.parse("123");
     test.parse("1H");
@@ -650,7 +662,7 @@ identifier: function(){
     //test.expectError("s := {32}", "0..31");
 },
 "REAL number": function(){
-    var test = setup(Grammar.expression);
+    var test = setupParser(Grammar.expression);
     test.parse("1.2345");
     test.parse("1.");
     test.parse("1.2345E6");
@@ -662,7 +674,7 @@ identifier: function(){
     test.expectError("1.2345E-1 2", "not parsed");
 },
 "LONGREAL number": function(){
-    var test = setup(Grammar.expression);
+    var test = setupParser(Grammar.expression);
     test.parse("1.2345D6");
     test.parse("1.2345D+6");
     test.parse("1.2345D-6");
@@ -848,7 +860,7 @@ identifier: function(){
         )
 ),
 "procedure body": function(){
-    var test = setup(Grammar.procedureBody);
+    var test = setupParser(Grammar.procedureBody);
     test.parse("END");
     test.parse("VAR END");
     test.parse("VAR i: INTEGER; END");
@@ -874,7 +886,7 @@ identifier: function(){
 },
 "procedure heading": function(){
     function innerMakeContext(cx){return new Context.ProcDecl(makeContext());}
-    var test = setup(Grammar.procedureHeading, innerMakeContext);
+    var test = setupParser(Grammar.procedureHeading, innerMakeContext);
 
     test.parse("PROCEDURE p");
     test.parse("PROCEDURE p(a1: INTEGER)");
@@ -1104,7 +1116,7 @@ procedure: function(){
     test.expectError("r1 := b1", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'Base1' expression");
 },
 "open Array assignment fails": function(){
-    var test = setup(Grammar.procedureDeclaration);
+    var test = setupParser(Grammar.procedureDeclaration);
     test.expectError("PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p"
                    , "cannot assign to read-only variable");
     test.expectError("PROCEDURE p(VAR s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p"
@@ -1113,7 +1125,7 @@ procedure: function(){
                    , "'s2' cannot be assigned to open 'ARRAY OF CHAR'");
 },
 "string assignment to open array fails": function(){
-    var test = setup(Grammar.procedureDeclaration);
+    var test = setupParser(Grammar.procedureDeclaration);
     test.expectError("PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "cannot assign to read-only variable");
     test.expectError("PROCEDURE p(VAR s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "string cannot be assigned to open ARRAY OF CHAR");
 },
@@ -1131,18 +1143,18 @@ procedure: function(){
     test.expectError("p4(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'ARRAY OF INTEGER'");
 },
 "scope": function(){
-    var test = setup(Grammar.declarationSequence);
+    var test = setupParser(Grammar.declarationSequence);
     test.parse("PROCEDURE p1(a1: INTEGER); END p1; PROCEDURE p2(a1: BOOLEAN); END p2;");
 },
 module: function(){
-    var test = setup(Grammar.module);
+    var test = setupParser(Grammar.module);
     test.parse("MODULE m; END m.");
     test.expectError("MODULE m; END undeclared.",
                      "original module name 'm' expected, got 'undeclared'");
     test.expectError("MODULE m; BEGIN - END m.", "END expected (MODULE)");
 },
 assert: function(){
-    var test = setup(Grammar.statement);
+    var test = setupParser(Grammar.statement);
     test.parse("ASSERT(TRUE)");
     test.parse("ASSERT(TRUE, 123)");
     test.expectError("ASSERT()", "at least 1 argument expected, got 0");
@@ -1186,7 +1198,25 @@ assert: function(){
          ["MODULE m; IMPORT a1 := u1, a1 := u2; END m.", "duplicated alias: 'a1'"],
          ["MODULE m; IMPORT J := JS; BEGIN JS.alert(\"test\") END m.", "undeclared identifier: 'JS'"]
          )
-    )
+    ),
+//"imported variables are read-only": function(){
+"imported identifiers": function(){
+    var imported = oc.compileModule(new Stream("MODULE test; END test."));
+    function run(s){
+        oc.compileModule(new Stream(s),
+                         undefined,
+                         function(){return imported.symbol().info();});
+    }
+    testWithSetup(
+        function(){return setup(run);},
+        pass(),
+        fail(["MODULE m; IMPORT test; BEGIN test.p(); END m.",
+              "identifier 'p' is not exported by module 'test'"],
+              ["MODULE m; IMPORT t := test; BEGIN t.p(); END m.",
+               "identifier 'p' is not exported by module 'test'"]
+              ))
+    ();
+    }
 };
 
 Test.run(testSuite);

@@ -44,7 +44,7 @@ function compileModule(stream, rtl, moduleResolver, handleErrors){
     return new CompiledModule(scope.module(), code.getResult(), scope.exports());
 }
 
-exports.compile = function(text, handleErrors){
+function compile(text, handleErrors){
     var stream = new Stream(text);
     var rtl = new RTL();
     var code = "";
@@ -62,4 +62,7 @@ exports.compile = function(text, handleErrors){
     } 
     while (!stream.eof());
     return rtl.generate() + code;
-};
+}
+
+exports.compileModule = compileModule;
+exports.compile = compile;
