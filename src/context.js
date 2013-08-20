@@ -1657,7 +1657,11 @@ exports.ModuleDeclaration = ChainedContext.extend({
         else
             throw new Errors.Error("original module name '" + this.__name + "' expected, got '" + id + "'" );
     },
-    findModule: function(name){return this.parent().findModule(name);},
+    findModule: function(name){
+        if (name == this.__name)
+            throw new Errors.Error("module '" + this.__name + "' cannot import itself");
+        return this.parent().findModule(name);
+    },
     handleImport: function(modules){
         var gen = this.codeGenerator();
         gen.write("var " + this.__name + " = function " + "(");

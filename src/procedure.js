@@ -97,7 +97,7 @@ var ProcCallGenerator = Class.extend({
             if (info instanceof Type.Const)
                 throw new Errors.Error("constant cannot be used as VAR parameter");
             if (info.isReadOnly())
-                throw new Errors.Error("read-only variable cannot be used as VAR parameter");
+                throw new Errors.Error(info.idType() + " cannot be used as VAR parameter");
         }
         return new CheckArgumentResult(arg.type, arg.isVar, castOperation);
     },

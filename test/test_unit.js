@@ -53,7 +53,7 @@ function parseUsingGrammar(grammar, s, cxFactory){
 
 function setup(run){
     return {
-        parse: function(s){
+        expectOK: function(s){
             function handleError(e){throw new TestError(s + "\n\t" + e);}
 
             if (!runAndHandleErrors(run, s, handleError))
@@ -109,7 +109,7 @@ function testWithSetup(setup, pass, fail){
         var test = setup();
         var i;
         for(i = 0; i < pass.length; ++i)
-            test.parse(pass[i]);
+            test.expectOK(pass[i]);
     
         if (fail)
             for(i = 0; i < fail.length; ++i){
@@ -129,6 +129,20 @@ function testWithContext(context, pass, fail){
 function testWithGrammar(grammar, pass, fail){
     return testWithSetup(
         function(){return setupParser(grammar);},
+        pass,
+        fail);
+}
+
+function testWithModule(src, pass, fail){
+    return testWithSetup(
+        function(){
+            var imported = oc.compileModule(new Stream(src));
+            var module = imported.symbol().info();
+            return setup(function(s){
+                oc.compileModule(new Stream(s),
+                                 undefined,
+                                 function(){return module;});
+            });},
         pass,
         fail);
 }
@@ -1142,37 +1156,52 @@ var testSuite = {
           "cannot export from within procedure: variable 'i'"]
          )
     ),
-"IMPORT": testWithGrammar(
+"import JS": testWithGrammar(
     Grammar.module,
     pass("MODULE m; IMPORT JS; END m.",
          "MODULE m; IMPORT JS; BEGIN JS.alert(\"test\") END m.",
-         "MODULE m; IMPORT JS; BEGIN JS.console.info(123) END m.",
-         "MODULE m; IMPORT J := JS; END m.",
-         "MODULE m; IMPORT J := JS; BEGIN J.alert(\"test\") END m."),
+         "MODULE m; IMPORT JS; BEGIN JS.console.info(123) END m."
+         )
+    ),
+"import unknown module": testWithGrammar(
+    Grammar.module,
+    pass(),
     fail(["MODULE m; IMPORT unknown; END m.", "module(s) not found: unknown"],
-         ["MODULE m; IMPORT unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2"],
-         ["MODULE m; IMPORT u1 := unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2"],
+         ["MODULE m; IMPORT unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2"]
+         )
+    ),
+"self import is failed": testWithGrammar(
+    Grammar.module,
+    pass(),
+    fail(["MODULE test; IMPORT test; END test.", "module 'test' cannot import itself"])
+    ),
+"import aliases": testWithGrammar(
+    Grammar.module,
+    pass("MODULE m; IMPORT J := JS; END m.",
+         "MODULE m; IMPORT J := JS; BEGIN J.alert(\"test\") END m."),
+    fail(["MODULE m; IMPORT u1 := unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2"],
          ["MODULE m; IMPORT a1 := m1, a2 := m1; END m.", "module already imported: 'm1'"],
          ["MODULE m; IMPORT a1 := u1, a1 := u2; END m.", "duplicated alias: 'a1'"],
          ["MODULE m; IMPORT J := JS; BEGIN JS.alert(\"test\") END m.", "undeclared identifier: 'JS'"]
          )
     ),
-//"imported variables are read-only": function(){
-"imported identifiers": testWithSetup(
-        function(){
-            var imported = oc.compileModule(new Stream("MODULE test; END test."));
-            var module = imported.symbol().info();
-            return setup(function(s){
-                oc.compileModule(new Stream(s),
-                                 undefined,
-                                 function(){return module;});
-            });},
-        pass(),
-        fail(["MODULE m; IMPORT test; BEGIN test.p(); END m.",
-              "identifier 'p' is not exported by module 'test'"],
-             ["MODULE m; IMPORT t := test; BEGIN t.p(); END m.",
-              "identifier 'p' is not exported by module 'test'"]
-            ))
+"imported module without exports": testWithModule(
+    "MODULE test; END test.",
+    pass("MODULE m; IMPORT test; END m."),
+    fail(["MODULE m; IMPORT test; BEGIN test.p(); END m.",
+          "identifier 'p' is not exported by module 'test'"],
+         ["MODULE m; IMPORT t := test; BEGIN t.p(); END m.",
+          "identifier 'p' is not exported by module 'test'"]
+        )),
+"imported variables are read-only": testWithModule(
+    "MODULE test; VAR i*: INTEGER; END test.",
+    pass("MODULE m; IMPORT test; PROCEDURE p(i: INTEGER); END p; BEGIN p(test.i); END m."),
+    fail(["MODULE m; IMPORT test; BEGIN test.i := 123; END m.",
+          "cannot assign to imported variable"],
+         ["MODULE m; IMPORT test; PROCEDURE p(VAR i: INTEGER); END p; BEGIN p(test.i); END m.",
+          "imported variable cannot be used as VAR parameter"]
+        )
+    )
 };
 
 Test.run(testSuite);
