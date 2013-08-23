@@ -6,7 +6,8 @@ var path = require("path");
 var Test = require("test.js");
 
 function normalizeLineEndings(text){
-    return text.replace(/\r\n/g, '\n');
+    return text.replace(/\r\n/g, '\n')
+               .replace(/\s+$/,''); // ending spaces
 }
 
 function compareResults(result, name, dirs){
