@@ -29,9 +29,9 @@ function p(){
 }
 pr = new anonymous$1$base();
 return {
-	ci: ci
-	i: function(){return i;}
-	pr: function(){return pr;}
+	ci: ci,
+	i: function(){return i;},
+	pr: function(){return pr;},
 	p: p
 }
 }();
