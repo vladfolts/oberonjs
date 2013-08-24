@@ -1619,11 +1619,13 @@ function genExports(exports, gen){
         var e = exports[access];
         if (e.isVariable())
             access = "function(){return " + access + ";}";
-        result += "\t" + e.id() + ": " + access + "\n";
+        if (result.length)
+            result += ",\n";
+        result += "\t" + e.id() + ": " + access;
     }
     if (!result.length)
         return;
-    gen.write("return {\n" + result + "}\n");
+    gen.write("return {\n" + result + "\n}\n");
 }
 
 exports.ModuleDeclaration = ChainedContext.extend({
