@@ -1,0 +1,13 @@
+MODULE do;
+TYPE throw = PROCEDURE;
+VAR case: INTEGER;
+PROCEDURE function();
+VAR i: throw;
+BEGIN
+	i := function;
+	case := 123;
+END function;
+
+BEGIN
+	function();
+END do.

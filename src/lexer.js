@@ -67,6 +67,11 @@ var reservedWords
        "NIL", "VAR", "DO", "OF", "WHILE", "ELSE", "OR", "ELSIF", "POINTER",
        "END", "PROCEDURE", "FALSE", "RECORD", "FOR", "REPEAT", "IF", "RETURN"
       ];
+var jsReservedWords 
+    = ["break", "case", "catch", "continue", "debugger", "default", "delete",
+       "do", "else", "finally", "for", "function", "if", "in", "instanceof",
+       "new", "return", "switch", "this", "throw", "try", "typeof", "var",
+       "void", "while", "with"];
 
 exports.ident = function(stream, context){
     if (!isLetter(stream.peekChar()))
@@ -85,6 +90,9 @@ exports.ident = function(stream, context){
         stream.setPos(savePos);
         return false;
     }
+    if (jsReservedWords.indexOf(result) != -1)
+        result += "$";
+
     context.setIdent(result);
     return true;
 };
