@@ -31,7 +31,7 @@ var LazyTypeId = TypeId.extend({
 
 exports.String = Type.extend({
     init: function TypeString(s){
-        Type.prototype.init.bind(this)();
+        Type.prototype.init.call(this);
         this.__s = s;
     },
     idType: function(){return "string";},
@@ -57,7 +57,7 @@ exports.Basic = BasicType;
 
 exports.Array = BasicType.extend({
     init: function ArrayType(name, initializer, elementsType, size){
-        BasicType.prototype.init.bind(this)(name, initializer);
+        BasicType.prototype.init.call(this, name, initializer);
         this.__elementsType = elementsType;
         this.__size = size;
     },
@@ -67,7 +67,7 @@ exports.Array = BasicType.extend({
 
 exports.Pointer = BasicType.extend({
     init: function PointerType(name, base){
-        BasicType.prototype.init.bind(this)(name, "null");
+        BasicType.prototype.init.call(this, name, "null");
         this.__base = base;
     },
     description: function(){
@@ -85,7 +85,7 @@ exports.Pointer = BasicType.extend({
 
 exports.ForwardRecord = Type.extend({
     init: function ForwardRecord(resolve){
-        Type.prototype.init.bind(this)();
+        Type.prototype.init.call(this);
         this.__resolve = resolve;
     },
     resolve: function(){return this.__resolve();}
@@ -93,7 +93,7 @@ exports.ForwardRecord = Type.extend({
 
 exports.Record = BasicType.extend({
     init: function RecordType(name){
-        BasicType.prototype.init.bind(this)(name, "new " + name + "()");
+        BasicType.prototype.init.call(this, name, "new " + name + "()");
         this.__fields = {};
         this.__base = undefined;
     },
@@ -123,7 +123,7 @@ exports.Record = BasicType.extend({
 });
 
 var NilType = Type.extend({
-    init: function NilType(){Type.prototype.init.bind(this)();},
+    init: function NilType(){Type.prototype.init.call(this);},
     idType: function(){return "NIL";},
     description: function(){return "NIL";}
 });
@@ -142,7 +142,7 @@ exports.nil = new NilType();
 
 exports.Const = Id.extend({
     init: function Const(type, value){
-        Id.prototype.init.bind(this)();
+        Id.prototype.init.call(this);
         this.__type = type;
         this.__value = value;
     },
@@ -153,7 +153,7 @@ exports.Const = Id.extend({
 
 var Variable = Id.extend({
     init: function Variable(type, isVar, isReadOnly){
-        Id.prototype.init.bind(this)();
+        Id.prototype.init.call(this);
         this.__type = type;
         this.__isVar = isVar;
         this.__isReadOnly = isReadOnly;

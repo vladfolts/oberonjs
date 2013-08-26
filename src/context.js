@@ -111,7 +111,7 @@ var ChainedContext = Class.extend({
 
 exports.Integer = ChainedContext.extend({
     init: function IntegerContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__result = "";
         this.__isHex = false;
     },
@@ -127,14 +127,14 @@ exports.Integer = ChainedContext.extend({
 
 exports.HexInteger = exports.Integer.extend({
     init: function HexIntegerContext(context){
-        exports.Integer.prototype.init.bind(this)(context);
+        exports.Integer.prototype.init.call(this, context);
     },
     toInt: function(s){return parseInt(this.__result, 16);}
 });
 
 exports.Real = ChainedContext.extend({
     init: function RealContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__result = "";
     },
     isLexem: function(){return true;},
@@ -164,7 +164,7 @@ function escapeString(s){
 
 exports.String = ChainedContext.extend({
     init: function StringContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__result = undefined;
     },
     handleString: function(s){this.__result = s;},
@@ -177,7 +177,7 @@ exports.String = ChainedContext.extend({
 
 exports.Char = exports.String.extend({
     init: function CharContext(context){
-        exports.String.prototype.init.bind(this)(context);
+        exports.String.prototype.init.call(this, context);
         this.__result = "";
     },
     handleChar: function(c){this.__result += c;},
@@ -186,7 +186,7 @@ exports.Char = exports.String.extend({
 
 exports.BaseType = ChainedContext.extend({
     init: function BaseTypeContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
     },
     handleSymbol: function(s){
         this.parent().setBaseType(unwrapType(s.symbol().info()));
@@ -210,7 +210,7 @@ var DesignatorInfo = Class.extend({
 
 exports.QualifiedIdentificator = ChainedContext.extend({
     init: function QualifiedIdentificator(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__module = undefined;
         this.__id = undefined;
         this.__code = "";
@@ -246,7 +246,7 @@ var Identdef = Class.extend({
 
 exports.Identdef = ChainedContext.extend({
     init: function IdentdefContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__id = undefined;
         this.__export = false;
     },
@@ -259,7 +259,7 @@ exports.Identdef = ChainedContext.extend({
 
 exports.Designator = ChainedContext.extend({
     init: function DesignatorContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__currentType = undefined;
         this.__info = undefined;
         this.__scope = undefined;
@@ -358,7 +358,8 @@ exports.Designator = ChainedContext.extend({
     },
     endParse: function(){
         var code = this.__code.result();
-        var refCode = this.__makeRefCode.bind(this);
+        var self = this;
+        var refCode = function(code){return self.__makeRefCode(code);};
         this.parent().setDesignator(
             new DesignatorInfo(code, refCode, this.__currentType, this.__info, this.__scope));
     },
@@ -375,14 +376,14 @@ exports.Designator = ChainedContext.extend({
 
 exports.Type = ChainedContext.extend({
     init: function TypeContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
     },
     handleSymbol: function(s){this.setType(unwrapType(s.symbol().info()));}
 });
 
 exports.FormalType = exports.Type.extend({
     init: function FormalType(context){
-        exports.Type.prototype.init.bind(this)(context);
+        exports.Type.prototype.init.call(this, context);
         this.__arrayDimension = 0;
     },
     setType: function(type){
@@ -411,7 +412,7 @@ var ProcArg = Class.extend({
 
 exports.FormalParameters = ChainedContext.extend({
     init: function FormalParametersContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__arguments = [];
         this.__result = undefined;
 
@@ -432,21 +433,21 @@ exports.FormalParameters = ChainedContext.extend({
 
 exports.FormalParametersProcDecl = exports.FormalParameters.extend({
     init: function FormalParametersProcDeclContext(context){
-        exports.FormalParameters.prototype.init.bind(this)(context);
+        exports.FormalParameters.prototype.init.call(this, context);
     },
     addArgument: function(name, arg){
-        exports.FormalParameters.prototype.addArgument.bind(this)(name, arg);
+        exports.FormalParameters.prototype.addArgument.call(this, name, arg);
         this.parent().addArgument(name, arg);
     },
     endParse: function(){
-        exports.FormalParameters.prototype.endParse.bind(this)();
+        exports.FormalParameters.prototype.endParse.call(this);
         this.parent().endParameters();
     }
 });
 
 exports.ProcDecl = ChainedContext.extend({
     init: function ProcDeclContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__id = undefined;
         this.__firstArgument = true;
         this.__type = undefined;
@@ -510,7 +511,7 @@ exports.ProcDecl = ChainedContext.extend({
 
 exports.Return = ChainedContext.extend({
     init: function ReturnContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__type = undefined;
         this.__code = new Code.SimpleGenerator();
     },
@@ -530,7 +531,7 @@ exports.Return = ChainedContext.extend({
 
 exports.ProcParams = ChainedContext.extend({
     init: function ProcParamsContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__isVar = false;
         this.__argNamesForType = [];
     },
@@ -552,7 +553,7 @@ exports.ProcParams = ChainedContext.extend({
 
 exports.PointerDecl = ChainedContext.extend({
     init: function PointerDecl(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__base = undefined;
         this.__name = this.parent().genTypeName();
    } ,
@@ -590,7 +591,7 @@ exports.PointerDecl = ChainedContext.extend({
 
 exports.ArrayDecl = ChainedContext.extend({
     init: function ArrayDeclContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__dimensions = undefined;
     },
     handleDimensions: function(dimensions){this.__dimensions = dimensions;},
@@ -618,7 +619,7 @@ exports.ArrayDecl = ChainedContext.extend({
 
 exports.ArrayDimensions = ChainedContext.extend({
     init: function ArrayDimensionsContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__dimensions = [];
     },
     codeGenerator: function(){return Code.nullGenerator;},
@@ -742,7 +743,7 @@ function relationOp(leftType, rightType, literal){
 
 exports.AddOperator = ChainedContext.extend({
     init: function AddOperatorContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
     },
     handleLiteral: function(s){
         var parent = this.parent();
@@ -767,7 +768,7 @@ exports.AddOperator = ChainedContext.extend({
 
 exports.MulOperator = ChainedContext.extend({
     init: function MulOperatorContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
     },
     handleLiteral: function(s){
         var parent = this.parent();
@@ -844,7 +845,7 @@ exports.Term = ChainedContext.extend({
 
 exports.Factor = ChainedContext.extend({
     init: function FactorContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
     },
     type: function(){return this.parent().type();},
     handleLiteral: function(s){
@@ -865,7 +866,7 @@ exports.Factor = ChainedContext.extend({
 
 exports.Set = ChainedContext.extend({
     init: function SetContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__value = 0;
         this.__expr = "";
     },
@@ -902,7 +903,7 @@ exports.Set = ChainedContext.extend({
 
 exports.SetElement = ChainedContext.extend({
     init: function SetElementContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__from = undefined;
         this.__fromValue = undefined;
         this.__to = undefined;
@@ -936,7 +937,7 @@ function constValueCode(value){
 
 exports.SimpleExpression = ChainedContext.extend({
     init: function SimpleExpressionContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__unaryOperator = undefined;
         this.__binaryOperator = undefined;
         this.__type = undefined;
@@ -979,7 +980,7 @@ exports.SimpleExpression = ChainedContext.extend({
 
 exports.Expression = ChainedContext.extend({
     init: function ExpressionContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__relation = undefined;
         this.__expression = undefined;
     },
@@ -1065,14 +1066,14 @@ var IfContextBase = ChainedContext.extend({
 
 exports.If = IfContextBase.extend({
     init: function IfContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.codeGenerator().write("if (");
     }
 });
 
 exports.ElseIf = IfContextBase.extend({
     init: function ElseIfContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         var gen = this.codeGenerator();
         gen.closeScope();
         gen.write("else if (");
@@ -1081,7 +1082,7 @@ exports.ElseIf = IfContextBase.extend({
 
 exports.Else = ChainedContext.extend({
     init: function ElseContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         var gen = this.codeGenerator();
         gen.closeScope();
         gen.write("else ");
@@ -1099,7 +1100,7 @@ exports.emitIfEnd = function(context){
 
 exports.Case = ChainedContext.extend({
     init: function CaseContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__type = undefined;
         this.__firstCase = true;
         this.genVarName("$c");
@@ -1136,7 +1137,7 @@ exports.Case = ChainedContext.extend({
 
 exports.CaseLabelList = ChainedContext.extend({
     init: function CaseLabelListContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__glue = "";
     },
     handleLabelType: function(type){this.parent().handleLabelType(type);},
@@ -1155,7 +1156,7 @@ exports.CaseLabelList = ChainedContext.extend({
 
 exports.CaseLabel = ChainedContext.extend({
     init: function CaseLabelContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
     },
     caseLabelBegin: function(){
         this.parent().beginCase();
@@ -1173,7 +1174,7 @@ exports.CaseLabel = ChainedContext.extend({
 
 exports.CaseRange = ChainedContext.extend({
     init: function CaseRangeContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__from = undefined;
         this.__to = undefined;
     },
@@ -1210,7 +1211,7 @@ exports.CaseRange = ChainedContext.extend({
 
 exports.While = ChainedContext.extend({
     init: function WhileContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         var gen = this.codeGenerator();
         gen.write("while (true)");
         gen.openScope();
@@ -1232,7 +1233,7 @@ exports.emitWhileEnd = function(context){
 
 exports.Repeat = ChainedContext.extend({
     init: function RepeatContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         var gen = context.codeGenerator();
         gen.write("do ");
         gen.openScope();
@@ -1241,7 +1242,7 @@ exports.Repeat = ChainedContext.extend({
 
 exports.Until = ChainedContext.extend({
     init: function UntilContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         var gen = context.codeGenerator();
         gen.closeScope(" while (");
     },
@@ -1251,7 +1252,7 @@ exports.Until = ChainedContext.extend({
 
 exports.For = ChainedContext.extend({
     init: function ForContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__var = undefined;
         this.__initExprParsed = false;
         this.__toExpr = new Code.SimpleGenerator();
@@ -1319,7 +1320,7 @@ exports.emitForBegin = function(context){context.handleBegin();};
 
 exports.Assignment = ChainedContext.extend({
     init: function AssignmentContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__left = undefined;
     },
     codeGenerator: function(){/*throw new Error("Test");*/ return Code.nullGenerator;},
@@ -1333,7 +1334,7 @@ exports.Assignment = ChainedContext.extend({
 
 exports.ConstDecl = ChainedContext.extend({
     init: function ConstDeclContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__id = undefined;
         this.__type = undefined;
         this.__value = undefined;
@@ -1368,7 +1369,7 @@ function checkIfFieldCanBeExported(name, idents, hint){
 
 exports.VariableDeclaration = ChainedContext.extend({
     init: function VariableDeclarationContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__idents = [];
         this.__type = undefined;
     },
@@ -1400,7 +1401,7 @@ exports.VariableDeclaration = ChainedContext.extend({
 
 exports.FieldListDeclaration = ChainedContext.extend({
     init: function FieldListDeclarationContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__idents = [];
         this.__type = undefined;
     },
@@ -1425,14 +1426,14 @@ function assertProcType(type){
 
 exports.ActualParameters = ChainedContext.extend({
     init: function ActualParametersContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.parent().hasActualParameters();
     }
 });
 
 var ProcedureCall = ChainedContext.extend({
     init: function ProcedureCallContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__type = undefined;
         this.__procCall = undefined;
         this.__code = new Code.SimpleGenerator();
@@ -1454,7 +1455,7 @@ var ProcedureCall = ChainedContext.extend({
 
 exports.StatementProcedureCall = ProcedureCall.extend({
     init: function StatementProcedureCallContext(context){
-        ProcedureCall.prototype.init.bind(this)(context);
+        ProcedureCall.prototype.init.call(this, context);
     },
     endParse: function(){
         ProcedureCall.prototype.endParse.call(this);
@@ -1467,7 +1468,7 @@ exports.StatementProcedureCall = ProcedureCall.extend({
 
 exports.ExpressionProcedureCall = ProcedureCall.extend({
     init: function ExpressionProcedureCall(context){
-        ProcedureCall.prototype.init.bind(this)(context);
+        ProcedureCall.prototype.init.call(this, context);
         this.__designator = undefined;
         this.__hasActualParameters = false;
     },
@@ -1475,7 +1476,7 @@ exports.ExpressionProcedureCall = ProcedureCall.extend({
         this.__designator = d;
     },
     hasActualParameters: function(){
-        ProcedureCall.prototype.setDesignator.bind(this)(this.__designator);
+        ProcedureCall.prototype.setDesignator.call(this, this.__designator);
         this.__hasActualParameters = true;
     },
     endParse: function(){
@@ -1518,7 +1519,7 @@ function isTypeRecursive(type, base){
 
 exports.RecordDecl = ChainedContext.extend({
     init: function RecordDeclContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         var id = this.genTypeName();
         this.__type = new Type.Record(id);
         this.parent().setType(this.__type);
@@ -1560,7 +1561,7 @@ exports.RecordDecl = ChainedContext.extend({
 
 exports.TypeDeclaration = ChainedContext.extend({
     init: function TypeDeclarationContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__id = undefined;
         this.__typeId = undefined;
         this.__symbol = undefined;
@@ -1585,7 +1586,7 @@ exports.TypeDeclaration = ChainedContext.extend({
 
 exports.TypeSection = ChainedContext.extend({
     init: function TypeSection(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
     },
     endParse: function(){
         var unresolved = this.currentScope().unresolved();
@@ -1596,7 +1597,7 @@ exports.TypeSection = ChainedContext.extend({
 
 exports.TypeCast = ChainedContext.extend({
     init: function TypeCastContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__type = undefined;
     },
     handleSymbol: function(s){
@@ -1630,7 +1631,7 @@ function genExports(exports, gen){
 
 exports.ModuleDeclaration = ChainedContext.extend({
     init: function ModuleDeclarationContext(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__name = undefined;
         this.__imports = [];
     },
@@ -1682,7 +1683,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
 
 var ModuleImport = ChainedContext.extend({
     init: function ModuleImport(context){
-        ChainedContext.prototype.init.bind(this)(context);
+        ChainedContext.prototype.init.call(this, context);
         this.__import = {};
         this.__currentModule = undefined;
         this.__currentAlias = undefined;

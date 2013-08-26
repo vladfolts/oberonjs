@@ -1,12 +1,15 @@
 var RTL$ = {
     extend: function extend(methods){
-        methods.__proto__ = this.prototype; // make instanceof work
+        function Type(){
+            for(var m in methods)
+                this[m] = methods[m];
+        }
+        Type.prototype = this.prototype;
 
-        // to see constructor name in diagnostic
         var result = methods.init;
-        methods.constructor = result.prototype.constructor;
-
-        result.prototype = methods;
+        result.prototype = new Type(); // inherit this.prototype
+        result.prototype.constructor = result; // to see constructor name in diagnostic
+        
         result.extend = extend;
         return result;
     },
