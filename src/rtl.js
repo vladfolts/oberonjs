@@ -1,5 +1,14 @@
 "use strict";
 
+// support IE8
+if (!Array.prototype.indexOf)
+    Array.prototype.indexOf = function(x){
+        for(var i = 0; i < this.length; ++i)
+            if (this[i] === x)
+                return i;
+        return -1;
+    };
+
 function Class(){}
 Class.extend = function extend(methods){
         function Type(){

@@ -1,4 +1,18 @@
 <!DOCTYPE html>
 <html>
-    <script src="test_unit_browser.js"></script>
+<body>
+
+<script>
+    var console = {
+        log: function(s){
+            var t = document.createTextNode(s);
+            document.body.appendChild(t);
+            document.body.appendChild(document.createElement("br"));
+        }
+    };
+</script>
+
+<script src="test_unit_browser.js"></script>
+
+</body>
 </html>
