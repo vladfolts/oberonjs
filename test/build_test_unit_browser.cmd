@@ -1,3 +1,1 @@
-cd ..\src
-..\browser\linkjs.py ../test/test_unit.js ../test/test_unit_browser.js
-cd ..\test
+..\browser\linkjs.py -I../src test_unit.js test_unit_browser.js

@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from optparse import OptionParser
 import os
 import re
 import sys
@@ -15,23 +16,29 @@ def extract_require(s):
 			return None
 	return m.group(3)
 
-def resolve_require(req, out, resolved, resolving, dir):
-	if not os.path.exists(os.path.join(dir, req)):
-		raise Exception('cannot resolve "%s"' % req)
-	process(req, out, resolved, resolving, dir)
+def resolve_path(file, dirs):
+	if os.path.isabs(file):
+		return file
 
-def process(path, out, resolved, resolving, dir):
+	for d in dirs:
+		result = os.path.join(d, file)
+		if os.path.exists(result):
+			return result
+	raise Exception('cannot find "%s" in "%s"' % (file, dirs))
+
+def process(path, out, resolved, resolving, dirs):
 	module_name = os.path.splitext(os.path.basename(path))[0]
 	if module_name in resolving:
 		raise Exception('cyclic import detected: "%s"' % module_name)
 	result = 'imports["%s"] = {};\n' % path
 	result += '(function %s(exports){\n' % module_name
-	with open(os.path.join(dir, path)) as f:
+	src_path = resolve_path(path, dirs)
+	with open(src_path) as f:
 		for l in f:
 			req = extract_require(l)
 			if req and not req in resolved:
 				try:
-					resolve_require(req, out, resolved, resolving + [module_name], dir)
+					process(req, out, resolved, resolving + [module_name], dirs)
 				except Exception:
 					print('while resolving "%s"...' % module_name)
 					raise sys.exc_info()[1]
@@ -46,7 +53,7 @@ def encode_to_js_string(s):
 		s = s.replace(e[0], e[1])
 	return '"%s"' % s
 
-def link(input_path, output_path, dir, version = None):
+def link(input_path, output_path, dirs, version = None):
 	with open(output_path, "w") as out:
 		prolog = ""
 		if not version is None:
@@ -54,11 +61,20 @@ def link(input_path, output_path, dir, version = None):
 		prolog += "var imports = {};\n"
 		prolog += 'function require(module){return imports[module];}\n'
 		out.write(prolog)
-		process(input_path, out, [], [], dir)
+		process(input_path, out, [], [], dirs)
+
+def parse_args(args):
+	parser = OptionParser('Usage: linkjs.py [options] <input js> <output js>')
+	parser.add_option('-I', '--include', action='append', metavar='<directory>',
+					  default=[],
+                      help='additional search directory')
+	opts, args = parser.parse_args(args)
+	if len(args) != 2:
+		parser.print_help()
+		sys.exit(-1)
+	return args[0], args[1], opts.include
 
 if __name__ == '__main__':
-	if len(sys.argv) != 3:
-		raise Exception("Usage: linkjs.py <input js> <output js>")
-
-	link(sys.argv[1], sys.argv[2], '.')
+	src, dst, include = parse_args(sys.argv[1:])
+	link(src, dst, include + ['.'])
 
