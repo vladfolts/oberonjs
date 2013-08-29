@@ -33,7 +33,8 @@ var doProcSymbol = (function(){
             var type = e.type();
             if (!(type instanceof Type.String))
                 throw new Errors.Error(
-                    "string is expected as an argument of " + description);
+                    "string is expected as an argument of " + description
+                    + ", got " + type.description());
             
             this.__code = type.value();
             return Procedure.CallGenerator.prototype.checkArgument.call(this, pos, e);

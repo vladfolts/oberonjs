@@ -1160,8 +1160,16 @@ var testSuite = {
     Grammar.module,
     pass("MODULE m; IMPORT JS; END m.",
          "MODULE m; IMPORT JS; BEGIN JS.alert(\"test\") END m.",
-         "MODULE m; IMPORT JS; BEGIN JS.console.info(123) END m."
-         )
+         "MODULE m; IMPORT JS; BEGIN JS.console.info(123) END m.",
+         "MODULE m; IMPORT JS; BEGIN JS.do(\"throw new Error()\") END m."
+         ),
+    fail(["MODULE m; IMPORT JS; BEGIN JS.do(123) END m.",
+          "string is expected as an argument of JS predefined procedure 'do', got INTEGER"],
+         ["MODULE m; IMPORT JS; BEGIN JS.do(\"a\", \"b\") END m.",
+          "1 argument(s) expected, got 2"],
+         ["MODULE m; IMPORT JS; VAR s: ARRAY 10 OF CHAR; BEGIN JS.do(s) END m.",
+          "string is expected as an argument of JS predefined procedure 'do', got ARRAY OF CHAR"]
+          )
     ),
 "import unknown module": testWithGrammar(
     Grammar.module,
