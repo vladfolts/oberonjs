@@ -344,7 +344,7 @@ exports.predefined = [
         var name = "LEN";
         var args = [new Arg(new Type.Array("ARRAY OF any type"), false)];
         var type = new Std(
-            "LEN",
+            name,
             args,
             Type.basic.integer,
             function(context, id, type){

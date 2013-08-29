@@ -1,6 +1,6 @@
 "use strict";
 /*
-do not use Class here - IE8 does not understande overloeded toString method.
+do not use Class here - IE8 does not understand overloeded toString method (using Class.extend).
 
 var Class = require("rtl.js").Class;
 
