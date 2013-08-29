@@ -1,5 +1,6 @@
 MODULE m;
 IMPORT JS;
 BEGIN
-	JS.console.info("test")
+	JS.console.info("test");
+	JS.do("var x = 123; ++x");
 END m.
