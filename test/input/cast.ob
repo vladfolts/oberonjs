@@ -9,9 +9,6 @@ TYPE
 
     PAnonymousDerived = POINTER TO RECORD(Base) field3: INTEGER END;
 
-    (*PForward1 = POINTER TO Forward;
-    PForward2 = POINTER TO Forward;
-    Forward = RECORD END;*)
 VAR
 	pb: POINTER TO Base;
 	pd1: POINTER TO Derived1;

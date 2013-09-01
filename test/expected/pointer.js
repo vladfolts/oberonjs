@@ -26,8 +26,13 @@ var T2 = RTL$.extend({
 		this.p = null;
 	}
 });
+var Forward = RTL$.extend({
+	init: function Forward(){
+	}
+});
 var r = new T();
 var r2 = null;
+var pf = null;
 var anonymous$1 = RTL$.extend({
 	init: function anonymous$1(){
 	}
@@ -38,5 +43,6 @@ r.p.p = new T();
 r.p.i = 123;
 r2 = new T2();
 r2.p = new T();
+pf = new Forward();
 pAnonymous = new anonymous$1();
 }();

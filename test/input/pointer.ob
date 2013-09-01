@@ -2,9 +2,13 @@ MODULE m;
 TYPE
 	T = RECORD p: POINTER TO T; i: INTEGER END;
 	T2 = POINTER TO RECORD p: POINTER TO T(*2*) END;
+
+    PForward = POINTER TO Forward;
+    Forward = RECORD END;
 VAR
 	r: T;
 	r2: T2;
+	pf: PForward;
 	pAnonymous: POINTER TO RECORD END;
 
 BEGIN
@@ -15,6 +19,8 @@ BEGIN
 	NEW(r2);
 	NEW(r2.p);
 	(*r2.p := r2;*)
+
+	NEW(pf);
 
 	NEW(pAnonymous);
 END m.

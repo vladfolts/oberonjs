@@ -331,7 +331,9 @@ var testSuite = {
     ),
 "POINTER forward declaration": testWithContext(
     context(Grammar.module, ""),
-    pass("MODULE m; TYPE T = POINTER TO NotDeclaredYet; NotDeclaredYet = RECORD END; END m."),
+    pass("MODULE m; TYPE T = POINTER TO NotDeclaredYet; NotDeclaredYet = RECORD END; END m.",
+         "MODULE m; TYPE T1 = POINTER TO NotDeclaredYet; T2 = POINTER TO NotDeclaredYet; NotDeclaredYet = RECORD END; END m."
+         ),
     fail(["MODULE m; TYPE T = POINTER TO NotDeclaredYet; END m.",
           "no declaration found for 'NotDeclaredYet'"],
          ["MODULE m; TYPE T1 = POINTER TO NotDeclaredYet1; T2 = POINTER TO NotDeclaredYet2; END m.",
