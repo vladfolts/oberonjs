@@ -3,16 +3,43 @@ MODULE m;
 TYPE
 	Base = RECORD END;
 	Derived1 = RECORD(Base) field1: INTEGER END;
+	PDerived1 = POINTER TO Derived1;
 	Derived2 = RECORD(Derived1) field2: INTEGER END;
+	PDerived2 = POINTER TO Derived2;
+
+    PAnonymousDerived = POINTER TO RECORD(Base) field3: INTEGER END;
+
+    (*PForward1 = POINTER TO Forward;
+    PForward2 = POINTER TO Forward;
+    Forward = RECORD END;*)
 VAR
 	pb: POINTER TO Base;
 	pd1: POINTER TO Derived1;
 	pd2: POINTER TO Derived2;
+    pad: PAnonymousDerived;
+
+PROCEDURE p(b: Base; d1: Derived1);
+BEGIN
+    b(Derived1).field1 := 0;
+    b(Derived2).field2 := 1;
+    d1(Derived2).field2 := 2;
+END p;
+
 BEGIN 
 	NEW(pd2);
 	pb := pd2;
 	pd1 := pd2;
-    pb(Derived1).field1 := 0;
-    pb(Derived2).field2 := 1;
-    pd1(Derived2).field2 := 2
+    pb(PDerived1).field1 := 0;
+    pb(PDerived2).field2 := 1;
+    pd1(PDerived2).field2 := 2;
+
+    pb^(Derived1).field1 := 0;
+    pb^(Derived2).field2 := 1;
+    pd1^(Derived2).field2 := 2;
+
+    NEW(pad);
+    pb := pad;
+    pb(PAnonymousDerived).field3 := 3;    
+
+    p(pd2^, pd2^);
 END m.

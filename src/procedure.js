@@ -309,7 +309,9 @@ exports.predefined = [
                 this.__baseType = type.baseType();
                 return new CheckArgumentResult(type, false);
             },
-            epilog: function(){return " = new " + this.__baseType.name() + "()";}
+            epilog: function(){
+                return " = new " + this.__baseType.cons() + "()";
+            }
         });
 
         var name = "NEW";

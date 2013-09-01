@@ -82,6 +82,8 @@ function promoteExpressionType(context, left, right){
 function checkTypeCast(from, to, msg){
     if (from instanceof Type.Pointer)
         from = from.baseType();
+    if (to instanceof Type.Pointer)
+        to = to.baseType();
 
     var t = to.baseType();
     while (t && t != from)
@@ -332,18 +334,24 @@ exports.Designator = ChainedContext.extend({
         this.__info = new Type.Variable(this.__currentType, false, false);
     },
     handleTypeCast: function(type){
-        if (!(type instanceof Type.Record))
-            throw new Errors.Error(
-                "invalid type cast: RECORD type expected as an argument of type guard, got '"
-              + type.description() + "'");
+        if (this.__currentType instanceof Type.Record){
+            if (!(type instanceof Type.Record))
+                throw new Errors.Error(
+                    "invalid type cast: RECORD type expected as an argument of RECORD type guard, got '"
+                  + type.description() + "'");
+        }
+        else if (this.__currentType instanceof Type.Pointer)
+            if (!(type instanceof Type.Pointer))
+                throw new Errors.Error(
+                    "invalid type cast: POINTER type expected as an argument of POINTER type guard, got '"
+                  + type.description() + "'");
 
         checkTypeCast(this.__currentType, type, "invalid type cast");
 
-        var code = this.rtl().typeGuard(this.__code.result(), type.name());
+        var castName = (type instanceof Type.Pointer ? type.baseType() : type).cons();
+        var code = this.rtl().typeGuard(this.__code.result(), castName);
         this.__code = new Code.SimpleGenerator(code);
 
-        if (this.__currentType instanceof Type.Pointer)
-            type = new Type.Pointer(this.genTypeName(), type);
         this.__currentType = type;
     },
     __denote: function(id){
@@ -555,7 +563,6 @@ exports.PointerDecl = ChainedContext.extend({
     init: function PointerDecl(context){
         ChainedContext.prototype.init.call(this, context);
         this.__base = undefined;
-        this.__name = this.parent().genTypeName();
    } ,
     setType: function(type){
         if (!(type instanceof Type.ForwardRecord) && !(type instanceof Type.Record))
@@ -579,13 +586,15 @@ exports.PointerDecl = ChainedContext.extend({
             scope
             );
     },
-    genTypeName: function(){
-        return this.__name + "$base";
-    },
+    isAnonymousDeclaration: function(){return true;},
     exportField: function(field){this.parent().exportField(field);},
     endParse: function(){
-        var type = new Type.Pointer(this.__name, this.__base);
-        this.parent().setType(type);
+        var parent = this.parent();
+        var name = parent.isAnonymousDeclaration() 
+            ? undefined
+            : parent.genTypeName();
+        var type = new Type.Pointer(name, this.__base);
+        parent.setType(type);
     }
 });
 
@@ -614,6 +623,7 @@ exports.ArrayDecl = ChainedContext.extend({
 
         this.__type = type;
     },
+    isAnonymousDeclaration: function(){return true;},
     endParse: function(){this.parent().setType(this.__type);}
 });
 
@@ -1379,6 +1389,7 @@ exports.VariableDeclaration = ChainedContext.extend({
     },
     setType: function(type){this.__type = type;},
     typeName: function(){return undefined;},
+    isAnonymousDeclaration: function(){return true;},
     endParse: function(){
         var v = new Type.Variable(this.__type);
         var idents = this.__idents;
@@ -1411,6 +1422,7 @@ exports.FieldListDeclaration = ChainedContext.extend({
         checkIfFieldCanBeExported(name, this.__idents, "field");
     },
     setType: function(type) {this.__type = type;},
+    isAnonymousDeclaration: function(){return true;},
     endParse: function(){
         var idents = this.__idents;
         var parent = this.parent();
@@ -1520,11 +1532,12 @@ function isTypeRecursive(type, base){
 exports.RecordDecl = ChainedContext.extend({
     init: function RecordDeclContext(context){
         ChainedContext.prototype.init.call(this, context);
-        var id = this.genTypeName();
-        this.__type = new Type.Record(id);
-        this.parent().setType(this.__type);
-        var gen = this.codeGenerator();
-        gen.write("var " + id + " = ");
+        var parent = this.parent();
+        var cons = parent.genTypeName();
+        var name = parent.isAnonymousDeclaration() ? undefined : cons;
+        this.__type = new Type.Record(name, cons);
+        parent.setType(this.__type);
+        parent.codeGenerator().write("var " + cons + " = ");
     },
     addField: function(field, type){
         if (isTypeRecursive(type, this.__type))
@@ -1546,7 +1559,7 @@ exports.RecordDecl = ChainedContext.extend({
         var gen = this.codeGenerator();
         gen.write((baseType ? baseType.name() : this.rtl().baseClass()) + ".extend(");
         gen.openScope();
-        gen.write("init: function " + type.name() + "()");
+        gen.write("init: function " + this.__type.cons() + "()");
         gen.openScope();
         if (baseType)
             gen.write(baseType.name() + ".prototype.init.call(this);\n");
@@ -1578,6 +1591,7 @@ exports.TypeDeclaration = ChainedContext.extend({
     },
     typeName: function(){return this.__id.id();},
     genTypeName: function(){return this.__id.id();},
+    isAnonymousDeclaration: function(){return false;},
     type: function(){return this.parent().type();},
     exportField: function(name){
         checkIfFieldCanBeExported(name, [this.__id], "record");

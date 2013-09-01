@@ -15,8 +15,8 @@ var RTL$ = {
     }
 };
 var m = function (){
-var anonymous$1$base = RTL$.extend({
-	init: function anonymous$1$base(){
+var anonymous$1 = RTL$.extend({
+	init: function anonymous$1(){
 	}
 });
 var p = null;

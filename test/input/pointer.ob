@@ -1,11 +1,20 @@
 MODULE m;
 TYPE
 	T = RECORD p: POINTER TO T; i: INTEGER END;
+	T2 = POINTER TO RECORD p: POINTER TO T(*2*) END;
 VAR
 	r: T;
+	r2: T2;
+	pAnonymous: POINTER TO RECORD END;
 
 BEGIN
 	NEW(r.p);
     NEW(r.p.p);
     r.p.i := 123;
+
+	NEW(r2);
+	NEW(r2.p);
+	(*r2.p := r2;*)
+
+	NEW(pAnonymous);
 END m.

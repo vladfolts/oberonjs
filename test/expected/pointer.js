@@ -21,8 +21,22 @@ var T = RTL$.extend({
 		this.i = 0;
 	}
 });
+var T2 = RTL$.extend({
+	init: function T2(){
+		this.p = null;
+	}
+});
 var r = new T();
+var r2 = null;
+var anonymous$1 = RTL$.extend({
+	init: function anonymous$1(){
+	}
+});
+var pAnonymous = null;
 r.p = new T();
 r.p.p = new T();
 r.p.i = 123;
+r2 = new T2();
+r2.p = new T();
+pAnonymous = new anonymous$1();
 }();

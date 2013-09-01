@@ -362,17 +362,16 @@ var testSuite = {
     ),
 "POINTER cast": testWithContext(
     context(Grammar.expression,
-            "TYPE Base = RECORD END; Derived = RECORD (Base) END; PDerived = POINTER TO Derived;"
+            "TYPE Base = RECORD END; PBase = POINTER TO Base; Derived = RECORD (Base) END; PDerived = POINTER TO Derived;"
             + "VAR p1, p2: POINTER TO RECORD END; pBase: POINTER TO Base; pDerived: POINTER TO Derived; i: INTEGER;"),
-    pass("pBase(Derived)"),
-    fail(["pDerived(Derived)",
+    pass("pBase(PDerived)",
+         "pBase^(Derived)"),
+    fail(["pDerived(PDerived)",
           "invalid type cast: 'Derived' is not an extension of 'Derived'"],
-         ["p1(Base)", 
+         ["p1(PBase)", 
           "invalid type cast: 'Base' is not an extension of 'anonymous RECORD'"],
          ["p1(INTEGER)", 
-          "invalid type cast: RECORD type expected as an argument of type guard, got 'INTEGER'"],
-         ["p1(PDerived)",
-          "invalid type cast: RECORD type expected as an argument of type guard, got 'PDerived'"],
+          "invalid type cast: POINTER type expected as an argument of POINTER type guard, got 'INTEGER'"],
          ["i(Derived)",
           "invalid type cast: 'Derived' is not an extension of 'INTEGER'"])
     ),

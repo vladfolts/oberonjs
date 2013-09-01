@@ -71,10 +71,7 @@ exports.Pointer = BasicType.extend({
         this.__base = base;
     },
     description: function(){
-        var name = this.name();
-        if (name.indexOf("$") != -1)
-            return "POINTER TO " + this.baseType().description();
-        return name;
+        return this.name() || "POINTER TO " + this.baseType().description();
     },
     baseType: function(){
         if (this.__base instanceof exports.ForwardRecord)
@@ -92,11 +89,13 @@ exports.ForwardRecord = Type.extend({
 });
 
 exports.Record = BasicType.extend({
-    init: function RecordType(name){
-        BasicType.prototype.init.call(this, name, "new " + name + "()");
+    init: function RecordType(name, cons){
+        BasicType.prototype.init.call(this, name, "new " + cons + "()");
+        this.__cons = cons;        
         this.__fields = {};
         this.__base = undefined;
     },
+    cons: function(){return this.__cons;},
     addField: function(field, type){
         var name = field.id();
         if (this.__fields.hasOwnProperty(name))
@@ -115,10 +114,7 @@ exports.Record = BasicType.extend({
     baseType: function() {return this.__base;},
     setBaseType: function(type) {this.__base = type;},
     description: function(){
-        var name = this.name();
-        if (name.indexOf("$") != -1)
-            return "anonymous RECORD";
-        return name;
+        return this.name() || "anonymous RECORD";
     }
 });
 
@@ -168,7 +164,7 @@ var ExportedVariable = Variable.extend({
     init: function ExportedVariable(variable){
         Variable.prototype.init.call(this, variable.type(), variable.isVar(), true);
     },
-    idType: function(){return "imported variable";},
+    idType: function(){return "imported variable";}
 });
 
 exports.Procedure = BasicType.extend({

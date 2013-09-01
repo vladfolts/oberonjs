@@ -20,19 +20,19 @@ var T1 = RTL$.extend({
 		this.field1 = 0;
 	}
 });
-var anonymous$1$base = RTL$.extend({
-	init: function anonymous$1$base(){
+var anonymous$1 = RTL$.extend({
+	init: function anonymous$1(){
 	}
 });
 var p = null;
 var p1 = null;
-var anonymous$3 = RTL$.extend({
-	init: function anonymous$3(){
+var anonymous$2 = RTL$.extend({
+	init: function anonymous$2(){
 		this.p = null;
 	}
 });
-var r = new anonymous$3();
-p = new anonymous$1$base();
+var r = new anonymous$2();
+p = new anonymous$1();
 p1 = new T1();
 r.p = new T1();
 }();

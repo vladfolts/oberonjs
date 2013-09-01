@@ -21,8 +21,8 @@ var RTL$ = {
 var m1 = function (){
 var ci = 123;
 var i = 0;
-var anonymous$1$base = RTL$.extend({
-	init: function anonymous$1$base(){
+var anonymous$1 = RTL$.extend({
+	init: function anonymous$1(){
 		this.i = 0;
 	}
 });
@@ -30,7 +30,7 @@ var pr = null;
 
 function p(){
 }
-pr = new anonymous$1$base();
+pr = new anonymous$1();
 return {
 	ci: ci,
 	i: function(){return i;},
