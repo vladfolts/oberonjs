@@ -562,13 +562,18 @@ exports.ProcParams = ChainedContext.extend({
 exports.PointerDecl = ChainedContext.extend({
     init: function PointerDecl(context){
         ChainedContext.prototype.init.call(this, context);
-        this.__base = undefined;
-   } ,
+    },
     setType: function(type){
         if (!(type instanceof Type.ForwardRecord) && !(type instanceof Type.Record))
             throw new Errors.Error(
                 "RECORD is expected as a POINTER base type, got '" + type.description() + "'");
-        this.__base = type;
+
+        var parent = this.parent();
+        var name = parent.isAnonymousDeclaration() 
+            ? undefined
+            : parent.genTypeName();
+        var pointerType = new Type.Pointer(name, type);
+        parent.setType(pointerType);
     },
     findSymbol: function(id){
         var parent = this.parent();
@@ -587,15 +592,7 @@ exports.PointerDecl = ChainedContext.extend({
             );
     },
     isAnonymousDeclaration: function(){return true;},
-    exportField: function(field){this.parent().exportField(field);},
-    endParse: function(){
-        var parent = this.parent();
-        var name = parent.isAnonymousDeclaration() 
-            ? undefined
-            : parent.genTypeName();
-        var type = new Type.Pointer(name, this.__base);
-        parent.setType(type);
-    }
+    exportField: function(field){this.parent().exportField(field);}
 });
 
 exports.ArrayDecl = ChainedContext.extend({

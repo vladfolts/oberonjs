@@ -1,7 +1,7 @@
 MODULE m;
 TYPE
 	T = RECORD p: POINTER TO T; i: INTEGER END;
-	T2 = POINTER TO RECORD p: POINTER TO T(*2*) END;
+	T2 = POINTER TO RECORD p: POINTER TO T END;
 
     PForward = POINTER TO Forward;
     Forward = RECORD END;
@@ -18,7 +18,6 @@ BEGIN
 
 	NEW(r2);
 	NEW(r2.p);
-	(*r2.p := r2;*)
 
 	NEW(pf);
 

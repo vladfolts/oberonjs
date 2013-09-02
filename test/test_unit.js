@@ -326,8 +326,10 @@ var testSuite = {
     fail(["T = POINTER TO INTEGER",
           "RECORD is expected as a POINTER base type, got 'INTEGER'"],
          ["T = POINTER TO POINTER TO RECORD END",
-          "RECORD is expected as a POINTER base type, got 'POINTER TO anonymous RECORD'"]
-          )
+          "RECORD is expected as a POINTER base type, got 'POINTER TO anonymous RECORD'"],
+         ["T = POINTER TO RECORD p: POINTER TO T END",
+          "RECORD is expected as a POINTER base type, got 'T'"]
+        )
     ),
 "POINTER forward declaration": testWithContext(
     context(Grammar.module, ""),
