@@ -106,15 +106,6 @@ var Module = Scope.extend({
         if (exported)
             this.__exports[symbol.id()] = symbol;
     },
-    resolve: function(symbol){
-        var id = symbol.id();
-        var exported = this.__exports[id];
-        if (exported)
-            // remove non-record types from generated exports
-            if (symbol.isType() && !(symbol.info().type() instanceof Type.Record))
-                delete this.__exports[id];
-        Scope.prototype.resolve.call(this, symbol);
-    },
     exports: function(){return this.__exports;}
 });
 

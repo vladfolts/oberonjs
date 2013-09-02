@@ -136,11 +136,12 @@ function testWithGrammar(grammar, pass, fail){
 function testWithModule(src, pass, fail){
     return testWithSetup(
         function(){
-            var imported = oc.compileModule(new Stream(src));
+            var rtl = new RTL();
+            var imported = oc.compileModule(new Stream(src), rtl);
             var module = imported.symbol().info();
             return setup(function(s){
                 oc.compileModule(new Stream(s),
-                                 undefined,
+                                 rtl,
                                  function(){return module;});
             });},
         pass,
@@ -1212,6 +1213,18 @@ var testSuite = {
          ["MODULE m; IMPORT test; PROCEDURE p(VAR i: INTEGER); END p; BEGIN p(test.i); END m.",
           "imported variable cannot be used as VAR parameter"]
         )
+    ),
+"import pointer type": testWithModule(
+    "MODULE test; TYPE TP* = POINTER TO RECORD END; END test.",
+    pass("MODULE m; IMPORT test; VAR p: test.TP; END m.")
+    ),
+"import array type": testWithModule(
+    "MODULE test; TYPE TA* = ARRAY 3 OF INTEGER; END test.",
+    pass("MODULE m; IMPORT test; VAR a: test.TA; END m.")
+    ),
+"import procedure type": testWithModule(
+    "MODULE test; TYPE TProc* = PROCEDURE; END test.",
+    pass("MODULE m; IMPORT test; VAR proc: test.TProc; END m.")
     )
 };
 

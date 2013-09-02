@@ -1625,15 +1625,27 @@ exports.TypeCast = ChainedContext.extend({
     }
 });
 
+function genExport(symbol){
+    if (symbol.isVariable())
+        return "function(){return " + symbol.id() + ";}";
+    if (symbol.isType()){
+        var type = symbol.info().type();
+        if (!(type instanceof Type.Record || type instanceof Type.Pointer))
+            return undefined;
+    }
+    return symbol.id();
+}
+
 function genExports(exports, gen){
     var result = "";
     for(var access in exports){
         var e = exports[access];
-        if (e.isVariable())
-            access = "function(){return " + access + ";}";
-        if (result.length)
-            result += ",\n";
-        result += "\t" + e.id() + ": " + access;
+        var code = genExport(e);
+        if (code){
+            if (result.length)
+                result += ",\n";
+            result += "\t" + e.id() + ": " + code;
+        }
     }
     if (!result.length)
         return;
