@@ -50,7 +50,10 @@ var Scope = Class.extend({
         }
     },
     findSymbol: function(ident){return this.__symbols[ident];},
-    addUnresolved: function(id){this.__unresolved.push(id);},
+    addUnresolved: function(id){
+        if (this.__unresolved.indexOf(id) == -1)
+            this.__unresolved.push(id);
+    },
     unresolved: function(){return this.__unresolved;}
 });
 
