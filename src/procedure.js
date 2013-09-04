@@ -310,7 +310,10 @@ exports.predefined = [
                 return new CheckArgumentResult(type, false);
             },
             epilog: function(){
-                return " = new " + this.__baseType.cons() + "()";
+                return " = new " 
+                     + this.context().qualifyScope(this.__baseType.scope()) 
+                     + this.__baseType.cons()
+                     + "()";
             }
         });
 

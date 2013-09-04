@@ -50,7 +50,7 @@ var BasicType = Type.extend({
     idType: function(){return "type";},
     name: function() {return this.__name;},
     description: function(){return this.name();},
-    initializer: function() {return this.__initValue;}
+    initializer: function(context){return this.__initValue;}
 });
 
 exports.Basic = BasicType;
@@ -89,12 +89,17 @@ exports.ForwardRecord = Type.extend({
 });
 
 exports.Record = BasicType.extend({
-    init: function RecordType(name, cons){
-        BasicType.prototype.init.call(this, name, "new " + cons + "()");
+    init: function RecordType(name, cons, scope){
+        BasicType.prototype.init.call(this, name);
         this.__cons = cons;        
+        this.__scope = scope;
         this.__fields = {};
         this.__base = undefined;
     },
+    initializer: function(context){
+        return "new " + context.qualifyScope(this.__scope) + this.__cons + "()";
+    },
+    scope: function(){return this.__scope;},
     cons: function(){return this.__cons;},
     addField: function(field, type){
         var name = field.id();

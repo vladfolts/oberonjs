@@ -21,11 +21,15 @@ function parseInContext(grammar, s, context){
         throw new Errors.Error("not parsed");
 }
 
-function makeContext(){
-    var result = new Context.Context(Code.nullGenerator, new RTL());
-    result.pushScope(new Scope.Module("test"));
-    return result;
-}
+var TestContext = Context.Context.extend({
+    init: function TestContext(){
+        Context.Context.prototype.init.call(this, Code.nullGenerator, new RTL());
+        this.pushScope(new Scope.Module("test"));
+    },
+    qualifyScope: function(){return "";}
+});
+
+function makeContext(){return new TestContext();}
 
 function runAndHandleErrors(action, s, handlerError){
     try {

@@ -108,6 +108,7 @@ var ChainedContext = Class.extend({
     handleConst: function(type, value, code){this.__parent.handleConst(type, value, code);},
     genTypeName: function(){return this.__parent.genTypeName();},
     genVarName: function(id){return this.__parent.genVarName(id);},
+    qualifyScope: function(scope){return this.__parent.qualifyScope(scope);},
     rtl: function(){return this.__parent.rtl();}
 });
 
@@ -348,7 +349,8 @@ exports.Designator = ChainedContext.extend({
 
         checkTypeCast(this.__currentType, type, "invalid type cast");
 
-        var castName = (type instanceof Type.Pointer ? type.baseType() : type).cons();
+        var baseType = type instanceof Type.Pointer ? type.baseType() : type;
+        var castName = this.qualifyScope(baseType.scope()) + baseType.cons();
         var code = this.rtl().typeGuard(this.__code.result(), castName);
         this.__code = new Code.SimpleGenerator(code);
 
@@ -603,8 +605,8 @@ exports.ArrayDecl = ChainedContext.extend({
     handleDimensions: function(dimensions){this.__dimensions = dimensions;},
     setType: function(type){
         var initializer = type instanceof Type.Array || type instanceof Type.Record
-            ? "function(){return " + type.initializer() + ";}"
-            : type.initializer();
+            ? "function(){return " + type.initializer(this) + ";}"
+            : type.initializer(this);
         var dimensions = "";
         for(var i = 0; i < this.__dimensions.length; ++i){
             var length = this.__dimensions[i];
@@ -1400,7 +1402,7 @@ exports.VariableDeclaration = ChainedContext.extend({
             var varName = id.id();
             this.currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
             var t = v.type();
-            gen.write("var " + varName + " = " + t.initializer() + ";");
+            gen.write("var " + varName + " = " + t.initializer(this) + ";");
         }
 
         gen.write("\n");
@@ -1532,7 +1534,7 @@ exports.RecordDecl = ChainedContext.extend({
         var parent = this.parent();
         var cons = parent.genTypeName();
         var name = parent.isAnonymousDeclaration() ? undefined : cons;
-        this.__type = new Type.Record(name, cons);
+        this.__type = new Type.Record(name, cons, context.currentScope());
         parent.setType(this.__type);
         parent.codeGenerator().write("var " + cons + " = ");
     },
@@ -1562,7 +1564,7 @@ exports.RecordDecl = ChainedContext.extend({
             gen.write(baseType.name() + ".prototype.init.call(this);\n");
         var ownFields = type.ownFields();
         for(var f in ownFields)
-            gen.write("this." + f + " = " + ownFields[f].initializer() + ";\n");
+            gen.write("this." + f + " = " + ownFields[f].initializer(this) + ";\n");
 
         gen.closeScope();
         gen.closeScope(");\n");
@@ -1656,12 +1658,14 @@ exports.ModuleDeclaration = ChainedContext.extend({
     init: function ModuleDeclarationContext(context){
         ChainedContext.prototype.init.call(this, context);
         this.__name = undefined;
-        this.__imports = [];
+        this.__imports = {};
+        this.__moduleScope = undefined;
     },
     setIdent: function(id){
         if (this.__name === undefined ) {
             this.__name = id;
-            this.parent().pushScope(new Scope.Module(id));
+            this.__moduleScope = new Scope.Module(id);
+            this.parent().pushScope(this.__moduleScope);
         }
         else if (id === this.__name){
             var scope = this.parent().currentScope();
@@ -1672,12 +1676,13 @@ exports.ModuleDeclaration = ChainedContext.extend({
             gen.write("}(");
 
             var modules = this.__imports;
-            for(var i = 0; i < modules.length; ++i){
-                var s = modules[i];
-                if (i)
-                    gen.write(", ");
-                gen.write(s.info().name());
+            var importList = "";
+            for(var name in modules){
+                if (importList.length)
+                    importList += ", ";
+                importList += name;
             }
+            gen.write(importList);
             gen.write(");\n");
         }
         else
@@ -1694,13 +1699,18 @@ exports.ModuleDeclaration = ChainedContext.extend({
         var scope = this.currentScope();
         for(var i = 0; i < modules.length; ++i){
             var s = modules[i];
+            this.__imports[s.info().name()] = s;
             scope.addSymbol(s);
             if (i)
                 gen.write(", ");
             gen.write(s.id());
         }
         gen.write("){\n");
-        this.__imports = modules;
+    },
+    qualifyScope: function(scope){
+        if (scope != this.__moduleScope && scope instanceof Scope.Module)
+            return this.__imports[scope.module().id()].id() + ".";
+        return "";
     }
 });
 
@@ -1725,7 +1735,7 @@ var ModuleImport = ChainedContext.extend({
             this.__handleImport();
 
         var modules = [];
-        var unresolved  = [];
+        var unresolved = [];
         for(var alias in this.__import){
             var moduleName = this.__import[alias];
             var module = this.parent().findModule(moduleName);
