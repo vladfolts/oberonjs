@@ -327,7 +327,8 @@ var testSuite = {
 "POINTER declaration": testWithGrammar(
     Grammar.typeDeclaration,
     pass("T = POINTER TO RECORD END",
-         "T = RECORD p: POINTER TO T END"),
+         "T = RECORD p: POINTER TO T END",
+         "T = POINTER TO RECORD p: T END"),
     fail(["T = POINTER TO INTEGER",
           "RECORD is expected as a POINTER base type, got 'INTEGER'"],
          ["T = POINTER TO POINTER TO RECORD END",
