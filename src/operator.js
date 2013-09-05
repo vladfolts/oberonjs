@@ -92,34 +92,36 @@ function assign(left, right, context){
                              + "' is '" + leftType.description()
                              + "' and cannot be assigned to '" + rightType.description() + "' expression");
 
-    if (isArray && rightType instanceof Type.Array)
+    if (isArray && rightType instanceof Type.Array){
         if (leftType.length() === undefined)
             throw new Errors.Error("'" + leftCode
                                  + "' is open '" + leftType.description()
                                  + "' and cannot be assigned");
-        else if (rightType.length() === undefined)
+        if (rightType.length() === undefined)
             throw new Errors.Error("'" + leftCode
                                  + "' cannot be assigned to open '"
                                  + rightType.description() + "'");
-        else if (leftType.length() != rightType.length())
+        if (leftType.length() != rightType.length())
             throw new Errors.Error("array size mismatch: '" + leftCode
                                  + "' has size " + leftType.length()
                                  + " and cannot be copied to the array with size "
                                  + rightType.length());
+    }
     
     if (isArray || rightType instanceof Type.Record)
         return context.rtl().copy(rightCode, leftCode);
 
     var castCode = castOperation(context, right.deref()).code();
     rightCode = castCode ? castCode : rightCode;
-    return leftCode + (info.isVar() ? ".set(" + rightCode + ")"
-                                    : " = " + rightCode);
+    return leftCode + (info instanceof Type.VariableRef 
+                      ? ".set(" + rightCode + ")"
+                      : " = " + rightCode);
 }
 
 function makeInplace(code, altOp){
     return function(left, right){
         var info = left.designator().info();
-        if (info.isVar())
+        if (info instanceof Type.VariableRef)
             return assign(left, altOp(left, right));
         return left.code() + code + right.deref().code();
     };

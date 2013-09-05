@@ -47,7 +47,7 @@ var pd1 = null;
 var pd2 = null;
 var pad = null;
 
-function p(b/*Base*/, d1/*Derived1*/){
+function p(b/*VAR Base*/, d1/*VAR Derived1*/){
 	RTL$.typeGuard(b, Derived1).field1 = 0;
 	RTL$.typeGuard(b, Derived2).field2 = 1;
 	RTL$.typeGuard(d1, Derived2).field2 = 2;

@@ -153,21 +153,25 @@ exports.Const = Id.extend({
 });
 
 var Variable = Id.extend({
-    init: function Variable(type, isVar, isReadOnly){
+    init: function Variable(type, isReadOnly){
         Id.prototype.init.call(this);
         this.__type = type;
-        this.__isVar = isVar;
         this.__isReadOnly = isReadOnly;
     },
     idType: function(){return this.__isReadOnly ? "read-only variable" : "variable";},
     type: function(){return this.__type;},
-    isVar: function(){return this.__isVar;},
     isReadOnly: function(){return this.__isReadOnly;}
+});
+
+var VariableRef = Variable.extend({
+    init: function Type$VariableRef(type){
+        Variable.prototype.init.call(this, type, false);
+    }
 });
 
 var ExportedVariable = Variable.extend({
     init: function ExportedVariable(variable){
-        Variable.prototype.init.call(this, variable.type(), variable.isVar(), true);
+        Variable.prototype.init.call(this, variable.type(), true);
     },
     idType: function(){return "imported variable";}
 });
@@ -188,6 +192,7 @@ var Module = Id.extend({
 });
 
 exports.Variable = Variable;
+exports.VariableRef = VariableRef;
 exports.ExportedVariable = ExportedVariable;
 exports.Module = Module;
 exports.Type = Type;

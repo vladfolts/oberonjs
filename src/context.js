@@ -261,7 +261,7 @@ exports.Identdef = ChainedContext.extend({
 });
 
 exports.Designator = ChainedContext.extend({
-    init: function DesignatorContext(context){
+    init: function Context$Designator(context){
         ChainedContext.prototype.init.call(this, context);
         this.__currentType = undefined;
         this.__info = undefined;
@@ -284,14 +284,19 @@ exports.Designator = ChainedContext.extend({
     },
     setIdent: function(id){
         var t = this.__currentType;
-        if (t instanceof Type.Pointer)
+        var isReadOnly = this.__info instanceof Type.Variable 
+                      && this.__info.isReadOnly();
+        if (t instanceof Type.Pointer){
             this.__handleDeref();
+            isReadOnly = false;
+        }
         else if (!(t instanceof Type.Record
                 || t instanceof Type.Module
                 || t instanceof Module.AnyType))
             throw new Errors.Error("cannot designate '" + t.description() + "'");
 
         this.__denote(id);
+        this.__info = new Type.Variable(this.__currentType, isReadOnly);
         this.__scope = undefined;
     },
     codeGenerator: function(){return this.__code;},
@@ -310,8 +315,9 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error("index out of bounds: maximum possible index is "
                                  + (type.length() - 1)
                                  + ", got " + value );
+
         this.__currentType = type.elementsType();
-        this.__info = new Type.Variable(this.__currentType, false, this.__info.isReadOnly());
+        this.__info = new Type.Variable(this.__currentType, this.__info.isReadOnly());
     },
     handleLiteral: function(s){
         if (s == "]" || s == ","){
@@ -324,18 +330,22 @@ exports.Designator = ChainedContext.extend({
             this.__derefCode = this.__code.result();
             this.__code = new Code.SimpleGenerator();
         }
-        else if (s == "^")
+        else if (s == "^"){
             this.__handleDeref();
+            this.__info = new Type.VariableRef(this.__currentType);
+        }
     },
     __handleDeref: function(){
         if (!(this.__currentType instanceof Type.Pointer))
             throw new Errors.Error("POINTER TO type expected, got '"
                                  + this.__currentType.description() + "'");
         this.__currentType = this.__currentType.baseType();
-        this.__info = new Type.Variable(this.__currentType, false, false);
     },
     handleTypeCast: function(type){
         if (this.__currentType instanceof Type.Record){
+            if (!(this.__info instanceof Type.VariableRef))
+                throw new Errors.Error(
+                    "invalid type cast: a value variable and cannot be used in typeguard");
             if (!(type instanceof Type.Record))
                 throw new Errors.Error(
                     "invalid type cast: RECORD type expected as an argument of RECORD type guard, got '"
@@ -378,7 +388,7 @@ exports.Designator = ChainedContext.extend({
             return this.rtl().makeRef(this.__derefCode, this.__propCode);
         if (!(this.__currentType instanceof Type.Array)
             && !(this.__currentType instanceof Type.Record)
-            && this.__info instanceof Type.Variable && !this.__info.isVar())
+            && !(this.__info instanceof Type.VariableRef))
             return "{set: function($v){" + code + " = $v;}, get: function(){return " + code + ";}}";
         return code;
     }
@@ -486,7 +496,9 @@ exports.ProcDecl = ChainedContext.extend({
         if (name == this.__id.id())
             throw new Errors.Error("argument '" + name + "' has the same name as procedure");
         var readOnly = !arg.isVar && (arg.type instanceof Type.Array);
-        var s = new Symbol.Symbol(name, new Type.Variable(arg.type, arg.isVar, readOnly));
+        var v = arg.isVar ? new Type.VariableRef(arg.type)
+                          : new Type.Variable(arg.type, readOnly);
+        var s = new Symbol.Symbol(name, v);
         this.currentScope().addSymbol(s);
 
         var code = this.codeGenerator();
@@ -812,7 +824,7 @@ exports.MulOperator = ChainedContext.extend({
 
 function writeDerefDesignatorCode(designator, code){
     var info = designator.info();
-    if (info instanceof Type.Variable && info.isVar())
+    if (info instanceof Type.VariableRef)
         code.write(".get()");
 }
 

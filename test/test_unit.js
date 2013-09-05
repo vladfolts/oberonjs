@@ -37,7 +37,8 @@ function runAndHandleErrors(action, s, handlerError){
     }
     catch (x){
         if (!(x instanceof Errors.Error))
-            throw new Error("'" + s + '":\n' + x.stack);
+            throw new Error("'" + s + "': " + x + "\n" 
+                            + (x.stack ? x.stack : "(no stack)"));
         
         if (handlerError)
             handlerError(x);
@@ -370,10 +371,11 @@ var testSuite = {
            "type mismatch: 'pDerived' is 'POINTER TO Derived' and cannot be assigned to 'POINTER TO Base' expression"],
           ["NIL := p1", "not parsed"])
     ),
-"POINTER cast": testWithContext(
+"typeguard": testWithContext(
     context(Grammar.expression,
             "TYPE Base = RECORD END; PBase = POINTER TO Base; Derived = RECORD (Base) END; PDerived = POINTER TO Derived;"
-            + "VAR p1, p2: POINTER TO RECORD END; pBase: POINTER TO Base; pDerived: POINTER TO Derived; i: INTEGER;"),
+            + "VAR p1, p2: POINTER TO RECORD END; pBase: POINTER TO Base; pDerived: POINTER TO Derived;"
+            + "vb: Base; i: INTEGER;"),
     pass("pBase(PDerived)",
          "pBase^(Derived)"),
     fail(["pDerived(PDerived)",
@@ -383,7 +385,23 @@ var testSuite = {
          ["p1(INTEGER)", 
           "invalid type cast: POINTER type expected as an argument of POINTER type guard, got 'INTEGER'"],
          ["i(Derived)",
-          "invalid type cast: 'Derived' is not an extension of 'INTEGER'"])
+          "invalid type cast: 'Derived' is not an extension of 'INTEGER'"],
+         ["vb(Derived)",
+          "invalid type cast: a value variable and cannot be used in typeguard"],
+         ["vb(PDerived)",
+          "invalid type cast: a value variable and cannot be used in typeguard"])
+    ),
+"typeguard for VAR argument": testWithContext(
+    context(Grammar.procedureDeclaration,
+            "TYPE Base = RECORD END; Derived = RECORD (Base) i: INTEGER END;"
+            + "T = RECORD END; TD = RECORD(T) b: Base END;"),
+    pass("PROCEDURE proc(VAR p: Base); BEGIN p(Derived).i := 1; END proc"),
+    fail(["PROCEDURE proc(p: Base); BEGIN p(Derived).i := 1; END proc",
+          "invalid type cast: a value variable and cannot be used in typeguard"],
+         ["PROCEDURE proc(p: TD); BEGIN p.b(Derived).i := 1; END proc",
+          "invalid type cast: a value variable and cannot be used in typeguard"],
+         ["PROCEDURE proc(VAR p: T); BEGIN p(TD).b(Derived).i := 1; END proc",
+          "invalid type cast: a value variable and cannot be used in typeguard"])
     ),
 "POINTER relations": testWithContext(
     context(Grammar.expression,

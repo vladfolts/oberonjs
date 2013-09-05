@@ -59,7 +59,7 @@ var Expression = Class.extend({
         if (this.__type instanceof Type.Array || this.__type instanceof Type.Record)
             return this;
         var info = this.__designator.info();
-        if (!(info instanceof Type.Variable && info.isVar()))
+        if (!(info instanceof Type.VariableRef))
             return this;
         return new Expression(this.__code + ".get()", this.__type);
     },
@@ -68,7 +68,7 @@ var Expression = Class.extend({
             return this;
         
         var info = this.__designator.info();
-        if (info instanceof Type.Variable && info.isVar())
+        if (info instanceof Type.VariableRef)
             return this;
 
         return new Expression(this.__designator.refCode(), this.__type);
