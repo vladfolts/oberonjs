@@ -697,9 +697,10 @@ function assertOpType(type, check, literal){
             type.description() + "'");
 }
 
-function assertNumericOp(type, literal, op){
+function assertNumericOp(type, literal, op, intOp){
     assertOpType(type, numericOpTypeCheck, literal);
-    return op;
+    return (intOp && type == basicTypes.integer)
+           ? intOp : op;
 }
 
 function assertIntOp(type, literal, op){
@@ -772,10 +773,10 @@ exports.AddOperator = ChainedContext.extend({
         var o;
         if (s == "+")
             o = (type == basicTypes.set) ? op.setUnion
-                                         : assertNumericOp(type, s, op.add);
+                                         : assertNumericOp(type, s, op.add, op.addInt);
         else if (s == "-")
             o = (type == basicTypes.set) ? op.setDiff
-                                         : assertNumericOp(type, s, op.sub);
+                                         : assertNumericOp(type, s, op.sub, op.subInt);
         else if (s == "OR"){
             if (type != basicTypes.bool)
                 throw new Errors.Error("BOOLEAN expected as operand of 'OR', got '"
@@ -797,17 +798,17 @@ exports.MulOperator = ChainedContext.extend({
         var o;
         if (s == "*")
             o = (type == basicTypes.set) ? op.setIntersection
-                                         : assertNumericOp(type, s, op.mul);
+                                         : assertNumericOp(type, s, op.mul, op.mulInt);
         else if (s == "/"){
             if (type == basicTypes.set)
                 o = op.setSymmetricDiff;
             else if (type == basicTypes.integer)
                 throw new Errors.Error("operator DIV expected for integer division");
             else
-                o = assertNumericOp(type, s, op.divFloat);
+                o = assertNumericOp(type, s, op.div);
         }
         else if (s == "DIV")
-            o = assertIntOp(type, s, op.div);
+            o = assertIntOp(type, s, op.divInt);
         else if (s == "MOD")
             o = assertIntOp(type, s, op.mod);
         else if (s == "&"){

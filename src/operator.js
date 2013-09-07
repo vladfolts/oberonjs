@@ -51,7 +51,7 @@ function makeUnary(op, code){
 }
 
 var mul = makeBinary(function(x, y){return x * y;}, " * ", precedence.mulDivMod);
-var divFloat = makeBinary(function(x, y){return x / y;}, " / ", precedence.mulDivMod);
+var div = makeBinary(function(x, y){return x / y;}, " / ", precedence.mulDivMod);
 
 function pow2(e){
     return new Code.Expression("Math.pow(2, " + e.deref().code() + ")",
@@ -127,16 +127,23 @@ function makeInplace(code, altOp){
     };
 }
 
+function makeBinaryInt(op, code, prec){
+    return makeBinary(
+            function(x, y){return op(x, y) | 0;},
+            function(x, y){return x + code + y + " | 0";},
+            prec,
+            precedence.bitOr);
+}
+
 var operators = {
-    add: makeBinary(function(x, y){return x + y;}, " + ", precedence.addSub),
-    sub: makeBinary(function(x, y){return x - y;}, " - ", precedence.addSub),
-    mul: mul,
-    div: makeBinary(
-            function(x, y){return (x / y) | 0;},
-            function(x, y){return x + " / " + y + " | 0";},
-            precedence.mulDivMod,
-            precedence.bitOr),
-    divFloat:   divFloat,
+    add:    makeBinary(   function(x, y){return x + y;}, " + ", precedence.addSub),
+    addInt: makeBinaryInt(function(x, y){return x + y;}, " + ", precedence.addSub),
+    sub:    makeBinary(   function(x, y){return x - y;}, " - ", precedence.addSub),
+    subInt: makeBinaryInt(function(x, y){return x - y;}, " - ", precedence.addSub),
+    mul:    mul,
+    mulInt: makeBinaryInt(function(x, y){return x * y;}, " * ", precedence.mulDivMod),
+    div:    div,
+    divInt: makeBinaryInt(function(x, y){return x / y;}, " / ", precedence.mulDivMod),
     mod:        makeBinary(function(x, y){return x % y;}, " % ", precedence.mulDivMod),
     setUnion:   makeBinary(function(x, y){return x | y;}, " | ", precedence.bitOr),
     setDiff:    makeBinary(function(x, y){return x & ~y;}, " & ~", precedence.bitAnd),
@@ -170,7 +177,7 @@ var operators = {
 
     assign:     assign,
     mulInplace: makeInplace(" *= ", mul),
-    divInplace: makeInplace(" /= ", divFloat),
+    divInplace: makeInplace(" /= ", div),
     
     pow2:       pow2,
     log2:       log2

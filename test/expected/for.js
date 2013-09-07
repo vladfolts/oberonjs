@@ -3,7 +3,7 @@ var i = 0;
 var b1 = false;
 var i1 = 0;
 for (i = 0; i <= 10; ++i){
-	i1 = i1 + 1;
+	i1 = i1 + 1 | 0;
 }
 for (i = 0; i <= 10; i += 5){
 	b1 = true;

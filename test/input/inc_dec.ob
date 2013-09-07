@@ -8,9 +8,11 @@ BEGIN
 	INC(i, 2);
 	INC(i, 3 * 5);
 	INC(i, ic);
+	INC(i, 07FFFFFFFH + 1 );
 
 	DEC(i);
 	DEC(i, 2);
 	DEC(i, 3 * 5);
 	DEC(i, ic);
+	DEC(i, 0FFFFFFFFH * 2);
 END m.

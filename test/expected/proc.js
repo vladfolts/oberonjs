@@ -32,7 +32,7 @@ function p1(arg1/*INTEGER*/){
 	var b = false;
 	var t1 = new T1();
 	var t2 = new T2();
-	i = arg1 + 1;
+	i = arg1 + 1 | 0;
 	t1.field1 = i;
 	t2.field1 = t1.field1;
 	b = true;
@@ -51,7 +51,7 @@ function p3(i/*INTEGER*/){
 }
 
 function p4(){
-	return p3(123) + p3(p3(123));
+	return p3(123) + p3(p3(123)) | 0;
 }
 
 function p5(){

@@ -66,7 +66,7 @@ function Fn1(s/*PState*/){
 function A(s/*PState*/){
 	var res = 0;
 	if (s.k <= 0){
-		res = call(s.x4) + call(s.x5);
+		res = call(s.x4) + call(s.x5) | 0;
 	}
 	else {
 		res = call(makeState(pB, s.k, s.x1, s.x2, s.x3, s.x4, s.x5));

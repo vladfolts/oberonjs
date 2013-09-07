@@ -1,7 +1,7 @@
 var m = function (){
 var i1 = 1;
 var b1 = true;
-var i2 = i1 + 2;
+var i2 = i1 + 2 | 0;
 var i3 = 31;
 var i4 = 10;
 var i5 = 3;

@@ -1,5 +1,8 @@
 MODULE m;
 
+CONST 
+	c1 = 07FFFFFFFH + 1; (* -2147483648 *)
+	c2 = 0FFFFFFFFH * 2; (* -2 *)
 VAR 
 	i1, i2: INTEGER;
 	r1, r2: REAL;
@@ -12,6 +15,7 @@ BEGIN
 	i1 := i1 * i2;
 	i1 := i1 DIV i2;
 	i1 := i1 MOD i2;
+	i1 := 1 + i1 * i2;
 
 	r1 := 1.0;
 	r2 := 2.0;
