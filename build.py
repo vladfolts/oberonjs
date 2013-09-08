@@ -76,7 +76,8 @@ def build(out, use_git):
 
     link('oc.js', os.path.join(out, 'oc.js'), ['src'], version)
     copy('browser/oberonjs.html', out)
-    copytree('browser/codemirror', os.path.join(out, 'codemirror'))
+    for d in ['codemirror', 'jslibs']:
+        copytree(os.path.join('browser', d), os.path.join(out, d))
     
     if version is None:
         if os.path.exists(build_version_path):
