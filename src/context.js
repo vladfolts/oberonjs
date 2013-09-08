@@ -444,7 +444,12 @@ exports.FormalParameters = ChainedContext.extend({
         this.__arguments.push(arg);
     },
     handleSymbol: function(s){
-        this.__result = unwrapType(s.symbol().info());
+        var resultType = unwrapType(s.symbol().info());
+        if (resultType instanceof Type.Array)
+            throw new Errors.Error("the result type of a procedure cannot be an ARRAY");
+        if (resultType instanceof Type.Record)
+            throw new Errors.Error("the result type of a procedure cannot be a RECORD");
+        this.__result = resultType;
     },
     endParse: function(){
         this.__type.define(this.__arguments, this.__result);

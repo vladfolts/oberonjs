@@ -280,7 +280,7 @@ var testSuite = {
          "T = RECORD i, j: INTEGER END",
          "T = RECORD i, j: INTEGER; b: BOOLEAN END",
          "T = RECORD p: PROCEDURE(r: T) END",
-         "T = RECORD p: PROCEDURE(): T END"
+         "T = POINTER TO RECORD p: PROCEDURE(): T END"
          ),
     fail(["T = RECORD i, j, i: INTEGER END", "duplicated field: 'i'"],
          ["T = RECORD r: T END", "recursive field definition: 'r'"],
@@ -922,8 +922,10 @@ var testSuite = {
          ["PROCEDURE p; BEGIN p1() END p", "undeclared identifier: 'p1'"])
     ),
 "procedure RETURN": testWithContext(
-    context(Grammar.procedureDeclaration,
-            "VAR i: INTEGER; PROCEDURE int(): INTEGER; RETURN 1 END int;"),
+    context(
+        Grammar.procedureDeclaration,
+            "TYPE A = ARRAY 3 OF INTEGER; R = RECORD END; PR = POINTER TO R;"
+          + "VAR i: INTEGER; PROCEDURE int(): INTEGER; RETURN 1 END int;"),
     pass("PROCEDURE p(): BOOLEAN; RETURN TRUE END p",
          "PROCEDURE p(): BOOLEAN; RETURN int() = 1 END p",
          "PROCEDURE p; BEGIN END p" ,
@@ -932,7 +934,12 @@ var testSuite = {
          ["PROCEDURE p(): BOOLEAN; END p", "RETURN expected at the end of PROCEDURE declared with 'BOOLEAN' result type"],
          ["PROCEDURE p(): undeclared; END p", "undeclared identifier: 'undeclared'"],
          ["PROCEDURE p(): i; END p", "type name expected"],
-         ["PROCEDURE p(): INTEGER; RETURN TRUE END p", "RETURN 'INTEGER' expected, got 'BOOLEAN'"]
+         ["PROCEDURE p(): INTEGER; RETURN TRUE END p", "RETURN 'INTEGER' expected, got 'BOOLEAN'"],
+         ["PROCEDURE p(a: A): A; RETURN a END p", "the result type of a procedure cannot be an ARRAY"],
+         ["PROCEDURE p(): A; VAR a: A; RETURN a END p", "the result type of a procedure cannot be an ARRAY"],
+         ["PROCEDURE p(r: R): R; RETURN r END p", "the result type of a procedure cannot be a RECORD"],
+         ["PROCEDURE p(): R; VAR r: R; RETURN r END p", "the result type of a procedure cannot be a RECORD"],
+         ["PROCEDURE p(pr: PR): R; RETURN pr END p", "the result type of a procedure cannot be a RECORD"]
          )
 ),
 "PROCEDURE relations": testWithContext(
