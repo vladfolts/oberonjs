@@ -71,7 +71,9 @@ var jsReservedWords
     = ["break", "case", "catch", "continue", "debugger", "default", "delete",
        "do", "else", "finally", "for", "function", "if", "in", "instanceof",
        "new", "return", "switch", "this", "throw", "try", "typeof", "var",
-       "void", "while", "with"];
+       "void", "while", "with",
+       "Math" // Math is used in generated code for some functions so it is reserved word from code generator standpoint
+       ];
 
 exports.ident = function(stream, context){
     if (!isLetter(stream.peekChar()))

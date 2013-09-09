@@ -1,7 +1,9 @@
 MODULE m;
 
 VAR i: INTEGER;
+	Math: REAL; (* the same name as standard JavaScript class used in generated code *)
 
 BEGIN
     i := ABS(i);
+	Math := ABS(Math);
 END m.
