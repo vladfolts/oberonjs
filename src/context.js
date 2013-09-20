@@ -625,10 +625,10 @@ exports.ArrayDecl = ChainedContext.extend({
             ? "function(){return " + type.initializer(this) + ";}"
             : type.initializer(this);
         var dimensions = "";
-        for(var i = 0; i < this.__dimensions.length; ++i){
+        for(var i = this.__dimensions.length; i-- ;){
             var length = this.__dimensions[i];
-            dimensions += (dimensions.length ? ", " : "") + length;
-            var arrayInit = i == this.__dimensions.length - 1
+            dimensions = length + (dimensions.length ? ", " + dimensions : "");
+            var arrayInit = !i
                 ? this.rtl().makeArray(dimensions + ", " + initializer)
                 : undefined;
             type = new Type.Array("ARRAY OF " + type.name()

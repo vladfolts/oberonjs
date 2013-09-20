@@ -97,15 +97,6 @@ function assign(left, right, context){
             throw new Errors.Error("'" + leftCode
                                  + "' is open '" + leftType.description()
                                  + "' and cannot be assigned");
-        if (rightType.length() === undefined)
-            throw new Errors.Error("'" + leftCode
-                                 + "' cannot be assigned to open '"
-                                 + rightType.description() + "'");
-        if (leftType.length() != rightType.length())
-            throw new Errors.Error("array size mismatch: '" + leftCode
-                                 + "' has size " + leftType.length()
-                                 + " and cannot be copied to the array with size "
-                                 + rightType.length());
     }
     
     if (isArray || rightType instanceof Type.Record)

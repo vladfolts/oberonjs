@@ -55,14 +55,32 @@ var BasicType = Type.extend({
 
 exports.Basic = BasicType;
 
-exports.Array = BasicType.extend({
+function foldArrayDimensions(a){
+    var result = a.length();
+    var next = a.elementsType();
+    if (result !== undefined
+        && next instanceof ArrayType){
+        var r = foldArrayDimensions(next);
+        return [result + ", " + r[0], r[1]];
+    }
+    return [result, next.description()];
+}
+
+var ArrayType = BasicType.extend({
     init: function ArrayType(name, initializer, elementsType, size){
         BasicType.prototype.init.call(this, name, initializer);
         this.__elementsType = elementsType;
         this.__size = size;
     },
     elementsType: function(){return this.__elementsType;},
-    length: function(){return this.__size;}
+    length: function(){return this.__size;},
+    description: function(){
+        if (this.__elementsType === undefined) // special arrays, see procedure "LEN"
+            return this.name();
+        var desc = foldArrayDimensions(this);
+        var sizes = (desc[0] === undefined ? "" : " " + desc[0]);
+        return "ARRAY" + sizes + " OF " + desc[1];
+    }
 });
 
 exports.Pointer = BasicType.extend({
@@ -191,6 +209,7 @@ var Module = Id.extend({
     name: function(){return this.__name;}
 });
 
+exports.Array = ArrayType;
 exports.Variable = Variable;
 exports.VariableRef = VariableRef;
 exports.ExportedVariable = ExportedVariable;

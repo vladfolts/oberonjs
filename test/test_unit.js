@@ -298,7 +298,8 @@ var testSuite = {
          "T = ARRAY 10 OF BOOLEAN",
          "T = ARRAY 1 + 2 OF INTEGER",
          "T = ARRAY c1 OF INTEGER",
-         "T = ARRAY ORD({0..5} <= {0..8}) OF INTEGER"
+         "T = ARRAY ORD({0..5} <= {0..8}) OF INTEGER",
+         "T = ARRAY 1, 2 OF ARRAY 3, 4 OF INTEGER"
          ),
     fail(["T = ARRAY 0 OF INTEGER",
           "array size must be greater than 0, got 0"],
@@ -585,7 +586,7 @@ var testSuite = {
         ),
     fail(["COPY(ac3, \"abc\")", "expression cannot be used as VAR parameter"],
          ["COPY(\"abcd\", ac3)", "3-character ARRAY is too small for 4-character string"],
-         ["COPY(ac3, ac4)", "array size mismatch: 'ac4' has size 4 and cannot be copied to the array with size 3"]
+         ["COPY(ac3, ac4)", "type mismatch: 'ac4' is 'ARRAY 4 OF CHAR' and cannot be assigned to 'ARRAY 3 OF CHAR' expression"]
          )
 ),
 "PACK": testWithContext(
@@ -650,7 +651,7 @@ var testSuite = {
          ["VAR a: ARRAY 10 OF BOOLEAN; BEGIN a[0,0] := TRUE END",
           "ARRAY expected, got 'BOOLEAN'"],
          ["VAR a: ARRAY 10, 20 OF BOOLEAN; BEGIN a[0] := TRUE END",
-          "type mismatch: 'a[0]' is 'ARRAY OF BOOLEAN' and cannot be assigned to 'BOOLEAN' expression"],
+          "type mismatch: 'a[0]' is 'ARRAY 20 OF BOOLEAN' and cannot be assigned to 'BOOLEAN' expression"],
          ["VAR a: ARRAY 10 OF INTEGER; BEGIN a[10] := 0 END",
           "index out of bounds: maximum possible index is 9, got 10"],
          ["CONST c1 = 5; VAR a: ARRAY 10 OF INTEGER; BEGIN a[10 + c1] := 0 END",
@@ -1081,7 +1082,7 @@ var testSuite = {
          "ch1 := 22X"),
     fail(["a1 := \"abcd\"", "3-character ARRAY is too small for 4-character string"],
          ["intArray := \"abcd\"",
-          "type mismatch: 'intArray' is 'ARRAY OF INTEGER' and cannot be assigned to 'multi-character string' expression"])
+          "type mismatch: 'intArray' is 'ARRAY 10 OF INTEGER' and cannot be assigned to 'multi-character string' expression"])
     ),
 "string relations": testWithContext(
     context(Grammar.expression,
@@ -1099,14 +1100,25 @@ var testSuite = {
             + "intArray: ARRAY 10 OF INTEGER;"
             + "intArray2: ARRAY 10 OF INTEGER;"
             + "intArray3: ARRAY 5 OF INTEGER;"
+            + "intArray23m1: ARRAY 2 OF ARRAY 3 OF INTEGER;"
+            + "intArray23m2: ARRAY 2, 3 OF INTEGER;"
+            + "intArray24m: ARRAY 2, 4 OF INTEGER;"
+            + "intArray43m: ARRAY 4, 3 OF INTEGER;"
             ),
-    pass("intArray := intArray2"),
+    pass("intArray := intArray2",
+         "intArray23m1 := intArray23m2",
+         "intArray23m2 := intArray23m1",
+         "intArray43m[0] := intArray23m1[0]"
+         ),
     fail(["intArray := charArray",
-         "type mismatch: 'intArray' is 'ARRAY OF INTEGER' and cannot be assigned to 'ARRAY OF CHAR' expression"],
+         "type mismatch: 'intArray' is 'ARRAY 10 OF INTEGER' and cannot be assigned to 'ARRAY 3 OF CHAR' expression"],
          ["intArray2 := intArray3",
-          "array size mismatch: 'intArray2' has size 10 and cannot be copied to the array with size 5"],
+          "type mismatch: 'intArray2' is 'ARRAY 10 OF INTEGER' and cannot be assigned to 'ARRAY 5 OF INTEGER' expression"],
          ["intArray3 := charArray",
-          "type mismatch: 'intArray3' is 'ARRAY OF INTEGER' and cannot be assigned to 'ARRAY OF CHAR' expression"])
+          "type mismatch: 'intArray3' is 'ARRAY 5 OF INTEGER' and cannot be assigned to 'ARRAY 3 OF CHAR' expression"],
+         ["intArray24m := intArray23m1",
+          "type mismatch: 'intArray24m' is 'ARRAY 2, 4 OF INTEGER' and cannot be assigned to 'ARRAY 2, 3 OF INTEGER' expression"]
+          )
     ),
 "record assignment": testWithContext(
     context(Grammar.statement,
@@ -1120,7 +1132,7 @@ var testSuite = {
     fail(["r1 := r2", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'T2' expression"],
          ["r1 := b1", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'Base1' expression"])
     ),
-"open Array assignment fails": testWithGrammar(
+"open array assignment fails": testWithGrammar(
     Grammar.procedureDeclaration,
     pass(),
     fail(["PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
@@ -1128,7 +1140,39 @@ var testSuite = {
          ["PROCEDURE p(VAR s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
           "'s1' is open 'ARRAY OF CHAR' and cannot be assigned"],
          ["PROCEDURE p(s1: ARRAY OF CHAR); VAR s2: ARRAY 10 OF CHAR; BEGIN s2 := s1 END p",
-          "'s2' cannot be assigned to open 'ARRAY OF CHAR'"])
+          "type mismatch: 's2' is 'ARRAY 10 OF CHAR' and cannot be assigned to 'ARRAY OF CHAR' expression"])
+    ),
+"open array type as procedure parameter": testWithContext(
+    context(Grammar.procedureDeclaration,
+            "TYPE A = ARRAY 3 OF INTEGER;"
+            ),
+    pass("PROCEDURE p(a: ARRAY OF INTEGER); BEGIN END p",
+         "PROCEDURE p(a: ARRAY OF ARRAY OF INTEGER); BEGIN END p",
+         "PROCEDURE p(a: ARRAY OF A); BEGIN END p"
+        ),
+    fail(["PROCEDURE p(a: ARRAY OF ARRAY 3 OF INTEGER); BEGIN END p",
+          "not parsed"]
+        )
+    ),
+"non-open array type as procedure parameter": testWithContext(
+    context(Grammar.procedureDeclaration,
+            "TYPE A = ARRAY 2 OF INTEGER;"
+            + "VAR a: A;"
+            + "PROCEDURE pa(a: A); BEGIN END pa;"
+            ),
+    pass("PROCEDURE p(a: A); BEGIN END p",
+         "PROCEDURE p(); VAR a: A; BEGIN pa(a) END p",
+         "PROCEDURE p(); VAR a: ARRAY 2 OF INTEGER; BEGIN pa(a) END p"
+         ),
+    fail(["PROCEDURE p(a: ARRAY 3 OF INTEGER); BEGIN END p",
+          "not parsed"],
+         ["PROCEDURE p(a: A): INTEGER; BEGIN RETURN a[2] END p",
+          "index out of bounds: maximum possible index is 1, got 2"],
+         ["PROCEDURE p(); VAR a: ARRAY 1 OF INTEGER; BEGIN pa(a) END p",
+          "type mismatch for argument 1: 'ARRAY 1 OF INTEGER' cannot be converted to 'ARRAY 2 OF INTEGER'"],
+         ["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN pa(a) END p",
+          "type mismatch for argument 1: 'ARRAY OF INTEGER' cannot be converted to 'ARRAY 2 OF INTEGER'"]
+        )
     ),
 "string assignment to open array fails": testWithGrammar(
     Grammar.procedureDeclaration,
@@ -1202,7 +1246,7 @@ var testSuite = {
          ["MODULE m; IMPORT JS; BEGIN JS.do(\"a\", \"b\") END m.",
           "1 argument(s) expected, got 2"],
          ["MODULE m; IMPORT JS; VAR s: ARRAY 10 OF CHAR; BEGIN JS.do(s) END m.",
-          "string is expected as an argument of JS predefined procedure 'do', got ARRAY OF CHAR"]
+          "string is expected as an argument of JS predefined procedure 'do', got ARRAY 10 OF CHAR"]
           )
     ),
 "import unknown module": testWithGrammar(

@@ -60,10 +60,10 @@ function p(){
 	a3[0] = 1;
 }
 
-function p1(a/*ARRAY OF INTEGER*/){
+function p1(a/*ARRAY 10 OF INTEGER*/){
 }
 
-function p2(a/*VAR ARRAY OF INTEGER*/){
+function p2(a/*VAR ARRAY 10 OF INTEGER*/){
 	p1(a);
 }
 a1[0] = 1;

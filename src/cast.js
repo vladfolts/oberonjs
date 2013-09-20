@@ -75,7 +75,8 @@ function implicitCast(from, to){
             };
     }
     else if (from instanceof ArrayType && to instanceof ArrayType)
-        return implicitCast(from.elementsType(), to.elementsType());
+        return (to.length() === undefined || to.length() === from.length())
+            && implicitCast(from.elementsType(), to.elementsType());
     else if (from instanceof PointerType && to instanceof PointerType){
         if (findPointerBaseType(to, from))
             return doNoting;
