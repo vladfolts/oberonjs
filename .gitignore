@@ -1,5 +1,7 @@
 _out/
 test/output/
+*.sublime-project
+*.sublime-workspace
 
 #################
 ## Eclipse
