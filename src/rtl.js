@@ -54,7 +54,7 @@ var impl = {
         
         function checkBit(b){
             if (b < 0 || b > 31)
-                throw new Error("integes between 0 and 31 expected, got " + b);
+                throw new Error("integers between 0 and 31 expected, got " + b);
         }
 
         function setBit(b){
