@@ -1214,10 +1214,7 @@ var testSuite = {
     Grammar.declarationSequence,
     pass("CONST i* = 1;",
          "TYPE T* = RECORD END;",
-         "TYPE PT* = POINTER TO RECORD f*: INTEGER END;",
          "VAR i*: INTEGER;",
-         "VAR i*: POINTER TO RECORD f*: INTEGER END;",
-         "VAR i*: POINTER TO RECORD r*: RECORD f*: INTEGER END END;",
          "PROCEDURE p*; END p;"
          ),
     fail(["VAR r*: RECORD END;",
@@ -1226,10 +1223,16 @@ var testSuite = {
           "only scalar type variables can be exported"],
          ["TYPE T = RECORD f*: INTEGER END;",
           "field 'f' can be exported only if record 'T' itself is exported too"],
+         ["TYPE PT* = POINTER TO RECORD f*: INTEGER END;",
+          "cannot export anonymous RECORD field: 'f'"],
          ["VAR p: POINTER TO RECORD f*: INTEGER END;",
-          "field 'f' can be exported only if variable 'p' itself is exported too"],
+          "cannot export anonymous RECORD field: 'f'"],
          ["VAR p*: POINTER TO RECORD r: RECORD f*: INTEGER END END;",
           "field 'f' can be exported only if field 'r' itself is exported too"],
+         ["VAR i*: POINTER TO RECORD f*: INTEGER END;",
+          "cannot export anonymous RECORD field: 'f'"],
+         ["VAR i*: POINTER TO RECORD r*: RECORD f*: INTEGER END END;",
+          "cannot export anonymous RECORD field: 'r'"],
          ["PROCEDURE p*; VAR i*: INTEGER; END p;",
           "cannot export from within procedure: variable 'i'"]
          )
