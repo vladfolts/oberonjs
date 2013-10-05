@@ -30,10 +30,14 @@ function getSymbol(context, id){
     return getSymbolAndScope(context, id).symbol();
 }
 
-function unwrapType(type){
+function unwrapTypeId(type){
     if (!(type instanceof Type.TypeId))
         throw new Errors.Error("type name expected");
-    return type.type();
+    return type;
+}
+
+function unwrapType(type){
+    return unwrapTypeId(type).type();
 }
 
 function getTypeSymbol(context, id){
@@ -340,6 +344,8 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error("POINTER TO type expected, got '"
                                  + this.__currentType.description() + "'");
         this.__currentType = this.__currentType.baseType();
+        if (!this.__currentType)
+            throw new Errors.Error("non-exported RECORD type cannot be dereferenced");
     },
     handleTypeCast: function(type){
         if (this.__currentType instanceof Type.Record){
@@ -395,18 +401,29 @@ exports.Designator = ChainedContext.extend({
 });
 
 exports.Type = ChainedContext.extend({
-    init: function TypeContext(context){
+    init: function Context$Type(context){
         ChainedContext.prototype.init.call(this, context);
     },
-    handleSymbol: function(s){this.setType(unwrapType(s.symbol().info()));}
+    handleSymbol: function(s){
+        this.parent().handleSymbol(s);
+    }
 });
 
-exports.FormalType = exports.Type.extend({
+var HandleSymbolAsType = ChainedContext.extend({
+    init: function Context$HandleSymbolAsType(context){
+        ChainedContext.prototype.init.call(this, context);
+    },
+    handleSymbol: function(s){
+        this.setType(unwrapType(s.symbol().info()));
+    }
+});
+
+exports.FormalType = HandleSymbolAsType.extend({
     init: function FormalType(context){
-        exports.Type.prototype.init.call(this, context);
+        HandleSymbolAsType.prototype.init.call(this, context);
         this.__arrayDimension = 0;
     },
-    setType: function(type){
+    setType: function(type){           
         for(var i = 0; i < this.__arrayDimension; ++i)
             type = new Type.Array("ARRAY OF " + type.name()
                                , undefined
@@ -556,9 +573,9 @@ exports.Return = ChainedContext.extend({
     }
 });
 
-exports.ProcParams = ChainedContext.extend({
-    init: function ProcParamsContext(context){
-        ChainedContext.prototype.init.call(this, context);
+exports.ProcParams = HandleSymbolAsType.extend({
+    init: function Context$ProcParams(context){
+        HandleSymbolAsType.prototype.init.call(this, context);
         this.__isVar = false;
         this.__argNamesForType = [];
     },
@@ -579,20 +596,32 @@ exports.ProcParams = ChainedContext.extend({
 });
 
 exports.PointerDecl = ChainedContext.extend({
-    init: function PointerDecl(context){
+    init: function Context$PointerDecl(context){
         ChainedContext.prototype.init.call(this, context);
     },
-    setType: function(type){
-        if (!(type instanceof Type.ForwardRecord) && !(type instanceof Type.Record))
-            throw new Errors.Error(
-                "RECORD is expected as a POINTER base type, got '" + type.description() + "'");
+    handleSymbol: function(s){
+        var typeId = unwrapTypeId(s.symbol().info());
+        this.__setTypeId(typeId);
+    },
+    __setTypeId: function(typeId){
+        if (!(typeId instanceof Type.ForwardTypeId)){
+            var type = typeId.type();
+            if (!(type instanceof Type.Record))
+                throw new Errors.Error(
+                    "RECORD is expected as a POINTER base type, got '" + type.description() + "'");
+        }
 
         var parent = this.parent();
         var name = parent.isAnonymousDeclaration() 
             ? undefined
             : parent.genTypeName();
-        var pointerType = new Type.Pointer(name, type);
+        var pointerType = new Type.Pointer(name, typeId);
         parent.setType(pointerType);
+    },
+    setType: function(type){
+        var typeId = new Type.TypeId(type);
+        this.currentScope().addType(typeId);
+        this.__setTypeId(typeId);
     },
     findSymbol: function(id){
         var parent = this.parent();
@@ -604,9 +633,8 @@ exports.PointerDecl = ChainedContext.extend({
         scope.addUnresolved(id);
         var resolve = function(){return getSymbol(parent, id).info().type();};
 
-        var type = new Type.ForwardRecord(resolve);
         return new Symbol.Found(
-            new Symbol.Symbol(id, new Type.TypeId(type)),
+            new Symbol.Symbol(id, new Type.ForwardTypeId(resolve)),
             scope
             );
     },
@@ -614,9 +642,9 @@ exports.PointerDecl = ChainedContext.extend({
     exportField: function(field){this.parent().exportField(field);}
 });
 
-exports.ArrayDecl = ChainedContext.extend({
-    init: function ArrayDeclContext(context){
-        ChainedContext.prototype.init.call(this, context);
+exports.ArrayDecl = HandleSymbolAsType.extend({
+    init: function Context$ArrayDecl(context){
+        HandleSymbolAsType.prototype.init.call(this, context);
         this.__dimensions = undefined;
     },
     handleDimensions: function(dimensions){this.__dimensions = dimensions;},
@@ -1394,9 +1422,9 @@ function checkIfFieldCanBeExported(name, idents, hint){
     }
 }
 
-exports.VariableDeclaration = ChainedContext.extend({
-    init: function VariableDeclarationContext(context){
-        ChainedContext.prototype.init.call(this, context);
+exports.VariableDeclaration = HandleSymbolAsType.extend({
+    init: function Context$VariableDeclaration(context){
+        HandleSymbolAsType.prototype.init.call(this, context);
         this.__idents = [];
         this.__type = undefined;
     },
@@ -1427,9 +1455,9 @@ exports.VariableDeclaration = ChainedContext.extend({
     }
 });
 
-exports.FieldListDeclaration = ChainedContext.extend({
-    init: function FieldListDeclarationContext(context){
-        ChainedContext.prototype.init.call(this, context);
+exports.FieldListDeclaration = HandleSymbolAsType.extend({
+    init: function Context$FieldListDeclaration(context){
+        HandleSymbolAsType.prototype.init.call(this, context);
         this.__idents = [];
         this.__type = undefined;
     },
@@ -1593,17 +1621,16 @@ exports.TypeDeclaration = ChainedContext.extend({
     init: function TypeDeclarationContext(context){
         ChainedContext.prototype.init.call(this, context);
         this.__id = undefined;
-        this.__typeId = undefined;
         this.__symbol = undefined;
     },
     handleIdentef: function(id){
+        var typeId = new Type.LazyTypeId();
+        var symbol = this.currentScope().addType(typeId, id);
         this.__id = id;
-        this.__typeId = new Type.LazyTypeId();
-        this.__symbol = new Symbol.Symbol(this.__id.id(), this.__typeId);
-        this.currentScope().addSymbol(this.__symbol, this.__id.exported());
+        this.__symbol = symbol;
     },
     setType: function(type){
-        this.__typeId.define(type);
+        this.__symbol.info().define(type);
         this.currentScope().resolve(this.__symbol);
     },
     typeName: function(){return this.__id.id();},
@@ -1687,6 +1714,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
         }
         else if (id === this.__name){
             var scope = this.parent().currentScope();
+            scope.strip();
             var exports = scope.exports();
             scope.module().info().defineExports(exports);
             var gen = this.codeGenerator();

@@ -9,9 +9,17 @@ TYPE
 VAR
     i*: INTEGER;
     pr*: POINTER TO RECORD i: INTEGER END;
+    pr2*: POINTER TO T;
 
 PROCEDURE p*();
 END p;
+
+PROCEDURE makeTPA*(): TPA;
+VAR result: TPA;
+BEGIN
+    NEW(result);
+    RETURN result
+END makeTPA;
 
 BEGIN
     NEW(pr);
@@ -37,12 +45,12 @@ BEGIN
 	pb := ptr;
 	pb(m1.TP).i := 123;
 
-	NEW(ptrA);
+	ptrA := m1.makeTPA();
 
 	m1.p();
     p(m1.i);
     p(m1.ci);
-    ref(m1.pr.i);
+    ref(m1.pr2.i);
 END m2.
 
 MODULE m3;

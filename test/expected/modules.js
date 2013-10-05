@@ -64,8 +64,15 @@ var anonymous$1 = RTL$.extend({
 	}
 });
 var pr = null;
+var pr2 = null;
 
 function p(){
+}
+
+function makeTPA(){
+	var result = null;
+	result = new TPA();
+	return result;
 }
 pr = new anonymous$1();
 return {
@@ -76,7 +83,9 @@ return {
 	TPA: TPA,
 	i: function(){return i;},
 	pr: function(){return pr;},
-	p: p
+	pr2: function(){return pr2;},
+	p: p,
+	makeTPA: makeTPA
 }
 }();
 var m2 = function (m1){
@@ -93,11 +102,11 @@ function ref(i/*VAR INTEGER*/){
 ptr = new m1.T();
 pb = ptr;
 RTL$.typeGuard(pb, m1.T).i = 123;
-ptrA = new m1.TPA();
+ptrA = m1.makeTPA();
 m1.p();
 p(m1.i());
 p(m1.ci);
-ref(RTL$.makeRef(m1.pr(), "i"));
+ref(RTL$.makeRef(m1.pr2(), "i"));
 }(m1);
 var m3 = function (m1, m2){
 var r = new m2.T();

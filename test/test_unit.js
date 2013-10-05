@@ -1299,6 +1299,22 @@ var testSuite = {
 "import procedure type": testWithModule(
     "MODULE test; TYPE TProc* = PROCEDURE; END test.",
     pass("MODULE m; IMPORT test; VAR proc: test.TProc; END m.")
+    ),
+"imported pointer type cannot be used in NEW if base type is not exported": testWithModule(
+    "MODULE test;"
+    + "TYPE T = RECORD END; TP* = POINTER TO T;"
+    + "TPAnonymous* = POINTER TO RECORD END; END test.",
+    pass(),
+    fail(["MODULE m; IMPORT test; VAR p: test.TPAnonymous; BEGIN NEW(p) END m.",
+          "non-exported RECORD type cannot be used in NEW"],
+         ["MODULE m; IMPORT test; VAR p: test.TP; BEGIN NEW(p) END m.",
+          "non-exported RECORD type cannot be used in NEW"])
+    ),
+"imported pointer variable: anonymous record field cannot be used": testWithModule(
+    "MODULE test; VAR p*: POINTER TO RECORD i: INTEGER END; END test.",
+    pass(),
+    fail(["MODULE m; IMPORT test; BEGIN ASSERT(test.p.i = 0) END m.",
+          "non-exported RECORD type cannot be dereferenced"])
     )
 };
 
