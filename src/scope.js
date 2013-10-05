@@ -37,6 +37,14 @@ var Scope = Class.extend({
             throw new Errors.Error( "'" + id + "' already declared");
         this.__symbols[id] = symbol;
     },
+    addType: function(type, id){
+        if (!id)
+            return undefined;
+
+        var symbol = new Symbol.Symbol(id.id(), type);
+        this.addSymbol(symbol, id.exported());
+        return symbol;
+    },
     resolve: function(symbol){
         var id = symbol.id();
         var i = this.__unresolved.indexOf(id);
@@ -69,6 +77,12 @@ var ProcedureScope = Scope.extend({
     }
 });
 
+var TypeRef = Class.extend({
+    init: function(type){this.__type = type;},
+    get: function(){return this.__type;},
+    reset: function(){this.__type = undefined;}
+});
+
 var CompiledModule = Type.Module.extend({
     init: function Scope$CompiledModule(id){
         Type.Module.prototype.init.call(this, id);
@@ -97,6 +111,7 @@ var Module = Scope.extend({
         Scope.prototype.init.call(this, "module");
         this.__name = name;
         this.__exports = {};
+        this.__stripTypes = [];
         this.__symbol = new Symbol.Symbol(name, new CompiledModule(name));
         this.addSymbol(this.__symbol);
     },
@@ -106,7 +121,17 @@ var Module = Scope.extend({
         if (exported)
             this.__exports[symbol.id()] = symbol;
     },
-    exports: function(){return this.__exports;}
+    addType: function(type, id){
+        var result = Scope.prototype.addType.call(this, type, id);
+        if (!id || !id.exported())
+            this.__stripTypes.push(type);
+        return result;
+    },
+    exports: function(){return this.__exports;},
+    strip: function(){
+        for(var i = 0; i < this.__stripTypes.length; ++i)
+            this.__stripTypes[i].strip();
+    }
 });
 
 exports.Procedure = ProcedureScope;
