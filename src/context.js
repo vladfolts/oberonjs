@@ -639,7 +639,9 @@ exports.PointerDecl = ChainedContext.extend({
             );
     },
     isAnonymousDeclaration: function(){return true;},
-    exportField: function(field){this.parent().exportField(field);}
+    exportField: function(field){
+        throw new Errors.Error( "cannot export anonymous RECORD field: '" + field + "'");
+    }
 });
 
 exports.ArrayDecl = HandleSymbolAsType.extend({
