@@ -307,6 +307,8 @@ exports.predefined = [
                     throw new Errors.Error("POINTER variable expected, got '"
                                          + type.name() + "'");
                 this.__baseType = type.baseType();
+                if (this.__baseType === undefined)
+                    throw new Errors.Error("non-exported RECORD type cannot be used in NEW");
                 return new CheckArgumentResult(type, false);
             },
             epilog: function(){
@@ -320,7 +322,7 @@ exports.predefined = [
         var name = "NEW";
         var args = [new Arg(undefined, true)];
         var type = new Std(
-            "NEW",
+            name,
             args,
             undefined,
             function(context, id, type){

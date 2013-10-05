@@ -19,7 +19,20 @@ var TypeId = Id.extend({
         this._type = type;
     },
     type: function(){return this._type;},
-    description: function(){return 'type ' + this._type.description();}
+    description: function(){return 'type ' + this._type.description();},
+    strip: function(){this._type = undefined;}
+});
+
+var ForwardTypeId = TypeId.extend({
+    init: function Type$ForwardTypeId(resolve){
+        TypeId.prototype.init.call(this);
+        this.__resolve = resolve;
+    },
+    type: function(){
+        if (!this._type)
+            this._type = this.__resolve();
+        return this._type;
+    }
 });
 
 var LazyTypeId = TypeId.extend({
@@ -91,19 +104,7 @@ exports.Pointer = BasicType.extend({
     description: function(){
         return this.name() || "POINTER TO " + this.baseType().description();
     },
-    baseType: function(){
-        if (this.__base instanceof exports.ForwardRecord)
-            this.__base = this.__base.resolve();
-        return this.__base;
-    }
-});
-
-exports.ForwardRecord = Type.extend({
-    init: function ForwardRecord(resolve){
-        Type.prototype.init.call(this);
-        this.__resolve = resolve;
-    },
-    resolve: function(){return this.__resolve();}
+    baseType: function(){return this.__base.type();}
 });
 
 exports.Record = BasicType.extend({
@@ -216,4 +217,5 @@ exports.ExportedVariable = ExportedVariable;
 exports.Module = Module;
 exports.Type = Type;
 exports.TypeId = TypeId;
+exports.ForwardTypeId = ForwardTypeId;
 exports.LazyTypeId = LazyTypeId;
