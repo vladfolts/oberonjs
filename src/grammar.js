@@ -147,7 +147,7 @@ var fpSection = and(optional(literal("VAR")), ident, repeat(and(",", ident)), ":
 var formalParameters = and(
           "("
         , optional(context(and(fpSection, repeat(and(";", fpSection))), Context.ProcParams))
-        , ")"
+        , required( ")" )
         , optional(and(":", qualident)));
 
 var procedureType = and("PROCEDURE"
