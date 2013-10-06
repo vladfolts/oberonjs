@@ -147,7 +147,7 @@ var fpSection = and(optional(literal("VAR")), ident, repeat(and(",", ident)), ":
 var formalParameters = and(
           "("
         , optional(context(and(fpSection, repeat(and(";", fpSection))), Context.ProcParams))
-        , ")"
+        , required( ")" )
         , optional(and(":", qualident)));
 
 var procedureType = and("PROCEDURE"
@@ -168,9 +168,9 @@ var procedureDeclaration = context(
 
 var constantDeclaration = context(and(identdef, "=", constExpression), Context.ConstDecl);
 
-var declarationSequence = and(optional(and("CONST", repeat(and(constantDeclaration, ";"))))
-                            , optional(and("TYPE", context(repeat(and(typeDeclaration, ";")), Context.TypeSection)))
-                            , optional(and("VAR", repeat(and(variableDeclaration, ";"))))
+var declarationSequence = and(optional(and("CONST", repeat(and(constantDeclaration, required(";")))))
+                            , optional(and("TYPE", context(repeat(and(typeDeclaration, required(";"))), Context.TypeSection)))
+                            , optional(and("VAR", repeat(and(variableDeclaration, required(";")))))
                             , repeat(and(procedureDeclaration, ";")));
 var procedureBody = and(declarationSequence
                       , optional(and("BEGIN", statementSequence))
