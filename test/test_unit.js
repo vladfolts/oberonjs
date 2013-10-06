@@ -1151,7 +1151,7 @@ var testSuite = {
          "PROCEDURE p(a: ARRAY OF A); BEGIN END p"
         ),
     fail(["PROCEDURE p(a: ARRAY OF ARRAY 3 OF INTEGER); BEGIN END p",
-          "not parsed"]
+          "')' expected"]
         )
     ),
 "non-open array type as procedure parameter": testWithContext(
@@ -1165,7 +1165,7 @@ var testSuite = {
          "PROCEDURE p(); VAR a: ARRAY 2 OF INTEGER; BEGIN pa(a) END p"
          ),
     fail(["PROCEDURE p(a: ARRAY 3 OF INTEGER); BEGIN END p",
-          "not parsed"],
+          "')' expected"],
          ["PROCEDURE p(a: A): INTEGER; BEGIN RETURN a[2] END p",
           "index out of bounds: maximum possible index is 1, got 2"],
          ["PROCEDURE p(); VAR a: ARRAY 1 OF INTEGER; BEGIN pa(a) END p",
@@ -1318,6 +1318,18 @@ var testSuite = {
     pass(),
     fail(["MODULE m; IMPORT test; BEGIN ASSERT(test.p.i = 0) END m.",
           "non-exported RECORD type cannot be dereferenced"])
+    ),
+"syntax errors": testWithGrammar(
+    Grammar.module,
+    pass(),
+    fail(["MODULE m; CONST c = 1 END m.",
+          "';' expected"],
+         ["MODULE m; TYPE T = RECORD END END m.",
+          "';' expected"],
+         ["MODULE m; VAR v: INTEGER END m.",
+          "';' expected"],
+         ["MODULE m; PROCEDURE p(INTEGER) END m.",
+          "')' expected"])
     )
 };
 
