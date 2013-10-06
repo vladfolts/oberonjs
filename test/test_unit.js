@@ -1318,6 +1318,16 @@ var testSuite = {
     pass(),
     fail(["MODULE m; IMPORT test; BEGIN ASSERT(test.p.i = 0) END m.",
           "non-exported RECORD type cannot be dereferenced"])
+    ),
+"syntax errors": testWithGrammar(
+    Grammar.module,
+    pass(),
+    fail(["MODULE m; CONST c = 1 END m.",
+          "';' expected"],
+         ["MODULE m; TYPE T = RECORD END END m.",
+          "';' expected"],
+         ["MODULE m; VAR v: INTEGER END m.",
+          "';' expected"])
     )
 };
 
