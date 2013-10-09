@@ -293,7 +293,7 @@ var testSuite = {
     ),
 "array declaration": testWithContext(
     context(Grammar.typeDeclaration,
-            "CONST c1 = 5; VAR v1: INTEGER;"),
+            "CONST c1 = 5; VAR v1: INTEGER; p: POINTER TO RECORD END;"),
     pass("T = ARRAY 10 OF INTEGER",
          "T = ARRAY 10 OF BOOLEAN",
          "T = ARRAY 1 + 2 OF INTEGER",
@@ -307,6 +307,8 @@ var testSuite = {
           "'INTEGER' constant expression expected, got 'BOOLEAN'"],
          ["T = ARRAY v1 OF INTEGER",
           "constant expression expected as ARRAY size"],
+         ["T = ARRAY p OF INTEGER",
+          "'INTEGER' constant expression expected, got 'POINTER TO anonymous RECORD'"],
          ["T = ARRAY c1 - 10 OF INTEGER",
           "array size must be greater than 0, got -5"],
          ["T = ARRAY ORD({0..5} >= {0..8}) OF INTEGER",
@@ -644,8 +646,12 @@ var testSuite = {
           "type mismatch: 'a[0]' is 'INTEGER' and cannot be assigned to 'BOOLEAN' expression"],
          ["VAR a: ARRAY 10 OF INTEGER; BEGIN a[TRUE] := 1 END",
           "'INTEGER' expression expected, got 'BOOLEAN'"],
+         ["VAR a: ARRAY 10 OF INTEGER; p: POINTER TO RECORD END; BEGIN a[p] := 1 END",
+          "'INTEGER' expression expected, got 'POINTER TO anonymous RECORD'"],
          ["VAR i: INTEGER; BEGIN i[0] := 1 END",
           "ARRAY expected, got 'INTEGER'"],
+         ["VAR p: POINTER TO RECORD END; BEGIN p[0] := 1 END",
+          "ARRAY expected, got 'POINTER TO anonymous RECORD'"],
          ["VAR a: ARRAY 10 OF INTEGER; BEGIN a[0][0] := 1 END",
           "ARRAY expected, got 'INTEGER'"],
          ["VAR a: ARRAY 10 OF BOOLEAN; BEGIN a[0,0] := TRUE END",
@@ -706,17 +712,19 @@ var testSuite = {
     ),
 "IF statement": testWithContext(
     context(Grammar.statement,
-            "VAR b1: BOOLEAN; i1: INTEGER;"),
+            "VAR b1: BOOLEAN; i1: INTEGER; p: POINTER TO RECORD END;"),
     pass("IF b1 THEN i1 := 0 END",
          "IF FALSE THEN i1 := 0 ELSE i1 := 1 END",
          "IF TRUE THEN i1 := 0 ELSIF FALSE THEN i1 := 1 ELSE i1 := 2 END"),
     fail(["IF i1 THEN i1 := 0 END", "'BOOLEAN' expression expected, got 'INTEGER'"],
          ["IF b1 THEN i1 := 0 ELSIF i1 THEN i1 := 2 END",
-          "'BOOLEAN' expression expected, got 'INTEGER'"])
+          "'BOOLEAN' expression expected, got 'INTEGER'"],
+         ["IF p THEN i1 := 0 END",
+          "'BOOLEAN' expression expected, got 'POINTER TO anonymous RECORD'"])
     ),
 "CASE statement": testWithContext(
     context(Grammar.statement,
-            "CONST ci = 15; cc = \"A\";   VAR c1: CHAR; b1: BOOLEAN; i1, i2: INTEGER;"),
+            "CONST ci = 15; cc = \"A\";   VAR c1: CHAR; b1: BOOLEAN; i1, i2: INTEGER; p: POINTER TO RECORD END;"),
     pass("CASE i1 OF END",
          "CASE i1 OF 0: b1 := TRUE END",
          "CASE c1 OF \"A\": b1 := TRUE END",
@@ -735,6 +743,8 @@ var testSuite = {
          ["CASE b1 OF END", "'INTEGER' or 'CHAR' expected as CASE expression"],
          ["CASE i1 OF \"A\": b1 := TRUE END",
           "label must be 'INTEGER' (the same as case expression), got 'CHAR'"],
+         ["CASE i1 OF p: b1 := TRUE END",
+          "'p' is not a constant"],
          ["CASE c1 OF \"A\", 1: b1 := TRUE END",
           "label must be 'CHAR' (the same as case expression), got 'INTEGER'"],
          ["CASE c1 OF \"A\"..1: b1 := TRUE END",
@@ -757,7 +767,7 @@ var testSuite = {
     ),
 "FOR statement": testWithContext(
     context(Grammar.statement,
-            "CONST c = 15; VAR b: BOOLEAN; i, n: INTEGER;"),
+            "CONST c = 15; VAR b: BOOLEAN; i, n: INTEGER; p: POINTER TO RECORD END;"),
     pass("FOR i := 0 TO 10 DO n := 1 END",
          "FOR i := 0 TO 10 BY 5 DO b := TRUE END",
          "FOR i := 0 TO n DO b := TRUE END",
@@ -769,22 +779,29 @@ var testSuite = {
          ["FOR c := 0 TO 10 DO END", "'c' is not a variable"],
          ["FOR i := TRUE TO 10 DO n := 1 END",
           "'INTEGER' expression expected to assign 'i', got 'BOOLEAN'"],
+         ["FOR i := p TO 10 DO n := 1 END",
+          "'INTEGER' expression expected to assign 'i', got 'POINTER TO anonymous RECORD'"],
+         ["FOR i := 0 TO p DO n := 1 END",
+          "'INTEGER' expression expected as 'TO' parameter, got 'POINTER TO anonymous RECORD'"],
          ["FOR i := 0 TO TRUE DO END",
           "'INTEGER' expression expected as 'TO' parameter, got 'BOOLEAN'"],
          ["FOR i := 0 TO 10 BY n DO END",
           "constant expression expected as 'BY' parameter"],
+         ["FOR i := 0 TO 10 BY p DO END",
+          "'INTEGER' expression expected as 'BY' parameter, got 'POINTER TO anonymous RECORD'"],
          ["FOR i := 0 TO 10 BY TRUE DO END",
           "'INTEGER' expression expected as 'BY' parameter, got 'BOOLEAN'"],
          ["FOR i := 0 TO 10 DO - END",
           "END expected (FOR)"])
     ),
 "logical operators": testWithContext(
-    context(Grammar.statement, "VAR b1, b2: BOOLEAN; i1: INTEGER;"),
+    context(Grammar.statement, "VAR b1, b2: BOOLEAN; i1: INTEGER; p: POINTER TO RECORD END;"),
     pass("b1 := b1 OR b2",
          "b1 := b1 & b2",
          "b1 := ~b2"),
     fail(["b1 := i1 OR b2", "BOOLEAN expected as operand of 'OR', got 'INTEGER'"],
          ["b1 := b1 OR i1", "type mismatch: expected 'BOOLEAN', got 'INTEGER'"],
+         ["b1 := p OR b1", "BOOLEAN expected as operand of 'OR', got 'POINTER TO anonymous RECORD'"],
          ["b1 := i1 & b2", "BOOLEAN expected as operand of '&', got 'INTEGER'"],
          ["b1 := b1 & i1", "type mismatch: expected 'BOOLEAN', got 'INTEGER'"],
          ["b1 := ~i1", "type mismatch: expected 'BOOLEAN', got 'INTEGER'"])
@@ -1004,7 +1021,7 @@ var testSuite = {
 "procedure call": testWithContext(
     context(Grammar.statement,
             "TYPE ProcType = PROCEDURE;" +
-            "VAR notProcedure: INTEGER;" +
+            "VAR notProcedure: INTEGER; ptr: POINTER TO RECORD END;" +
             "PROCEDURE p; END p;" +
             "PROCEDURE p1(i: INTEGER); END p1;" +
             "PROCEDURE p2(i: INTEGER; b: BOOLEAN); END p2;" +
@@ -1015,6 +1032,7 @@ var testSuite = {
          "p1(1 + 2)",
          "p2(1, TRUE)"),
     fail(["notProcedure", "PROCEDURE expected, got 'INTEGER'"],
+         ["ptr()", "PROCEDURE expected, got 'POINTER TO anonymous RECORD'"],
          ["p2(TRUE, 1)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
          ["p2(1, 1)", "type mismatch for argument 2: 'INTEGER' cannot be converted to 'BOOLEAN'"],
          ["p()()", "not parsed"],
