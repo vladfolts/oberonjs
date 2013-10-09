@@ -1375,6 +1375,16 @@ exports.For = ChainedContext.extend({
 
 exports.emitForBegin = function(context){context.handleBegin();};
 
+exports.CheckAssignment = ChainedContext.extend({
+    init: function Context$CheckAssignment(context){
+        ChainedContext.prototype.init.call(this, context);
+    },
+    handleLiteral: function(s){
+        if (s == "=")
+            throw new Errors.Error("did you mean ':=' (statement expected, got expression)?");
+    }
+});
+
 exports.Assignment = ChainedContext.extend({
     init: function AssignmentContext(context){
         ChainedContext.prototype.init.call(this, context);
