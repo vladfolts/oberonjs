@@ -309,11 +309,11 @@ exports.Designator = ChainedContext.extend({
         var e = this.__indexExpression;
         var expType = e.type();
         if (expType != basicTypes.integer)
-            throw new Errors.Error("'INTEGER' expression expected, got '" + expType.name() + "'");
+            throw new Errors.Error("'INTEGER' expression expected, got '" + expType.description() + "'");
 
         var type = this.__currentType;
         if (!(type instanceof Type.Array))
-            throw new Errors.Error("ARRAY expected, got '" + type.name() + "'");
+            throw new Errors.Error("ARRAY expected, got '" + type.description() + "'");
         var value = e.constValue();
         if (value !== undefined && value >= type.length())
             throw new Errors.Error("index out of bounds: maximum possible index is "
@@ -682,7 +682,7 @@ exports.ArrayDimensions = ChainedContext.extend({
     handleExpression: function(e){
         var type = e.type();
         if (type !== basicTypes.integer)
-            throw new Errors.Error("'INTEGER' constant expression expected, got '" + type.name() + "'");
+            throw new Errors.Error("'INTEGER' constant expression expected, got '" + type.description() + "'");
         var value = e.constValue();
         if (value === undefined)
             throw new Errors.Error("constant expression expected as ARRAY size");
@@ -815,7 +815,7 @@ exports.AddOperator = ChainedContext.extend({
         else if (s == "OR"){
             if (type != basicTypes.bool)
                 throw new Errors.Error("BOOLEAN expected as operand of 'OR', got '"
-                                     + type.name() + "'");
+                                     + type.description() + "'");
             o = op.or;
         }
         if (o)
@@ -1106,7 +1106,7 @@ exports.Expression = ChainedContext.extend({
 function handleIfExpression(e){
     var type = e.type();
     if (type !== basicTypes.bool)
-        throw new Errors.Error("'BOOLEAN' expression expected, got '" + type.name() + "'");
+        throw new Errors.Error("'BOOLEAN' expression expected, got '" + type.description() + "'");
 }
 
 var IfContextBase = ChainedContext.extend({
@@ -1334,10 +1334,10 @@ exports.For = ChainedContext.extend({
             throw new Errors.Error(
                 !this.__initExprParsed
                     ? "'INTEGER' expression expected to assign '" + this.__var
-                      + "', got '" + type.name() + "'"
+                      + "', got '" + type.description() + "'"
                     : !this.__toParsed
-                    ? "'INTEGER' expression expected as 'TO' parameter, got '" + type.name() + "'"
-                    : "'INTEGER' expression expected as 'BY' parameter, got '" + type.name() + "'"
+                    ? "'INTEGER' expression expected as 'TO' parameter, got '" + type.description() + "'"
+                    : "'INTEGER' expression expected as 'BY' parameter, got '" + type.description() + "'"
                     );
         if (!this.__initExprParsed)
             this.__initExprParsed = true;
@@ -1374,6 +1374,16 @@ exports.For = ChainedContext.extend({
 });
 
 exports.emitForBegin = function(context){context.handleBegin();};
+
+exports.CheckAssignment = ChainedContext.extend({
+    init: function Context$CheckAssignment(context){
+        ChainedContext.prototype.init.call(this, context);
+    },
+    handleLiteral: function(s){
+        if (s == "=")
+            throw new Errors.Error("did you mean ':=' (statement expected, got expression)?");
+    }
+});
 
 exports.Assignment = ChainedContext.extend({
     init: function AssignmentContext(context){
@@ -1480,7 +1490,7 @@ exports.FieldListDeclaration = HandleSymbolAsType.extend({
 
 function assertProcType(type){
     if (!(type instanceof Type.Procedure) && !(type instanceof Module.AnyType))
-        throw new Errors.Error("PROCEDURE expected, got '" + type.name() + "'");
+        throw new Errors.Error("PROCEDURE expected, got '" + type.description() + "'");
 }
 
 exports.ActualParameters = ChainedContext.extend({
