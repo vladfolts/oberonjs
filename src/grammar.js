@@ -87,7 +87,8 @@ var actualParameters = and("(", context(optional(expList), Context.ActualParamet
 var procedureCall = context(and(designator, optional(actualParameters))
                           , Context.StatementProcedureCall);
 
-var assignment = context(and(designator, ":=", required(expression, "expression expected"))
+var assignment = context(and(designator, context(or(":=", "="), Context.CheckAssignment)
+                       , required(expression, "expression expected"))
                        , Context.Assignment);
 
 var statement = optional(or(
