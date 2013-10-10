@@ -1,18 +1,4 @@
 var RTL$ = {
-    extend: function extend(methods){
-        function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
-        }
-        Type.prototype = this.prototype;
-
-        var result = methods.init;
-        result.prototype = new Type(); // inherit this.prototype
-        result.prototype.constructor = result; // to see constructor name in diagnostic
-        
-        result.extend = extend;
-        return result;
-    },
     makeArray: function (/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
         var result = new Array(forward.shift());
@@ -31,6 +17,20 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
+    extend: function extend(methods){
+        function Type(){
+            for(var m in methods)
+                this[m] = methods[m];
+        }
+        Type.prototype = this.prototype;
+
+        var result = methods.init;
+        result.prototype = new Type(); // inherit this.prototype
+        result.prototype.constructor = result; // to see constructor name in diagnostic
+        
+        result.extend = extend;
+        return result;
+    },
     makeRef: function (obj, prop){
         return {set: function(v){ obj[prop] = v; },
                 get: function(){ return obj[prop]; }};
@@ -40,6 +40,7 @@ var m = function (){
 var R = RTL$.extend({
 	init: function R(){
 		this.i = 0;
+		this.a = RTL$.makeArray(3, 0);
 		this.p = null;
 	}
 });
@@ -84,6 +85,7 @@ function p3(i/*VAR INTEGER*/, b/*VAR BOOLEAN*/){
 	p1(RTL$.makeRef(r.p, "i"), RTL$.makeRef(ar[j].p, "i"));
 	p2(ar[j].p.i, r.p.i == ar[j].p.i);
 	j = array(ai);
+	j = array(r.a);
 }
 p3({set: function($v){i = $v;}, get: function(){return i;}}, {set: function($v){b = $v;}, get: function(){return b;}});
 }();
