@@ -1,6 +1,6 @@
 MODULE m;
 
-TYPE R = RECORD i: INTEGER; p: POINTER TO R END;
+TYPE R = RECORD i: INTEGER; a: ARRAY 3 OF INTEGER; p: POINTER TO R END;
 
 VAR 
 	i: INTEGER;
@@ -48,7 +48,8 @@ BEGIN
 	p1(r.p.i, ar[j].p.i);
 	p2(ar[j].p.i, r.p.i = ar[j].p.i);
 
-	j := array(ai)
+	j := array(ai);
+	j := array(r.a);
 END p3;
 
 BEGIN
