@@ -390,13 +390,13 @@ exports.Designator = ChainedContext.extend({
             new DesignatorInfo(code, refCode, this.__currentType, this.__info, this.__scope));
     },
     __makeRefCode: function(code){
+        if ((this.__currentType instanceof Type.Array)
+            || (this.__currentType instanceof Type.Record)
+            || (this.__info instanceof Type.VariableRef))
+            return code;
         if (this.__derefCode)
             return this.rtl().makeRef(this.__derefCode, this.__propCode);
-        if (!(this.__currentType instanceof Type.Array)
-            && !(this.__currentType instanceof Type.Record)
-            && !(this.__info instanceof Type.VariableRef))
-            return "{set: function($v){" + code + " = $v;}, get: function(){return " + code + ";}}";
-        return code;
+        return "{set: function($v){" + code + " = $v;}, get: function(){return " + code + ";}}";
     }
 });
 
