@@ -10,7 +10,6 @@ var Parser = require("parser.js");
 var Procedure = require("procedure.js");
 var Class = require("rtl.js").Class;
 var Scope = require("scope.js");
-var Stream = require("stream.js").Stream;
 var Symbol = require("symbol.js");
 var Type = require("type.js");
 
