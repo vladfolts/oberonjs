@@ -1,0 +1,161 @@
+MODULE String;
+CONST
+    offs8 = 8;
+    offs16 = 8 + 16;
+    offs32 = offs16 + 32;
+    offs64 = offs32 + 64;
+    offs128 = offs64 + 128;
+    offs256 = offs128 + 256;
+    offs512 = offs256 + 512;
+    offs1024 = offs512 + 1024;
+    chunkSize = 4096;
+TYPE
+    Type* = POINTER TO RECORD
+        size: INTEGER;
+        data: ARRAY 8 OF CHAR;
+        next: POINTER TO Data16
+    END;
+    Data16 = RECORD
+        data: ARRAY 16 OF CHAR;
+        next: POINTER TO Data32
+    END;
+    Data32 = RECORD
+        data: ARRAY 32 OF CHAR;
+        next: POINTER TO Data64
+    END;
+    Data64 = RECORD
+        data: ARRAY 64 OF CHAR;
+        next: POINTER TO Data128
+    END;
+    Data128 = RECORD
+        data: ARRAY 128 OF CHAR;
+        next: POINTER TO Data256
+    END;
+    Data256 = RECORD
+        data: ARRAY 256 OF CHAR;
+        next: POINTER TO Data512
+    END;
+    Data512 = RECORD
+        data: ARRAY 512 OF CHAR;
+        next: POINTER TO Data1024
+    END;
+    Data1024 = RECORD
+        data: ARRAY 1024 OF CHAR;
+        next: POINTER TO Chunk
+    END;
+    Chunk = RECORD
+        data: ARRAY chunkSize OF CHAR;
+        next: POINTER TO Chunk
+    END;
+
+PROCEDURE fromArray*(a: ARRAY OF CHAR): Type;
+VAR 
+    result: Type;
+    
+    PROCEDURE copy(from: INTEGER; VAR dst: ARRAY OF CHAR): BOOLEAN;
+    VAR
+        i: INTEGER;
+    BEGIN
+        WHILE (i < LEN(dst)) & (i + from < LEN(a)) DO
+            dst[i] := a[i + from];
+            INC(i);
+        END;
+        RETURN i + from < LEN(a)
+    END copy;
+
+    PROCEDURE copyToChunks();
+    VAR
+        i: INTEGER;
+        from: INTEGER;
+        chunk: POINTER TO Chunk;
+    BEGIN
+        from := offs1024;
+        NEW(chunk); 
+        result.next.next.next.next.next.next.next.next := chunk;
+        WHILE from < LEN(a) DO
+            IF i = LEN(chunk.data) THEN
+                NEW(chunk.next);
+                chunk := chunk.next;
+                i := 0;
+            END;
+            chunk.data[i] := a[from];
+            INC(i);
+            INC(from);
+        END;
+    END copyToChunks;
+
+BEGIN
+    NEW(result);
+    IF copy(0, result.data) THEN
+        NEW(result.next);
+        IF copy(offs8, result.next.data) THEN
+            NEW(result.next.next);
+            IF copy(offs16, result.next.next.data) THEN
+                NEW(result.next.next.next);
+                IF copy(offs32, result.next.next.next.data) THEN
+                    NEW(result.next.next.next.next);
+                    IF copy(offs64, result.next.next.next.next.data) THEN
+                        NEW(result.next.next.next.next.next);
+                        IF copy(offs128, result.next.next.next.next.next.data) THEN
+                            NEW(result.next.next.next.next.next.next);
+                            IF copy(offs256, result.next.next.next.next.next.next.data) THEN
+                                NEW(result.next.next.next.next.next.next.next);
+                                IF copy(offs512, result.next.next.next.next.next.next.next.data) THEN
+                                    copyToChunks();
+                                END;
+                            END;
+                        END;
+                    END;
+                END;
+            END;
+        END;
+    END;
+
+    result.size := LEN(a);
+    RETURN result
+END fromArray;    
+
+PROCEDURE size*(s: Type): INTEGER;
+    RETURN s.size
+END size;
+
+PROCEDURE at*(s: Type; index: INTEGER): CHAR;
+VAR
+    result: CHAR;
+
+    PROCEDURE chunkAt(): CHAR;
+    VAR
+        i: INTEGER;
+        chunk: POINTER TO Chunk;
+    BEGIN
+        chunk := s.next.next.next.next.next.next.next.next;
+        FOR i := 0 TO ((index - offs1024) DIV chunkSize) - 1 DO
+            chunk := chunk.next;
+        END;
+        RETURN chunk.data[(index - offs1024) MOD chunkSize]
+    END chunkAt;
+
+BEGIN
+    IF index < offs8 THEN
+        result := s.data[index];
+    ELSIF index < offs16 THEN
+        result := s.next.data[index - offs8];
+    ELSIF index < offs32 THEN
+        result := s.next.next.data[index - offs16];
+    ELSIF index < offs64 THEN
+        result := s.next.next.next.data[index - offs32];
+    ELSIF index < offs128 THEN
+        result := s.next.next.next.next.data[index - offs64];
+    ELSIF index < offs256 THEN
+        result := s.next.next.next.next.next.data[index - offs128];
+    ELSIF index < offs512 THEN
+        result := s.next.next.next.next.next.next.data[index - offs256];
+    ELSIF index < offs1024 THEN
+        result := s.next.next.next.next.next.next.next.data[index - offs512];
+    ELSE
+        result := chunkAt();
+    END
+    RETURN result
+END at;
+
+END String.

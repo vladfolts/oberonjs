@@ -1,0 +1,25 @@
+MODULE TestString;
+IMPORT String;
+CONST
+    longStringSize = 1024 * 100 + 1;
+VAR
+    s: String.Type;
+    testArray: ARRAY longStringSize OF CHAR;
+    i: INTEGER;
+BEGIN
+    s := String.fromArray("abc");
+    ASSERT(String.size(s) = 3);
+    ASSERT(String.at(s, 0) = "a");
+    ASSERT(String.at(s, 1) = "b");
+    ASSERT(String.at(s, 2) = "c");
+
+    FOR i := 0 TO LEN(testArray) - 1 DO
+        testArray[i] := CHR(i);
+    END;
+    s := String.fromArray(testArray);
+    ASSERT(String.size(s) = LEN(testArray));
+    FOR i := 0 TO LEN(testArray) - 1 DO
+        ASSERT(testArray[i] = String.at(s, i));
+    END;
+
+END TestString.
