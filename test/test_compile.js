@@ -46,6 +46,8 @@ function compileNodejs(src, dirs){
                     );
     if (errors)
         throw new Test.TestError(errors);
+
+    cmpDirs(path.join(dirs.expected, subdir), outDir);
 }
 
 function expectOk(src, dirs){
@@ -98,6 +100,20 @@ function rmTree(root){
             fs.unlinkSync(filePath);
     });
     fs.rmdirSync(root);
+}
+
+function cmpDirs(expected, result){
+    fs.readdirSync(expected).forEach(function(file){
+        var expectedFile = path.join(expected, file);
+        var resultFile = path.join(result, file);
+        var expectedContent = fs.readFileSync(expectedFile, "utf8");
+        var resultContent = fs.readFileSync(resultFile, "utf8");
+        if (   normalizeLineEndings(expectedContent)
+            != normalizeLineEndings(resultContent))
+            throw new Test.TestError(
+                "Files '" + expectedFile + "' and '"
+                + resultFile + "' do not match.");
+    });
 }
 
 function main(){
