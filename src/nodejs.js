@@ -1,9 +1,11 @@
 "use strict";
 
-var Class = require("rtl.js").Class;
+var Rtl = require("rtl.js");
 var Code = require("code.js");
+var Context = require("context.js");
+var oc = require("oc.js");
 
-var ModuleGenerator = Class.extend({
+var ModuleGenerator = Rtl.Class.extend({
     init: function Nodejs$ModuleGenerator(name, imports){
         this.__name = name;
         this.__imports = imports;
@@ -30,4 +32,20 @@ var ModuleGenerator = Class.extend({
     }
 });
 
-exports.ModuleGenerator = ModuleGenerator;
+function compile(text, handleErrors, handleCompiledModule){
+    var rtl = new Rtl.RTL();
+    var code = new Code.Generator();
+    var moduleCode = function(name, imports){return new ModuleGenerator(name, imports);};
+
+    oc.compileWithContext(
+            text,
+            function(moduleResolver){return new Context.Context(code, moduleCode, rtl, moduleResolver);},
+            handleErrors,
+            handleCompiledModule);
+
+    var rtlCode = rtl.generate();
+    if (rtlCode)
+        handleCompiledModule(rtl.name(), rtlCode);
+}
+
+exports.compile = compile;

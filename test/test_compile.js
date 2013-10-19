@@ -1,5 +1,6 @@
 "use strict";
 
+var nodejs = require("nodejs");
 var oc = require("oc");
 var fs = require("fs");
 var path = require("path");
@@ -36,9 +37,9 @@ function compileNodejs(src, dirs){
     fs.mkdirSync(outDir);
 
     var errors = "";
-    oc.compileNodejs(text,
-                     function(e){errors += e;},
-                     function(name, code){
+    nodejs.compile(text,
+                   function(e){errors += e;},
+                   function(name, code){
                         var filePath = path.join(outDir, name + ".js");
                         fs.writeFileSync(filePath, code);
                      }

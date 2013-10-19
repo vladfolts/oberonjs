@@ -5,7 +5,6 @@ var Context = require("context.js");
 var Errors = require("errors.js");
 var Grammar = require("grammar.js");
 var Lexer = require("lexer.js");
-var Nodejs = require("nodejs.js");
 var ImportRTL = require("rtl.js");
 var Stream = require("stream.js").Stream;
 
@@ -46,7 +45,7 @@ function compileModule(stream, context, handleErrors){
             scope.exports());
 }
 
-function compileImpl(text, contextFactory, handleErrors, handleCompiledModule){
+function compileWithContext(text, contextFactory, handleErrors, handleCompiledModule){
     var stream = new Stream(text);
     var modules = {};
     function resolveModule(name){return modules[name];}
@@ -69,7 +68,7 @@ function compile(text, handleErrors){
     var result = "";
     var rtl = new RTL();
     var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
-    compileImpl(
+    compileWithContext(
             text,
             function(moduleResolver){
                 return new Context.Context(new Code.Generator(),
@@ -86,22 +85,6 @@ function compile(text, handleErrors){
     return result;
 }
 
-function compileNodejs(text, handleErrors, handleCompiledModule){
-    var rtl = new RTL();
-    var code = new Code.Generator();
-    var moduleCode = function(name, imports){return new Nodejs.ModuleGenerator(name, imports);};
-
-    compileImpl(
-            text,
-            function(moduleResolver){return new Context.Context(code, moduleCode, rtl, moduleResolver);},
-            handleErrors,
-            handleCompiledModule);
-
-    var rtlCode = rtl.generate();
-    if (rtlCode)
-        handleCompiledModule(rtl.name(), rtlCode);
-}
-
 exports.compileModule = compileModule;
 exports.compile = compile;
-exports.compileNodejs = compileNodejs;
+exports.compileWithContext = compileWithContext;
