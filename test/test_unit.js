@@ -291,6 +291,15 @@ var testSuite = {
          ["T = RECORD r: RECORD (T) END END", "recursive field definition: 'r'"]
          )
     ),
+"record extension": testWithContext(
+    context(Grammar.typeDeclaration,
+            "TYPE B = RECORD END;"),
+    pass("T = RECORD(B) END"
+         ),
+    fail(["T = RECORD(INTEGER) END", "RECORD type is expected as a base type, got 'INTEGER'"],
+         ["T = RECORD(INTEGER) m: INTEGER END", "RECORD type is expected as a base type, got 'INTEGER'"]
+         )
+    ),
 "array declaration": testWithContext(
     context(Grammar.typeDeclaration,
             "CONST c1 = 5; VAR v1: INTEGER; p: POINTER TO RECORD END;"),

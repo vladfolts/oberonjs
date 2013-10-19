@@ -1604,6 +1604,11 @@ exports.RecordDecl = ChainedContext.extend({
             this.parent().exportField(field.id());
     },
     setBaseType: function(type){
+        if (!(type instanceof Type.Record))
+            throw new Errors.Error(
+                "RECORD type is expected as a base type, got '"
+                + type.description()
+                + "'");
         if (isTypeRecursive(type, this.__type))
             throw new Errors.Error("recursive inheritance: '"
                 + this.__type.name() + "'");
