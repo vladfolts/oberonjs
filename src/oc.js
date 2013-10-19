@@ -5,6 +5,7 @@ var Context = require("context.js");
 var Errors = require("errors.js");
 var Grammar = require("grammar.js");
 var Lexer = require("lexer.js");
+var Nodejs = require("nodejs.js");
 var ImportRTL = require("rtl.js");
 var Stream = require("stream.js").Stream;
 
@@ -22,9 +23,7 @@ var CompiledModule = Class.extend({
     exports: function(){return this.__exports;}
 });
 
-function compileModule(stream, rtl, moduleResolver, handleErrors){
-    var code = new Code.Generator();
-    var context = new Context.Context(code, rtl, moduleResolver);
+function compileModule(stream, context, handleErrors){
     Lexer.skipSpaces(stream, context);  
     try {
         if (!Grammar.module(stream, context))
@@ -41,28 +40,68 @@ function compileModule(stream, rtl, moduleResolver, handleErrors){
         throw x;
     }
     var scope = context.currentScope();
-    return new CompiledModule(scope.module(), code.getResult(), scope.exports());
+    return new CompiledModule(
+            scope.module(),
+            context.codeGenerator().getResult(),
+            scope.exports());
 }
 
-function compile(text, handleErrors){
+function compileImpl(text, contextFactory, handleErrors, handleCompiledModule){
     var stream = new Stream(text);
-    var rtl = new RTL();
-    var code = "";
     var modules = {};
     function resolveModule(name){return modules[name];}
 
     do {
-        var module = compileModule(stream, rtl, resolveModule, handleErrors);
+        var context = contextFactory(resolveModule);
+        var module = compileModule(stream, context, handleErrors);
         if (!module)
-            return undefined;
+            return;
         var symbol = module.symbol();
-        modules[symbol.id()] = symbol.info();
-        code += module.code();
+        var moduleName = symbol.id();
+        modules[moduleName] = symbol.info();
+        handleCompiledModule(moduleName, module.code());
         Lexer.skipSpaces(stream);
     } 
     while (!stream.eof());
-    return rtl.generate() + code;
+}
+
+function compile(text, handleErrors){
+    var result = "";
+    var rtl = new RTL();
+    var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
+    compileImpl(
+            text,
+            function(moduleResolver){
+                return new Context.Context(new Code.Generator(),
+                                           moduleCode,
+                                           rtl,
+                                           moduleResolver);
+            },
+            handleErrors,
+            function(name, code){result += code;});
+
+    var rtlCode = rtl.generate();
+    if (rtlCode)
+        result = rtlCode + result;
+    return result;
+}
+
+function compileNodejs(text, handleErrors, handleCompiledModule){
+    var rtl = new RTL();
+    var code = new Code.Generator();
+    var moduleCode = function(name, imports){return new Nodejs.ModuleGenerator(name, imports);};
+
+    compileImpl(
+            text,
+            function(moduleResolver){return new Context.Context(code, moduleCode, rtl, moduleResolver);},
+            handleErrors,
+            handleCompiledModule);
+
+    var rtlCode = rtl.generate();
+    if (rtlCode)
+        handleCompiledModule(rtl.name(), rtlCode);
 }
 
 exports.compileModule = compileModule;
 exports.compile = compile;
+exports.compileNodejs = compileNodejs;

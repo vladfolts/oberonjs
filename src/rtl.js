@@ -123,13 +123,14 @@ exports.RTL = Class.extend({
             this[fName + "Id"] = this.__makeIdOnDemand(fName);
         }
     },
+    name: function(){return "RTL$";},
     baseClass: function(){
         if (!this.__entries["extend"])
             this.__entries.extend = Class.extend;
-        return "RTL$";
+        return this.name();
     },
     generate: function(){
-        var result = "var RTL$ = {\n";
+        var result = "var " + this.name() + " = {\n";
         var firstEntry = true;
         for (var name in this.__entries){
             if (!firstEntry)
@@ -141,7 +142,7 @@ exports.RTL = Class.extend({
         if (!firstEntry)
             result += "\n};\n";
         else
-            result = "";
+            result = undefined;
         
         return result;
     },
@@ -149,7 +150,7 @@ exports.RTL = Class.extend({
         return function(){
             if (!this.__entries[name])
                 this.__entries[name] = impl[name];
-            return "RTL$." + name;
+            return this.name() + "." + name;
         };
     },
     __makeOnDemand: function(name){

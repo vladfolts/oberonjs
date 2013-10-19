@@ -11,8 +11,8 @@ function normalizeLineEndings(text){
 }
 
 function compareResults(result, name, dirs){
-    fs.writeFileSync(dirs.output + "/" + name, result);
-    var expected = fs.readFileSync(dirs.expected + "/" + name, "utf8");
+    fs.writeFileSync(path.join(dirs.output, name), result);
+    var expected = fs.readFileSync(path.join(dirs.expected, name), "utf8");
     if (normalizeLineEndings(result) != normalizeLineEndings(expected))
         throw new Test.TestError("Failed");
 }
@@ -24,6 +24,27 @@ function compile(src){
     if (errors)
         throw new Test.TestError(errors);
     return result;
+}
+
+function compileNodejs(src, dirs){
+    var text = fs.readFileSync(src, "utf8");
+    
+    var subdir = path.basename(src);
+    subdir = subdir.substr(0, subdir.length - path.extname(subdir).length);
+
+    var outDir = path.join(dirs.output, subdir);
+    fs.mkdirSync(outDir);
+
+    var errors = "";
+    oc.compileNodejs(text,
+                     function(e){errors += e;},
+                     function(name, code){
+                        var filePath = path.join(outDir, name + ".js");
+                        fs.writeFileSync(filePath, code);
+                     }
+                    );
+    if (errors)
+        throw new Test.TestError(errors);
 }
 
 function expectOk(src, dirs){
@@ -60,11 +81,22 @@ function makeTests(test, dirs){
     var tests = {};
     for(var i = 0; i < sources.length; ++i){
         var source = sources[i];
-        var path = dirs.input + "/" + source;
-        if (fs.statSync(path).isFile())
-            tests[source] = makeTest(test, path, dirs);
+        var filePath = path.join(dirs.input, source);
+        if (fs.statSync(filePath).isFile())
+            tests[source] = makeTest(test, filePath, dirs);
     }
     return tests;
+}
+
+function rmTree(root){
+    fs.readdirSync(root).forEach(function(file){
+        var filePath = path.join(root, file);
+        if (fs.statSync(filePath).isDirectory())
+            rmTree(filePath);
+        else
+            fs.unlinkSync(filePath);
+    });
+    fs.rmdirSync(root);
 }
 
 function main(){
@@ -79,22 +111,26 @@ function main(){
     var okDirs = {input: "input", output: "output", expected: "expected"};
     var errDirs = {};
     var runDirs = {};
+    var nodejsDirs = {};
     var p;
-    for(p in okDirs)
-        errDirs[p] = okDirs[p] + "/errors";
-    for(p in okDirs)
-        runDirs[p] = okDirs[p] + "/run";
+    for(p in okDirs){
+        errDirs[p] = path.join(okDirs[p], "errors");
+        runDirs[p] = path.join(okDirs[p], "run");
+        nodejsDirs[p] = path.join(okDirs[p], "nodejs");
+    }
 
-    if (!fs.existsSync(okDirs.output))
-        fs.mkdirSync(okDirs.output);
-    if (!fs.existsSync(errDirs.output))
-        fs.mkdirSync(errDirs.output);
-    if (!fs.existsSync(runDirs.output))
-        fs.mkdirSync(runDirs.output);
+    var dirsSet = [okDirs, errDirs, runDirs, nodejsDirs];
+    for(var i = 0; i < dirsSet.length; ++i){
+        var output = dirsSet[i].output;
+        if (fs.existsSync(output))
+            rmTree(output);
+        fs.mkdirSync(output);
+    }
 
-    Test.run({"expect OK": makeTests(expectOk, okDirs),
+    Test.run({"expect OK": makeTests(expectOk, okDirs, compile),
               "expect compile error": makeTests(expectError, errDirs),
-              "run": makeTests(run, runDirs)}
+              "run": makeTests(run, runDirs),
+              "nodejs": makeTests(compileNodejs, nodejsDirs)}
             );
 }
 

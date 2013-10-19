@@ -1683,64 +1683,27 @@ exports.TypeCast = ChainedContext.extend({
     }
 });
 
-function genExport(symbol){
-    if (symbol.isVariable())
-        return "function(){return " + symbol.id() + ";}";
-    if (symbol.isType()){
-        var type = symbol.info().type();
-        if (!(type instanceof Type.Record || type instanceof Type.Pointer))
-            return undefined;
-    }
-    return symbol.id();
-}
-
-function genExports(exports, gen){
-    var result = "";
-    for(var access in exports){
-        var e = exports[access];
-        var code = genExport(e);
-        if (code){
-            if (result.length)
-                result += ",\n";
-            result += "\t" + e.id() + ": " + code;
-        }
-    }
-    if (!result.length)
-        return;
-    gen.write("return {\n" + result + "\n}\n");
-}
-
 exports.ModuleDeclaration = ChainedContext.extend({
     init: function ModuleDeclarationContext(context){
         ChainedContext.prototype.init.call(this, context);
         this.__name = undefined;
         this.__imports = {};
         this.__moduleScope = undefined;
+        this.__moduleGen = undefined;
     },
     setIdent: function(id){
+        var parent = this.parent();
         if (this.__name === undefined ) {
             this.__name = id;
             this.__moduleScope = new Scope.Module(id);
-            this.parent().pushScope(this.__moduleScope);
+            parent.pushScope(this.__moduleScope);
         }
         else if (id === this.__name){
-            var scope = this.parent().currentScope();
+            var scope = parent.currentScope();
             scope.strip();
             var exports = scope.exports();
             scope.module().info().defineExports(exports);
-            var gen = this.codeGenerator();
-            genExports(exports, gen);
-            gen.write("}(");
-
-            var modules = this.__imports;
-            var importList = "";
-            for(var name in modules){
-                if (importList.length)
-                    importList += ", ";
-                importList += name;
-            }
-            gen.write(importList);
-            gen.write(");\n");
+            this.codeGenerator().write(this.__moduleGen.epilog(exports));
         }
         else
             throw new Errors.Error("original module name '" + this.__name + "' expected, got '" + id + "'" );
@@ -1751,18 +1714,19 @@ exports.ModuleDeclaration = ChainedContext.extend({
         return this.parent().findModule(name);
     },
     handleImport: function(modules){
-        var gen = this.codeGenerator();
-        gen.write("var " + this.__name + " = function " + "(");
         var scope = this.currentScope();
+        var moduleAliases = {};
         for(var i = 0; i < modules.length; ++i){
             var s = modules[i];
-            this.__imports[s.info().name()] = s;
+            var name = s.info().name();
+            this.__imports[name] = s;
             scope.addSymbol(s);
-            if (i)
-                gen.write(", ");
-            gen.write(s.id());
+            moduleAliases[name] = s.id();
         }
-        gen.write("){\n");
+        this.__moduleGen = this.parent().makeModuleGenerator(
+                this.__name,
+                moduleAliases);
+        this.codeGenerator().write(this.__moduleGen.prolog());
     },
     qualifyScope: function(scope){
         if (scope != this.__moduleScope && scope instanceof Scope.Module)
@@ -1825,8 +1789,9 @@ var ModuleImport = ChainedContext.extend({
 exports.ModuleImport = ModuleImport;
 
 exports.Context = Class.extend({
-    init: function Context(code, rtl, moduleResolver){
+    init: function Context(code, moduleGeneratorFactory, rtl, moduleResolver){
         this.__code = code;
+        this.__moduleGeneratorFactory = moduleGeneratorFactory;
         this.__scopes = [];
         this.__gen = 0;
         this.__vars = [];
@@ -1859,6 +1824,9 @@ exports.Context = Class.extend({
     handleExpression: function(){},
     handleLiteral: function(){},
     codeGenerator: function(){return this.__code;},
+    makeModuleGenerator: function(name, imports){
+        return this.__moduleGeneratorFactory(name, imports);
+    },
     rtl: function(){return this.__rtl;},
     findModule: function(name){
         if (name == "JS"){

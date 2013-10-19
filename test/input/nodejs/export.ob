@@ -1,0 +1,13 @@
+MODULE m;
+CONST
+    ci* = 123;
+TYPE
+    T* = PROCEDURE;
+VAR
+    p*: T;
+    vi*: INTEGER;
+
+PROCEDURE p1*;
+END p1;
+
+END m.

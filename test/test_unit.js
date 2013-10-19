@@ -21,9 +21,19 @@ function parseInContext(grammar, s, context){
         throw new Errors.Error("not parsed");
 }
 
+var TestModuleGenerator = Class.extend({
+    init: function TestModuleGenerator(){},
+    prolog: function(){return undefined;},
+    epilog: function(){return undefined;}
+});
+
 var TestContext = Context.Context.extend({
     init: function TestContext(){
-        Context.Context.prototype.init.call(this, Code.nullGenerator, new RTL());
+        Context.Context.prototype.init.call(
+                this,
+                Code.nullGenerator,
+                function(){return new TestModuleGenerator();},
+                new RTL());
         this.pushScope(new Scope.Module("test"));
     },
     qualifyScope: function(){return "";}
@@ -138,16 +148,22 @@ function testWithGrammar(grammar, pass, fail){
         fail);
 }
 
+var TestContextWithModule = TestContext.extend({
+    init: function(module){
+        TestContext.prototype.init.call(this);
+        this.__module = module;
+    },
+    findModule: function(){return this.__module;}
+});
+
 function testWithModule(src, pass, fail){
     return testWithSetup(
         function(){
-            var rtl = new RTL();
-            var imported = oc.compileModule(new Stream(src), rtl);
+            var imported = oc.compileModule(new Stream(src), makeContext());
             var module = imported.symbol().info();
             return setup(function(s){
                 oc.compileModule(new Stream(s),
-                                 rtl,
-                                 function(){return module;});
+                                 new TestContextWithModule(module));
             });},
         pass,
         fail);
