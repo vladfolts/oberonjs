@@ -6,6 +6,7 @@ TYPE
 	T* = RECORD(Base) END;
 	TP* = POINTER TO T;
 	TPA* = POINTER TO RECORD END;
+    TPB* = POINTER TO RECORD(Base) END;
 VAR
     i*: INTEGER;
     pr*: POINTER TO RECORD i: INTEGER END;
@@ -20,6 +21,13 @@ BEGIN
     NEW(result);
     RETURN result
 END makeTPA;
+
+PROCEDURE makeTPB*(): TPB;
+VAR result: TPB;
+BEGIN
+    NEW(result);
+    RETURN result
+END makeTPB;
 
 BEGIN
     NEW(pr);
@@ -60,10 +68,14 @@ VAR
     a: ARRAY 3 OF m2.Base;
     ptr: m2.TP;
     pb: POINTER TO m2.Base;
+    pTPB: m2.TPB;
 BEGIN
     NEW(ptr);
     pb := ptr;
     pb(m2.TP).i := 123;
+
+    pb := m2.makeTPB();
+    pTPB := pb(m2.TPB);
 
     m2.p();
 END m3.

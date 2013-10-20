@@ -20,7 +20,11 @@ var TypeId = Id.extend({
     },
     type: function(){return this._type;},
     description: function(){return 'type ' + this._type.description();},
-    strip: function(){this._type = undefined;}
+    strip: function(){
+        this._type = this._type instanceof Record 
+                   ? new NonExportedRecord(this._type.cons(), this._type.scope(), this._type.baseType())
+                   : undefined;
+    }
 });
 
 var ForwardTypeId = TypeId.extend({
@@ -107,8 +111,8 @@ exports.Pointer = BasicType.extend({
     baseType: function(){return this.__base.type();}
 });
 
-exports.Record = BasicType.extend({
-    init: function RecordType(name, cons, scope){
+var Record = BasicType.extend({
+    init: function Type$Record(name, cons, scope){
         BasicType.prototype.init.call(this, name);
         this.__cons = cons;        
         this.__scope = scope;
@@ -139,6 +143,13 @@ exports.Record = BasicType.extend({
     setBaseType: function(type) {this.__base = type;},
     description: function(){
         return this.name() || "anonymous RECORD";
+    }
+});
+
+var NonExportedRecord = Record.extend({
+    init: function Scope$NonExportedRecord(cons, scope, base){
+        Record.prototype.init.call(this, undefined, cons, scope);
+        this.setBaseType(base);
     }
 });
 
@@ -215,6 +226,8 @@ exports.Variable = Variable;
 exports.VariableRef = VariableRef;
 exports.ExportedVariable = ExportedVariable;
 exports.Module = Module;
+exports.NonExportedRecord = NonExportedRecord;
+exports.Record = Record;
 exports.Type = Type;
 exports.TypeId = TypeId;
 exports.ForwardTypeId = ForwardTypeId;
