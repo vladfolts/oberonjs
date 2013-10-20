@@ -1,4 +1,4 @@
-var RTL$ = require("RTL$.js");
+var RTL$ = require("RTL$.js").RTL$;
 var ci = 123;
 var Base = RTL$.extend({
 	init: function Base(){
@@ -32,13 +32,13 @@ function makeTPA(){
 	return result;
 }
 pr = new anonymous$1();
-exports.ci = ci
-exports.Base = Base
-exports.T = T
-exports.TP = TP
-exports.TPA = TPA
-exports.i = function(){return i;}
-exports.pr = function(){return pr;}
-exports.pr2 = function(){return pr2;}
-exports.p = p
-exports.makeTPA = makeTPA
+exports.ci = ci;
+exports.Base = Base;
+exports.T = T;
+exports.TP = TP;
+exports.TPA = TPA;
+exports.i = function(){return i;};
+exports.pr = function(){return pr;};
+exports.pr2 = function(){return pr2;};
+exports.p = p;
+exports.makeTPA = makeTPA;

@@ -41,3 +41,5 @@ var RTL$ = {
         return result;
     }
 };
+
+exports.RTL$ = RTL$;

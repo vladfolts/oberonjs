@@ -60,7 +60,8 @@ function compile(text, handleErrors, handleCompiledModule){
             handleErrors,
             function(name, code){
                 if (rtlCodeWatcher.used()){
-                    code = "var RTL$ = require(\"RTL$.js\").RTL$;\n" + code;
+                    code = "var " + rtl.name() + " = require(\"" + rtl.name() 
+                         + ".js\")." + rtl.name() + ";\n" + code;
                     rtlCodeWatcher.reset();
                 }
                 handleCompiledModule(name, code);

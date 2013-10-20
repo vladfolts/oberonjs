@@ -1,5 +1,5 @@
-var RTL$ = require("RTL$.js");
-var m1 = require(m1.js);
+var RTL$ = require("RTL$.js").RTL$;
+var m1 = require("m1.js");
 var r = new m1.T();
 var pb = null;
 var ptr = null;
