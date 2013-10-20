@@ -26,6 +26,7 @@ Class.extend = function extend(methods){
     };
 
 var impl = {
+    extend: Class.extend,
     typeGuard: function(from, to){
         if (!(from instanceof to))
             throw new Error("typeguard assertion failed");
@@ -114,21 +115,32 @@ var impl = {
     }
 };
 
+var Code = Class.extend({
+    init: function RTL$Code(){
+        var names = [];
+        for(var f in impl)
+            names.push(f);
+        this.__functions = names;
+    },
+    functions: function(){return this.__functions;},
+    get: function(func){return impl[func];}
+});
+
+var defaultCode = new Code();
+
 exports.Class = Class;
 exports.RTL = Class.extend({
-    init: function RTL(){
+    init: function RTL(code){
         this.__entries = {};
-        for(var fName in impl){
-            this[fName] = this.__makeOnDemand(fName);
-            this[fName + "Id"] = this.__makeIdOnDemand(fName);
+        this.__code = code || defaultCode;        
+        var names = this.__code.functions();
+        for(var i = 0; i < names.length; ++i){
+            var name = names[i];
+            this[name] = this.__makeOnDemand(name);
+            this[name + "Id"] = this.__makeIdOnDemand(name);
         }
     },
     name: function(){return "RTL$";},
-    baseClass: function(){
-        if (!this.__entries["extend"])
-            this.__entries.extend = Class.extend;
-        return this.name();
-    },
     generate: function(){
         var result = "var " + this.name() + " = {\n";
         var firstEntry = true;
@@ -149,7 +161,7 @@ exports.RTL = Class.extend({
     __makeIdOnDemand: function(name){
         return function(){
             if (!this.__entries[name])
-                this.__entries[name] = impl[name];
+                this.__entries[name] = this.__code.get(name);
             return this.name() + "." + name;
         };
     },
@@ -167,3 +179,5 @@ exports.RTL = Class.extend({
     }
 
 });
+
+exports.Code = Code;

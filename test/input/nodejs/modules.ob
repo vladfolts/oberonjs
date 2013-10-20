@@ -1,0 +1,69 @@
+MODULE m1;
+CONST
+    ci* = 123;
+TYPE
+	Base* = RECORD i: INTEGER END;
+	T* = RECORD(Base) END;
+	TP* = POINTER TO T;
+	TPA* = POINTER TO RECORD END;
+VAR
+    i*: INTEGER;
+    pr*: POINTER TO RECORD i: INTEGER END;
+    pr2*: POINTER TO T;
+
+PROCEDURE p*();
+END p;
+
+PROCEDURE makeTPA*(): TPA;
+VAR result: TPA;
+BEGIN
+    NEW(result);
+    RETURN result
+END makeTPA;
+
+BEGIN
+    NEW(pr);
+END m1.
+
+MODULE m2;
+IMPORT m1;
+
+VAR 
+	r: m1.T;
+	pb: POINTER TO m1.Base;
+	ptr: m1.TP;
+	ptrA: m1.TPA;
+
+PROCEDURE p(i: INTEGER);
+END p;
+
+PROCEDURE ref(VAR i: INTEGER);
+END ref;
+
+BEGIN
+	NEW(ptr);
+	pb := ptr;
+	pb(m1.TP).i := 123;
+
+	ptrA := m1.makeTPA();
+
+	m1.p();
+    p(m1.i);
+    p(m1.ci);
+    ref(m1.pr2.i);
+END m2.
+
+MODULE m3;
+IMPORT m1 := m2, m2 := m1;
+VAR 
+    r: m2.T;
+    a: ARRAY 3 OF m2.Base;
+    ptr: m2.TP;
+    pb: POINTER TO m2.Base;
+BEGIN
+    NEW(ptr);
+    pb := ptr;
+    pb(m2.TP).i := 123;
+
+    m2.p();
+END m3.
