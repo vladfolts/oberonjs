@@ -57,6 +57,11 @@ var TPA = RTL$.extend({
 	init: function TPA(){
 	}
 });
+var TPB = Base.extend({
+	init: function TPB(){
+		Base.prototype.init.call(this);
+	}
+});
 var i = 0;
 var anonymous$1 = RTL$.extend({
 	init: function anonymous$1(){
@@ -74,18 +79,25 @@ function makeTPA(){
 	result = new TPA();
 	return result;
 }
+
+function makeTPB(){
+	var result = null;
+	result = new TPB();
+	return result;
+}
 pr = new anonymous$1();
 return {
 	ci: ci,
 	Base: Base,
 	T: T,
-	TP: TP,
 	TPA: TPA,
+	TPB: TPB,
 	i: function(){return i;},
 	pr: function(){return pr;},
 	pr2: function(){return pr2;},
 	p: p,
-	makeTPA: makeTPA
+	makeTPA: makeTPA,
+	makeTPB: makeTPB
 }
 }();
 var m2 = function (m1){
@@ -113,8 +125,11 @@ var r = new m2.T();
 var a = RTL$.makeArray(3, function(){return new m2.Base();});
 var ptr = null;
 var pb = null;
+var pTPB = null;
 ptr = new m2.T();
 pb = ptr;
 RTL$.typeGuard(pb, m2.T).i = 123;
+pb = m2.makeTPB();
+pTPB = RTL$.typeGuard(pb, m2.TPB);
 m2.p();
 }(m2, m1);
