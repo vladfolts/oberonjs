@@ -307,7 +307,7 @@ exports.predefined = [
                     throw new Errors.Error("POINTER variable expected, got '"
                                          + type.name() + "'");
                 this.__baseType = type.baseType();
-                if (this.__baseType === undefined)
+                if (this.__baseType instanceof Type.NonExportedRecord)
                     throw new Errors.Error("non-exported RECORD type cannot be used in NEW");
                 return new CheckArgumentResult(type, false);
             },

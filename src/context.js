@@ -343,8 +343,8 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error("POINTER TO type expected, got '"
                                  + this.__currentType.description() + "'");
         this.__currentType = this.__currentType.baseType();
-        if (!this.__currentType)
-            throw new Errors.Error("non-exported RECORD type cannot be dereferenced");
+        if (this.__currentType instanceof Type.NonExportedRecord)
+            throw new Errors.Error("POINTER TO non-exported RECORD type cannot be dereferenced");
     },
     handleTypeCast: function(type){
         if (this.__currentType instanceof Type.Record){

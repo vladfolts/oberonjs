@@ -88,7 +88,8 @@ function genExport(symbol){
         return "function(){return " + symbol.id() + ";}";
     if (symbol.isType()){
         var type = symbol.info().type();
-        if (!(type instanceof Type.Record || type instanceof Type.Pointer))
+        if (!(type instanceof Type.Record 
+              || (type instanceof Type.Pointer && !type.baseType().name())))
             return undefined;
     }
     return symbol.id();

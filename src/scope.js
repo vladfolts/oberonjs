@@ -77,12 +77,6 @@ var ProcedureScope = Scope.extend({
     }
 });
 
-var TypeRef = Class.extend({
-    init: function(type){this.__type = type;},
-    get: function(){return this.__type;},
-    reset: function(){this.__type = undefined;}
-});
-
 var CompiledModule = Type.Module.extend({
     init: function Scope$CompiledModule(id){
         Type.Module.prototype.init.call(this, id);

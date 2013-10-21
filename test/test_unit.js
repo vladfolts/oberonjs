@@ -388,11 +388,20 @@ var testSuite = {
     ),
 "POINTER assignment": testWithContext(
     context(Grammar.statement,
-            "TYPE Base = RECORD END; Derived = RECORD (Base) END;"
-            + "VAR p1, p2: POINTER TO RECORD END; pBase: POINTER TO Base; pDerived: POINTER TO Derived;"),
+            "TYPE Base = RECORD END;"
+                + "Derived = RECORD (Base) END;"
+                + "PDerivedAnonymous = POINTER TO RECORD(Base) END;"
+            + "VAR p1, p2: POINTER TO RECORD END;"
+                + "pBase: POINTER TO Base; pDerived: POINTER TO Derived;"
+                + "pDerivedAnonymous: PDerivedAnonymous;"
+                + "pDerivedAnonymous2: POINTER TO RECORD(Base) END;"
+                ),
     pass("p1 := NIL",
          "p1 := p2",
-         "pBase := pDerived"),
+         "pBase := pDerived",
+         "pBase := pDerivedAnonymous",
+         "pBase := pDerivedAnonymous2"
+         ),
     fail(["p1 := pBase",
           "type mismatch: 'p1' is 'POINTER TO anonymous RECORD' and cannot be assigned to 'POINTER TO Base' expression"],
           ["pDerived := pBase",
@@ -1336,8 +1345,17 @@ var testSuite = {
         )
     ),
 "import pointer type": testWithModule(
-    "MODULE test; TYPE TP* = POINTER TO RECORD END; END test.",
-    pass("MODULE m; IMPORT test; VAR p: test.TP; END m.")
+    "MODULE test;"
+    + "TYPE TPAnonymous1* = POINTER TO RECORD END; TPAnonymous2* = POINTER TO RECORD END;"
+        + "Base* = RECORD END; TPDerived* = POINTER TO RECORD(Base) END;"
+    + "END test.",
+    pass("MODULE m; IMPORT test; VAR p1: test.TPAnonymous1; p2: test.TPAnonymous2; END m.",
+         "MODULE m; IMPORT test;"
+            + "VAR pb: POINTER TO test.Base; pd: test.TPDerived;"
+            + "BEGIN pb := pd; END m."),
+    fail(["MODULE m; IMPORT test; VAR p1: test.TPAnonymous1; p2: test.TPAnonymous2; BEGIN p1 := p2; END m.",
+          "type mismatch: 'p1' is 'TPAnonymous1' and cannot be assigned to 'TPAnonymous2' expression"]
+         )
     ),
 "import array type": testWithModule(
     "MODULE test; TYPE TA* = ARRAY 3 OF INTEGER; END test.",
@@ -1357,11 +1375,24 @@ var testSuite = {
          ["MODULE m; IMPORT test; VAR p: test.TP; BEGIN NEW(p) END m.",
           "non-exported RECORD type cannot be used in NEW"])
     ),
+"imported pointer type cannot be dereferenced if base type is not exported (even if base of base type is exported)": testWithModule(
+    "MODULE test;"
+    + "TYPE B* = RECORD i: INTEGER END; T = RECORD(B) END; TP* = POINTER TO T;"
+    + "TPAnonymous* = POINTER TO RECORD(B) END;"
+    + "PROCEDURE makeTP*(): TP; VAR result: TP; BEGIN NEW(result); RETURN result END makeTP;"
+    + "PROCEDURE makeTPA*(): TPAnonymous; VAR result: TPAnonymous; BEGIN NEW(result); RETURN result END makeTPA;"
+    + "END test.",
+    pass(),
+    fail(["MODULE m; IMPORT test; VAR p: test.TPAnonymous; BEGIN p := test.makeTPA(); p.i := 123; END m.",
+          "POINTER TO non-exported RECORD type cannot be dereferenced"],
+         ["MODULE m; IMPORT test; VAR p: test.TP; BEGIN p := test.makeTP(); p.i := 123; END m.",
+          "POINTER TO non-exported RECORD type cannot be dereferenced"])
+    ),
 "imported pointer variable: anonymous record field cannot be used": testWithModule(
     "MODULE test; VAR p*: POINTER TO RECORD i: INTEGER END; END test.",
     pass(),
     fail(["MODULE m; IMPORT test; BEGIN ASSERT(test.p.i = 0) END m.",
-          "non-exported RECORD type cannot be dereferenced"])
+          "POINTER TO non-exported RECORD type cannot be dereferenced"])
     ),
 "syntax errors": testWithGrammar(
     Grammar.module,
