@@ -6,19 +6,29 @@ var Procedure = require("procedure.js");
 var Symbol = require("symbol.js");
 var Type = require("type.js");
 
+var AnyTypeProc = Type.Procedure.extend({
+    init: function AnyTypeProc(){
+        Type.Procedure.prototype.init.call("PROCEDURE: JS.var");
+    },
+    result: function(){return any;}
+});
+
+var anyProc = new AnyTypeProc();
+
 var AnyType = Type.Basic.extend({
     init: function AnyType(){
-        Type.Basic.prototype.init.call(this, "ANY");
+        Type.Basic.prototype.init.call(this, "JS.var");
     },
     findSymbol: function(){return this;},
     callGenerator: function(context, id){
-        return new Procedure.CallGenerator(context, id);
+        return new Procedure.CallGenerator(context, id, anyProc);
     }
 });
 
 var any = new AnyType();
 
 var doProcId = "do$";
+var varTypeId = "var$";
 
 var doProcSymbol = (function(){
     var description = "JS predefined procedure 'do'";
@@ -62,6 +72,10 @@ var doProcSymbol = (function(){
     return new Symbol.Symbol(doProcId, new ProcType());
 })();
 
+var varTypeSymbol = function(){
+    return new Symbol.Symbol(varTypeId, new Type.TypeId(any));
+}();
+
 var JSModule = Type.Module.extend({
     init: function Module$JSModule(){
         Type.Module.prototype.init.call(this);
@@ -70,7 +84,8 @@ var JSModule = Type.Module.extend({
     findSymbol: function(id){
         return new Symbol.Found(
             id == doProcId ? doProcSymbol
-                           : new Symbol.Symbol(id, any));
+          : id == varTypeId ? varTypeSymbol
+          : new Symbol.Symbol(id, any));
     }
 });
 

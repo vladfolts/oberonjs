@@ -1289,6 +1289,15 @@ var testSuite = {
           "string is expected as an argument of JS predefined procedure 'do', got ARRAY 10 OF CHAR"]
           )
     ),
+"JS.var": testWithGrammar(
+    Grammar.module,
+    pass("MODULE m; IMPORT JS; VAR v: JS.var; END m.",
+         "MODULE m; IMPORT JS; VAR v: JS.var; BEGIN v := JS.f(); END m.",
+         "MODULE m; IMPORT JS; VAR v: JS.var; BEGIN v := JS.f1(); JS.f2(v); END m."
+         ),
+    fail(["MODULE m; IMPORT JS; VAR v: JS.var; i: INTEGER; BEGIN i := v; END m.",
+          "type mismatch: 'i' is 'INTEGER' and cannot be assigned to 'JS.var' expression"])
+    ),
 "import unknown module": testWithGrammar(
     Grammar.module,
     pass(),

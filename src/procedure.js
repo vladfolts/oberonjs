@@ -42,7 +42,7 @@ var ProcCallGenerator = Class.extend({
         var pos = this.__argumentsCount++;
         var isVarArg = false;
         var convert;
-        if (this.__type){
+        if (this.__type.args){
             var expectedArguments = this.__type.args();
             if (pos >= expectedArguments.length )
                 // ignore, handle error after parsing all arguments
@@ -61,7 +61,7 @@ var ProcCallGenerator = Class.extend({
         this.writeCode(prefix + code);
     },
     end: function(){
-        if (this.__type)
+        if (this.__type.args)
             this.checkArgumentsCount(this.__argumentsCount);
         return this.callExpression();
     },
