@@ -5,6 +5,9 @@ var Code = require("code.js");
 var Context = require("context.js");
 var oc = require("oc.js");
 
+var fs = require("fs");
+var path = require("path");
+
 var ModuleGenerator = Rtl.Class.extend({
     init: function Nodejs$ModuleGenerator(name, imports){
         this.__name = name;
@@ -45,13 +48,24 @@ var RtlCodeUsingWatcher = Rtl.Code.extend({
     reset: function(){this.__used = false;}
 });
 
-function compile(text, handleErrors, handleCompiledModule){
+function writeCompiledModule(name, code, outDir){
+    var filePath = path.join(outDir, name + ".js");
+    fs.writeFileSync(filePath, code);
+    }
+
+function compile(sources, handleErrors, outDir){
     var rtlCodeWatcher = new RtlCodeUsingWatcher();
     var rtl = new Rtl.RTL(rtlCodeWatcher);
     var moduleCode = function(name, imports){return new ModuleGenerator(name, imports);};
 
-    oc.compileWithContext(
-            text,
+    oc.compileModules(
+            sources,
+            function(name){
+                var fileName = name;
+                if (!path.extname(fileName).length)
+                    fileName += ".ob";
+                return fs.readFileSync(fileName, "utf8");
+            },
             function(moduleResolver){return new Context.Context(
                 new Code.Generator(),
                 moduleCode,
@@ -64,13 +78,13 @@ function compile(text, handleErrors, handleCompiledModule){
                          + ".js\")." + rtl.name() + ";\n" + code;
                     rtlCodeWatcher.reset();
                 }
-                handleCompiledModule(name, code);
+                writeCompiledModule(name, code, outDir);
             });
 
     var rtlCode = rtl.generate();
     if (rtlCode){
         rtlCode += "\nexports." + rtl.name() + " = " + rtl.name() + ";";
-        handleCompiledModule(rtl.name(), rtlCode);
+        writeCompiledModule(rtl.name(), rtlCode, outDir);
     }
 }
 

@@ -45,39 +45,81 @@ function compileModule(stream, context, handleErrors){
             scope.exports());
 }
 
-function compileWithContext(text, contextFactory, handleErrors, handleCompiledModule){
+function compileModulesFromText(
+        text,
+        contextFactory,
+        resolveModule,
+        handleCompiledModule,
+        handleErrors){
     var stream = new Stream(text);
-    var modules = {};
-    function resolveModule(name){return modules[name];}
-
     do {
         var context = contextFactory(resolveModule);
         var module = compileModule(stream, context, handleErrors);
         if (!module)
             return;
+        handleCompiledModule(module);
+        Lexer.skipSpaces(stream);
+    }
+    while (!stream.eof());
+}
+
+var ModuleResolver = Class.extend({
+    init: function Oc$ModuleResolver(compile, handleCompiledModule, moduleReader){
+        this.__modules = {};
+        this.__compile = compile;
+        this.__moduleReader = moduleReader;
+        this.__handleCompiledModule = handleCompiledModule;
+    },
+    compile: function(text){
+        this.__compile(text, this.__resolveModule.bind(this), this.__handleModule.bind(this));
+    },
+    __resolveModule: function(name){
+        if (this.__moduleReader && !this.__modules[name])
+            this.compile(this.__moduleReader(name));
+        return this.__modules[name];
+    },
+    __handleModule: function(module){
         var symbol = module.symbol();
         var moduleName = symbol.id();
-        modules[moduleName] = symbol.info();
-        handleCompiledModule(moduleName, module.code());
-        Lexer.skipSpaces(stream);
-    } 
-    while (!stream.eof());
+        this.__modules[moduleName] = symbol.info();
+        this.__handleCompiledModule(moduleName, module.code());
+    }
+});
+
+function makeResolver(contextFactory, handleCompiledModule, handleErrors, moduleReader){
+    return new ModuleResolver(
+        function(text, resolveModule, handleModule){
+            compileModulesFromText(text,
+                                   contextFactory,
+                                   resolveModule,
+                                   handleModule,
+                                   handleErrors);
+        },
+        handleCompiledModule,
+        moduleReader
+        );
+}
+
+function compileModules(names, moduleReader, contextFactory, handleErrors, handleCompiledModule){
+    var resolver = makeResolver(contextFactory, handleCompiledModule, handleErrors, moduleReader);
+    names.forEach(function(name){ resolver.compile(moduleReader(name)); });
 }
 
 function compile(text, handleErrors){
     var result = "";
     var rtl = new RTL();
     var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
-    compileWithContext(
-            text,
+    var resolver = makeResolver(
             function(moduleResolver){
                 return new Context.Context(new Code.Generator(),
                                            moduleCode,
                                            rtl,
                                            moduleResolver);
             },
-            handleErrors,
-            function(name, code){result += code;});
+            function(name, code){result += code;},
+            handleErrors
+            );
+    resolver.compile(text);
 
     var rtlCode = rtl.generate();
     if (rtlCode)
@@ -87,4 +129,4 @@ function compile(text, handleErrors){
 
 exports.compileModule = compileModule;
 exports.compile = compile;
-exports.compileWithContext = compileWithContext;
+exports.compileModules = compileModules;

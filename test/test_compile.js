@@ -28,8 +28,6 @@ function compile(src){
 }
 
 function compileNodejs(src, dirs){
-    var text = fs.readFileSync(src, "utf8");
-    
     var subdir = path.basename(src);
     subdir = subdir.substr(0, subdir.length - path.extname(subdir).length);
 
@@ -37,13 +35,7 @@ function compileNodejs(src, dirs){
     fs.mkdirSync(outDir);
 
     var errors = "";
-    nodejs.compile(text,
-                   function(e){errors += e;},
-                   function(name, code){
-                        var filePath = path.join(outDir, name + ".js");
-                        fs.writeFileSync(filePath, code);
-                     }
-                    );
+    nodejs.compile([src], function(e){errors += e;}, outDir);
     if (errors)
         throw new Test.TestError(errors);
 
