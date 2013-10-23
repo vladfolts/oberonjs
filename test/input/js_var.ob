@@ -1,0 +1,8 @@
+MODULE m;
+IMPORT JS;
+VAR 
+	v: JS.var;
+BEGIN
+	v := JS.Date();
+	JS.console.info(v);
+END m.

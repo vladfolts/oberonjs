@@ -1528,7 +1528,8 @@ exports.StatementProcedureCall = ProcedureCall.extend({
     endParse: function(){
         ProcedureCall.prototype.endParse.call(this);
         var e = this.callExpression();
-        if  (e.type())
+        var type = e.type();
+        if  (type && !(type instanceof Module.AnyType ))
             throw new Errors.Error("procedure returning a result cannot be used as a statement");
         this.parent().codeGenerator().write(e.code());
     }
