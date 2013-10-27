@@ -1,0 +1,42 @@
+MODULE JsString;
+IMPORT JS;
+
+TYPE
+    Type* = POINTER TO RECORD END;
+
+PROCEDURE len*(self: Type): INTEGER;
+VAR result: INTEGER;
+BEGIN
+    JS.do("result = self.length");
+    RETURN result
+END len;
+
+PROCEDURE at*(self: Type; pos: INTEGER): CHAR;
+VAR result: CHAR;
+BEGIN
+    JS.do("result = self[pos]")
+    RETURN result
+END at;
+
+PROCEDURE indexOf*(self: Type; c: CHAR): INTEGER;
+VAR result: INTEGER;
+BEGIN
+    JS.do("result = self.indexOf(JS.String.fromCharCode(c))")
+    RETURN result
+END indexOf;
+
+PROCEDURE indexOfFrom*(self: Type; c: CHAR; pos: INTEGER): INTEGER;
+VAR result: INTEGER;
+BEGIN
+    JS.do("result = self.indexOf(JS.String.fromCharCode(c), pos)")
+    RETURN result
+END indexOfFrom;
+
+PROCEDURE substr*(self: Type; pos: INTEGER; len: INTEGER): Type;
+VAR result: Type;
+BEGIN
+    JS.do("result = self.substr(pos, len)")
+    RETURN result
+END substr;
+
+END JsString.

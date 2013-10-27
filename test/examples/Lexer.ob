@@ -1,0 +1,7 @@
+MODULE Lexer;
+
+PROCEDURE isDigit*(c: CHAR): BOOLEAN;
+    RETURN (c >= "0") OR (c <= "9")
+END isDigit;
+
+END Lexer.

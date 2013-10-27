@@ -31,7 +31,7 @@ def process(path, out, resolved, resolving, dirs):
 	if module_name in resolving:
 		raise Exception('cyclic import detected: "%s"' % module_name)
 	result = 'imports["%s"] = {};\n' % path
-	result += '(function %s(exports){\n' % module_name
+	result += '(function module$%s(exports){\n' % module_name
 	src_path = resolve_path(path, dirs)
 	with open(src_path) as f:
 		for l in f:
@@ -58,6 +58,7 @@ def link(input_path, output_path, dirs, version = None):
 		prolog = ""
 		if not version is None:
 			prolog += 'var buildVersion = %s;\n' % encode_to_js_string(version)
+		prolog += "var GLOBAL = this;\n"
 		prolog += "var imports = {};\n"
 		prolog += 'function require(module){return imports[module];}\n'
 		out.write(prolog)

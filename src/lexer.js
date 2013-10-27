@@ -1,11 +1,15 @@
 "use strict";
 
 var Errors = require("errors.js");
+var Stream = require("oberon.js/Stream.js");
 
 function isDigit(c) {return c >= '0' && c <= '9';}
 
 exports.digit = function(stream, context){
-    var c = stream.getChar();
+    if (Stream.eof(stream))
+        return false;
+
+    var c = Stream.getChar(stream);
     if (!isDigit(c))
         return false;
     context.handleChar(c);
@@ -13,7 +17,7 @@ exports.digit = function(stream, context){
 };
 
 exports.hexDigit = function(stream, context){
-    var c = stream.getChar();
+    var c = Stream.getChar(stream);
     if (!isDigit(c) && (c < 'A' || c > 'F'))
         return false;
     context.handleChar(c);
@@ -21,8 +25,9 @@ exports.hexDigit = function(stream, context){
 };
 
 exports.point = function(stream, context){
-    if (stream.getChar() != '.'
-        || stream.peekChar() == '.') // not a diapason ".."
+    if (Stream.eof(stream) 
+        || Stream.getChar(stream) != '.'
+        || (!Stream.eof(stream) && Stream.peekChar(stream) == '.')) // not a diapason ".."
         return false;
     context.handleLiteral(".");
     return true;
@@ -37,13 +42,16 @@ exports.character = function(stream, context){
 };
 
 function string(stream, context){
-    var c = stream.getChar();
+    if (Stream.eof(stream))
+        return false;
+
+    var c = Stream.getChar(stream);
     if (c != '"')
         return false;
 
     var result = "";
     var parsed = false;
-    stream.read(function(c){
+    Stream.read(stream, function(c){
         if (c == '"'){
             parsed = true;
             return false;
@@ -54,7 +62,7 @@ function string(stream, context){
     if (!parsed)
         throw new Errors.Error("unexpected end of string");
 
-    stream.next(1);
+    Stream.next(stream, 1);
     context.handleString(result);
     return true;
 }
@@ -76,12 +84,12 @@ var jsReservedWords
        ];
 
 exports.ident = function(stream, context){
-    if (!isLetter(stream.peekChar()))
+    if (Stream.eof(stream) || !isLetter(Stream.peekChar(stream)))
         return false;
     
-    var savePos = stream.pos();
+    var savePos = Stream.pos(stream);
     var result = "";
-    stream.read(function(c){
+    Stream.read(stream, function(c){
         if (!isLetter(c) && !isDigit(c) /*&& c != '_'*/)
             return false;
         result += c;
@@ -89,7 +97,7 @@ exports.ident = function(stream, context){
     });
 
     if (reservedWords.indexOf(result) != -1){
-        stream.setPos(savePos);
+        Stream.setPos(stream, savePos);
         return false;
     }
     if (jsReservedWords.indexOf(result) != -1)
@@ -100,17 +108,17 @@ exports.ident = function(stream, context){
 };
 
 function skipComment(stream){
-    if (stream.peekStr(2) != "(*")
+    if (Stream.peekStr(stream, 2) != "(*")
         return false;
 
-    stream.next(2);
-    while (stream.peekStr(2) != "*)"){
-        if (stream.eof())
+    Stream.next(stream, 2);
+    while (Stream.peekStr(stream, 2) != "*)"){
+        if (Stream.eof(stream))
             throw new Errors.Error("comment was not closed");
         if (!skipComment(stream))
-            stream.next(1);
+            Stream.next(stream, 1);
         }
-    stream.next(2);
+    Stream.next(stream, 2);
     return true;
 }
 
@@ -121,23 +129,26 @@ exports.skipSpaces = function(stream, context){
         return;
 
     do {
-        stream.read(readSpaces);
+        Stream.read(stream, readSpaces);
     }
     while (skipComment(stream));
 };
 
 exports.separator = function(stream, context){
-    return !isLetter(stream.peekChar());
+    return Stream.eof(stream) || !isLetter(Stream.peekChar(stream));
 };
 
 exports.literal = function(s){
     return function(stream, context){
-        if (stream.str(s.length) != s)
+        if (Stream.peekStr(stream, s.length) != s)
             return false;
-        stream.next(s.length);
+        Stream.next(stream, s.length);
         
-        if ((!context.isLexem || !context.isLexem()) && isLetter(s[s.length - 1])){
-            var next = stream.peekChar();
+        if ((!context.isLexem || !context.isLexem())
+            && isLetter(s[s.length - 1])
+            && !Stream.eof(stream)
+           ){
+            var next = Stream.peekChar(stream);
             if (isLetter(next) || isDigit(next))
                 return false;
         }

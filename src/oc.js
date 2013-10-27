@@ -6,7 +6,7 @@ var Errors = require("errors.js");
 var Grammar = require("grammar.js");
 var Lexer = require("lexer.js");
 var ImportRTL = require("rtl.js");
-var Stream = require("stream.js").Stream;
+var Stream = require("oberon.js/Stream.js");
 
 var RTL = ImportRTL.RTL;
 var Class = ImportRTL.Class;
@@ -32,7 +32,7 @@ function compileModule(stream, context, handleErrors){
         if (x instanceof Errors.Error) {
             //console.log(context.getResult());
             if (handleErrors){
-                handleErrors(stream.describePosition() + ": " + x);
+                handleErrors("line " + Stream.lineNumber(stream) + ": " + x);
                 return undefined;
             }
         }
@@ -51,7 +51,7 @@ function compileModulesFromText(
         resolveModule,
         handleCompiledModule,
         handleErrors){
-    var stream = new Stream(text);
+    var stream = Stream.make(text);
     do {
         var context = contextFactory(resolveModule);
         var module = compileModule(stream, context, handleErrors);
@@ -60,7 +60,7 @@ function compileModulesFromText(
         handleCompiledModule(module);
         Lexer.skipSpaces(stream);
     }
-    while (!stream.eof());
+    while (!Stream.eof(stream));
 }
 
 var ModuleResolver = Class.extend({

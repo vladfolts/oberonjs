@@ -1,0 +1,86 @@
+MODULE Stream;
+IMPORT JsString;
+
+TYPE
+    Type = POINTER TO RECORD
+        s: JsString.Type;
+        pos: INTEGER
+    END;
+
+    ReaderProc = PROCEDURE(c: CHAR): BOOLEAN;
+
+PROCEDURE make*(text: JsString.Type): Type;
+VAR result: Type;
+BEGIN
+    NEW(result);
+    result.s := text;
+    RETURN result
+END make;
+
+PROCEDURE eof*(self: Type): BOOLEAN;
+    RETURN self.pos = JsString.len(self.s)
+END eof;
+
+PROCEDURE pos*(self: Type): INTEGER;
+    RETURN self.pos
+END pos;
+
+PROCEDURE setPos*(self: Type; pos: INTEGER);
+BEGIN
+    ASSERT(pos <= JsString.len(self.s));
+    self.pos := pos
+END setPos;
+
+PROCEDURE next*(self: Type; n: INTEGER);
+BEGIN
+    ASSERT(self.pos + n <= JsString.len(self.s));
+    self.pos := self.pos + n;
+END next;
+
+PROCEDURE peekChar*(self: Type): CHAR;
+BEGIN
+    ASSERT(~eof(self));
+    RETURN JsString.at(self.s, self.pos)
+END peekChar;
+
+PROCEDURE getChar*(self: Type): CHAR;
+VAR result: CHAR;
+BEGIN
+    ASSERT(~eof(self));
+    result := JsString.at(self.s, self.pos);
+    INC(self.pos);
+    RETURN result
+END getChar;
+
+PROCEDURE peekStr*(self: Type; len: INTEGER): JsString.Type;
+VAR max: INTEGER;
+BEGIN
+    max := JsString.len(self.s) - self.pos;
+    IF len > max THEN
+        len := max;
+    END
+    RETURN JsString.substr(self.s, self.pos, len)
+END peekStr;
+
+PROCEDURE read*(self: Type; f: ReaderProc): BOOLEAN;
+BEGIN
+    WHILE ~eof(self) & f(peekChar(self)) DO
+        next(self, 1);
+    END
+    RETURN ~eof(self)
+END read;
+
+PROCEDURE lineNumber*(self: Type): INTEGER;
+VAR 
+    line: INTEGER;
+    lastPos: INTEGER;
+BEGIN
+    lastPos := JsString.indexOf(self.s, 0DX);
+    WHILE (lastPos # -1) & (lastPos < self.pos) DO
+        INC(line);
+        lastPos := JsString.indexOfFrom(self.s, 0DX, lastPos + 1);
+    END;
+    RETURN line + 1
+END lineNumber;
+
+END Stream.

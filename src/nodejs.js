@@ -18,7 +18,9 @@ var ModuleGenerator = Rtl.Class.extend({
         var modules = this.__imports;
         for(var name in modules){
             var alias = modules[name];
-            result += "var " + alias + " = require(\"" + name + ".js\");\n";
+            result += "var " + alias + " = " + (name == "this" 
+                ? "GLOBAL"
+                : "require(\"" + name + ".js\")") + ";\n";
         }
         return result;
     },
@@ -58,12 +60,14 @@ function compile(sources, handleErrors, outDir){
     var rtl = new Rtl.RTL(rtlCodeWatcher);
     var moduleCode = function(name, imports){return new ModuleGenerator(name, imports);};
 
+    var compiledFilesStack = [];
     oc.compileModules(
             sources,
             function(name){
                 var fileName = name;
                 if (!path.extname(fileName).length)
                     fileName += ".ob";
+                compiledFilesStack.push(fileName);
                 return fs.readFileSync(fileName, "utf8");
             },
             function(moduleResolver){return new Context.Context(
@@ -71,7 +75,7 @@ function compile(sources, handleErrors, outDir){
                 moduleCode,
                 rtl,
                 moduleResolver);},
-            handleErrors,
+            function(e){handleErrors("File \"" + compiledFilesStack[compiledFilesStack.length - 1] + "\", " + e);},
             function(name, code){
                 if (rtlCodeWatcher.used()){
                     code = "var " + rtl.name() + " = require(\"" + rtl.name() 
@@ -79,6 +83,7 @@ function compile(sources, handleErrors, outDir){
                     rtlCodeWatcher.reset();
                 }
                 writeCompiledModule(name, code, outDir);
+                compiledFilesStack.pop();
             });
 
     var rtlCode = rtl.generate();

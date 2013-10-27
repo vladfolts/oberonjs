@@ -8,7 +8,7 @@ var Grammar = require("grammar.js");
 var oc = require("oc.js");
 var ImportRTL = require("rtl.js");
 var Scope = require("scope.js");
-var Stream = require("stream.js").Stream;
+var Stream = require("Stream.js");
 var Test = require("test.js");
 
 var TestError = Test.TestError;
@@ -16,8 +16,8 @@ var RTL = ImportRTL.RTL;
 var Class = ImportRTL.Class;
 
 function parseInContext(grammar, s, context){
-    var stream = new Stream(s);
-    if (!grammar(stream, context) || !stream.eof())
+    var stream = Stream.make(s);
+    if (!grammar(stream, context) || !Stream.eof(stream))
         throw new Errors.Error("not parsed");
 }
 
@@ -159,10 +159,10 @@ var TestContextWithModule = TestContext.extend({
 function testWithModule(src, pass, fail){
     return testWithSetup(
         function(){
-            var imported = oc.compileModule(new Stream(src), makeContext());
+            var imported = oc.compileModule(Stream.make(src), makeContext());
             var module = imported.symbol().info();
             return setup(function(s){
-                oc.compileModule(new Stream(s),
+                oc.compileModule(Stream.make(s),
                                  new TestContextWithModule(module));
             });},
         pass,

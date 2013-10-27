@@ -3,6 +3,7 @@
 var assert = require("assert.js").ok;
 var Errors = require("errors.js");
 var Lexer = require("lexer.js");
+var Stream = require("oberon.js/Stream.js");
 
 function implicitParser(p){
 	return typeof p === "string" ? Lexer.literal(p) : p;
@@ -39,10 +40,10 @@ exports.or = function(/*...*/){
 	return function(stream, context){
 		for(var i = 0; i < parsers.length; ++i){
 			var p = parsers[i];
-			var savePos = stream.pos();
+			var savePos = Stream.pos(stream);
 			if (p(stream, context))
 				return true;
-			stream.setPos(savePos);
+			Stream.setPos(stream, savePos);
 		}
 		return false;
 	};
@@ -50,12 +51,12 @@ exports.or = function(/*...*/){
 
 exports.repeat = function(p){
 	return function(stream, context){
-			var savePos = stream.pos();
-			while (!stream.eof() && p(stream, context)){
+			var savePos = Stream.pos(stream);
+			while (!Stream.eof(stream) && p(stream, context)){
 				Lexer.skipSpaces(stream, context);
-				savePos = stream.pos();
+				savePos = Stream.pos(stream);
 			}
-			stream.setPos(savePos);
+			Stream.setPos(stream, savePos);
 			return true;
 		};
 };
@@ -65,9 +66,9 @@ exports.optional = function(parser){
 	var p = implicitParser(parser);
 
 	return function(stream, context){
-		var savePos = stream.pos();
+		var savePos = Stream.pos(stream);
 		if ( !p(stream, context))
-			stream.setPos(savePos);
+			Stream.setPos(stream, savePos);
 		return true;
 		};
 };
