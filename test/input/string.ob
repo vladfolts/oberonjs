@@ -4,6 +4,12 @@ CONST
 	s1 = 22X;
 	s2 = "ABC";
 	s3 = "with space";
+	s4 = 0AX;
+	s5 = 0DX;
+	s6 = 08X;
+	s7 = 09X;
+	s8 = 0CX;
+	s9 = "\";
 VAR
     ch1: CHAR;
 	a2: ARRAY 3 OF CHAR;
