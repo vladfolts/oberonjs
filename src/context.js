@@ -486,6 +486,12 @@ exports.FormalParametersProcDecl = exports.FormalParameters.extend({
         exports.FormalParameters.prototype.addArgument.call(this, name, arg);
         this.parent().addArgument(name, arg);
     },
+    /*
+    handleSymbol: function(s){
+        exports.FormalParameters.prototype.handleSymbol.call(this, s);
+        this.parent().checkResultType(s);
+    },
+    */
     endParse: function(){
         exports.FormalParameters.prototype.endParse.call(this);
         this.parent().endParameters();
@@ -540,6 +546,16 @@ exports.ProcDecl = ChainedContext.extend({
         code.write(")");
         code.openScope();
     },
+    /*
+    checkResultType: function(s){
+        if (this.__id.exported()){
+            if (!s.scope().exports()[s.symbol().id()])
+                throw new Errors.Error(
+                    "exported PROCEDURE '" + this.__id.id()
+                    + "' uses non-exported type '" + s.symbol().id() + "'");
+        }
+    },
+    */
     handleReturn: function(type){
         var result = this.__type.result();
         if (!result)

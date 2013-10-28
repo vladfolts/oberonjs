@@ -1272,6 +1272,8 @@ var testSuite = {
           "cannot export anonymous RECORD field: 'r'"],
          ["PROCEDURE p*; VAR i*: INTEGER; END p;",
           "cannot export from within procedure: variable 'i'"]
+         //["TYPE PT = POINTER TO RECORD END; PROCEDURE p*(): PT; RETURN NIL END p;",
+         //"exported PROCEDURE 'p' uses non-exported type 'PT'"]
          )
     ),
 "import JS": testWithGrammar(
