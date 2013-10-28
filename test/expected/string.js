@@ -40,6 +40,12 @@ var m = function (){
 var s1 = "\"";
 var s2 = "ABC";
 var s3 = "with space";
+var s4 = "\n";
+var s5 = "\r";
+var s6 = "\b";
+var s7 = "\t";
+var s8 = "\f";
+var s9 = "\\";
 var ch1 = 0;
 var a2 = RTL$.makeArray(3, 0);
 
