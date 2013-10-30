@@ -163,11 +163,16 @@ var basic = {
     bool: new BasicType("BOOLEAN", false),
     ch: new BasicType("CHAR", 0),
     integer: new BasicType("INTEGER", 0),
+    uint8: new BasicType("BYTE", 0),
     real: new BasicType("REAL", 0),
     set: new BasicType("SET", 0)
 };
 exports.basic = basic;
-exports.numeric = [basic.integer, basic.real];
+exports.numeric = [basic.integer, basic.uint8, basic.real];
+
+exports.isInt = function(type){return type == basic.integer || type == basic.uint8;};
+
+exports.intsDescription = function(){return "'INTEGER' or 'BYTE'";};
 
 exports.nil = new NilType();
 

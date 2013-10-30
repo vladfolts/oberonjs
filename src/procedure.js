@@ -84,10 +84,15 @@ var ProcCallGenerator = Class.extend({
         var expectType = arg.type; // can be undefined for predefined functions (like NEW), dont check it in this case
         if (expectType){
             var type = e.type();
-            castOperation = Cast.implicit(type, expectType);
+            castOperation = Cast.implicit(type, expectType, op);
             if (!castOperation)
-                throw new Errors.Error("type mismatch for argument " + (pos + 1) + ": '" + type.description()
-                                     + "' cannot be converted to '" + expectType.description() + "'");
+                throw new Errors.Error(
+                      "type mismatch for argument " + (pos + 1) + ": '" + type.description()
+                    + "' cannot be converted to '" + expectType.description() + "'");
+            if (arg.isVar && expectType != type && Type.isInt(type))
+                throw new Errors.Error(
+                      "type mismatch for argument " + (pos + 1) + ": cannot pass '" 
+                    + type.description() + "' as VAR parameter of type '" + expectType.description() + "'");
         }
         if (arg.isVar){
             var designator = e.designator();

@@ -26,6 +26,8 @@ function matchesToNIL(t){
 function areTypesMatch(t1, t2){
     if (t1 == t2)
         return true;
+    if (Type.isInt(t1) && Type.isInt(t2))
+        return true;
     if (t1 instanceof PointerType && t2 instanceof PointerType)
         return areTypesMatch(t1.baseType(), t2.baseType());
     if (t1 instanceof ProcedureType && t2 instanceof ProcedureType)
@@ -59,9 +61,17 @@ function areProceduresMatch(p1, p2){
     return areTypesMatch(r1, r2);
 }
 
-function implicitCast(from, to){
-    if (from === to)
+function implicitCast(from, to, ops){
+    if (from == to)
         return doNoting;
+
+    if (from == Type.basic.uint8 && to == Type.basic.integer)
+        return doNoting;
+
+    if (from == Type.basic.integer && to == Type.basic.uint8)
+        return function(context, e){
+            return ops.setIntersection(e, new Code.Expression("0xFF", Type.basic.integer, undefined, 0xFF));
+        };
 
     if (from instanceof Type.String){
         if (to === Type.basic.ch){

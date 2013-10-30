@@ -1,30 +1,37 @@
 MODULE m;
 
-TYPE R = RECORD i: INTEGER; a: ARRAY 3 OF INTEGER; p: POINTER TO R END;
+TYPE R = RECORD i: INTEGER; byte: BYTE; a: ARRAY 3 OF INTEGER; p: POINTER TO R END;
 
 VAR 
 	i: INTEGER;
+	byte: BYTE;
 	b: BOOLEAN;
 	a: ARRAY 5 OF INTEGER;
+	byteArray: ARRAY 3 OF BYTE;
 
-PROCEDURE p1(VAR i1, i2: INTEGER);
+PROCEDURE p1(VAR i1, i2: INTEGER; VAR byte: BYTE);
 BEGIN
     i1 := 1;
-	i2 := 2
+	i2 := 2;
+	byte := 3;
 END p1;
 
-PROCEDURE p2(i: INTEGER; b: BOOLEAN);
+PROCEDURE p2(i: INTEGER; byte: BYTE; b: BOOLEAN);
 END p2;
 
 PROCEDURE index(VAR i: INTEGER): INTEGER;
 	RETURN i
 END index;
 
+PROCEDURE indexByte(VAR b: BYTE): BYTE;
+	RETURN b
+END indexByte;
+
 PROCEDURE array(VAR a: ARRAY OF INTEGER): INTEGER;
 	RETURN a[0]
 END array;
 
-PROCEDURE p3(VAR i: INTEGER; VAR b: BOOLEAN);
+PROCEDURE p3(VAR i: INTEGER; VAR byte: BYTE; VAR b: BOOLEAN);
 VAR j: INTEGER;
 	r: R;
 	ar: ARRAY 5 OF R;
@@ -36,23 +43,23 @@ BEGIN
 	j := -i;
 	b := ~b;
 	a[i] := i;
-    p1(j, i);
-	p1(i, j);
-	p1(i, a[index(i)]);
-	p2(i, b);
+    p1(j, i, byte);
+	p1(i, j, byte);
+	p1(i, a[index(i)], byteArray[indexByte(byte)]);
+	p2(i, byte, b);
 
-	p1(r.i, ar[index(r.i)].i);
+	p1(r.i, ar[index(r.i)].i, ar[index(r.i)].byte);
 
 	NEW(r.p);
 	NEW(ar[j].p);
-	p1(r.p.i, ar[j].p.i);
-	p2(ar[j].p.i, r.p.i = ar[j].p.i);
+	p1(r.p.i, ar[j].p.i, ar[j].p.byte);
+	p2(ar[j].p.i, ar[j].p.byte, r.p.i = ar[j].p.i);
 
 	j := array(ai);
 	j := array(r.a);
 END p3;
 
 BEGIN
-    p3(i, b)
+    p3(i, byte, b)
 
 END m.

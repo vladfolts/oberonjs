@@ -5,6 +5,7 @@ CONST
 	c2 = 0FFFFFFFFH * 2; (* -2 *)
 VAR 
 	i1, i2: INTEGER;
+	b1, b2: BYTE;
 	r1, r2: REAL;
 
 BEGIN
@@ -16,6 +17,29 @@ BEGIN
 	i1 := i1 DIV i2;
 	i1 := i1 MOD i2;
 	i1 := 1 + i1 * i2;
+
+	b1 := 1;
+	b1 := -1;
+	b1 := b2;
+	b1 := -b2;
+	b1 := +b2;
+	b1 := b1 + b2;
+	b1 := b1 - b2;
+	b1 := b1 * b2;
+	b1 := b1 DIV b2;
+	b1 := b1 MOD b2;
+
+	i1 := b1;
+	b1 := i1;
+	i1 := -b1;
+	b1 := -i1;
+	i1 := i2 + b1;
+	i1 := b1 - i2;
+	i1 := i2 * b1;
+	i1 := b1 DIV i2;
+	b1 := i1 MOD b2;
+	b1 := b1 MOD i1;
+	b1 := i1 MOD i2;
 
 	r1 := 1.0;
 	r2 := 2.0;

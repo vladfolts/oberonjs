@@ -474,6 +474,36 @@ var testSuite = {
           "invalid type test: 'Base' is not an extension of 'Derived'"],
          ["pDerived IS INTEGER", "RECORD type expected after 'IS'"])
     ),
+"BYTE": testWithContext(
+    context(Grammar.statement,
+              "VAR b1, b2: BYTE; i: INTEGER; set: SET; a: ARRAY 3 OF BYTE;"
+            + "PROCEDURE varIntParam(VAR i: INTEGER); END varIntParam;"
+            + "PROCEDURE varByteParam(VAR b: BYTE); END varByteParam;"
+            ),
+    pass("b1 := b2",
+         "i := b1",
+         "b2 := i",
+         "a[b1] := i",
+         "ASSERT(i = b1)",
+         "ASSERT(b1 = i)",
+         "ASSERT(i < b1)",
+         "ASSERT(b1 > i)",
+         "ASSERT(b1 IN set)",
+         "i := b1 DIV i",
+         "i := i DIV b1",
+         "b1 := b1 MOD i",
+         "b1 := i MOD b1",
+         "b1 := b1 + i",
+         "b1 := i - b1",
+         "i := b1 * i",
+         "i := -b1",
+         "i := +b1"
+        ),
+    fail(["i := b1 / i", "operator DIV expected for integer division"],
+         ["varIntParam(b1)", "type mismatch for argument 1: cannot pass 'BYTE' as VAR parameter of type 'INTEGER'"],
+         ["varByteParam(i)", "type mismatch for argument 1: cannot pass 'INTEGER' as VAR parameter of type 'BYTE'"]
+        )
+    ),
 "NEW": testWithContext(
     context(Grammar.statement,
             "TYPE P = POINTER TO RECORD END;"
@@ -680,9 +710,9 @@ var testSuite = {
     fail(["VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := TRUE END",
           "type mismatch: 'a[0]' is 'INTEGER' and cannot be assigned to 'BOOLEAN' expression"],
          ["VAR a: ARRAY 10 OF INTEGER; BEGIN a[TRUE] := 1 END",
-          "'INTEGER' expression expected, got 'BOOLEAN'"],
+          "'INTEGER' or 'BYTE' expression expected, got 'BOOLEAN'"],
          ["VAR a: ARRAY 10 OF INTEGER; p: POINTER TO RECORD END; BEGIN a[p] := 1 END",
-          "'INTEGER' expression expected, got 'POINTER TO anonymous RECORD'"],
+          "'INTEGER' or 'BYTE' expression expected, got 'POINTER TO anonymous RECORD'"],
          ["VAR i: INTEGER; BEGIN i[0] := 1 END",
           "ARRAY expected, got 'INTEGER'"],
          ["VAR p: POINTER TO RECORD END; BEGIN p[0] := 1 END",
@@ -759,10 +789,12 @@ var testSuite = {
     ),
 "CASE statement": testWithContext(
     context(Grammar.statement,
-            "CONST ci = 15; cc = \"A\";   VAR c1: CHAR; b1: BOOLEAN; i1, i2: INTEGER; p: POINTER TO RECORD END;"),
+              "CONST ci = 15; cc = \"A\";"
+            + "VAR c1: CHAR; b1: BOOLEAN; i1, i2: INTEGER; byte: BYTE; p: POINTER TO RECORD END;"),
     pass("CASE i1 OF END",
          "CASE i1 OF 0: b1 := TRUE END",
          "CASE c1 OF \"A\": b1 := TRUE END",
+         "CASE byte OF 3: b1 := TRUE END",
          "CASE i1 OF 0: b1 := TRUE | 1: b1 := FALSE END",
          "CASE i1 OF 0, 1: b1 := TRUE END",
          "CASE c1 OF \"A\", \"B\": b1 := TRUE END",
@@ -775,7 +807,7 @@ var testSuite = {
           "undeclared identifier: 'undefined'"],
          ["CASE i1 OF i2: b1 := TRUE END",
           "'i2' is not a constant"],
-         ["CASE b1 OF END", "'INTEGER' or 'CHAR' expected as CASE expression"],
+         ["CASE b1 OF END", "'INTEGER' or 'BYTE' or 'CHAR' expected as CASE expression"],
          ["CASE i1 OF \"A\": b1 := TRUE END",
           "label must be 'INTEGER' (the same as case expression), got 'CHAR'"],
          ["CASE i1 OF p: b1 := TRUE END",
@@ -802,7 +834,8 @@ var testSuite = {
     ),
 "FOR statement": testWithContext(
     context(Grammar.statement,
-            "CONST c = 15; VAR b: BOOLEAN; i, n: INTEGER; p: POINTER TO RECORD END;"),
+              "CONST c = 15;"
+            + "VAR b: BOOLEAN; i, n: INTEGER; ch: CHAR; p: POINTER TO RECORD END;"),
     pass("FOR i := 0 TO 10 DO n := 1 END",
          "FOR i := 0 TO 10 BY 5 DO b := TRUE END",
          "FOR i := 0 TO n DO b := TRUE END",
@@ -811,6 +844,8 @@ var testSuite = {
           "undeclared identifier: 'undefined'"],
          ["FOR b := TRUE TO 10 DO n := 1 END",
           "'b' is a 'BOOLEAN' variable, 'FOR' control variable must be 'INTEGER'"],
+         ["FOR ch := 'a' TO 10 DO n := 1 END",
+          "'ch' is a 'CHAR' variable, 'FOR' control variable must be 'INTEGER'"],
          ["FOR c := 0 TO 10 DO END", "'c' is not a variable"],
          ["FOR i := TRUE TO 10 DO n := 1 END",
           "'INTEGER' expression expected to assign 'i', got 'BOOLEAN'"],
@@ -855,7 +890,7 @@ var testSuite = {
          "r1 := r1 * r2",
          "r1 := r1 / r2"),
     fail(["i1 := i1 / i2", "operator DIV expected for integer division"],
-         ["r1 := r1 DIV r1", "operator 'DIV' type mismatch: INTEGER expected, got 'REAL'"],
+         ["r1 := r1 DIV r1", "operator 'DIV' type mismatch: 'INTEGER' or 'BYTE' expected, got 'REAL'"],
          ["b1 := b1 + b1", "operator '+' type mismatch: numeric type expected, got 'BOOLEAN'"],
          ["c1 := c1 - c1", "operator '-' type mismatch: numeric type expected, got 'CHAR'"],
          ["p1 := p1 * p1", "operator '*' type mismatch: numeric type expected, got 'PROCEDURE'"],
@@ -890,7 +925,7 @@ var testSuite = {
          "set1 # set2",
          "i IN set1"),
     fail(["set1 <= i", "type mismatch: expected 'SET', got 'INTEGER'"],
-         ["b IN set1", "'INTEGER' expected as an element of SET, got 'BOOLEAN'"],
+         ["b IN set1", "'INTEGER' or 'BYTE' expected as an element of SET, got 'BOOLEAN'"],
          ["i IN b", "type mismatch: expected 'SET', got 'BOOLEAN'"])
     ),
 "SET operators": testWithContext(

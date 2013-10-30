@@ -4,6 +4,10 @@ TYPE
 	P1 = PROCEDURE(a1: INTEGER);
 	P2 = PROCEDURE(): P2;
 
+VAR
+    i: INTEGER; 
+	byte: BYTE;
+
 PROCEDURE p1(arg1: INTEGER);
 TYPE
     T1 = RECORD 
@@ -47,4 +51,33 @@ BEGIN
 	RETURN 0 
 END emptyBeginWithReturn;
 
+PROCEDURE withByteArgument(b: BYTE);
+END withByteArgument;
+
+PROCEDURE withByteResult(): BYTE;
+	RETURN 0
+END withByteResult;
+
+PROCEDURE withByteResult2(b: BYTE): BYTE;
+	RETURN b
+END withByteResult2;
+
+PROCEDURE withByteResult3(VAR b: BYTE): BYTE;
+	RETURN b
+END withByteResult3;
+
+PROCEDURE withByteResult4(): BYTE;
+VAR b: BYTE;
+BEGIN
+	b := 0;
+	RETURN b
+END withByteResult4;
+
+BEGIN
+	byte := withByteResult();
+	i := withByteResult();
+	withByteArgument(byte);
+	byte := withByteResult2(byte);
+	byte := withByteResult2(i);
+	byte := withByteResult3(byte);
 END m.

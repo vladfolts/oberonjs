@@ -86,7 +86,7 @@ function assign(left, right, context){
         return context.rtl().assignArrayFromString(leftCode, rightCode);
     }
 
-    var castOperation = Cast.implicit(rightType, leftType);
+    var castOperation = Cast.implicit(rightType, leftType, exports);
     if (!castOperation)
         throw new Errors.Error("type mismatch: '" + leftCode
                              + "' is '" + leftType.description()
@@ -118,12 +118,26 @@ function makeInplace(code, altOp){
     };
 }
 
+function promoteToWideIfNeeded(op){
+    return function(){
+        var result = op.apply(this, arguments);
+        if (result.type() == Type.basic.uint8)
+            result = new Code.Expression(
+                result.code(),
+                Type.basic.integer,
+                result.designator(),
+                result.constValue(),
+                result.maxPrecedence());
+        return result;
+    };
+}
+
 function makeBinaryInt(op, code, prec){
-    return makeBinary(
+    return promoteToWideIfNeeded(makeBinary(
             function(x, y){return op(x, y) | 0;},
             function(x, y){return x + code + y + " | 0";},
             prec,
-            precedence.bitOr);
+            precedence.bitOr));
 }
 
 var operators = {
@@ -158,7 +172,7 @@ var operators = {
     eqGreater:  makeBinary(function(x, y){return x >= y;}, " >= ", precedence.relational),
 
     not:        makeUnary(function(x){return !x;}, "!"),
-    negate:     makeUnary(function(x){return -x;}, "-"),
+    negate:     promoteToWideIfNeeded(makeUnary(function(x){return -x;}, "-")),
     unaryPlus:  makeUnary(function(x){return x;}, ""),
     setComplement: makeUnary(function(x){return ~x;}, "~"),
 
