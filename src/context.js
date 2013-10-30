@@ -54,7 +54,7 @@ function checkTypeMatch(from, to){
 }
 
 function checkImplicitCast(from, to){
-    var result = Cast.implicit(from, to);
+    var result = Cast.implicit(from, to, op);
     if (!result)
         throwTypeMismatch(from, to);
     return result;
@@ -73,13 +73,13 @@ function promoteTypeInExpression(e, type){
 function promoteExpressionType(context, left, right){
     var rightType = right.type();
     if (!left)
-        return right;
+        return;
 
     var leftType = left.type();
     if (rightType === undefined)
-        return right;
-    
-    return checkImplicitCast(rightType, leftType)(context, right);
+        return;
+
+    checkImplicitCast(rightType, leftType);
 }
 
 function checkTypeCast(from, to, msg){
@@ -313,8 +313,9 @@ exports.Designator = ChainedContext.extend({
     __handleIndexExpression: function(){
         var e = this.__indexExpression;
         var expType = e.type();
-        if (expType != basicTypes.integer)
-            throw new Errors.Error("'INTEGER' expression expected, got '" + expType.description() + "'");
+        if (!Type.isInt(expType))
+            throw new Errors.Error(
+                Type.intsDescription() + " expression expected, got '" + expType.description() + "'");
 
         var type = this.__currentType;
         if (!(type instanceof Type.Array))
@@ -395,9 +396,9 @@ exports.Designator = ChainedContext.extend({
             new DesignatorInfo(code, refCode, this.__currentType, this.__info, this.__scope));
     },
     __makeRefCode: function(code){
-        if ((this.__currentType instanceof Type.Array)
-            || (this.__currentType instanceof Type.Record)
-            || (this.__info instanceof Type.VariableRef))
+        if (   this.__currentType instanceof Type.Array
+            || this.__currentType instanceof Type.Record
+            || this.__info instanceof Type.VariableRef)
             return code;
         if (this.__derefCode)
             return this.rtl().makeRef(this.__derefCode, this.__propCode);
@@ -560,7 +561,7 @@ exports.ProcDecl = ChainedContext.extend({
         var result = this.__type.result();
         if (!result)
             throw new Errors.Error("unexpected RETURN in PROCEDURE declared with no result type");
-        if (!Cast.implicit(type, result))
+        if (!Cast.implicit(type, result, op))
             throw new Errors.Error(
                 "RETURN '" + result.description() + "' expected, got '"
                 + type.description() + "'");
@@ -575,22 +576,16 @@ exports.ProcDecl = ChainedContext.extend({
 });
 
 exports.Return = ChainedContext.extend({
-    init: function ReturnContext(context){
+    init: function Context$Return(context){
         ChainedContext.prototype.init.call(this, context);
-        this.__type = undefined;
-        this.__code = new Code.SimpleGenerator();
+        this.__expr = undefined;
     },
-    codeGenerator: function(){return this.__code;},
-    handleExpression: function(e){
-        this.__type = e.type();
-        var designator = e.designator();
-        if (designator)
-            writeDerefDesignatorCode(designator, this.__code);
-    },
+    codeGenerator: function(){return Code.nullGenerator;},
+    handleExpression: function(e){this.__expr = e;},
     endParse: function(){
         var parent = this.parent();
-        parent.codeGenerator().write("return " + this.__code.result() + ";\n");
-        parent.handleReturn(this.__type);
+        parent.codeGenerator().write("return " + this.__expr.deref().code() + ";\n");
+        parent.handleReturn(this.__expr.type());
     }
 });
 
@@ -722,14 +717,18 @@ var numericOpTypeCheck = {
 };
 
 var intOpTypeCheck = {
-    expect: "INTEGER",
-    check: function(t){return t == basicTypes.integer;}
+    expect: Type.intsDescription(),
+    check: Type.isInt
 };
 
 var orderOpTypeCheck = {
     expect: "numeric type or CHAR or character array",
     check: function(t){
-        return [basicTypes.integer, basicTypes.real, basicTypes.ch].indexOf(t) != -1
+        return [basicTypes.integer,
+                basicTypes.uint8,
+                basicTypes.real,
+                basicTypes.ch
+               ].indexOf(t) != -1
             || (t instanceof Type.Array && t.elementsType() == basicTypes.ch);
     }
 };
@@ -737,7 +736,13 @@ var orderOpTypeCheck = {
 var equalOpTypeCheck = {
     expect: "numeric type or SET or BOOLEAN OR CHAR or character array or POINTER or PROCEDURE",
     check: function(t){
-        return [basicTypes.integer, basicTypes.real, basicTypes.set, basicTypes.bool, basicTypes.ch].indexOf(t) != -1
+        return [basicTypes.integer,
+                basicTypes.uint8,
+                basicTypes.real,
+                basicTypes.set,
+                basicTypes.bool,
+                basicTypes.ch
+               ].indexOf(t) != -1
             || (t instanceof Type.Array && t.elementsType() == basicTypes.ch)
             || t instanceof Type.Pointer
             || t instanceof Type.Procedure
@@ -755,7 +760,7 @@ function assertOpType(type, check, literal){
 
 function assertNumericOp(type, literal, op, intOp){
     assertOpType(type, numericOpTypeCheck, literal);
-    return (intOp && type == basicTypes.integer)
+    return (intOp && Type.isInt(type))
            ? intOp : op;
 }
 
@@ -858,7 +863,7 @@ exports.MulOperator = ChainedContext.extend({
         else if (s == "/"){
             if (type == basicTypes.set)
                 o = op.setSymmetricDiff;
-            else if (type == basicTypes.integer)
+            else if (Type.isInt(type))
                 throw new Errors.Error("operator DIV expected for integer division");
             else
                 o = assertNumericOp(type, s, op.div);
@@ -878,12 +883,6 @@ exports.MulOperator = ChainedContext.extend({
             parent.handleOperator(o);
     }
 });
-
-function writeDerefDesignatorCode(designator, code){
-    var info = designator.info();
-    if (info instanceof Type.VariableRef)
-        code.write(".get()");
-}
 
 exports.Term = ChainedContext.extend({
     init: function TermContext(context){
@@ -913,7 +912,7 @@ exports.Term = ChainedContext.extend({
     },
     endParse: function(){this.parent().handleTerm(this.__expression);},
     handleExpression: function(e){
-        e = promoteExpressionType(this, this.__expression, e);
+        promoteExpressionType(this, this.__expression, e);
         if (this.__operator)
             e = this.__expression ? this.__operator(this.__expression, e)
                                   : this.__operator(e);
@@ -1077,8 +1076,9 @@ exports.Expression = ChainedContext.extend({
         var code;
 
         if (this.__relation == "IN"){
-            if (leftType != basicTypes.integer)
-                throw new Errors.Error("'INTEGER' expected as an element of SET, got '" + leftType.name() + "'");
+            if (!Type.isInt(leftType))
+                throw new Errors.Error(
+                    Type.intsDescription() + " expected as an element of SET, got '" + leftType.name() + "'");
             checkImplicitCast(rightType, basicTypes.set);
 
             code = "1 << " + leftCode + " & " + rightCode;
@@ -1194,8 +1194,9 @@ exports.Case = ChainedContext.extend({
                 type = basicTypes.ch;
             }
         }
-        if (type != basicTypes.integer && type != basicTypes.ch)
-            throw new Errors.Error("'INTEGER' or 'CHAR' expected as CASE expression");
+        if (!Type.isInt(type) && type != basicTypes.ch)
+            throw new Errors.Error(
+                Type.intsDescription() + " or 'CHAR' expected as CASE expression");
         this.__type = type;
         gen.write(";\n");
     },
@@ -1206,7 +1207,7 @@ exports.Case = ChainedContext.extend({
             this.codeGenerator().write("else ");
     },
     handleLabelType: function(type){
-        if (type !== this.__type)
+        if (!Cast.areTypesMatch(type, this.__type))
             throw new Errors.Error(
                 "label must be '" + this.__type.name() + "' (the same as case expression), got '"
                 + type.name() + "'");
@@ -1342,9 +1343,11 @@ exports.For = ChainedContext.extend({
         var s = getSymbol(this.parent(), id);
         if (!s.isVariable())
             throw new Errors.Error("'" + s.id() + "' is not a variable");
-        if (s.info().type() !== basicTypes.integer)
+        var type = s.info().type();
+        if (type !== basicTypes.integer)
             throw new Errors.Error(
-                "'" + s.id() + "' is a 'BOOLEAN' variable, 'FOR' control variable must be 'INTEGER'");
+                  "'" + s.id() + "' is a '" 
+		+ type.description() + "' variable, 'FOR' control variable must be 'INTEGER'");
         this.codeGenerator().write("for (" + id + " = ");
         this.__var = id;
     },
@@ -1411,7 +1414,7 @@ exports.Assignment = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.__left = undefined;
     },
-    codeGenerator: function(){/*throw new Error("Test");*/ return Code.nullGenerator;},
+    codeGenerator: function(){return Code.nullGenerator;},
     setDesignator: function(d){
         this.__left = new Code.Expression(d.code(), d.type(), d);
     },

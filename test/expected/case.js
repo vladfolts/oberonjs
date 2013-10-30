@@ -4,6 +4,7 @@ var constI = 12;
 var i = 0;
 var b1 = false;
 var i1 = 0;
+var byte = 0;
 var c = 0;
 var $c;
 $c = i1;
@@ -39,6 +40,16 @@ else if (($c >= 4 && $c <= 5)){
 }
 else if ($c === 6 || ($c >= 7 && $c <= 10)){
 	b1 = true;
+}
+$c = byte;
+if ($c === 1){
+	i = 2;
+}
+else if ($c === 257){
+	i = 3;
+}
+else if (($c >= 4 && $c <= 12)){
+	i = 5;
 }
 $c = c;
 if ($c === 65){

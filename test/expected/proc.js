@@ -15,6 +15,8 @@ var RTL$ = {
     }
 };
 var m = function (){
+var i = 0;
+var byte = 0;
 
 function p1(arg1/*INTEGER*/){
 	var T1 = RTL$.extend({
@@ -64,4 +66,31 @@ function emptyBegin(){
 function emptyBeginWithReturn(){
 	return 0;
 }
+
+function withByteArgument(b/*BYTE*/){
+}
+
+function withByteResult(){
+	return 0;
+}
+
+function withByteResult2(b/*BYTE*/){
+	return b;
+}
+
+function withByteResult3(b/*VAR BYTE*/){
+	return b.get();
+}
+
+function withByteResult4(){
+	var b = 0;
+	b = 0 & 0xFF;
+	return b;
+}
+byte = withByteResult();
+i = withByteResult();
+withByteArgument(byte);
+byte = withByteResult2(byte);
+byte = withByteResult2(i & 0xFF);
+byte = withByteResult3({set: function($v){byte = $v;}, get: function(){return byte;}});
 }();
