@@ -612,9 +612,9 @@ var testSuite = {
 "INC": testWithContext(
     context(Grammar.statement, "VAR i: INTEGER;"),
     pass("INC(i)",
-         "INC(i, 3)"),
+         "INC(i, 3)",
+         "INC(i, i)"),
     fail(["INC(i + i)", "expression cannot be used as VAR parameter"],
-         ["INC(i, i)", "constant expected as second argument of INC"],
          ["INC()", "at least 1 argument expected, got 0"],
          ["INC(i, 1, 2)", "at most 2 arguments expected, got 3"]
          )
@@ -622,9 +622,9 @@ var testSuite = {
 "DEC": testWithContext(
     context(Grammar.statement, "VAR i: INTEGER;"),
     pass("DEC(i)",
-         "DEC(i, 3)"),
+         "DEC(i, 3)",
+         "DEC(i, i)"),
     fail(["DEC(i + i)", "expression cannot be used as VAR parameter"],
-         ["DEC(i, i)", "constant expected as second argument of DEC"],
          ["DEC()", "at least 1 argument expected, got 0"],
          ["DEC(i, 1, 2)", "at most 2 arguments expected, got 3"]
          )

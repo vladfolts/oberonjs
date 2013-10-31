@@ -225,10 +225,13 @@ function incImpl(name, unary, op){
             return unary + x.code();
 
         var value = y.constValue();
+        var valueCode;
         if (value === undefined)
-            throw new Errors.Error("constant expected as second argument of " + name);
-        var comment = y.isTerm() ? "" : "/*" + y.code() + "*/";
-        var valueCode = value + comment;
+            valueCode = y.code();
+        else {
+            var comment = y.isTerm() ? "" : "/*" + y.code() + "*/";
+            valueCode = value + comment;
+        }
         return op(x.code(), valueCode);
     }
     var CallGenerator = TwoArgToOperatorProcCallGenerator.extend({
