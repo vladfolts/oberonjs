@@ -540,20 +540,6 @@ var testSuite = {
          ["i := FLT(i, i)", "1 argument(s) expected, got 2"]
          )
     ),
-"LONG": testWithContext(
-    context(Grammar.statement, "VAR i: INTEGER; r: REAL; lr: LONGREAL;"),
-    pass("lr := LONG(r)"),
-    fail(["lr := LONG(i)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'REAL'"],
-         ["lr := LONG(r, r)", "1 argument(s) expected, got 2"]
-         )
-    ),
-"SHORT": testWithContext(
-    context(Grammar.statement, "VAR i: INTEGER; r: REAL; lr: LONGREAL;"),
-    pass("r := SHORT(lr)"),
-    fail(["r := SHORT(i)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'REAL'"],
-         ["r := SHORT(lr, lr)", "1 argument(s) expected, got 2"]
-         )
-    ),
 "LSL": testWithContext(
     context(Grammar.statement,
             "VAR i: INTEGER; r: REAL; c: CHAR;"),
@@ -627,16 +613,6 @@ var testSuite = {
     fail(["DEC(i + i)", "expression cannot be used as VAR parameter"],
          ["DEC()", "at least 1 argument expected, got 0"],
          ["DEC(i, 1, 2)", "at most 2 arguments expected, got 3"]
-         )
-),
-"COPY": testWithContext(
-    context(Grammar.statement, "VAR ac3: ARRAY 3 OF CHAR; ac4: ARRAY 4 OF CHAR;"),
-    pass("COPY(\"abc\", ac3)",
-         "COPY(ac3, ac3)"
-        ),
-    fail(["COPY(ac3, \"abc\")", "expression cannot be used as VAR parameter"],
-         ["COPY(\"abcd\", ac3)", "3-character ARRAY is too small for 4-character string"],
-         ["COPY(ac3, ac4)", "type mismatch: 'ac4' is 'ARRAY 4 OF CHAR' and cannot be assigned to 'ARRAY 3 OF CHAR' expression"]
          )
 ),
 "PACK": testWithContext(

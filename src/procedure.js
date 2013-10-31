@@ -278,25 +278,6 @@ function bitShiftImpl(name, op){
     return symbol;
 }
 
-function longShort(name){
-    var CallGenerator = ExpCallGenerator.extend({
-        init: function LongShortCallGenerator(context, id, type){
-            ExpCallGenerator.prototype.init.call(this, context, id, type);
-        },
-        callExpression: function(){return this.args()[0];}
-    });
-    var args = [new Arg(Type.basic.real, false)];
-    var proc = new Std(
-        name,
-        args,
-        Type.basic.real,
-        function(context, id, type){
-            return new CallGenerator(context, id, type);
-        });
-    var symbol = new Symbol.Symbol(name, proc);
-    return symbol;
-}
-
 function checkVariableArgumentsCount(min, max, actual){
     if (actual < min)
         throw new Errors.Error("at least " + min + " argument expected, got " + actual);
@@ -489,8 +470,6 @@ exports.predefined = [
         var symbol = new Symbol.Symbol("FLT", proc);
         return symbol;
     }(),
-    longShort("LONG"),
-    longShort("SHORT"),
     bitShiftImpl("LSL", op.lsl),
     bitShiftImpl("ASR", op.asr),
     bitShiftImpl("ROR", op.ror),
@@ -557,28 +536,6 @@ exports.predefined = [
             name,
             [new Arg(Type.basic.integer, false)],
             Type.basic.ch,
-            function(context, id, type){
-                return new CallGenerator(context, id, type);
-            });
-        var symbol = new Symbol.Symbol(name, type);
-        return symbol;
-    }(),
-    function(){
-        var CallGenerator = ExpCallGenerator.extend({
-            init: function CopyProcCallGenerator(context, id, type){
-                ExpCallGenerator.prototype.init.call(this, context, id, type);
-            },
-            callExpression: function(){
-                var args = this.args();
-                return new Code.Expression(op.assign(args[1], args[0], this.context()));
-            }
-        });
-        var name = "COPY";
-        var type = new Std(
-            name,
-            [new Arg(undefined, false),
-             new Arg(new Type.Array("ARRAY OF CHAR", undefined, Type.basic.ch), true)],
-            undefined,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
