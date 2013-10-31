@@ -556,20 +556,6 @@ var testSuite = {
          ["i := FLT(i, i)", "1 argument(s) expected, got 2"]
          )
     ),
-"LONG": testWithContext(
-    context(Grammar.statement, "VAR i: INTEGER; r: REAL; lr: LONGREAL;"),
-    pass("lr := LONG(r)"),
-    fail(["lr := LONG(i)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'REAL'"],
-         ["lr := LONG(r, r)", "1 argument(s) expected, got 2"]
-         )
-    ),
-"SHORT": testWithContext(
-    context(Grammar.statement, "VAR i: INTEGER; r: REAL; lr: LONGREAL;"),
-    pass("r := SHORT(lr)"),
-    fail(["r := SHORT(i)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'REAL'"],
-         ["r := SHORT(lr, lr)", "1 argument(s) expected, got 2"]
-         )
-    ),
 "LSL": testWithContext(
     context(Grammar.statement,
             "VAR i: INTEGER; r: REAL; c: CHAR;"),
@@ -628,9 +614,9 @@ var testSuite = {
 "INC": testWithContext(
     context(Grammar.statement, "VAR i: INTEGER;"),
     pass("INC(i)",
-         "INC(i, 3)"),
+         "INC(i, 3)",
+         "INC(i, i)"),
     fail(["INC(i + i)", "expression cannot be used as VAR parameter"],
-         ["INC(i, i)", "constant expected as second argument of INC"],
          ["INC()", "at least 1 argument expected, got 0"],
          ["INC(i, 1, 2)", "at most 2 arguments expected, got 3"]
          )
@@ -638,21 +624,11 @@ var testSuite = {
 "DEC": testWithContext(
     context(Grammar.statement, "VAR i: INTEGER;"),
     pass("DEC(i)",
-         "DEC(i, 3)"),
+         "DEC(i, 3)",
+         "DEC(i, i)"),
     fail(["DEC(i + i)", "expression cannot be used as VAR parameter"],
-         ["DEC(i, i)", "constant expected as second argument of DEC"],
          ["DEC()", "at least 1 argument expected, got 0"],
          ["DEC(i, 1, 2)", "at most 2 arguments expected, got 3"]
-         )
-),
-"COPY": testWithContext(
-    context(Grammar.statement, "VAR ac3: ARRAY 3 OF CHAR; ac4: ARRAY 4 OF CHAR;"),
-    pass("COPY(\"abc\", ac3)",
-         "COPY(ac3, ac3)"
-        ),
-    fail(["COPY(ac3, \"abc\")", "expression cannot be used as VAR parameter"],
-         ["COPY(\"abcd\", ac3)", "3-character ARRAY is too small for 4-character string"],
-         ["COPY(ac3, ac4)", "type mismatch: 'ac4' is 'ARRAY 4 OF CHAR' and cannot be assigned to 'ARRAY 3 OF CHAR' expression"]
          )
 ),
 "PACK": testWithContext(
@@ -945,12 +921,12 @@ var testSuite = {
     context(Grammar.statement,
             "VAR set1, set2: SET; b: BOOLEAN; i: INTEGER;"),
     pass("INCL(set1, 0)",
-         "EXCL(set1, 3)"),
+         "EXCL(set1, 3)",
+         "INCL(set1, i)",
+         "EXCL(set1, i)"),
     fail(["INCL({}, i)", "expression cannot be used as VAR parameter"],
-         ["INCL(set1, i)", "constant (0..31) expected as second argument of INCL"],
-         ["EXCL(set1, i)", "constant (0..31) expected as second argument of EXCL"],
-         ["INCL(set1, 32)", "constant (0..31) expected as second argument of INCL"],
-         ["EXCL(set1, -1)", "constant (0..31) expected as second argument of EXCL"]
+         ["INCL(set1, 32)", "value (0..31) expected as a second argument of INCL, got 32"],
+         ["EXCL(set1, -1)", "value (0..31) expected as a second argument of EXCL, got -1"]
         )
     ),
 "procedure body": testWithGrammar(
@@ -1293,9 +1269,9 @@ var testSuite = {
     ),
 "assert": testWithGrammar(
     Grammar.statement,
-    pass("ASSERT(TRUE)",
-         "ASSERT(TRUE, 123)"),
-    fail(["ASSERT()", "at least 1 argument expected, got 0"],
+    pass("ASSERT(TRUE)"),
+    fail(["ASSERT()", "1 argument(s) expected, got 0"],
+         ["ASSERT(TRUE, 123)", "1 argument(s) expected, got 2"],
          ["ASSERT(123, TRUE)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'BOOLEAN'"])
     ),
 "export": testWithGrammar(

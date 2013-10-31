@@ -188,17 +188,22 @@ var TwoArgToOperatorProcCallGenerator = ExpCallGenerator.extend({
     }
 });
 
-function setBitImpl(name, op){
+function setBitImpl(name, bitOp){
     var args = [new Arg(Type.basic.set, true),
                 new Arg(Type.basic.integer, false)];
     function operator(x, y){
         var value = y.constValue();
-        if (value === undefined || value < 0 || value > 31)
-            throw new Errors.Error("constant (0..31) expected as second argument of " + name);
-        var comment = "bit: " + (y.isTerm() ? value : Code.adjustPrecedence(y, precedence.shift));
-        value = 1 << value;
-        var valueCode = value + "/*" + comment + "*/";
-        return op(Code.adjustPrecedence(x, precedence.assignment), valueCode);
+        var valueCode;
+        if (value === undefined)
+            valueCode = op.lsl(new Code.Expression("1"), y).code();
+        else {
+            if (value < 0 || value > 31)
+                throw new Errors.Error("value (0..31) expected as a second argument of " + name + ", got " + value);
+            var comment = "bit: " + (y.isTerm() ? value : Code.adjustPrecedence(y, precedence.shift));
+            value = 1 << value;
+            valueCode = value + "/*" + comment + "*/";
+        }
+        return bitOp(Code.adjustPrecedence(x, precedence.assignment), valueCode);
     }
     var proc = new Std(
         name,
@@ -220,10 +225,13 @@ function incImpl(name, unary, op){
             return unary + x.code();
 
         var value = y.constValue();
+        var valueCode;
         if (value === undefined)
-            throw new Errors.Error("constant expected as second argument of " + name);
-        var comment = y.isTerm() ? "" : "/*" + y.code() + "*/";
-        var valueCode = value + comment;
+            valueCode = y.code();
+        else {
+            var comment = y.isTerm() ? "" : "/*" + y.code() + "*/";
+            valueCode = value + comment;
+        }
         return op(x.code(), valueCode);
     }
     var CallGenerator = TwoArgToOperatorProcCallGenerator.extend({
@@ -263,25 +271,6 @@ function bitShiftImpl(name, op){
         name,
         args,
         Type.basic.integer,
-        function(context, id, type){
-            return new CallGenerator(context, id, type);
-        });
-    var symbol = new Symbol.Symbol(name, proc);
-    return symbol;
-}
-
-function longShort(name){
-    var CallGenerator = ExpCallGenerator.extend({
-        init: function LongShortCallGenerator(context, id, type){
-            ExpCallGenerator.prototype.init.call(this, context, id, type);
-        },
-        callExpression: function(){return this.args()[0];}
-    });
-    var args = [new Arg(Type.basic.real, false)];
-    var proc = new Std(
-        name,
-        args,
-        Type.basic.real,
         function(context, id, type){
             return new CallGenerator(context, id, type);
         });
@@ -393,13 +382,10 @@ exports.predefined = [
             init: function AssertProcCallGenerator(context, id, type){
                 ProcCallGenerator.prototype.init.call(this, context, id, type);
             },
-            prolog: function(){return this.context().rtl().assertId() + "(";},
-            checkArgumentsCount: function(count){
-                checkVariableArgumentsCount(1, 2, count);
-            }
+            prolog: function(){return this.context().rtl().assertId() + "(";}
         });
 
-        var args = [new Arg(Type.basic.bool), new Arg(Type.basic.integer)];
+        var args = [new Arg(Type.basic.bool)];
         var proc = new Std(
             "ASSERT",
             args,
@@ -481,8 +467,6 @@ exports.predefined = [
         var symbol = new Symbol.Symbol("FLT", proc);
         return symbol;
     }(),
-    longShort("LONG"),
-    longShort("SHORT"),
     bitShiftImpl("LSL", op.lsl),
     bitShiftImpl("ASR", op.asr),
     bitShiftImpl("ROR", op.ror),
@@ -549,28 +533,6 @@ exports.predefined = [
             name,
             [new Arg(Type.basic.integer, false)],
             Type.basic.ch,
-            function(context, id, type){
-                return new CallGenerator(context, id, type);
-            });
-        var symbol = new Symbol.Symbol(name, type);
-        return symbol;
-    }(),
-    function(){
-        var CallGenerator = ExpCallGenerator.extend({
-            init: function CopyProcCallGenerator(context, id, type){
-                ExpCallGenerator.prototype.init.call(this, context, id, type);
-            },
-            callExpression: function(){
-                var args = this.args();
-                return new Code.Expression(op.assign(args[1], args[0], this.context()));
-            }
-        });
-        var name = "COPY";
-        var type = new Std(
-            name,
-            [new Arg(undefined, false),
-             new Arg(new Type.Array("ARRAY OF CHAR", undefined, Type.basic.ch), true)],
-            undefined,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });

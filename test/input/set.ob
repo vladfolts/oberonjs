@@ -57,9 +57,11 @@ BEGIN
 	INCL(s2, 3);
 	INCL(s1, ci * 2 + 3);
 	INCL(s1, ORD(cb));
+	INCL(s2, i1);
 	INCL(aSet[0], 3);
 
 	EXCL(s2, 3);
 	EXCL(s2, ORD(~cb));
+	EXCL(s2, i1);
 	EXCL(aSet[0], 3);
 END m.

@@ -12,7 +12,6 @@ var stdSymbols = function(){
         var type = Type.basic[t];
         symbols[type.name()] = new Symbol.Symbol(type.name(), new Type.TypeId(type));
     }
-    symbols["LONGREAL"] = new Symbol.Symbol("LONGREAL", new Type.TypeId(Type.basic.real));
     
     var predefined = Procedure.predefined;
     for(var i = 0; i < predefined.length; ++i){

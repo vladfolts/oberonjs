@@ -16,7 +16,7 @@ MODULE Blur;
 
   VAR
     a, b:  Plane;
-    time: LONGREAL;
+    time: REAL;
 
   PROCEDURE Blur2DArray*;
   VAR
