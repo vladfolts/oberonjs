@@ -1253,9 +1253,9 @@ var testSuite = {
     ),
 "assert": testWithGrammar(
     Grammar.statement,
-    pass("ASSERT(TRUE)",
-         "ASSERT(TRUE, 123)"),
-    fail(["ASSERT()", "at least 1 argument expected, got 0"],
+    pass("ASSERT(TRUE)"),
+    fail(["ASSERT()", "1 argument(s) expected, got 0"],
+         ["ASSERT(TRUE, 123)", "1 argument(s) expected, got 2"],
          ["ASSERT(123, TRUE)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'BOOLEAN'"])
     ),
 "export": testWithGrammar(

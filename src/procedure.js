@@ -382,13 +382,10 @@ exports.predefined = [
             init: function AssertProcCallGenerator(context, id, type){
                 ProcCallGenerator.prototype.init.call(this, context, id, type);
             },
-            prolog: function(){return this.context().rtl().assertId() + "(";},
-            checkArgumentsCount: function(count){
-                checkVariableArgumentsCount(1, 2, count);
-            }
+            prolog: function(){return this.context().rtl().assertId() + "(";}
         });
 
-        var args = [new Arg(Type.basic.bool), new Arg(Type.basic.integer)];
+        var args = [new Arg(Type.basic.bool)];
         var proc = new Std(
             "ASSERT",
             args,

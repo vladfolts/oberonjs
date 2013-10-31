@@ -7,5 +7,4 @@ var RTL$ = {
 };
 var m = function (){
 RTL$.assert(true);
-RTL$.assert(true, 123);
 }();
