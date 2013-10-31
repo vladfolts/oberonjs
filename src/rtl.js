@@ -9,6 +9,16 @@ if (!Array.prototype.indexOf)
         return -1;
     };
 
+// support Function.bind
+if (!Function.prototype.bind)
+    Function.prototype.bind = function(thisArg){
+        var self = this;
+        var bindArgs = Array.prototype.slice.call(arguments, 1);
+        return function(){
+            return self.apply(thisArg, bindArgs.concat(Array.prototype.slice.call(arguments)));
+        };
+    };
+
 function Class(){}
 Class.extend = function extend(methods){
         function Type(){
