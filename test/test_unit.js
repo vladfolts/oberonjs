@@ -929,12 +929,12 @@ var testSuite = {
     context(Grammar.statement,
             "VAR set1, set2: SET; b: BOOLEAN; i: INTEGER;"),
     pass("INCL(set1, 0)",
-         "EXCL(set1, 3)"),
+         "EXCL(set1, 3)",
+         "INCL(set1, i)",
+         "EXCL(set1, i)"),
     fail(["INCL({}, i)", "expression cannot be used as VAR parameter"],
-         ["INCL(set1, i)", "constant (0..31) expected as second argument of INCL"],
-         ["EXCL(set1, i)", "constant (0..31) expected as second argument of EXCL"],
-         ["INCL(set1, 32)", "constant (0..31) expected as second argument of INCL"],
-         ["EXCL(set1, -1)", "constant (0..31) expected as second argument of EXCL"]
+         ["INCL(set1, 32)", "value (0..31) expected as a second argument of INCL, got 32"],
+         ["EXCL(set1, -1)", "value (0..31) expected as a second argument of EXCL, got -1"]
         )
     ),
 "procedure body": testWithGrammar(

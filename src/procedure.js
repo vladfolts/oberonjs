@@ -188,17 +188,22 @@ var TwoArgToOperatorProcCallGenerator = ExpCallGenerator.extend({
     }
 });
 
-function setBitImpl(name, op){
+function setBitImpl(name, bitOp){
     var args = [new Arg(Type.basic.set, true),
                 new Arg(Type.basic.integer, false)];
     function operator(x, y){
         var value = y.constValue();
-        if (value === undefined || value < 0 || value > 31)
-            throw new Errors.Error("constant (0..31) expected as second argument of " + name);
-        var comment = "bit: " + (y.isTerm() ? value : Code.adjustPrecedence(y, precedence.shift));
-        value = 1 << value;
-        var valueCode = value + "/*" + comment + "*/";
-        return op(Code.adjustPrecedence(x, precedence.assignment), valueCode);
+        var valueCode;
+        if (value === undefined)
+            valueCode = op.lsl(new Code.Expression("1"), y).code();
+        else {
+            if (value < 0 || value > 31)
+                throw new Errors.Error("value (0..31) expected as a second argument of " + name + ", got " + value);
+            var comment = "bit: " + (y.isTerm() ? value : Code.adjustPrecedence(y, precedence.shift));
+            value = 1 << value;
+            valueCode = value + "/*" + comment + "*/";
+        }
+        return bitOp(Code.adjustPrecedence(x, precedence.assignment), valueCode);
     }
     var proc = new Std(
         name,
