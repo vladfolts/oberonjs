@@ -12,6 +12,7 @@ CONST
 	s9 = "\";
 VAR
     ch1: CHAR;
+	a1: ARRAY 15 OF CHAR;
 	a2: ARRAY 3 OF CHAR;
 
 PROCEDURE p1(s: ARRAY OF CHAR);
@@ -22,13 +23,28 @@ END p2;
 
 BEGIN
     ch1 := s1;
-	a2 := s1;
+	a1 := s1;
 	a2 := s2;
+	a1 := s2;
 
 	p1(s1);
 	p1(s2);
     p2(s1);
 
     ASSERT(ch1 = s1);
-	ASSERT(s1 = ch1)
+	ASSERT(s1 = ch1);
+
+	ASSERT("abc" = "abc");
+
+	ASSERT(a1 = a2);
+	ASSERT(a1 # a2);
+	ASSERT(a1 > a2);
+	
+	ASSERT(a1 > s1);
+	ASSERT(a1 >= s1);
+	ASSERT(a1 # s1);
+	ASSERT(s1 < a1);
+	ASSERT(s1 <= a1);
+	ASSERT(s1 # a1);
+
 END m.

@@ -682,7 +682,11 @@ var testSuite = {
 "array expression": testWithGrammar(
     Grammar.procedureBody,
     pass("VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := 1 END",
-         "VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := 1; a[1] := a[0] END"),
+         "VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := 1; a[1] := a[0] END",
+         "VAR a1, a2: ARRAY 3 OF CHAR; BEGIN ASSERT(a1 = a2); END",
+         "VAR a1: ARRAY 2 OF CHAR; a2: ARRAY 3 OF CHAR; BEGIN ASSERT(a1 = a2); END",
+         "CONST cs = \"a\"; VAR a: ARRAY 3 OF CHAR; BEGIN ASSERT(a = cs); ASSERT(cs # a); ASSERT(a < cs); ASSERT(cs > a); END"
+         ),
     fail(["VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := TRUE END",
           "type mismatch: 'a[0]' is 'INTEGER' and cannot be assigned to 'BOOLEAN' expression"],
          ["VAR a: ARRAY 10 OF INTEGER; BEGIN a[TRUE] := 1 END",
@@ -702,7 +706,9 @@ var testSuite = {
          ["VAR a: ARRAY 10 OF INTEGER; BEGIN a[10] := 0 END",
           "index out of bounds: maximum possible index is 9, got 10"],
          ["CONST c1 = 5; VAR a: ARRAY 10 OF INTEGER; BEGIN a[10 + c1] := 0 END",
-          "index out of bounds: maximum possible index is 9, got 15"])
+          "index out of bounds: maximum possible index is 9, got 15"],
+         ["VAR a1, a2: ARRAY 3 OF INTEGER; BEGIN ASSERT(a1 = a2); END",
+          "operator '=' type mismatch: numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE expected, got 'ARRAY 3 OF INTEGER'"])
     ),
 "multi-dimensional array expression": testWithGrammar(
     Grammar.procedureBody,

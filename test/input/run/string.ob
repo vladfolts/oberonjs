@@ -1,0 +1,16 @@
+MODULE m;
+
+VAR
+	a3: ARRAY 3 OF CHAR;
+	a4: ARRAY 4 OF CHAR;
+
+BEGIN
+	ASSERT("abc" = "abc");
+	ASSERT("abd" > "abc");
+	ASSERT("abcd" > "abc");
+
+	a3 := "abc";
+	a4 := "abc";
+	ASSERT(a3 < a4); (*a4 has extra 0*)
+
+END m.
