@@ -170,9 +170,16 @@ var basic = {
 exports.basic = basic;
 exports.numeric = [basic.integer, basic.uint8, basic.real];
 
-exports.isInt = function(type){return type == basic.integer || type == basic.uint8;};
+exports.isInt = function(type){
+    return type == basic.integer || type == basic.uint8;
+};
 
 exports.intsDescription = function(){return "'INTEGER' or 'BYTE'";};
+
+exports.isString = function(type){
+    return (type instanceof ArrayType && type.elementsType() == basic.ch)
+            || type instanceof exports.String;
+};
 
 exports.nil = new NilType();
 

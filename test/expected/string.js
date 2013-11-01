@@ -34,6 +34,15 @@ var RTL$ = {
         if (!condition)
             throw new Error("assertion failed"
                           + ((code !== undefined) ? " with code " + code : ""));
+    },
+    strCmp: function (s1, s2){
+        var cmp = 0;
+        var i = 0;
+        while (!cmp && i < s1.length && i < s2.length){
+            cmp = s1[i] - s2[i];
+            ++i;
+        }
+        return cmp ? cmp : s1.length - s2.length;
     }
 };
 var m = function (){
@@ -47,6 +56,7 @@ var s7 = "\t";
 var s8 = "\f";
 var s9 = "\\";
 var ch1 = 0;
+var a1 = RTL$.makeArray(15, 0);
 var a2 = RTL$.makeArray(3, 0);
 
 function p1(s/*ARRAY OF CHAR*/){
@@ -55,11 +65,22 @@ function p1(s/*ARRAY OF CHAR*/){
 function p2(c/*CHAR*/){
 }
 ch1 = 34;
-RTL$.assignArrayFromString(a2, s1);
+RTL$.assignArrayFromString(a1, s1);
 RTL$.assignArrayFromString(a2, s2);
+RTL$.assignArrayFromString(a1, s2);
 p1(RTL$.strToArray(s1));
 p1(RTL$.strToArray(s2));
 p2(34);
 RTL$.assert(ch1 == 34);
 RTL$.assert(34 == ch1);
+RTL$.assert(RTL$.strCmp(RTL$.strToArray("abc"), RTL$.strToArray("abc")) == 0);
+RTL$.assert(RTL$.strCmp(a1, a2) == 0);
+RTL$.assert(RTL$.strCmp(a1, a2) != 0);
+RTL$.assert(RTL$.strCmp(a1, a2) > 0);
+RTL$.assert(RTL$.strCmp(a1, RTL$.strToArray(s1)) > 0);
+RTL$.assert(RTL$.strCmp(a1, RTL$.strToArray(s1)) >= 0);
+RTL$.assert(RTL$.strCmp(a1, RTL$.strToArray(s1)) != 0);
+RTL$.assert(RTL$.strCmp(RTL$.strToArray(s1), a1) < 0);
+RTL$.assert(RTL$.strCmp(RTL$.strToArray(s1), a1) <= 0);
+RTL$.assert(RTL$.strCmp(RTL$.strToArray(s1), a1) != 0);
 }();

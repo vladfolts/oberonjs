@@ -96,6 +96,15 @@ var impl = {
             result[i] = s.charCodeAt(i);
         return result;
     },
+    strCmp: function(s1, s2){
+        var cmp = 0;
+        var i = 0;
+        while (!cmp && i < s1.length && i < s2.length){
+            cmp = s1[i] - s2[i];
+            ++i;
+        }
+        return cmp ? cmp : s1.length - s2.length;
+    },
     copy: function(from, to){
         for(var prop in to){
             if (to.hasOwnProperty(prop)){

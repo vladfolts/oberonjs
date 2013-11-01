@@ -729,12 +729,12 @@ var orderOpTypeCheck = {
                 basicTypes.real,
                 basicTypes.ch
                ].indexOf(t) != -1
-            || (t instanceof Type.Array && t.elementsType() == basicTypes.ch);
+            || Type.isString(t);
     }
 };
 
 var equalOpTypeCheck = {
-    expect: "numeric type or SET or BOOLEAN OR CHAR or character array or POINTER or PROCEDURE",
+    expect: "numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE",
     check: function(t){
         return [basicTypes.integer,
                 basicTypes.uint8,
@@ -743,7 +743,7 @@ var equalOpTypeCheck = {
                 basicTypes.bool,
                 basicTypes.ch
                ].indexOf(t) != -1
-            || (t instanceof Type.Array && t.elementsType() == basicTypes.ch)
+            || Type.isString(t)
             || t instanceof Type.Pointer
             || t instanceof Type.Procedure
             || t == Type.nil;
@@ -777,7 +777,12 @@ function useTypeInRelation(leftType, rightType){
         if (type)
             return type;
     }
-    checkTypeMatch(rightType, leftType);
+
+    // special case for strings
+    var isStrings = Type.isString(leftType) && Type.isString(rightType);
+    if (!isStrings)
+        checkTypeMatch(rightType, leftType);
+
     return leftType;
 }
 
@@ -787,26 +792,26 @@ function relationOp(leftType, rightType, literal){
     var type = useTypeInRelation(leftType, rightType);
     switch (literal){
         case "=":
-            o = op.equal;
+            o = Type.isString(type) ? op.equalStr : op.equal;
             check = equalOpTypeCheck;
             break;
         case "#":
-            o = op.notEqual;
+            o = Type.isString(type) ? op.notEqualStr : op.notEqual;
             check = equalOpTypeCheck;
             break;
         case "<":
-            o = op.less;
+            o = Type.isString(type) ? op.lessStr : op.less;
             check = orderOpTypeCheck;
             break;
         case ">":
-            o = op.greater;
+            o = Type.isString(type) ? op.greaterStr : op.greater;
             check = orderOpTypeCheck;
             break;
         case "<=":
             if (type == basicTypes.set)
                 o = op.setInclL;
             else {
-                o = op.eqLess;
+                o = Type.isString(type) ? op.eqLessStr : op.eqLess;
                 check = orderOpTypeCheck;
             }
             break;
@@ -814,7 +819,7 @@ function relationOp(leftType, rightType, literal){
             if (type == basicTypes.set)
                 o = op.setInclR;
             else {
-                o = op.eqGreater;
+                o = Type.isString(type) ? op.eqGreaterStr : op.eqGreater;
                 check = orderOpTypeCheck;
             }
             break;

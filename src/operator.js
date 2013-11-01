@@ -53,6 +53,25 @@ function makeUnary(op, code){
 var mul = makeBinary(function(x, y){return x * y;}, " * ", precedence.mulDivMod);
 var div = makeBinary(function(x, y){return x / y;}, " / ", precedence.mulDivMod);
 
+var openArrayChar = new Type.Array(undefined, undefined, Type.basic.ch);
+
+function castToStr(e, context){
+    var type = e.type();
+    var opCast = Cast.implicit(type, openArrayChar);
+    return opCast(context, e).code();
+}
+
+function makeStrCmp(op){
+    return function(left, right, context){
+        return new Code.Expression(
+            context.rtl().strCmp(castToStr(left, context),
+                                 castToStr(right, context))
+                + op + "0",
+            Type.basic.bool
+        );
+    };
+}
+
 function pow2(e){
     return new Code.Expression("Math.pow(2, " + e.deref().code() + ")",
                                Type.basic.real);
@@ -165,11 +184,17 @@ var operators = {
     and:        makeBinary(function(x, y){return x && y;}, " && ", precedence.and),
 
     equal:      makeBinary(function(x, y){return x == y;}, " == ", precedence.equal),
+    equalStr:   makeStrCmp(" == "),
     notEqual:   makeBinary(function(x, y){return x != y;}, " != ", precedence.equal),
+    notEqualStr: makeStrCmp(" != "),
     less:       makeBinary(function(x, y){return x < y;}, " < ", precedence.relational),
+    lessStr:    makeStrCmp(" < "),
     greater:    makeBinary(function(x, y){return x > y;}, " > ", precedence.relational),
+    greaterStr: makeStrCmp(" > "),
     eqLess:     makeBinary(function(x, y){return x <= y;}, " <= ", precedence.relational),
+    eqLessStr:  makeStrCmp(" <= "),
     eqGreater:  makeBinary(function(x, y){return x >= y;}, " >= ", precedence.relational),
+    eqGreaterStr: makeStrCmp(" >= "),
 
     not:        makeUnary(function(x){return !x;}, "!"),
     negate:     promoteToWideIfNeeded(makeUnary(function(x){return -x;}, "-")),
