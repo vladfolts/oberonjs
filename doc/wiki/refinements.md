@@ -1,4 +1,4 @@
-Here are implemented refinements to the original language report. 
+Here are implemented refinements to the original language report (see doc/Oberon07.Report.pdf). 
 * These refinements do not contradict to the original report.
 * These refinements are not extensions of the original report because they do not extend syntax or language semantics.
 * These refinements are not directly inherited from original report using "common sense".
