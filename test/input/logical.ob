@@ -12,4 +12,5 @@ BEGIN
     b1 := b2 & ~b1;
     b1 := b2 OR ~~b1;
     b1 := b2 OR ~(~(b1 & b2));
+    b1 := ~b1 & ~b2;
 END m.

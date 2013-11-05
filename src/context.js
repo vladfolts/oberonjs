@@ -923,8 +923,10 @@ exports.Term = ChainedContext.extend({
     endParse: function(){this.parent().handleTerm(this.__expression);},
     handleExpression: function(e){
         promoteExpressionType(this, this.__expression, e);
-        if (this.__logicalNot)
+        if (this.__logicalNot){
             e = op.not(e);
+            this.__logicalNot = false;
+        }
         if (this.__operator)
             e = this.__expression ? this.__operator(this.__expression, e)
                                   : this.__operator(e);
