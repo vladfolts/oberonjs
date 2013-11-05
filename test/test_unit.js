@@ -380,11 +380,14 @@ var testSuite = {
     ),
 "POINTER dereference": testWithContext(
     context(Grammar.statement,
-            "VAR p: POINTER TO RECORD field: INTEGER END; i: INTEGER; r: RECORD END;"),
+            "TYPE PT = POINTER TO RECORD END;"
+            + "VAR pt: PT; p: POINTER TO RECORD field: INTEGER END; i: INTEGER; r: RECORD END;"),
     pass("p^.field := 1",
          "p.field := 0"),
     fail(["i^", "POINTER TO type expected, got 'INTEGER'"],
-         ["r^", "POINTER TO type expected, got 'anonymous RECORD'"])
+         ["r^", "POINTER TO type expected, got 'anonymous RECORD'"],
+         ["p.unknown := 0", "type 'anonymous RECORD' has no 'unknown' field"],
+         ["pt.unknown := 0", "type 'PT' has no 'unknown' field"])
     ),
 "POINTER assignment": testWithContext(
     context(Grammar.statement,
@@ -958,7 +961,7 @@ var testSuite = {
          ["TYPE T = RECORD field: INTEGER END; VAR v: T; BEGIN v := 1 END",
           "type mismatch: 'v' is 'T' and cannot be assigned to 'INTEGER' expression"],
          ["TYPE T = RECORD field: INTEGER END; VAR v: T; BEGIN v.unknown := 1 END",
-          "Type 'T' has no 'unknown' field"],
+          "type 'T' has no 'unknown' field"],
          ["TYPE T1 = RECORD field1: INTEGER END; T2 = RECORD (T1) field1: INTEGER END; END",
           "base record already has field: 'field1'"])
     ),
