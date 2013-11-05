@@ -767,7 +767,9 @@ var testSuite = {
          ["IF b1 THEN i1 := 0 ELSIF i1 THEN i1 := 2 END",
           "'BOOLEAN' expression expected, got 'INTEGER'"],
          ["IF p THEN i1 := 0 END",
-          "'BOOLEAN' expression expected, got 'POINTER TO anonymous RECORD'"])
+          "'BOOLEAN' expression expected, got 'POINTER TO anonymous RECORD'"],
+         ["IF b1 (*THEN*) i1 := 0 END", "THEN expected"],
+         ["IF b1 THEN i1 := 0 ELSIF ~b1 (*THEN*) i1 := 0 END", "THEN expected"])
     ),
 "CASE statement": testWithContext(
     context(Grammar.statement,

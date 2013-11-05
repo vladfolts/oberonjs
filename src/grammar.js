@@ -103,8 +103,8 @@ var statement = optional(or(
                  ));
 var statementSequence = and(statement, repeat(and(";", statement)));
 
-var ifStatement = and("IF", context(expression, Context.If), "THEN", statementSequence
-                    , repeat(and("ELSIF", context(expression, Context.ElseIf), "THEN", statementSequence))
+var ifStatement = and("IF", context(expression, Context.If), required("THEN", "THEN expected"), statementSequence
+                    , repeat(and("ELSIF", context(expression, Context.ElseIf), required("THEN", "THEN expected"), statementSequence))
                     , optional(and("ELSE", context(statementSequence, Context.Else)))
                     , emit("END", Context.emitIfEnd));
 
