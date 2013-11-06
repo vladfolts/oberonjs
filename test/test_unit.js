@@ -219,6 +219,7 @@ var testSuite = {
          "22X",
          "0X"),
     fail(["\"", "unexpected end of string"],
+         ["\"abc", "unexpected end of string"],
          ["FFX", "undeclared identifier: 'FFX'"]
         )
     ),
@@ -233,8 +234,8 @@ var testSuite = {
 "identifier": testWithSetup(
     function(){
         var IdentDeclarationContext = Class.extend({
-            init: function(){this.__ident = undefined;},
-            setIdent: function(id){this.__ident = id;},
+            init: function IdentDeclarationContext(){this.__ident = undefined;},
+            handleIdent: function(id){this.__ident = id;},
             ident: function() {return this.__ident;},
             getResult: function() {return this.__ident;}
         });
@@ -243,6 +244,7 @@ var testSuite = {
         return setupParser(Grammar.ident, makeContext);},
     pass("i", "abc1"),
     fail(["", "not parsed"],
+         [";", "not parsed"],
          ["1", "not parsed"]
          )
     ),

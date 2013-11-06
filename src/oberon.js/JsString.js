@@ -5,6 +5,16 @@ var Type = RTL$.extend({
 	}
 });
 
+function make(s/*ARRAY OF CHAR*/){
+	var result = null;
+	var i = 0;
+	result = '';
+	for (i = 0; i <= s.length - 1 | 0; ++i){
+		result += JS.String.fromCharCode(s[i]);
+	}
+	return result;
+}
+
 function len(self/*Type*/){
 	var result = 0;
 	result = self.length;
@@ -13,7 +23,7 @@ function len(self/*Type*/){
 
 function at(self/*Type*/, pos/*INTEGER*/){
 	var result = 0;
-	result = self[pos];
+	result = self.charCodeAt(pos);
 	return result;
 }
 
@@ -34,9 +44,18 @@ function substr(self/*Type*/, pos/*INTEGER*/, len/*INTEGER*/){
 	result = self.substr(pos, len);
 	return result;
 }
+
+function appendChar(self/*Type*/, c/*CHAR*/){
+	var result = null;
+	result = self;
+	result += JS.String.fromCharCode(c);
+	return result;
+}
 exports.Type = Type;
+exports.make = make;
 exports.len = len;
 exports.at = at;
 exports.indexOf = indexOf;
 exports.indexOfFrom = indexOfFrom;
 exports.substr = substr;
+exports.appendChar = appendChar;

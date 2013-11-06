@@ -2,11 +2,19 @@
 
 var assert = require("assert.js").ok;
 var Errors = require("errors.js");
-var Lexer = require("lexer.js");
+var Lexer = require("oberon.js/lexer.js");
 var Stream = require("oberon.js/Stream.js");
+var RTL$ = require("oberon.js/RTL$.js").RTL$;
+
+function literal(s){
+	var l = Lexer.makeLiteral(RTL$.strToArray(s));
+	return function(stream, context){
+		return Lexer.literal(l, stream, context);
+	};
+}
 
 function implicitParser(p){
-	return typeof p === "string" ? Lexer.literal(p) : p;
+	return typeof p === "string" ? literal(p) : p;
 }
 
 function argumentsToParsers(args){
@@ -107,3 +115,5 @@ exports.emit = function(parser, action){
 		return true;
 	};
 };
+
+exports.literal = literal;

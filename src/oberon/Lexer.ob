@@ -1,0 +1,232 @@
+MODULE Lexer;
+IMPORT JS, JsString, Stream;
+
+CONST
+    quote = 22X; (* " *)
+    commentBegin = "(*";
+    commentEnd = "*)";
+
+TYPE
+    Context = RECORD
+        handleChar: PROCEDURE(c: CHAR);
+        handleLiteral: PROCEDURE(s: JsString.Type): BOOLEAN;
+        handleString: PROCEDURE(s: JsString.Type);
+        handleIdent: PROCEDURE(s: JsString.Type);
+        isLexem: PROCEDURE(): BOOLEAN;
+        raiseException: PROCEDURE(s: ARRAY OF CHAR)
+    END;
+
+    Literal = POINTER TO RECORD
+        s: ARRAY 1 OF CHAR
+    END;
+
+VAR
+    reservedWords: JsString.Type;
+    jsReservedWords: JsString.Type;
+
+PROCEDURE isDigit(c: CHAR): BOOLEAN;
+    RETURN (c >= "0") & (c <= "9")
+END isDigit;
+
+PROCEDURE isLetter(c: CHAR): BOOLEAN;
+    RETURN ((c >= "a") & (c <= "z")) OR ((c >= "A") & (c <= "Z"))
+END isLetter;
+
+PROCEDURE digit*(stream: Stream.Type; context: Context): BOOLEAN;
+VAR
+    result: BOOLEAN;
+    c: CHAR;
+BEGIN
+    IF ~Stream.eof(stream) THEN
+        c := Stream.getChar(stream);
+        IF isDigit(c) THEN
+            context.handleChar(c);
+            result := TRUE;
+        END
+    END
+    RETURN result
+END digit;
+
+PROCEDURE hexDigit*(stream: Stream.Type; context: Context): BOOLEAN;
+VAR
+    result: BOOLEAN;
+    c: CHAR;
+BEGIN
+    c := Stream.getChar(stream);
+    IF isDigit(c) OR ((c >= "A") & (c <= "F")) THEN
+        context.handleChar(c);
+        result := TRUE;
+    END
+    RETURN result
+END hexDigit;
+
+PROCEDURE handleLiteral(context: Context; s: ARRAY OF CHAR): BOOLEAN;
+VAR result: BOOLEAN;
+BEGIN
+    JS.do("var r = context.handleLiteral(JsString.make(s)); result = (r === undefined || r)");
+    RETURN result
+END handleLiteral;
+
+PROCEDURE point*(stream: Stream.Type; context: Context): BOOLEAN;
+VAR result: BOOLEAN;
+BEGIN
+    IF    ~Stream.eof(stream)
+        & (Stream.getChar(stream) = ".")
+        & (    Stream.eof(stream) 
+            OR (Stream.peekChar(stream) # ".")) THEN (*not a diapason ".."*)        
+        result := handleLiteral(context, ".");
+    END
+    RETURN result
+END point;
+
+PROCEDURE string*(stream: Stream.Type; context: Context): BOOLEAN;
+VAR
+    result: BOOLEAN;
+    c: CHAR;
+    s: JsString.Type;
+BEGIN
+    IF ~Stream.eof(stream) THEN
+        c := Stream.getChar(stream);
+        IF c = quote THEN
+            IF ~Stream.eof(stream) THEN
+                s := JsString.make("");
+                c := Stream.getChar(stream);
+                WHILE (c # quote) & ~Stream.eof(stream) DO
+                    IF c # quote THEN
+                        s := JsString.appendChar(s, c);
+                    END;
+                    c := Stream.getChar(stream);
+                END;
+            END;
+            IF (s = NIL) OR (c # quote) THEN
+                context.raiseException("unexpected end of string");
+            END;
+            context.handleString(s);
+            result := TRUE;
+        END
+    END
+    RETURN result
+END string;
+
+PROCEDURE isReservedWorld(s: JsString.Type; words: JsString.Type): BOOLEAN;
+VAR
+    i, w: INTEGER;
+BEGIN
+    WHILE (w < JsString.len(words))
+        & (i < JsString.len(s))
+        & (JsString.at(words, w) = JsString.at(s, i))
+        & ((i # 0) OR (w = 0) OR (JsString.at(words, w - 1) = " ")) DO
+        INC(w);
+        INC(i);
+    ELSIF (w < JsString.len(words)) 
+        & ((i < JsString.len(s)) OR (JsString.at(words, w) # " ")) DO
+        INC(w);
+        i := 0;
+    END;
+    RETURN i = JsString.len(s)
+END isReservedWorld;
+
+PROCEDURE ident*(stream: Stream.Type; context: Context): BOOLEAN;
+VAR
+    result: BOOLEAN;
+    c: CHAR;
+    s: JsString.Type;
+BEGIN
+    IF ~Stream.eof(stream) THEN
+        c := Stream.getChar(stream);
+        IF isLetter(c) THEN
+            s := JsString.make("");
+            WHILE ~Stream.eof(stream) & (isLetter(c) OR isDigit(c)) DO (* OR c = "_" *)
+                s := JsString.appendChar(s, c);
+                c := Stream.getChar(stream);
+            END;
+            IF isLetter(c) OR isDigit(c) THEN
+                s := JsString.appendChar(s, c);
+            ELSE
+                Stream.next(stream, -1);
+            END;
+
+            IF ~isReservedWorld(s, reservedWords) THEN
+                IF isReservedWorld(s, jsReservedWords) THEN
+                    s := JsString.appendChar(s, "$");
+                END;
+                context.handleIdent(s);
+                result := TRUE;
+            END
+        END
+    END
+    RETURN result
+END ident;
+
+PROCEDURE skipComment(stream: Stream.Type; context: Context): BOOLEAN;
+VAR
+    result: BOOLEAN;
+BEGIN
+    IF Stream.peekStr(stream, commentBegin) THEN
+        Stream.next(stream, LEN(commentBegin));
+        WHILE ~Stream.peekStr(stream, commentEnd) DO
+            IF ~skipComment(stream, context) THEN
+                Stream.next(stream, 1);
+                IF Stream.eof(stream) THEN
+                    context.raiseException("comment was not closed");
+                END
+            END
+        END;
+        Stream.next(stream, LEN(commentEnd));
+        result := TRUE;
+    END
+    RETURN result
+END skipComment;
+
+PROCEDURE readSpaces(c: CHAR): BOOLEAN;
+    RETURN (c = " ") 
+        OR (c = 8X)
+        OR (c = 9X)
+        OR (c = 0AX)
+        OR (c = 0DX)
+END readSpaces;
+
+PROCEDURE skipSpaces*(stream: Stream.Type; context: Context);
+BEGIN
+    IF (context.isLexem = NIL) OR ~context.isLexem() THEN
+        WHILE Stream.read(stream, readSpaces)
+            & skipComment(stream, context) DO END;
+    END
+END skipSpaces;
+
+PROCEDURE separator*(stream: Stream.Type; context: Context): BOOLEAN;
+    RETURN Stream.eof(stream) OR ~isLetter(Stream.peekChar(stream))
+END separator;
+
+PROCEDURE makeLiteral*(s: ARRAY OF CHAR): Literal;
+VAR
+    result: Literal;
+BEGIN
+    NEW(result);
+    JS.do("result.s = s");
+    RETURN result
+END makeLiteral;
+
+PROCEDURE literal*(l: Literal; stream: Stream.Type; context: Context): BOOLEAN;
+VAR
+    result: BOOLEAN;
+BEGIN
+    IF Stream.peekStr(stream, l.s) THEN
+        Stream.next(stream, LEN(l.s));
+        IF ((context.isLexem # NIL) & context.isLexem())
+            OR ~isLetter(l.s[LEN(l.s) - 1])
+            OR Stream.eof(stream)
+            OR (~isLetter(Stream.peekChar(stream)) & ~isDigit(Stream.peekChar(stream)))
+                THEN
+            result := handleLiteral(context, l.s);
+        END;
+    END;
+    RETURN result
+END literal;
+
+BEGIN
+    reservedWords := JsString.make(
+        "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN");
+    jsReservedWords := JsString.make(
+        "break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math"); (* Math is used in generated code for some functions so it is reserved word from code generator standpoint *)
+END Lexer.

@@ -1,5 +1,5 @@
 _out/
-snapshot/
+snapshot*/
 test/output/
 *.sublime-project
 *.sublime-workspace

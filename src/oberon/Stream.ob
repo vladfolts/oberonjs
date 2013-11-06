@@ -2,7 +2,7 @@ MODULE Stream;
 IMPORT JsString;
 
 TYPE
-    Type = POINTER TO RECORD
+    Type* = POINTER TO RECORD
         s: JsString.Type;
         pos: INTEGER
     END;
@@ -52,14 +52,18 @@ BEGIN
     RETURN result
 END getChar;
 
-PROCEDURE peekStr*(self: Type; len: INTEGER): JsString.Type;
-VAR max: INTEGER;
+PROCEDURE peekStr*(self: Type; s: ARRAY OF CHAR): BOOLEAN;
+VAR
+    result: BOOLEAN;
+    i: INTEGER;
 BEGIN
-    max := JsString.len(self.s) - self.pos;
-    IF len > max THEN
-        len := max;
+    IF LEN(s) <= JsString.len(self.s) - self.pos THEN
+        WHILE (i < LEN(s)) & (s[i] = JsString.at(self.s, self.pos + i)) DO
+            INC(i)
+        END;
+        result := i = LEN(s);
     END
-    RETURN JsString.substr(self.s, self.pos, len)
+    RETURN result
 END peekStr;
 
 PROCEDURE read*(self: Type; f: ReaderProc): BOOLEAN;

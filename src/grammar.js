@@ -1,12 +1,11 @@
 "use strict";
 
 var Context = require("context.js");
-var Lexer = require("lexer.js");
+var Lexer = require("oberon.js/Lexer.js");
 var Parser = require("parser.js");
 var Class = require("rtl.js").Class;
 
-var character = Lexer.character;
-var literal = Lexer.literal;
+var literal = Parser.literal;
 var digit = Lexer.digit;
 var hexDigit = Lexer.hexDigit;
 var ident = Lexer.ident;

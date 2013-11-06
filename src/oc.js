@@ -4,7 +4,7 @@ var Code = require("code.js");
 var Context = require("context.js");
 var Errors = require("errors.js");
 var Grammar = require("grammar.js");
-var Lexer = require("lexer.js");
+var Lexer = require("oberon.js/lexer.js");
 var ImportRTL = require("rtl.js");
 var Stream = require("oberon.js/Stream.js");
 
@@ -58,7 +58,7 @@ function compileModulesFromText(
         if (!module)
             return;
         handleCompiledModule(module);
-        Lexer.skipSpaces(stream);
+        Lexer.skipSpaces(stream, context);
     }
     while (!Stream.eof(stream));
 }

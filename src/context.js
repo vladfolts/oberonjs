@@ -3,7 +3,6 @@
 var Cast = require("cast.js");
 var Code = require("code.js");
 var Errors = require("errors.js");
-var Lexer = require("lexer.js");
 var Module = require("module.js");
 var op = require("operator.js");
 var Parser = require("parser.js");
@@ -112,7 +111,15 @@ var ChainedContext = Class.extend({
     genTypeName: function(){return this.__parent.genTypeName();},
     genVarName: function(id){return this.__parent.genVarName(id);},
     qualifyScope: function(scope){return this.__parent.qualifyScope(scope);},
-    rtl: function(){return this.__parent.rtl();}
+    rtl: function(){return this.__parent.rtl();},
+    
+    // called from oberon code
+    raiseException: function(s){
+        var result = "";
+        for(var i = 0; i < s.length; ++i)
+            result += String.fromCharCode(s[i]);
+        throw new Errors.Error(result);
+    }
 });
 
 exports.Integer = ChainedContext.extend({
@@ -122,7 +129,7 @@ exports.Integer = ChainedContext.extend({
         this.__isHex = false;
     },
     isLexem: function(){return true;},
-    handleChar: function(c){this.__result += c;},
+    handleChar: function(c){this.__result += String.fromCharCode(c);},
     handleLiteral: function(){this.__isHex = true;},
     toInt: function(s){return parseInt(this.__result, 10);},
     endParse: function(){
@@ -144,7 +151,7 @@ exports.Real = ChainedContext.extend({
         this.__result = "";
     },
     isLexem: function(){return true;},
-    handleChar: function(c){this.__result += c;},
+    handleChar: function(c){this.__result += String.fromCharCode(c);},
     handleLiteral: function(s){
         if (s == "D") // LONGREAL
             s = "E";
@@ -192,7 +199,7 @@ exports.Char = exports.String.extend({
         exports.String.prototype.init.call(this, context);
         this.__result = "";
     },
-    handleChar: function(c){this.__result += c;},
+    handleChar: function(c){this.__result += String.fromCharCode(c);},
     toStr: function(s){return String.fromCharCode(parseInt(s, 16));}
 });
 
@@ -227,7 +234,7 @@ exports.QualifiedIdentificator = ChainedContext.extend({
         this.__id = undefined;
         this.__code = "";
     },
-    setIdent: function(id){
+    handleIdent: function(id){
         this.__id = id;
     },
     handleLiteral: function(){
@@ -262,10 +269,10 @@ exports.Identdef = ChainedContext.extend({
         this.__id = undefined;
         this.__export = false;
     },
-    setIdent: function(id){this.__id = id;},
+    handleIdent: function(id){this.__id = id;},
     handleLiteral: function(){this.__export = true;},
     endParse: function(){
-        this.parent().handleIdentef(new Identdef(this.__id, this.__export));
+        this.parent().handleIdentdef(new Identdef(this.__id, this.__export));
     }
 });
 
@@ -291,7 +298,7 @@ exports.Designator = ChainedContext.extend({
         this.__info = info;
         this.__code.write(code);
     },
-    setIdent: function(id){
+    handleIdent: function(id){
         var t = this.__currentType;
         var pointerType;
         var isReadOnly = this.__info instanceof Type.Variable 
@@ -514,12 +521,12 @@ exports.ProcDecl = ChainedContext.extend({
         this.__returnParsed = false;
         this.__outerScope = this.parent().currentScope();
     },
-    handleIdentef: function(id){
+    handleIdentdef: function(id){
         this.__id = id;
         this.codeGenerator().write("\nfunction " + id.id() + "(");
         this.parent().pushScope(new Scope.Procedure());
     },
-    setIdent: function(id){
+    handleIdent: function(id){
         if (this.__id.id() != id)
             throw new Errors.Error("mismatched procedure names: '" + this.__id.id()
                                  + "' at the begining and '" + id + "' at the end");
@@ -605,7 +612,7 @@ exports.ProcParams = HandleSymbolAsType.extend({
         if (s == "VAR")
             this.__isVar = true;
     },
-    setIdent: function(id){ this.__argNamesForType.push(id);},
+    handleIdent: function(id){ this.__argNamesForType.push(id);},
     setType: function(type){
         var names = this.__argNamesForType;
         for(var i = 0; i < names.length; ++i){
@@ -1293,7 +1300,7 @@ exports.CaseRange = ChainedContext.extend({
         }
         this.handleLabel(type, value);
     },
-    setIdent: function(id){
+    handleIdent: function(id){
         var s = getSymbol(this.parent(), id);
         if (!s.isConst())
             throw new Errors.Error("'" + id + "' is not a constant");
@@ -1358,7 +1365,7 @@ exports.For = ChainedContext.extend({
         this.__by_parsed = false;
         this.__by = undefined;
     },
-    setIdent: function(id){
+    handleIdent: function(id){
         var s = getSymbol(this.parent(), id);
         if (!s.isVariable())
             throw new Errors.Error("'" + s.id() + "' is not a variable");
@@ -1449,7 +1456,7 @@ exports.ConstDecl = ChainedContext.extend({
         this.__type = undefined;
         this.__value = undefined;
     },
-    handleIdentef: function(id){
+    handleIdentdef: function(id){
         this.__id = id;
         this.codeGenerator().write("var " + id.id() + " = ");
     },
@@ -1483,7 +1490,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
         this.__idents = [];
         this.__type = undefined;
     },
-    handleIdentef: function(id){this.__idents.push(id);},
+    handleIdentdef: function(id){this.__idents.push(id);},
     exportField: function(name){
         checkIfFieldCanBeExported(name, this.__idents, "variable");
     },
@@ -1517,7 +1524,7 @@ exports.FieldListDeclaration = HandleSymbolAsType.extend({
         this.__type = undefined;
     },
     typeName: function(){return undefined;},
-    handleIdentef: function(id) {this.__idents.push(id);},
+    handleIdentdef: function(id) {this.__idents.push(id);},
     exportField: function(name){
         checkIfFieldCanBeExported(name, this.__idents, "field");
     },
@@ -1684,7 +1691,7 @@ exports.TypeDeclaration = ChainedContext.extend({
         this.__id = undefined;
         this.__symbol = undefined;
     },
-    handleIdentef: function(id){
+    handleIdentdef: function(id){
         var typeId = new Type.LazyTypeId();
         var symbol = this.currentScope().addType(typeId, id);
         this.__id = id;
@@ -1741,7 +1748,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
         this.__moduleScope = undefined;
         this.__moduleGen = undefined;
     },
-    setIdent: function(id){
+    handleIdent: function(id){
         var parent = this.parent();
         if (this.__name === undefined ) {
             this.__name = id;
@@ -1792,7 +1799,7 @@ var ModuleImport = ChainedContext.extend({
         this.__currentModule = undefined;
         this.__currentAlias = undefined;
     },
-    setIdent: function(id){
+    handleIdent: function(id){
         this.__currentModule = id;
     },
     handleLiteral: function(s){

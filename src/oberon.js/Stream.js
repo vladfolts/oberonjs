@@ -45,13 +45,18 @@ function getChar(self/*Type*/){
 	return result;
 }
 
-function peekStr(self/*Type*/, len/*INTEGER*/){
-	var max = 0;
-	max = JsString.len(self.s) - self.pos | 0;
-	if (len > max){
-		len = max;
+function peekStr(self/*Type*/, s/*ARRAY OF CHAR*/){
+	var result = false;
+	var i = 0;
+	if (s.length <= (JsString.len(self.s) - self.pos | 0)){
+		while (true){
+			if (i < s.length && s[i] == JsString.at(self.s, self.pos + i | 0)){
+				++i;
+			} else break;
+		}
+		result = i == s.length;
 	}
-	return JsString.substr(self.s, self.pos, len);
+	return result;
 }
 
 function read(self/*Type*/, f/*ReaderProc*/){
@@ -75,6 +80,7 @@ function lineNumber(self/*Type*/){
 	}
 	return line + 1 | 0;
 }
+exports.Type = Type;
 exports.make = make;
 exports.eof = eof;
 exports.pos = pos;
