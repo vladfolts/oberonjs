@@ -293,9 +293,11 @@ exports.Designator = ChainedContext.extend({
     },
     setIdent: function(id){
         var t = this.__currentType;
+        var pointerType;
         var isReadOnly = this.__info instanceof Type.Variable 
                       && this.__info.isReadOnly();
         if (t instanceof Type.Pointer){
+            pointerType = t;
             this.__handleDeref();
             isReadOnly = false;
         }
@@ -304,7 +306,7 @@ exports.Designator = ChainedContext.extend({
                 || t instanceof Module.AnyType))
             throw new Errors.Error("cannot designate '" + t.description() + "'");
 
-        this.__denote(id);
+        this.__denote(id, pointerType);
         this.__info = new Type.Variable(this.__currentType, isReadOnly);
         this.__scope = undefined;
     },
@@ -378,11 +380,15 @@ exports.Designator = ChainedContext.extend({
 
         this.__currentType = type;
     },
-    __denote: function(id){
+    __denote: function(id, pointerType){
         var t = this.__currentType;
         var fieldType = t.findSymbol(id);
-        if (!fieldType)
-            throw new Errors.Error("Type '" + t.name() + "' has no '" + id + "' field");
+        if (!fieldType){
+            var typeDesc = !t.name() && pointerType && pointerType.name()
+                ? pointerType.name()
+                : t.description();
+            throw new Errors.Error("type '" + typeDesc + "' has no '" + id + "' field");
+        }
         this.__derefCode = this.__code.result();
         this.__propCode = "\"" + id + "\"";
         this.__code.write("." + id);
@@ -892,6 +898,7 @@ exports.MulOperator = ChainedContext.extend({
 exports.Term = ChainedContext.extend({
     init: function TermContext(context){
         ChainedContext.prototype.init.call(this, context);
+        this.__logicalNot = false;
         this.__operator = undefined;
         this.__expression = undefined;
     },
@@ -903,6 +910,10 @@ exports.Term = ChainedContext.extend({
             value = info.value();
         this.handleExpression(
             new Code.Expression(d.code(), d.type(), d, value));
+    },
+    handleLogicalNot: function(){
+        this.__logicalNot = !this.__logicalNot;
+        this.setType(basicTypes.bool);
     },
     handleOperator: function(o){this.__operator = o;},
     handleConst: function(type, value, code){
@@ -918,6 +929,10 @@ exports.Term = ChainedContext.extend({
     endParse: function(){this.parent().handleTerm(this.__expression);},
     handleExpression: function(e){
         promoteExpressionType(this, this.__expression, e);
+        if (this.__logicalNot){
+            e = op.not(e);
+            this.__logicalNot = false;
+        }
         if (this.__operator)
             e = this.__expression ? this.__operator(this.__expression, e)
                                   : this.__operator(e);
@@ -938,12 +953,11 @@ exports.Factor = ChainedContext.extend({
             parent.handleConst(basicTypes.bool, true, "true");
         else if (s == "FALSE")
             parent.handleConst(basicTypes.bool, false, "false");
-        else if (s == "~"){
-            parent.setType(basicTypes.bool);
-            parent.handleOperator(op.not);
-        }
+        else if (s == "~")
+            parent.handleLogicalNot();
     },
-    handleFactor: function(e){this.parent().handleFactor(e);}
+    handleFactor: function(e){this.parent().handleFactor(e);},
+    handleLogicalNot: function(){this.parent().handleLogicalNot();}
 });
 
 exports.Set = ChainedContext.extend({
