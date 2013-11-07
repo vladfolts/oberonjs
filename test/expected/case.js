@@ -8,6 +8,11 @@ var byte = 0;
 var c = 0;
 var $c;
 $c = i1;
+$c = i1;
+$c = i1;
+if ($c === 1){
+	b1 = false;
+}
 $c = 123;
 if ($c === 1){
 	b1 = true;

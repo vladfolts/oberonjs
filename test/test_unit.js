@@ -763,6 +763,8 @@ var testSuite = {
               "CONST ci = 15; cc = \"A\";"
             + "VAR c1: CHAR; b1: BOOLEAN; i1, i2: INTEGER; byte: BYTE; p: POINTER TO RECORD END;"),
     pass("CASE i1 OF END",
+         "CASE i1 OF | END",
+         "CASE i1 OF | 0: b1 := TRUE END",
          "CASE i1 OF 0: b1 := TRUE END",
          "CASE c1 OF \"A\": b1 := TRUE END",
          "CASE byte OF 3: b1 := TRUE END",
