@@ -13,6 +13,14 @@ VAR i: INTEGER;
 BEGIN    
 	CASE i1 OF END;
 
+	CASE i1 OF
+		|
+	END;
+
+	CASE i1 OF
+		| 1: b1 := FALSE
+	END;
+
 	CASE 123 OF 1: b1 := TRUE END;
 
 	CASE i1 OF 
