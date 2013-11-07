@@ -1,4 +1,4 @@
-var RTL$ = require("RTL$.js").RTL$;
+var RTL$ = require("rtl.js");
 var JS = GLOBAL;
 var Type = RTL$.extend({
 	init: function Type(){

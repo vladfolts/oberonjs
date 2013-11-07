@@ -1,14 +1,15 @@
 "use strict";
 
-var Rtl = require("rtl.js");
+var Class = require("rtl.js").Class;
 var Code = require("code.js");
 var Context = require("context.js");
 var oc = require("oc.js");
+var RTL = require("rtl_code.js").RTL;
 
 var fs = require("fs");
 var path = require("path");
 
-var ModuleGenerator = Rtl.Class.extend({
+var ModuleGenerator = Class.extend({
     init: function Nodejs$ModuleGenerator(name, imports){
         this.__name = name;
         this.__imports = imports;
@@ -37,15 +38,9 @@ var ModuleGenerator = Rtl.Class.extend({
     }
 });
 
-var RtlCodeUsingWatcher = Rtl.Code.extend({
-    init: function(){
-        Rtl.Code.prototype.init.call(this);
-        this.__used = false;
-    },
-    get: function(func){
-        this.__used = true;
-        return Rtl.Code.prototype.get.call(this, func);
-    },
+var RtlCodeUsingWatcher = Class.extend({
+    init: function(){this.__used = false;},
+    using: function(){this.__used = true;},
     used: function(){return this.__used;},
     reset: function(){this.__used = false;}
 });
@@ -57,7 +52,7 @@ function writeCompiledModule(name, code, outDir){
 
 function compile(sources, handleErrors, outDir){
     var rtlCodeWatcher = new RtlCodeUsingWatcher();
-    var rtl = new Rtl.RTL(rtlCodeWatcher);
+    var rtl = new RTL(rtlCodeWatcher.using.bind(rtlCodeWatcher));
     var moduleCode = function(name, imports){return new ModuleGenerator(name, imports);};
 
     var compiledFilesStack = [];
@@ -78,19 +73,12 @@ function compile(sources, handleErrors, outDir){
             function(e){handleErrors("File \"" + compiledFilesStack[compiledFilesStack.length - 1] + "\", " + e);},
             function(name, code){
                 if (rtlCodeWatcher.used()){
-                    code = "var " + rtl.name() + " = require(\"" + rtl.name() 
-                         + ".js\")." + rtl.name() + ";\n" + code;
+                    code = "var " + rtl.name() + " = require(\"rtl.js\");\n" + code;
                     rtlCodeWatcher.reset();
                 }
                 writeCompiledModule(name, code, outDir);
                 compiledFilesStack.pop();
             });
-
-    var rtlCode = rtl.generate();
-    if (rtlCode){
-        rtlCode += "\nexports." + rtl.name() + " = " + rtl.name() + ";";
-        writeCompiledModule(rtl.name(), rtlCode, outDir);
-    }
 }
 
 exports.compile = compile;

@@ -1,4 +1,4 @@
-var RTL$ = require("RTL$.js").RTL$;
+var RTL$ = require("rtl.js");
 var ci = 123;
 var Base = RTL$.extend({
 	init: function Base(){

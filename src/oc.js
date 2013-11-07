@@ -1,15 +1,13 @@
 "use strict";
 
+var Class = require("rtl.js").Class;
 var Code = require("code.js");
 var Context = require("context.js");
 var Errors = require("errors.js");
 var Grammar = require("grammar.js");
 var Lexer = require("oberon.js/lexer.js");
-var ImportRTL = require("rtl.js");
+var RTL = require("rtl_code.js").RTL;
 var Stream = require("oberon.js/Stream.js");
-
-var RTL = ImportRTL.RTL;
-var Class = ImportRTL.Class;
 
 var CompiledModule = Class.extend({
     init: function CompiledModule(symbol, code, exports){

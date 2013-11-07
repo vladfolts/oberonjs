@@ -1,19 +1,18 @@
 "use strict";
 
 var assert = require("assert.js").ok;
+var Class = require("rtl.js").Class;
 var Code = require("code.js");
 var Context = require("context.js");
 var Errors = require("errors.js");
 var Grammar = require("grammar.js");
 var oc = require("oc.js");
-var ImportRTL = require("rtl.js");
+var RTL = require("rtl_code.js").RTL;
 var Scope = require("scope.js");
 var Stream = require("Stream.js");
 var Test = require("test.js");
 
 var TestError = Test.TestError;
-var RTL = ImportRTL.RTL;
-var Class = ImportRTL.Class;
 
 function parseInContext(grammar, s, context){
     var stream = Stream.make(s);

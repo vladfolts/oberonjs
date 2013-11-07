@@ -1,24 +1,5 @@
 "use strict";
 
-// support IE8
-if (!Array.prototype.indexOf)
-    Array.prototype.indexOf = function(x){
-        for(var i = 0; i < this.length; ++i)
-            if (this[i] === x)
-                return i;
-        return -1;
-    };
-
-// support Function.bind
-if (!Function.prototype.bind)
-    Function.prototype.bind = function(thisArg){
-        var self = this;
-        var bindArgs = Array.prototype.slice.call(arguments, 1);
-        return function(){
-            return self.apply(thisArg, bindArgs.concat(Array.prototype.slice.call(arguments)));
-        };
-    };
-
 function Class(){}
 Class.extend = function extend(methods){
         function Type(){
@@ -134,69 +115,6 @@ var impl = {
     }
 };
 
-var Code = Class.extend({
-    init: function RTL$Code(){
-        var names = [];
-        for(var f in impl)
-            names.push(f);
-        this.__functions = names;
-    },
-    functions: function(){return this.__functions;},
-    get: function(func){return impl[func];}
-});
-
-var defaultCode = new Code();
-
 exports.Class = Class;
-exports.RTL = Class.extend({
-    init: function RTL(code){
-        this.__entries = {};
-        this.__code = code || defaultCode;        
-        var names = this.__code.functions();
-        for(var i = 0; i < names.length; ++i){
-            var name = names[i];
-            this[name] = this.__makeOnDemand(name);
-            this[name + "Id"] = this.__makeIdOnDemand(name);
-        }
-    },
-    name: function(){return "RTL$";},
-    generate: function(){
-        var result = "var " + this.name() + " = {\n";
-        var firstEntry = true;
-        for (var name in this.__entries){
-            if (!firstEntry)
-                result += ",\n";
-            else
-                firstEntry = false;
-            result += "    " + name + ": " + this.__entries[name].toString();
-        }
-        if (!firstEntry)
-            result += "\n};\n";
-        else
-            result = undefined;
-        
-        return result;
-    },
-    __makeIdOnDemand: function(name){
-        return function(){
-            if (!this.__entries[name])
-                this.__entries[name] = this.__code.get(name);
-            return this.name() + "." + name;
-        };
-    },
-    __makeOnDemand: function(name){
-        return function(){
-            var result = this[name +"Id"]() + "(";
-            if (arguments.length){
-                result += arguments[0];
-                for(var a = 1; a < arguments.length; ++a)
-                    result += ", " + arguments[a];
-            }
-            result += ")";
-            return result;
-        };
-    }
-
-});
-
-exports.Code = Code;
+for(var e in impl)
+    exports[e] = impl[e];

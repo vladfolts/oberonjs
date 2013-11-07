@@ -1,4 +1,4 @@
-var RTL$ = require("RTL$.js").RTL$;
+var RTL$ = require("rtl.js");
 var JS = GLOBAL;
 var JsString = require("JsString.js");
 var Stream = require("Stream.js");
