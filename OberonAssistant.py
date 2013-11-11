@@ -14,11 +14,16 @@ class OberonAssistant(sublime_plugin.EventListener):
 				self.rs = view.sel()
 				curr = self.rs[0]
 				ch = view.substr(sublime.Region(curr.a-1,curr.a))
-				if ch==" " or ch=="\n" or ch==";" or ch=="(" :
-					word = view.substr(view.word(sublime.Region(curr.a-1,curr.a-1)))					
+				if ch==" " or ch=="\n" or ch==";" or ch=="(" or ch==")" :
+					word = view.substr(view.word(sublime.Region(curr.a-1,curr.a-1)))
+					shift = 1
+					if ")" in word :
+						word = view.substr(view.word(sublime.Region(curr.a-2,curr.a-2)))
+						sublime.status_message(word)
+						shift = 2					
 					if word.upper() in self.keywords:
 						edit = view.begin_edit()
-						view.replace(edit, view.word(sublime.Region(curr.a-1,curr.a-1)), word.upper())
+						view.replace(edit, view.word(sublime.Region(curr.a-shift,curr.a-shift)), word.upper())
 						self.inProcess = True
 						view.end_edit(edit)
 						self.inProcess = False
