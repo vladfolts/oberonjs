@@ -1,1 +1,1 @@
-..\browser\linkjs.py -I../src test_unit.js test_unit_browser.js
+..\browser\linkjs.py -I../src -I../src/oberon.js test_unit.js test_unit_browser.js
