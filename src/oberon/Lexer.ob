@@ -5,6 +5,8 @@ CONST
     quote = 22X; (* " *)
     commentBegin = "(*";
     commentEnd = "*)";
+    reservedWords = "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN";
+    jsReservedWords = "break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math"; (* Math is used in generated code for some functions so it is reserved word from code generator standpoint *)
 
 TYPE
     Context = RECORD
@@ -19,10 +21,6 @@ TYPE
     Literal = POINTER TO RECORD
         s: ARRAY 1 OF CHAR
     END;
-
-VAR
-    reservedWords: JsString.Type;
-    jsReservedWords: JsString.Type;
 
 PROCEDURE isDigit(c: CHAR): BOOLEAN;
     RETURN (c >= "0") & (c <= "9")
@@ -108,18 +106,18 @@ BEGIN
     RETURN result
 END string;
 
-PROCEDURE isReservedWorld(s: JsString.Type; words: JsString.Type): BOOLEAN;
+PROCEDURE isReservedWorld(s: JsString.Type; words: ARRAY OF CHAR): BOOLEAN;
 VAR
     i, w: INTEGER;
 BEGIN
-    WHILE (w < JsString.len(words))
+    WHILE (w < LEN(words))
         & (i < JsString.len(s))
-        & (JsString.at(words, w) = JsString.at(s, i))
-        & ((i # 0) OR (w = 0) OR (JsString.at(words, w - 1) = " ")) DO
+        & (words[w] = JsString.at(s, i))
+        & ((i # 0) OR (w = 0) OR (words[w - 1] = " ")) DO
         INC(w);
         INC(i);
-    ELSIF (w < JsString.len(words)) 
-        & ((i < JsString.len(s)) OR (JsString.at(words, w) # " ")) DO
+    ELSIF (w < LEN(words)) 
+        & ((i < JsString.len(s)) OR (words[w] # " ")) DO
         INC(w);
         i := 0;
     END;
@@ -224,9 +222,4 @@ BEGIN
     RETURN result
 END literal;
 
-BEGIN
-    reservedWords := JsString.make(
-        "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN");
-    jsReservedWords := JsString.make(
-        "break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math"); (* Math is used in generated code for some functions so it is reserved word from code generator standpoint *)
 END Lexer.

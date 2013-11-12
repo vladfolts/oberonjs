@@ -5,6 +5,8 @@ var Stream = require("Stream.js");
 var quote = "\"";
 var commentBegin = "(*";
 var commentEnd = "*)";
+var reservedWords = "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN";
+var jsReservedWords = "break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math";
 var Context = RTL$.extend({
 	init: function Context(){
 		this.handleChar = null;
@@ -20,8 +22,6 @@ var Literal = RTL$.extend({
 		this.s = RTL$.makeCharArray(1);
 	}
 });
-var reservedWords = null;
-var jsReservedWords = null;
 
 function isDigit(c/*CHAR*/){
 	return c >= 48 && c <= 57;
@@ -98,14 +98,14 @@ function string(stream/*Type*/, context/*Context*/){
 	return result;
 }
 
-function isReservedWorld(s/*Type*/, words/*Type*/){
+function isReservedWorld(s/*Type*/, words/*ARRAY OF CHAR*/){
 	var i = 0;var w = 0;
 	while (true){
-		if (w < JsString.len(words) && i < JsString.len(s) && JsString.at(words, w) == JsString.at(s, i) && (i != 0 || w == 0 || JsString.at(words, w - 1 | 0) == 32)){
+		if (w < words.length && i < JsString.len(s) && words.charCodeAt(w) == JsString.at(s, i) && (i != 0 || w == 0 || words.charCodeAt(w - 1 | 0) == 32)){
 			++w;
 			++i;
 		}
-		else if (w < JsString.len(words) && (i < JsString.len(s) || JsString.at(words, w) != 32)){
+		else if (w < words.length && (i < JsString.len(s) || words.charCodeAt(w) != 32)){
 			++w;
 			i = 0;
 		} else break;
@@ -199,8 +199,6 @@ function literal(l/*Literal*/, stream/*Type*/, context/*Context*/){
 	}
 	return result;
 }
-reservedWords = JsString.make("ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN");
-jsReservedWords = JsString.make("break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math");
 exports.digit = digit;
 exports.hexDigit = hexDigit;
 exports.point = point;
