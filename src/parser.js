@@ -1,7 +1,7 @@
 "use strict";
 
 var assert = require("assert.js").ok;
-var Errors = require("errors.js");
+var Errors = require("oberon.js/Errors");
 var Lexer = require("oberon.js/lexer.js");
 var Stream = require("oberon.js/Stream.js");
 

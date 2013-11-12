@@ -1,5 +1,5 @@
 MODULE Lexer;
-IMPORT JS, JsString, Stream;
+IMPORT JS, JsString, Errors, Stream;
 
 CONST
     quote = 22X; (* " *)
@@ -14,8 +14,7 @@ TYPE
         handleLiteral: PROCEDURE(s: JsString.Type): BOOLEAN;
         handleString: PROCEDURE(s: JsString.Type);
         handleIdent: PROCEDURE(s: JsString.Type);
-        isLexem: PROCEDURE(): BOOLEAN;
-        raiseException: PROCEDURE(s: ARRAY OF CHAR)
+        isLexem: PROCEDURE(): BOOLEAN
     END;
 
     Literal = POINTER TO RECORD
@@ -97,7 +96,7 @@ BEGIN
                 END;
             END;
             IF (s = NIL) OR (c # quote) THEN
-                context.raiseException("unexpected end of string");
+                Errors.raise(JsString.make("unexpected end of string"));
             END;
             context.handleString(s);
             result := TRUE;
@@ -166,7 +165,7 @@ BEGIN
             IF ~skipComment(stream, context) THEN
                 Stream.next(stream, 1);
                 IF Stream.eof(stream) THEN
-                    context.raiseException("comment was not closed");
+                    Errors.raise(JsString.make("comment was not closed"));
                 END
             END
         END;

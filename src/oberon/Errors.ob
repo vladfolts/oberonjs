@@ -1,0 +1,15 @@
+MODULE Errors;
+IMPORT JS, JsString;
+
+TYPE Error* = RECORD END;
+
+PROCEDURE raise*(msg: JsString.Type);
+BEGIN
+    JS.do("throw new Error(msg)")
+END raise;
+
+BEGIN
+    (* do not use Rtl.Class here - IE8 does not understand overloeded toString method (using Class.extend). *)
+    JS.do("Error = function(msg){this.__msg = msg;}");
+    JS.do("Error.prototype.toString = function(){return this.__msg;};");
+END Errors.

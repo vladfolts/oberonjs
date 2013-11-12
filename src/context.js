@@ -2,7 +2,7 @@
 
 var Cast = require("cast.js");
 var Code = require("code.js");
-var Errors = require("errors.js");
+var Errors = require("oberon.js/Errors.js");
 var Module = require("module.js");
 var op = require("operator.js");
 var Parser = require("parser.js");
@@ -111,10 +111,7 @@ var ChainedContext = Class.extend({
     genTypeName: function(){return this.__parent.genTypeName();},
     genVarName: function(id){return this.__parent.genVarName(id);},
     qualifyScope: function(scope){return this.__parent.qualifyScope(scope);},
-    rtl: function(){return this.__parent.rtl();},
-    
-    // called from oberon code
-    raiseException: function(s){throw new Errors.Error(s);}
+    rtl: function(){return this.__parent.rtl();}
 });
 
 exports.Integer = ChainedContext.extend({

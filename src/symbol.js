@@ -1,7 +1,7 @@
 "use strict";
 
 var Class = require("rtl.js").Class;
-var Errors = require("errors.js");
+var Errors = require("oberon.js/Errors");
 var Type = require("type.js");
 
 var Symbol = Class.extend({

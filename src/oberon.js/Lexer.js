@@ -1,6 +1,7 @@
 var RTL$ = require("rtl.js");
 var JS = GLOBAL;
 var JsString = require("JsString.js");
+var Errors = require("Errors.js");
 var Stream = require("Stream.js");
 var quote = "\"";
 var commentBegin = "(*";
@@ -14,7 +15,6 @@ var Context = RTL$.extend({
 		this.handleString = null;
 		this.handleIdent = null;
 		this.isLexem = null;
-		this.raiseException = null;
 	}
 });
 var Literal = RTL$.extend({
@@ -89,7 +89,7 @@ function string(stream/*Type*/, context/*Context*/){
 				}
 			}
 			if (s == null || c != 34){
-				context.raiseException("unexpected end of string");
+				Errors.raise(JsString.make("unexpected end of string"));
 			}
 			context.handleString(s);
 			result = true;
@@ -154,7 +154,7 @@ function skipComment(stream/*Type*/, context/*Context*/){
 				if (!skipComment(stream, context)){
 					Stream.next(stream, 1);
 					if (Stream.eof(stream)){
-						context.raiseException("comment was not closed");
+						Errors.raise(JsString.make("comment was not closed"));
 					}
 				}
 			} else break;
