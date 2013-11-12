@@ -114,12 +114,7 @@ var ChainedContext = Class.extend({
     rtl: function(){return this.__parent.rtl();},
     
     // called from oberon code
-    raiseException: function(s){
-        var result = "";
-        for(var i = 0; i < s.length; ++i)
-            result += String.fromCharCode(s[i]);
-        throw new Errors.Error(result);
-    }
+    raiseException: function(s){throw new Errors.Error(s);}
 });
 
 exports.Integer = ChainedContext.extend({
@@ -213,14 +208,16 @@ exports.BaseType = ChainedContext.extend({
 });
 
 var DesignatorInfo = Class.extend({
-    init: function(code, refCode, type, info, scope){
+    init: function(code, lval, refCode, type, info, scope){
         this.__code = code;
+        this.__lval = lval;
         this.__refCode = refCode;
         this.__type = type;
         this.__info = info;
         this.__scope = scope;
     },
     code: function(){return this.__code;},
+    lval: function(){return this.__lval;},
     refCode: function(){return this.__refCode(this.__code);},
     type: function(){return this.__type;},
     info: function(){return this.__info;},
@@ -282,7 +279,8 @@ exports.Designator = ChainedContext.extend({
         this.__currentType = undefined;
         this.__info = undefined;
         this.__scope = undefined;
-        this.__code = new Code.SimpleGenerator();
+        this.__code = "";
+        this.__lval = undefined;
         this.__indexExpression = undefined;
         this.__derefCode = undefined;
         this.__propCode = undefined;
@@ -296,7 +294,7 @@ exports.Designator = ChainedContext.extend({
         else if (s.isVariable() || s.isConst())
             this.__currentType = info.type();
         this.__info = info;
-        this.__code.write(code);
+        this.__code += code;
     },
     handleIdent: function(id){
         var t = this.__currentType;
@@ -317,7 +315,6 @@ exports.Designator = ChainedContext.extend({
         this.__info = new Type.Variable(this.__currentType, isReadOnly);
         this.__scope = undefined;
     },
-    codeGenerator: function(){return this.__code;},
     handleExpression: function(e){this.__indexExpression = e;},
     __handleIndexExpression: function(){
         var e = this.__indexExpression;
@@ -343,11 +340,16 @@ exports.Designator = ChainedContext.extend({
             this.__handleIndexExpression();
             var indexCode = this.__indexExpression.deref().code();
             this.__propCode = indexCode;
-            this.__code = new Code.SimpleGenerator(this.__derefCode + "[" + indexCode + "]");
+            var code = this.__derefCode + "[" + indexCode + "]";
+            if (this.__currentType == basicTypes.ch){
+                this.__lval = code;
+                code = this.__derefCode + ".charCodeAt(" + indexCode + ")";
+            }
+            this.__code += code;
             }
         if (s == "[" || s == ","){
-            this.__derefCode = this.__code.result();
-            this.__code = new Code.SimpleGenerator();
+            this.__derefCode = this.__code;
+            this.__code = "";
         }
         else if (s == "^"){
             this.__handleDeref();
@@ -382,8 +384,8 @@ exports.Designator = ChainedContext.extend({
 
         var baseType = type instanceof Type.Pointer ? type.baseType() : type;
         var castName = this.qualifyScope(baseType.scope()) + baseType.cons();
-        var code = this.rtl().typeGuard(this.__code.result(), castName);
-        this.__code = new Code.SimpleGenerator(code);
+        var code = this.rtl().typeGuard(this.__code, castName);
+        this.__code = code;
 
         this.__currentType = type;
     },
@@ -396,17 +398,17 @@ exports.Designator = ChainedContext.extend({
                 : t.description();
             throw new Errors.Error("type '" + typeDesc + "' has no '" + id + "' field");
         }
-        this.__derefCode = this.__code.result();
+        this.__derefCode = this.__code;
         this.__propCode = "\"" + id + "\"";
-        this.__code.write("." + id);
+        this.__code += "." + id;
         this.__currentType = fieldType;
     },
     endParse: function(){
-        var code = this.__code.result();
+        var code = this.__code;
         var self = this;
         var refCode = function(code){return self.__makeRefCode(code);};
         this.parent().setDesignator(
-            new DesignatorInfo(code, refCode, this.__currentType, this.__info, this.__scope));
+            new DesignatorInfo(code, this.__lval ? this.__lval : code, refCode, this.__currentType, this.__info, this.__scope));
     },
     __makeRefCode: function(code){
         if (   this.__currentType instanceof Type.Array
@@ -683,12 +685,14 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
         var initializer = type instanceof Type.Array || type instanceof Type.Record
             ? "function(){return " + type.initializer(this) + ";}"
             : type.initializer(this);
+        var isCharArray = (type == basicTypes.ch);
         var dimensions = "";
         for(var i = this.__dimensions.length; i-- ;){
             var length = this.__dimensions[i];
             dimensions = length + (dimensions.length ? ", " + dimensions : "");
             var arrayInit = !i
-                ? this.rtl().makeArray(dimensions + ", " + initializer)
+                ? isCharArray ? this.rtl().makeCharArray(dimensions)
+                              : this.rtl().makeArray(dimensions + ", " + initializer)
                 : undefined;
             type = new Type.Array("ARRAY OF " + type.name()
                                , arrayInit

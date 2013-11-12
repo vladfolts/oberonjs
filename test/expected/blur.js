@@ -1,21 +1,34 @@
 var RTL$ = {
-    makeArray: function (/*dimensions, initializer*/){
+    makeCharArray: function (/*dimensions*/){
         var forward = Array.prototype.slice.call(arguments);
-        var result = new Array(forward.shift());
-        var i;
-        if (forward.length == 1){
-            var init = forward[0];
-            if (typeof init == "function")
+        var length = forward.pop();
+
+        if (!forward.length)
+            return makeCharArray(length);
+
+        function makeCharArray(length){
+            var result = new Uint16Array(length);
+            result.charCodeAt = function(i){return this[i];};
+            return result;
+        }
+
+        function makeArray(){
+            var forward = Array.prototype.slice.call(arguments);
+            var result = new Array(forward.shift());
+            var i;
+            if (forward.length == 1){
+                var init = forward[0];
                 for(i = 0; i < result.length; ++i)
                     result[i] = init();
+            }
             else
                 for(i = 0; i < result.length; ++i)
-                    result[i] = init;
+                    result[i] = makeArray.apply(undefined, forward);
+            return result;
         }
-        else
-            for(i = 0; i < result.length; ++i)
-                result[i] = this.makeArray.apply(this, forward);
-        return result;
+
+        forward.push(makeCharArray.bind(undefined, length));
+        return makeArray.apply(undefined, forward);
     }
 };
 var Blur = function (){
@@ -25,7 +38,7 @@ var H = 480;
 var H1 = 480 - 3 | 0;
 var N = 13;
 var Frames = 1;
-var a = RTL$.makeArray(1920, 480, 0);var b = RTL$.makeArray(1920, 480, 0);
+var a = RTL$.makeCharArray(1920, 480);var b = RTL$.makeCharArray(1920, 480);
 var time = 0;
 
 function Blur2DArray(){
@@ -37,14 +50,14 @@ function Blur2DArray(){
 			for (y = 1; y <= H - 2 | 0; ++y){
 				for (x = 1; x <= W - 2 | 0; ++x){
 					for (color = 0; color <= 2; ++color){
-						b[(x * 3 | 0) + color | 0][y] = (((a[(x * 3 | 0) + color | 0][y + 1 | 0] + a[(x * 3 | 0) + color | 0][y - 1 | 0] | 0) + a[(x - 1 | 0) * 3 | 0][y] | 0) + a[(x + 1 | 0) * 3 | 0][y] | 0) / 4 | 0;
+						b[(x * 3 | 0) + color | 0][y] = (((a[(x * 3 | 0) + color | 0].charCodeAt(y + 1 | 0) + a[(x * 3 | 0) + color | 0].charCodeAt(y - 1 | 0) | 0) + a[(x - 1 | 0) * 3 | 0].charCodeAt(y) | 0) + a[(x + 1 | 0) * 3 | 0].charCodeAt(y) | 0) / 4 | 0;
 					}
 				}
 			}
 			for (y = 1; y <= H - 2 | 0; ++y){
 				for (x = 1; x <= W - 2 | 0; ++x){
 					for (color = 0; color <= 2; ++color){
-						a[(x * 3 | 0) + color | 0][y] = (((b[(x * 3 | 0) + color | 0][y + 1 | 0] + b[(x * 3 | 0) + color | 0][y - 1 | 0] | 0) + b[(x - 1 | 0) * 3 | 0][y] | 0) + b[(x + 1 | 0) * 3 | 0][y] | 0) / 4 | 0;
+						a[(x * 3 | 0) + color | 0][y] = (((b[(x * 3 | 0) + color | 0].charCodeAt(y + 1 | 0) + b[(x * 3 | 0) + color | 0].charCodeAt(y - 1 | 0) | 0) + b[(x - 1 | 0) * 3 | 0].charCodeAt(y) | 0) + b[(x + 1 | 0) * 3 | 0].charCodeAt(y) | 0) / 4 | 0;
 					}
 				}
 			}

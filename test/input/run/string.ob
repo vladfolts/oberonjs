@@ -3,6 +3,7 @@ MODULE m;
 VAR
 	a3: ARRAY 3 OF CHAR;
 	a4: ARRAY 4 OF CHAR;
+    a34: ARRAY 3, 4 OF CHAR;
 
 BEGIN
 	ASSERT("abc" = "abc");
@@ -12,5 +13,13 @@ BEGIN
 	a3 := "abc";
 	a4 := "abc";
 	ASSERT(a3 < a4); (*a4 has extra 0*)
+
+    a34[0] := "abcd";
+    a34[1][0] := "c";
+    ASSERT(a34[0][0] = "a");
+    ASSERT(a34[0][1] = "b");
+    ASSERT(a34[0][2] = "c");
+    ASSERT(a34[0][3] = "d");
+    ASSERT(a34[1][0] = "c");
 
 END m.

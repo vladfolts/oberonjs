@@ -1,21 +1,34 @@
 var RTL$ = {
-    makeArray: function (/*dimensions, initializer*/){
+    makeCharArray: function (/*dimensions*/){
         var forward = Array.prototype.slice.call(arguments);
-        var result = new Array(forward.shift());
-        var i;
-        if (forward.length == 1){
-            var init = forward[0];
-            if (typeof init == "function")
+        var length = forward.pop();
+
+        if (!forward.length)
+            return makeCharArray(length);
+
+        function makeCharArray(length){
+            var result = new Uint16Array(length);
+            result.charCodeAt = function(i){return this[i];};
+            return result;
+        }
+
+        function makeArray(){
+            var forward = Array.prototype.slice.call(arguments);
+            var result = new Array(forward.shift());
+            var i;
+            if (forward.length == 1){
+                var init = forward[0];
                 for(i = 0; i < result.length; ++i)
                     result[i] = init();
+            }
             else
                 for(i = 0; i < result.length; ++i)
-                    result[i] = init;
+                    result[i] = makeArray.apply(undefined, forward);
+            return result;
         }
-        else
-            for(i = 0; i < result.length; ++i)
-                result[i] = this.makeArray.apply(this, forward);
-        return result;
+
+        forward.push(makeCharArray.bind(undefined, length));
+        return makeArray.apply(undefined, forward);
     },
     assignArrayFromString: function (a, s){
         var i;
@@ -23,12 +36,6 @@ var RTL$ = {
             a[i] = s.charCodeAt(i);
         for(i = s.length; i < a.length; ++i)
             a[i] = 0;
-    },
-    strToArray: function (s){
-        var result = new Array(s.length);
-        for(var i = 0; i < s.length; ++i)
-            result[i] = s.charCodeAt(i);
-        return result;
     },
     assert: function (condition, code){
         if (!condition)
@@ -39,7 +46,7 @@ var RTL$ = {
         var cmp = 0;
         var i = 0;
         while (!cmp && i < s1.length && i < s2.length){
-            cmp = s1[i] - s2[i];
+            cmp = s1.charCodeAt(i) - s2.charCodeAt(i);
             ++i;
         }
         return cmp ? cmp : s1.length - s2.length;
@@ -56,8 +63,8 @@ var s7 = "\t";
 var s8 = "\f";
 var s9 = "\\";
 var ch1 = 0;
-var a1 = RTL$.makeArray(15, 0);
-var a2 = RTL$.makeArray(3, 0);
+var a1 = RTL$.makeCharArray(15);
+var a2 = RTL$.makeCharArray(3);
 
 function p1(s/*ARRAY OF CHAR*/){
 }
@@ -68,19 +75,22 @@ ch1 = 34;
 RTL$.assignArrayFromString(a1, s1);
 RTL$.assignArrayFromString(a2, s2);
 RTL$.assignArrayFromString(a1, s2);
-p1(RTL$.strToArray(s1));
-p1(RTL$.strToArray(s2));
+p1(s1);
+p1(s2);
 p2(34);
+p2(a1.charCodeAt(0));
 RTL$.assert(ch1 == 34);
 RTL$.assert(34 == ch1);
-RTL$.assert(RTL$.strCmp(RTL$.strToArray("abc"), RTL$.strToArray("abc")) == 0);
+RTL$.assert(RTL$.strCmp("abc", "abc") == 0);
 RTL$.assert(RTL$.strCmp(a1, a2) == 0);
 RTL$.assert(RTL$.strCmp(a1, a2) != 0);
 RTL$.assert(RTL$.strCmp(a1, a2) > 0);
-RTL$.assert(RTL$.strCmp(a1, RTL$.strToArray(s1)) > 0);
-RTL$.assert(RTL$.strCmp(a1, RTL$.strToArray(s1)) >= 0);
-RTL$.assert(RTL$.strCmp(a1, RTL$.strToArray(s1)) != 0);
-RTL$.assert(RTL$.strCmp(RTL$.strToArray(s1), a1) < 0);
-RTL$.assert(RTL$.strCmp(RTL$.strToArray(s1), a1) <= 0);
-RTL$.assert(RTL$.strCmp(RTL$.strToArray(s1), a1) != 0);
+RTL$.assert(RTL$.strCmp(a1, s1) > 0);
+RTL$.assert(RTL$.strCmp(a1, s1) >= 0);
+RTL$.assert(RTL$.strCmp(a1, s1) != 0);
+RTL$.assert(RTL$.strCmp(s1, a1) < 0);
+RTL$.assert(RTL$.strCmp(s1, a1) <= 0);
+RTL$.assert(RTL$.strCmp(s1, a1) != 0);
+a1[0] = 97;
+a1[1] = a1.charCodeAt(0);
 }();

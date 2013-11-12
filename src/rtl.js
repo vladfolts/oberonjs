@@ -41,6 +41,37 @@ var impl = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
+    makeCharArray: function(/*dimensions*/){
+        var forward = Array.prototype.slice.call(arguments);
+        var length = forward.pop();
+
+        if (!forward.length)
+            return makeCharArray(length);
+
+        function makeCharArray(length){
+            var result = new Uint16Array(length);
+            result.charCodeAt = function(i){return this[i];};
+            return result;
+        }
+
+        function makeArray(){
+            var forward = Array.prototype.slice.call(arguments);
+            var result = new Array(forward.shift());
+            var i;
+            if (forward.length == 1){
+                var init = forward[0];
+                for(i = 0; i < result.length; ++i)
+                    result[i] = init();
+            }
+            else
+                for(i = 0; i < result.length; ++i)
+                    result[i] = makeArray.apply(undefined, forward);
+            return result;
+        }
+
+        forward.push(makeCharArray.bind(undefined, length));
+        return makeArray.apply(undefined, forward);
+    },
     makeSet: function(/*...*/){
         var result = 0;
         
@@ -82,17 +113,11 @@ var impl = {
         for(i = s.length; i < a.length; ++i)
             a[i] = 0;
     },
-    strToArray: function(s){
-        var result = new Array(s.length);
-        for(var i = 0; i < s.length; ++i)
-            result[i] = s.charCodeAt(i);
-        return result;
-    },
     strCmp: function(s1, s2){
         var cmp = 0;
         var i = 0;
         while (!cmp && i < s1.length && i < s2.length){
-            cmp = s1[i] - s2[i];
+            cmp = s1.charCodeAt(i) - s2.charCodeAt(i);
             ++i;
         }
         return cmp ? cmp : s1.length - s2.length;

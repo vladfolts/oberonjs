@@ -49,6 +49,7 @@ var Expression = Class.extend({
         this.__maxPrecedence = maxPrecedence;
     },
     code: function(){return this.__code;},
+    lval: function(){return this.__designator ? this.__designator.lval() : this.__code;},
     type: function(){return this.__type;},
     designator: function(){return this.__designator;},
     constValue: function(){return this.__constValue;},

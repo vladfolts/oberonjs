@@ -30,6 +30,7 @@ BEGIN
 	p1(s1);
 	p1(s2);
     p2(s1);
+	p2(a1[0]);
 
     ASSERT(ch1 = s1);
 	ASSERT(s1 = ch1);
@@ -47,4 +48,6 @@ BEGIN
 	ASSERT(s1 <= a1);
 	ASSERT(s1 # a1);
 
+	a1[0] := "a";
+	a1[1] := a1[0];
 END m.

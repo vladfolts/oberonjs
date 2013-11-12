@@ -64,7 +64,11 @@ function expectError(src, dirs){
 }
 
 function run(src, dirs){
-    eval(compile(src));
+    var result = compile(src);
+    var resultName = path.basename(src).replace(".ob", ".js");
+    var resultPath = path.join(dirs.output, resultName);
+    fs.writeFileSync(resultPath, result);
+    require(resultPath);
 }
 
 function makeTest(test, src, dirs){

@@ -11,7 +11,7 @@ VAR
 BEGIN
     JS.do("result = ''");
     FOR i := 0 TO LEN(s) - 1 DO
-        JS.do("result += JS.String.fromCharCode(s[i])")
+        JS.do("result += JS.String.fromCharCode(s.charCodeAt(i))")
     END
     RETURN result
 END make;

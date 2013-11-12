@@ -10,7 +10,7 @@ function make(s/*ARRAY OF CHAR*/){
 	var i = 0;
 	result = '';
 	for (i = 0; i <= s.length - 1 | 0; ++i){
-		result += JS.String.fromCharCode(s[i]);
+		result += JS.String.fromCharCode(s.charCodeAt(i));
 	}
 	return result;
 }

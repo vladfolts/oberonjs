@@ -4,10 +4,9 @@ var assert = require("assert.js").ok;
 var Errors = require("errors.js");
 var Lexer = require("oberon.js/lexer.js");
 var Stream = require("oberon.js/Stream.js");
-var Rtl = require("rtl.js");
 
 function literal(s){
-	var l = Lexer.makeLiteral(Rtl.strToArray(s));
+	var l = Lexer.makeLiteral(s);
 	return function(stream, context){
 		return Lexer.literal(l, stream, context);
 	};

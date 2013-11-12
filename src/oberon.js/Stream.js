@@ -50,7 +50,7 @@ function peekStr(self/*Type*/, s/*ARRAY OF CHAR*/){
 	var i = 0;
 	if (s.length <= (JsString.len(self.s) - self.pos | 0)){
 		while (true){
-			if (i < s.length && s[i] == JsString.at(self.s, self.pos + i | 0)){
+			if (i < s.length && s.charCodeAt(i) == JsString.at(self.s, self.pos + i | 0)){
 				++i;
 			} else break;
 		}

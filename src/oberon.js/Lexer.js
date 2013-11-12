@@ -17,7 +17,7 @@ var Context = RTL$.extend({
 });
 var Literal = RTL$.extend({
 	init: function Literal(){
-		this.s = RTL$.makeArray(1, 0);
+		this.s = RTL$.makeCharArray(1);
 	}
 });
 var reservedWords = null;
@@ -64,7 +64,7 @@ function handleLiteral(context/*Context*/, s/*ARRAY OF CHAR*/){
 function point(stream/*Type*/, context/*Context*/){
 	var result = false;
 	if (!Stream.eof(stream) && Stream.getChar(stream) == 46 && (Stream.eof(stream) || Stream.peekChar(stream) != 46)){
-		result = handleLiteral(context, RTL$.strToArray("."));
+		result = handleLiteral(context, ".");
 	}
 	return result;
 }
@@ -77,7 +77,7 @@ function string(stream/*Type*/, context/*Context*/){
 		c = Stream.getChar(stream);
 		if (c == 34){
 			if (!Stream.eof(stream)){
-				s = JsString.make(RTL$.strToArray(""));
+				s = JsString.make("");
 				c = Stream.getChar(stream);
 				while (true){
 					if (c != 34 && !Stream.eof(stream)){
@@ -89,7 +89,7 @@ function string(stream/*Type*/, context/*Context*/){
 				}
 			}
 			if (s == null || c != 34){
-				context.raiseException(RTL$.strToArray("unexpected end of string"));
+				context.raiseException("unexpected end of string");
 			}
 			context.handleString(s);
 			result = true;
@@ -120,7 +120,7 @@ function ident(stream/*Type*/, context/*Context*/){
 	if (!Stream.eof(stream)){
 		c = Stream.getChar(stream);
 		if (isLetter(c)){
-			s = JsString.make(RTL$.strToArray(""));
+			s = JsString.make("");
 			while (true){
 				if (!Stream.eof(stream) && (isLetter(c) || isDigit(c))){
 					s = JsString.appendChar(s, c);
@@ -147,14 +147,14 @@ function ident(stream/*Type*/, context/*Context*/){
 
 function skipComment(stream/*Type*/, context/*Context*/){
 	var result = false;
-	if (Stream.peekStr(stream, RTL$.strToArray(commentBegin))){
+	if (Stream.peekStr(stream, commentBegin)){
 		Stream.next(stream, commentBegin.length);
 		while (true){
-			if (!Stream.peekStr(stream, RTL$.strToArray(commentEnd))){
+			if (!Stream.peekStr(stream, commentEnd)){
 				if (!skipComment(stream, context)){
 					Stream.next(stream, 1);
 					if (Stream.eof(stream)){
-						context.raiseException(RTL$.strToArray("comment was not closed"));
+						context.raiseException("comment was not closed");
 					}
 				}
 			} else break;
@@ -193,14 +193,14 @@ function literal(l/*Literal*/, stream/*Type*/, context/*Context*/){
 	var result = false;
 	if (Stream.peekStr(stream, l.s)){
 		Stream.next(stream, l.s.length);
-		if (context.isLexem != null && context.isLexem() || !isLetter(l.s[l.s.length - 1 | 0]) || Stream.eof(stream) || !isLetter(Stream.peekChar(stream)) && !isDigit(Stream.peekChar(stream))){
+		if (context.isLexem != null && context.isLexem() || !isLetter(l.s.charCodeAt(l.s.length - 1 | 0)) || Stream.eof(stream) || !isLetter(Stream.peekChar(stream)) && !isDigit(Stream.peekChar(stream))){
 			result = handleLiteral(context, l.s);
 		}
 	}
 	return result;
 }
-reservedWords = JsString.make(RTL$.strToArray("ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN"));
-jsReservedWords = JsString.make(RTL$.strToArray("break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math"));
+reservedWords = JsString.make("ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN");
+jsReservedWords = JsString.make("break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math");
 exports.digit = digit;
 exports.hexDigit = hexDigit;
 exports.point = point;

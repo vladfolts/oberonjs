@@ -80,9 +80,7 @@ function implicitCast(from, to, ops){
                 return function(){return new Code.Expression(v, to);};
         }
         else if (to instanceof Type.Array && to.elementsType() == Type.basic.ch)
-            return function(context, e){
-                return new Code.Expression(context.rtl().strToArray(e.code()), to);
-            };
+            return doNoting;
     }
     else if (from instanceof ArrayType && to instanceof ArrayType)
         return (to.length() === undefined || to.length() === from.length())

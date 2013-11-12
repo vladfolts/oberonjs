@@ -87,7 +87,7 @@ function assign(left, right, context){
     if (!(info instanceof Type.Variable) || info.isReadOnly())
         throw new Errors.Error("cannot assign to " + info.idType());
 
-    var leftCode = left.code();
+    var leftCode = left.lval();
     var leftType = left.type();
     var rightCode = right.code();
     var rightType = right.type();
