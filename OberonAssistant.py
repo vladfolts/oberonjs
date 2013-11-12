@@ -34,5 +34,5 @@ class OberonAssistant(sublime_plugin.EventListener):
 	def on_selection_modified(self,view):
 			self.rs = view.sel()
 			curr = self.rs[0]
-			sublime.status_message(view.scope_name(curr.a))
+			#sublime.status_message(view.scope_name(curr.a))
 
