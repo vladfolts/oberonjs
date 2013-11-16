@@ -159,7 +159,6 @@ var typeDeclaration = context(and(identdef, "=", strucType), Context.TypeDeclara
 var procedureHeading = and("PROCEDURE"
                          , identdef
                          , context(optional(formalParameters), Context.FormalParametersProcDecl));
-var grammar;
 
 exports.makeProcedureDeclaration = function(procedureBody){
     return context(and(procedureHeading, ";",

@@ -1,3 +1,5 @@
+"use strict";
+
 function TestError(s) {this.__s = s;}
 TestError.prototype.toString = function(){return this.__s;};
 
@@ -41,8 +43,26 @@ function run(tests){
 
     console.log("Running..." );
     var start = (new Date()).getTime();
-    if (typeof process != "undefined" && process.argv.length > 2)
-        runTest(process.argv[2], tests, stat, "");
+    if (typeof process != "undefined" && process.argv.length > 2){
+        var testName = process.argv[2];
+        while (!tests[testName]){
+            var dotPos = testName.indexOf(".");
+            if (dotPos == -1){
+                console.log("test '" + testName + "' not found");
+                return;
+            }
+
+            var suite = testName.substr(0, dotPos);
+            tests = tests[suite];
+            if (!tests){
+                console.log("suite '" + suite + "' not found");
+                return;
+            }
+            
+            testName = testName.substr(dotPos + 1);
+        }
+        runTest(testName, tests, stat, "");
+    }
     else
         runImpl(tests, stat, "");
     var stop = (new Date()).getTime();
