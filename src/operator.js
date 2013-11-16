@@ -2,7 +2,7 @@
 
 var Cast = require("cast.js");
 var Code = require("code.js");
-var Errors = require("oberon.js/Errors");
+var Errors = require("js/Errors.js");
 var Type = require("type.js");
 
 var precedence = {

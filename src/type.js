@@ -1,7 +1,7 @@
 "use strict";
 
 var Class = require("rtl.js").Class;
-var Errors = require("oberon.js/Errors");
+var Errors = require("js/Errors.js");
 
 var Id = Class.extend({
     init: function Id(){}

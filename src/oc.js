@@ -3,11 +3,10 @@
 var Class = require("rtl.js").Class;
 var Code = require("code.js");
 var Context = require("context.js");
-var Errors = require("oberon.js/Errors");
-var Grammar = require("grammar.js");
-var Lexer = require("oberon.js/lexer.js");
+var Errors = require("js/Errors.js");
+var Lexer = require("js/Lexer.js");
 var RTL = require("rtl_code.js").RTL;
-var Stream = require("oberon.js/Stream.js");
+var Stream = require("js/Stream.js");
 
 var CompiledModule = Class.extend({
     init: function CompiledModule(symbol, code, exports){
@@ -20,10 +19,10 @@ var CompiledModule = Class.extend({
     exports: function(){return this.__exports;}
 });
 
-function compileModule(stream, context, handleErrors){
+function compileModule(grammar, stream, context, handleErrors){
     Lexer.skipSpaces(stream, context);  
     try {
-        if (!Grammar.module(stream, context))
+        if (!grammar.module(stream, context))
             throw new Errors.Error("syntax error");
     }
     catch (x) {
@@ -45,6 +44,7 @@ function compileModule(stream, context, handleErrors){
 
 function compileModulesFromText(
         text,
+        grammar,
         contextFactory,
         resolveModule,
         handleCompiledModule,
@@ -52,7 +52,7 @@ function compileModulesFromText(
     var stream = Stream.make(text);
     do {
         var context = contextFactory(resolveModule);
-        var module = compileModule(stream, context, handleErrors);
+        var module = compileModule(grammar, stream, context, handleErrors);
         if (!module)
             return;
         handleCompiledModule(module);
@@ -84,10 +84,11 @@ var ModuleResolver = Class.extend({
     }
 });
 
-function makeResolver(contextFactory, handleCompiledModule, handleErrors, moduleReader){
+function makeResolver(grammar, contextFactory, handleCompiledModule, handleErrors, moduleReader){
     return new ModuleResolver(
         function(text, resolveModule, handleModule){
             compileModulesFromText(text,
+                                   grammar,
                                    contextFactory,
                                    resolveModule,
                                    handleModule,
@@ -98,16 +99,17 @@ function makeResolver(contextFactory, handleCompiledModule, handleErrors, module
         );
 }
 
-function compileModules(names, moduleReader, contextFactory, handleErrors, handleCompiledModule){
-    var resolver = makeResolver(contextFactory, handleCompiledModule, handleErrors, moduleReader);
+function compileModules(names, moduleReader, grammar, contextFactory, handleErrors, handleCompiledModule){
+    var resolver = makeResolver(grammar, contextFactory, handleCompiledModule, handleErrors, moduleReader);
     names.forEach(function(name){ resolver.compile(moduleReader(name)); });
 }
 
-function compile(text, handleErrors){
+function compile(text, grammar, handleErrors){
     var result = "";
     var rtl = new RTL();
     var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
     var resolver = makeResolver(
+            grammar,
             function(moduleResolver){
                 return new Context.Context(new Code.Generator(),
                                            moduleCode,

@@ -2,7 +2,7 @@
 
 var Cast = require("cast.js");
 var Code = require("code.js");
-var Errors = require("oberon.js/Errors.js");
+var Errors = require("js/Errors.js");
 var Module = require("module.js");
 var op = require("operator.js");
 var Parser = require("parser.js");

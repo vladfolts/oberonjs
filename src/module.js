@@ -1,7 +1,7 @@
 "use strict";
 
 var Code = require("code.js");
-var Errors = require("oberon.js/Errors");
+var Errors = require("js/Errors.js");
 var Procedure = require("procedure.js");
 var Symbol = require("symbol.js");
 var Type = require("type.js");

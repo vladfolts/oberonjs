@@ -1,7 +1,7 @@
 "use strict";
 
 var Context = require("context.js");
-var Lexer = require("oberon.js/Lexer.js");
+var Lexer = require("js/Lexer.js");
 var Parser = require("parser.js");
 var Class = require("rtl.js").Class;
 
@@ -159,39 +159,51 @@ var typeDeclaration = context(and(identdef, "=", strucType), Context.TypeDeclara
 var procedureHeading = and("PROCEDURE"
                          , identdef
                          , context(optional(formalParameters), Context.FormalParametersProcDecl));
-var procedureDeclaration = context(
-      and(procedureHeading, ";"
-          // break recursive declaration of procedureBody
-        , function(stream, context){return procedureBody(stream, context);}
-        , ident)
-    , Context.ProcDecl);
+var grammar;
+
+exports.makeProcedureDeclaration = function(procedureBody){
+    return context(and(procedureHeading, ";",
+                       procedureBody,
+                       ident),
+                   Context.ProcDecl);
+    };
 
 var constantDeclaration = context(and(identdef, "=", constExpression), Context.ConstDecl);
 
-var declarationSequence = and(optional(and("CONST", repeat(and(constantDeclaration, required(";")))))
-                            , optional(and("TYPE", context(repeat(and(typeDeclaration, required(";"))), Context.TypeSection)))
-                            , optional(and("VAR", repeat(and(variableDeclaration, required(";")))))
-                            , repeat(and(procedureDeclaration, ";")));
-var procedureBody = and(declarationSequence
-                      , optional(and("BEGIN", statementSequence))
-                      , optional(context(and("RETURN", expression), Context.Return))
-                      , required("END", "END expected (PROCEDURE)"));
-
 var imprt = and(ident, optional(and(":=", ident)));
 var importList = and("IMPORT", imprt, repeat(and(",", imprt)));
-var modul = context(and("MODULE", ident, ";",
-                        context(optional(and(importList, ";")), Context.ModuleImport),
-                        declarationSequence,
-                        optional(and("BEGIN", statementSequence)),
-                        required("END", "END expected (MODULE)"), ident, point),
-                     Context.ModuleDeclaration);
 
-exports.declarationSequence = declarationSequence;
+function make(makeProcedureDeclaration){
+    var result = {};
+    result.procedureDeclaration
+        // break recursive declaration of procedureBody
+        = makeProcedureDeclaration(
+            function(stream, context){
+                return result.procedureBody(stream, context);}
+        );
+    result.declarationSequence
+        = and(optional(and("CONST", repeat(and(constantDeclaration, required(";"))))),
+              optional(and("TYPE", context(repeat(and(typeDeclaration, required(";"))), Context.TypeSection))),
+              optional(and("VAR", repeat(and(variableDeclaration, required(";"))))),
+              repeat(and(result.procedureDeclaration, ";")));
+    result.procedureBody
+        = and(result.declarationSequence,
+              optional(and("BEGIN", statementSequence)),
+              optional(context(and("RETURN", expression), Context.Return)),
+              required("END", "END expected (PROCEDURE)"));
+    result.module
+        = context(and("MODULE", ident, ";",
+                      context(optional(and(importList, ";")), Context.ModuleImport),
+                      result.declarationSequence,
+                      optional(and("BEGIN", statementSequence)),
+                      required("END", "END expected (MODULE)"), ident, point),
+                  Context.ModuleDeclaration);
+    return result;
+    }
+
+exports.make = make;
 exports.expression = expression;
 exports.ident = ident;
-exports.module = modul;
-exports.procedureBody = procedureBody;
-exports.procedureDeclaration = procedureDeclaration;
 exports.procedureHeading = procedureHeading;
 exports.statement = statement;
 exports.typeDeclaration = typeDeclaration;

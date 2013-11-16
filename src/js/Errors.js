@@ -1,6 +1,6 @@
 var RTL$ = require("rtl.js");
 var JS = GLOBAL;
-var JsString = require("JsString.js");
+var JsString = require("js/JsString.js");
 var Error = RTL$.extend({
 	init: function Error(){
 	}

@@ -1,9 +1,9 @@
 "use strict";
 
 var assert = require("assert.js").ok;
-var Errors = require("oberon.js/Errors");
-var Lexer = require("oberon.js/lexer.js");
-var Stream = require("oberon.js/Stream.js");
+var Errors = require("js/Errors.js");
+var Lexer = require("js/Lexer.js");
+var Stream = require("js/Stream.js");
 
 function literal(s){
 	var l = Lexer.makeLiteral(s);

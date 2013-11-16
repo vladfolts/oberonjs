@@ -59,4 +59,11 @@ BEGIN
     RETURN result
 END appendChar;
 
+PROCEDURE concat*(self: Type; add: Type): Type;
+VAR result: Type;
+BEGIN
+    JS.do("result = self + add");
+    RETURN result
+END concat;
+
 END JsString.

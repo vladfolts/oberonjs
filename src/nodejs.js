@@ -50,7 +50,7 @@ function writeCompiledModule(name, code, outDir){
     fs.writeFileSync(filePath, code);
     }
 
-function compile(sources, handleErrors, outDir){
+function compile(sources, grammar, handleErrors, outDir){
     var rtlCodeWatcher = new RtlCodeUsingWatcher();
     var rtl = new RTL(rtlCodeWatcher.using.bind(rtlCodeWatcher));
     var moduleCode = function(name, imports){return new ModuleGenerator(name, imports);};
@@ -65,6 +65,7 @@ function compile(sources, handleErrors, outDir){
                 compiledFilesStack.push(fileName);
                 return fs.readFileSync(fileName, "utf8");
             },
+            grammar,
             function(moduleResolver){return new Context.Context(
                 new Code.Generator(),
                 moduleCode,

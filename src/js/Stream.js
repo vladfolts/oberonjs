@@ -1,5 +1,5 @@
 var RTL$ = require("rtl.js");
-var JsString = require("JsString.js");
+var JsString = require("js/JsString.js");
 var Type = RTL$.extend({
 	init: function Type(){
 		this.s = null;

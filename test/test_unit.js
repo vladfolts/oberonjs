@@ -4,8 +4,9 @@ var assert = require("assert.js").ok;
 var Class = require("rtl.js").Class;
 var Code = require("code.js");
 var Context = require("context.js");
-var Errors = require("oberon.js/Errors");
+var Errors = require("js/Errors.js");
 var Grammar = require("grammar.js");
+var oberonGrammar = require("oberon/oberon_grammar.js").grammar;
 var oc = require("oc.js");
 var RTL = require("rtl_code.js").RTL;
 var Scope = require("scope.js");
@@ -97,7 +98,7 @@ function setupWithContext(grammar, source){
     function innerMakeContext(){
         var context = makeContext();
         try {
-            parseInContext(Grammar.declarationSequence, source, context);
+            parseInContext(oberonGrammar.declarationSequence, source, context);
         }
         catch (x) {
             if (x instanceof Errors.Error)
@@ -158,10 +159,11 @@ var TestContextWithModule = TestContext.extend({
 function testWithModule(src, pass, fail){
     return testWithSetup(
         function(){
-            var imported = oc.compileModule(Stream.make(src), makeContext());
+            var imported = oc.compileModule(oberonGrammar, Stream.make(src), makeContext());
             var module = imported.symbol().info();
             return setup(function(s){
-                oc.compileModule(Stream.make(s),
+                oc.compileModule(oberonGrammar,
+                                 Stream.make(s),
                                  new TestContextWithModule(module));
             });},
         pass,
@@ -254,14 +256,14 @@ var testSuite = {
     fail(["i: T", "undeclared identifier: 'T'"])
     ),
 "procedure VAR section": testWithGrammar(
-    Grammar.declarationSequence,
+    oberonGrammar.declarationSequence,
     pass("VAR",
          "VAR i: INTEGER;",
          "VAR i, j: INTEGER;",
          "VAR i, j: INTEGER; b: BOOLEAN;")
     ),
 "const declaration": testWithContext(
-    context(Grammar.declarationSequence,
+    context(oberonGrammar.declarationSequence,
             "CONST ci = 1; VAR v1: INTEGER;"),
     pass("CONST i = 10;",
          "CONST i = 1 + 2;",
@@ -368,7 +370,7 @@ var testSuite = {
         )
     ),
 "POINTER forward declaration": testWithContext(
-    context(Grammar.module, ""),
+    context(oberonGrammar.module, ""),
     pass("MODULE m; TYPE T = POINTER TO NotDeclaredYet; NotDeclaredYet = RECORD END; END m.",
          "MODULE m; TYPE T1 = POINTER TO NotDeclaredYet; T2 = POINTER TO NotDeclaredYet; NotDeclaredYet = RECORD END; END m."
          ),
@@ -433,7 +435,7 @@ var testSuite = {
           "invalid type cast: a value variable and cannot be used in typeguard"])
     ),
 "typeguard for VAR argument": testWithContext(
-    context(Grammar.procedureDeclaration,
+    context(oberonGrammar.procedureDeclaration,
             "TYPE Base = RECORD END; Derived = RECORD (Base) i: INTEGER END;"
             + "T = RECORD END; TD = RECORD(T) b: Base END;"),
     pass("PROCEDURE proc(VAR p: Base); BEGIN p(Derived).i := 1; END proc"),
@@ -522,14 +524,14 @@ var testSuite = {
          ["NEW(proc())", "expression cannot be used as VAR parameter"])
     ),
 "NEW for read only array element fails": testWithContext(
-    context(Grammar.procedureDeclaration,
+    context(oberonGrammar.procedureDeclaration,
             "TYPE P = POINTER TO RECORD END;"),
     pass(),
     fail(["PROCEDURE readOnlyPointers(a: ARRAY OF P); BEGIN NEW(a[0]) END readOnlyPointers",
           "read-only variable cannot be used as VAR parameter"])
     ),
 "LEN": testWithGrammar(
-    Grammar.procedureDeclaration,
+    oberonGrammar.procedureDeclaration,
     pass("PROCEDURE p(a: ARRAY OF INTEGER): INTEGER; RETURN LEN(a) END p",
          "PROCEDURE p(VAR a: ARRAY OF BOOLEAN): INTEGER; RETURN LEN(a) END p",
          "PROCEDURE p(): INTEGER; RETURN LEN(\"abc\") END p"),
@@ -684,7 +686,7 @@ var testSuite = {
          ["i := noResult()", "procedure returning no result cannot be used in an expression"])
     ),
 "array expression": testWithGrammar(
-    Grammar.procedureBody,
+    oberonGrammar.procedureBody,
     pass("VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := 1 END",
          "VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := 1; a[1] := a[0] END",
          "VAR a1, a2: ARRAY 3 OF CHAR; BEGIN ASSERT(a1 = a2); END",
@@ -715,7 +717,7 @@ var testSuite = {
           "operator '=' type mismatch: numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE expected, got 'ARRAY 3 OF INTEGER'"])
     ),
 "multi-dimensional array expression": testWithGrammar(
-    Grammar.procedureBody,
+    oberonGrammar.procedureBody,
     pass("VAR a: ARRAY 10 OF ARRAY 5 OF INTEGER; BEGIN a[0][0] := 1 END",
          "VAR a: ARRAY 10, 5 OF BOOLEAN; BEGIN a[0][0] := TRUE END",
          "VAR a: ARRAY 10, 5 OF BOOLEAN; BEGIN a[0, 0] := TRUE END")
@@ -944,7 +946,7 @@ var testSuite = {
         )
     ),
 "procedure body": testWithGrammar(
-    Grammar.procedureBody,
+    oberonGrammar.procedureBody,
     pass("END",
          "VAR END",
          "VAR i: INTEGER; END",
@@ -980,7 +982,7 @@ var testSuite = {
          ["PROCEDURE p(p: INTEGER)", "argument 'p' has the same name as procedure"])
     ),
 "procedure": testWithContext(
-    context(Grammar.procedureDeclaration,
+    context(oberonGrammar.procedureDeclaration,
             "TYPE ProcType = PROCEDURE(): ProcType;"),
     pass("PROCEDURE p; END p",
          "PROCEDURE p; VAR i: INTEGER; BEGIN i := i + 1 END p",
@@ -1001,7 +1003,7 @@ var testSuite = {
     ),
 "procedure RETURN": testWithContext(
     context(
-        Grammar.procedureDeclaration,
+        oberonGrammar.procedureDeclaration,
             "TYPE A = ARRAY 3 OF INTEGER; R = RECORD END; PR = POINTER TO R;"
           + "VAR i: INTEGER; PROCEDURE int(): INTEGER; RETURN 1 END int;"),
     pass("PROCEDURE p(): BOOLEAN; RETURN TRUE END p",
@@ -1030,7 +1032,7 @@ var testSuite = {
          )
     ),
 "pass VAR argument as VAR parameter": testWithContext(
-    context(Grammar.procedureDeclaration,
+    context(oberonGrammar.procedureDeclaration,
             "PROCEDURE p1(VAR i: INTEGER); END p1;"
             + "PROCEDURE p2(VAR b: BOOLEAN); END p2;"),
     pass("PROCEDURE p(VAR i1: INTEGER); BEGIN p1(i1) END p"),
@@ -1057,7 +1059,7 @@ var testSuite = {
          ["p2(~b1)", "expression cannot be used as VAR parameter"])
     ),
 "ARRAY parameter": testWithContext(
-    context(Grammar.procedureDeclaration,
+    context(oberonGrammar.procedureDeclaration,
             "TYPE T = RECORD i: INTEGER; p: POINTER TO T END;"
             + "PROCEDURE p1(i: INTEGER); END p1;"
             + "PROCEDURE varInteger(VAR i: INTEGER); END varInteger;"
@@ -1101,7 +1103,7 @@ var testSuite = {
          )
 ),
 "local procedure": testWithContext(
-    context(Grammar.procedureDeclaration,
+    context(oberonGrammar.procedureDeclaration,
             "TYPE ProcType = PROCEDURE;" +
             "VAR procVar: ProcType;" +
             "PROCEDURE procWithProcArg(p: ProcType); END procWithProcArg;"),
@@ -1211,7 +1213,7 @@ var testSuite = {
          ["r1 := b1", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'Base1' expression"])
     ),
 "open array assignment fails": testWithGrammar(
-    Grammar.procedureDeclaration,
+    oberonGrammar.procedureDeclaration,
     pass(),
     fail(["PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
           "cannot assign to read-only variable"],
@@ -1221,7 +1223,7 @@ var testSuite = {
           "type mismatch: 's2' is 'ARRAY 10 OF CHAR' and cannot be assigned to 'ARRAY OF CHAR' expression"])
     ),
 "open array type as procedure parameter": testWithContext(
-    context(Grammar.procedureDeclaration,
+    context(oberonGrammar.procedureDeclaration,
             "TYPE A = ARRAY 3 OF INTEGER;"
             ),
     pass("PROCEDURE p(a: ARRAY OF INTEGER); BEGIN END p",
@@ -1233,7 +1235,7 @@ var testSuite = {
         )
     ),
 "non-open array type as procedure parameter": testWithContext(
-    context(Grammar.procedureDeclaration,
+    context(oberonGrammar.procedureDeclaration,
             "TYPE A = ARRAY 2 OF INTEGER;"
             + "VAR a: A;"
             + "PROCEDURE pa(a: A); BEGIN END pa;"
@@ -1253,7 +1255,7 @@ var testSuite = {
         )
     ),
 "string assignment to open array fails": testWithGrammar(
-    Grammar.procedureDeclaration,
+    oberonGrammar.procedureDeclaration,
     pass(),
     fail(["PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "cannot assign to read-only variable"],
          ["PROCEDURE p(VAR s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "string cannot be assigned to open ARRAY OF CHAR"])
@@ -1271,11 +1273,11 @@ var testSuite = {
          ["p4(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'ARRAY OF INTEGER'"])
     ),
 "scope": testWithGrammar(
-    Grammar.declarationSequence,
+    oberonGrammar.declarationSequence,
     pass("PROCEDURE p1(a1: INTEGER); END p1; PROCEDURE p2(a1: BOOLEAN); END p2;")
     ),
 "module": testWithGrammar(
-    Grammar.module,
+    oberonGrammar.module,
     pass("MODULE m; END m."),
     fail(["MODULE m; END undeclared.",
           "original module name 'm' expected, got 'undeclared'"],
@@ -1289,7 +1291,7 @@ var testSuite = {
          ["ASSERT(123, TRUE)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'BOOLEAN'"])
     ),
 "export": testWithGrammar(
-    Grammar.declarationSequence,
+    oberonGrammar.declarationSequence,
     pass("CONST i* = 1;",
          "TYPE T* = RECORD END;",
          "VAR i*: INTEGER;",
@@ -1318,7 +1320,7 @@ var testSuite = {
          )
     ),
 "import JS": testWithGrammar(
-    Grammar.module,
+    oberonGrammar.module,
     pass("MODULE m; IMPORT JS; END m.",
          "MODULE m; IMPORT JS; BEGIN JS.alert(\"test\") END m.",
          "MODULE m; IMPORT JS; BEGIN JS.console.info(123) END m.",
@@ -1333,7 +1335,7 @@ var testSuite = {
           )
     ),
 "JS.var": testWithGrammar(
-    Grammar.module,
+    oberonGrammar.module,
     pass("MODULE m; IMPORT JS; VAR v: JS.var; END m.",
          "MODULE m; IMPORT JS; VAR v: JS.var; BEGIN v := JS.f(); END m.",
          "MODULE m; IMPORT JS; VAR v: JS.var; BEGIN v := JS.f1(); JS.f2(v); END m."
@@ -1342,19 +1344,19 @@ var testSuite = {
           "type mismatch: 'i' is 'INTEGER' and cannot be assigned to 'JS.var' expression"])
     ),
 "import unknown module": testWithGrammar(
-    Grammar.module,
+    oberonGrammar.module,
     pass(),
     fail(["MODULE m; IMPORT unknown; END m.", "module(s) not found: unknown"],
          ["MODULE m; IMPORT unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2"]
          )
     ),
 "self import is failed": testWithGrammar(
-    Grammar.module,
+    oberonGrammar.module,
     pass(),
     fail(["MODULE test; IMPORT test; END test.", "module 'test' cannot import itself"])
     ),
 "import aliases": testWithGrammar(
-    Grammar.module,
+    oberonGrammar.module,
     pass("MODULE m; IMPORT J := JS; END m.",
          "MODULE m; IMPORT J := JS; BEGIN J.alert(\"test\") END m."),
     fail(["MODULE m; IMPORT u1 := unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2"],
@@ -1431,7 +1433,7 @@ var testSuite = {
           "POINTER TO non-exported RECORD type cannot be dereferenced"])
     ),
 "syntax errors": testWithGrammar(
-    Grammar.module,
+    oberonGrammar.module,
     pass(),
     fail(["MODULE m; CONST c = 1 END m.",
           "';' expected"],

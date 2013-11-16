@@ -2,6 +2,7 @@
 
 var nodejs = require("nodejs");
 var oc = require("oc");
+var oberonGrammar = require("oberon/oberon_grammar.js").grammar;
 var fs = require("fs");
 var path = require("path");
 var Test = require("test.js");
@@ -21,7 +22,7 @@ function compareResults(result, name, dirs){
 function compile(src){
     var text = fs.readFileSync(src, "utf8");
     var errors = "";
-    var result = oc.compile(text, function(e){errors += e;});
+    var result = oc.compile(text, oberonGrammar, function(e){errors += e;});
     if (errors)
         throw new Test.TestError(errors);
     return result;
@@ -35,7 +36,7 @@ function compileNodejs(src, dirs){
     fs.mkdirSync(outDir);
 
     var errors = "";
-    nodejs.compile([src], function(e){errors += e;}, outDir);
+    nodejs.compile([src], oberonGrammar, function(e){errors += e;}, outDir);
     if (errors)
         throw new Test.TestError(errors);
 
@@ -52,7 +53,7 @@ function expectError(src, dirs){
     var text = fs.readFileSync(src, "utf8");
     var errors = "";
     try {
-        oc.compile(text, function(e){errors += e + "\n";});
+        oc.compile(text, oberonGrammar, function(e){errors += e + "\n";});
     }
     catch (e){
         errors += e;

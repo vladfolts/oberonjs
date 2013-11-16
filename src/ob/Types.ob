@@ -1,0 +1,17 @@
+MODULE Types;
+IMPORT JsString;
+
+TYPE
+    Id = RECORD END;
+    Type = POINTER TO RECORD(Id)
+        description: PROCEDURE(): JsString.Type
+    END;
+    TypeId = RECORD(Id)
+        type: Type
+    END;
+
+PROCEDURE description*(t: TypeId): JsString.Type;
+    RETURN JsString.concat(JsString.make("type "), t.type.description())
+END description;
+
+END Types.
