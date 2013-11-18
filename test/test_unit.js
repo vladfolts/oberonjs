@@ -688,18 +688,6 @@ var testSuite = {
          ["EXCL(set1, -1)", "value (0..31) expected as a second argument of EXCL, got -1"]
         )
     ),
-"procedure heading": testWithSetup(
-    function(){
-        function innerMakeContext(cx){
-            return new Context.ProcDecl(TestUnitCommon.makeContext());}
-        return setupParser(Grammar.procedureHeading, innerMakeContext);
-    },
-    pass("PROCEDURE p",
-         "PROCEDURE p(a1: INTEGER)",
-         "PROCEDURE p(a1, a2: INTEGER; b1: BOOLEAN)"),
-    fail(["PROCEDURE p(a1: INTEGER; a1: BOOLEAN)", "'a1' already declared"],
-         ["PROCEDURE p(p: INTEGER)", "argument 'p' has the same name as procedure"])
-    ),
 "PROCEDURE relations": testWithContext(
     context(Grammar.expression,
             "VAR p1: PROCEDURE; p2: PROCEDURE;"),
@@ -1049,6 +1037,18 @@ function makeSuiteForGrammar(grammar){
     pass("VAR a: ARRAY 10 OF ARRAY 5 OF INTEGER; BEGIN a[0][0] := 1 END",
          "VAR a: ARRAY 10, 5 OF BOOLEAN; BEGIN a[0][0] := TRUE END",
          "VAR a: ARRAY 10, 5 OF BOOLEAN; BEGIN a[0, 0] := TRUE END")
+    ),
+"procedure heading": testWithSetup(
+    function(){
+        function innerMakeContext(cx){
+            return new Context.ProcDecl(TestUnitCommon.makeContext());}
+        return setupParser(grammar.procedureHeading, innerMakeContext);
+    },
+    pass("PROCEDURE p",
+         "PROCEDURE p(a1: INTEGER)",
+         "PROCEDURE p(a1, a2: INTEGER; b1: BOOLEAN)"),
+    fail(["PROCEDURE p(a1: INTEGER; a1: BOOLEAN)", "'a1' already declared"],
+         ["PROCEDURE p(p: INTEGER)", "argument 'p' has the same name as procedure"])
     ),
 "procedure body": testWithGrammar(
     grammar.procedureBody,

@@ -156,11 +156,7 @@ var procedureType = and("PROCEDURE"
 var strucType = or(arrayType, recordType, pointerType, procedureType);
 var typeDeclaration = context(and(identdef, "=", strucType), Context.TypeDeclaration);
 
-var procedureHeading = and("PROCEDURE"
-                         , identdef
-                         , context(optional(formalParameters), Context.FormalParametersProcDecl));
-
-exports.makeProcedureDeclaration = function(procedureBody){
+exports.makeProcedureDeclaration = function(procedureHeading, procedureBody){
     return context(and(procedureHeading, ";",
                        procedureBody,
                        ident),
@@ -202,8 +198,9 @@ function make(makeProcedureDeclaration){
 
 exports.make = make;
 exports.expression = expression;
+exports.formalParameters = formalParameters;
 exports.ident = ident;
-exports.procedureHeading = procedureHeading;
+exports.identdef = identdef;
 exports.statement = statement;
 exports.typeDeclaration = typeDeclaration;
 exports.variableDeclaration = variableDeclaration;
