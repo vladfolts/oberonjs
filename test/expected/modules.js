@@ -101,9 +101,17 @@ return {
 }
 }();
 var m2 = function (m1){
+var T = m1.T.extend({
+	init: function T(){
+		T.prototype.init.call(this);
+		this.i2 = 0;
+	}
+});
 var r = new m1.T();
+var r2 = new T();
 var pb = null;
 var ptr = null;
+var ptr2 = null;
 var ptrA = null;
 
 function p(i/*INTEGER*/){
@@ -114,6 +122,9 @@ function ref(i/*VAR INTEGER*/){
 ptr = new m1.T();
 pb = ptr;
 RTL$.typeGuard(pb, m1.T).i = 123;
+ptr2 = new T();
+ptr2.i = 1;
+ptr2.i2 = 2;
 ptrA = m1.makeTPA();
 m1.p();
 p(m1.i());
@@ -121,7 +132,13 @@ p(m1.ci);
 ref(RTL$.makeRef(m1.pr2(), "i"));
 }(m1);
 var m3 = function (m1, m2){
+var T = m2.T.extend({
+	init: function T(){
+		T.prototype.init.call(this);
+	}
+});
 var r = new m2.T();
+var r2 = new T();
 var a = RTL$.makeArray(3, function(){return new m2.Base();});
 var ptr = null;
 var pb = null;
