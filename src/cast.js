@@ -28,6 +28,8 @@ function areTypesMatch(t1, t2){
         return true;
     if (Type.isInt(t1) && Type.isInt(t2))
         return true;
+    if (t1 instanceof ArrayType && t2 instanceof ArrayType)
+        return t1.length() === t2.length() && areTypesMatch(t1.elementsType(), t2.elementsType());
     if (t1 instanceof PointerType && t2 instanceof PointerType)
         return areTypesMatch(t1.baseType(), t2.baseType());
     if (t1 instanceof ProcedureType && t2 instanceof ProcedureType)
