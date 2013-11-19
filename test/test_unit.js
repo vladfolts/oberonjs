@@ -1128,14 +1128,18 @@ var testSuite = {
                 + "v3: PROCEDURE(i: INTEGER): ProcType1; v4: PROCEDURE(b: BOOLEAN): ProcType1;"
                 + "v5: PROCEDURE(p: ProcType1); v6: PROCEDURE(p: ProcType2);"
                 + "v7: ProcType3; v8: ProcType4; v8VAR: ProcType4VAR; v9: ProcType5; v10: ProcType6; v11: ProcType7;"
+                + "vProcCharArray: PROCEDURE (a: ARRAY OF CHAR);"
             + "PROCEDURE p1(): ProcType1; RETURN p1 END p1;"
+            + "PROCEDURE procCharArray(a: ARRAY OF CHAR); END procCharArray;"
+            + "PROCEDURE procIntArray(a: ARRAY OF INTEGER); END procIntArray;"
             ),
     pass("v1 := v2",
          "v5 := v6",
          "v7 := v8",
          "v7 := v9",
          "v8 := v9",
-         "v1 := p1"),
+         "v1 := p1",
+         "vProcCharArray := procCharArray"),
     fail(["p1 := v1", "cannot assign to procedure"],
          ["v3 := v1",
           "type mismatch: 'v3' is 'PROCEDURE(INTEGER): ProcType1' and cannot be assigned to 'ProcType1' expression"],
@@ -1144,7 +1148,10 @@ var testSuite = {
          ["v10 := NEW",
           "standard procedure NEW cannot be referenced"],
          ["v10 := v11", "type mismatch: 'v10' is 'ProcType6' and cannot be assigned to 'ProcType7' expression" ],
-         ["v8 := v8VAR", "type mismatch: 'v8' is 'ProcType4' and cannot be assigned to 'ProcType4VAR' expression" ])
+         ["v8 := v8VAR", "type mismatch: 'v8' is 'ProcType4' and cannot be assigned to 'ProcType4VAR' expression" ],
+         ["vProcCharArray := procIntArray",
+          "type mismatch: 'vProcCharArray' is 'PROCEDURE(ARRAY OF CHAR)' and cannot be assigned to 'PROCEDURE(ARRAY OF INTEGER)' expression"]
+         )
     ),
 "string assignment": testWithContext(
     context(Grammar.statement,
