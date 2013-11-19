@@ -1,6 +1,7 @@
 "use strict";
 
 var Context = require("context.js");
+var EbContext = require("eberon/eberon_context.js");
 var Grammar = require("grammar.js");
 var Parser = require("parser.js");
 
@@ -8,9 +9,9 @@ var and = Parser.and;
 var context = Parser.context;
 var optional = Parser.optional;
 
-var procedureHeading = and("PROCEDURE"
-                         , and(optional(and(Grammar.ident, ".")), Grammar.identdef)
-                         , context(optional(Grammar.formalParameters), Context.FormalParametersProcDecl));
+var procedureHeading = and("PROCEDURE",
+                           context(and(optional(and(Grammar.ident, ".")), Grammar.identdef), EbContext.MethodId),
+                           context(optional(Grammar.formalParameters), Context.FormalParametersProcDecl));
 
 function makeProcedureDeclaration(procedureBody){
     return Grammar.makeProcedureDeclaration(procedureHeading, procedureBody);

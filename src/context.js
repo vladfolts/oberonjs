@@ -1893,3 +1893,5 @@ exports.Context = Class.extend({
         return this.__moduleResolver ? this.__moduleResolver(name) : undefined;
     }
 });
+
+exports.Chained = ChainedContext;
