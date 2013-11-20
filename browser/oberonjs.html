@@ -71,7 +71,7 @@ END test.
         var errors = "";
         var start = new Date();
         try {
-            result = require("oc.js").compile(src, function(e){
+            result = require("oc.js").compile(src, undefined, function(e){
                 errors += e;
             });
             }
