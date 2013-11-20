@@ -36,10 +36,14 @@ END m1.
 MODULE m2;
 IMPORT m1;
 
+TYPE
+	T = RECORD(m1.T) i2: INTEGER END;
 VAR 
 	r: m1.T;
+	r2: T;
 	pb: POINTER TO m1.Base;
 	ptr: m1.TP;
+	ptr2: POINTER TO T;
 	ptrA: m1.TPA;
 
 PROCEDURE p(i: INTEGER);
@@ -53,6 +57,10 @@ BEGIN
 	pb := ptr;
 	pb(m1.TP).i := 123;
 
+	NEW(ptr2);
+	ptr2.i := 1;
+	ptr2.i2 := 2;
+
 	ptrA := m1.makeTPA();
 
 	m1.p();
@@ -63,8 +71,11 @@ END m2.
 
 MODULE m3;
 IMPORT m1 := m2, m2 := m1;
+TYPE
+	T = RECORD(m2.T) END;
 VAR 
     r: m2.T;
+	r2: T;
     a: ARRAY 3 OF m2.Base;
     ptr: m2.TP;
     pb: POINTER TO m2.Base;
