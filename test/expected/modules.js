@@ -103,7 +103,7 @@ return {
 var m2 = function (m1){
 var T = m1.T.extend({
 	init: function T(){
-		T.prototype.init.call(this);
+		m1.T.prototype.init.call(this);
 		this.i2 = 0;
 	}
 });
@@ -134,7 +134,7 @@ ref(RTL$.makeRef(m1.pr2(), "i"));
 var m3 = function (m1, m2){
 var T = m2.T.extend({
 	init: function T(){
-		T.prototype.init.call(this);
+		m2.T.prototype.init.call(this);
 	}
 });
 var r = new m2.T();
