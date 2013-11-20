@@ -1663,14 +1663,15 @@ exports.RecordDecl = ChainedContext.extend({
         var type = this.__type;
         var baseType = type.baseType();
         var gen = this.codeGenerator();
-        gen.write((baseType ? this.qualifyScope(baseType.scope()) + baseType.name() 
-                            : this.rtl().baseClass())
-                  + ".extend(");
+        var qualifiedBase = baseType 
+                          ? this.qualifyScope(baseType.scope()) + baseType.name() 
+                          : this.rtl().baseClass();
+        gen.write(qualifiedBase + ".extend(");
         gen.openScope();
         gen.write("init: function " + this.__type.cons() + "()");
         gen.openScope();
         if (baseType)
-            gen.write(baseType.name() + ".prototype.init.call(this);\n");
+            gen.write(qualifiedBase + ".prototype.init.call(this);\n");
         var ownFields = type.ownFields();
         for(var f in ownFields)
             gen.write("this." + f + " = " + ownFields[f].initializer(this) + ";\n");
