@@ -248,8 +248,8 @@ exports.QualifiedIdentificator = ChainedContext.extend({
     }
 });
 
-var Identdef = Class.extend({
-    init: function Identdef(id, exported){
+var IdentdefInfo = Class.extend({
+    init: function Context$Identdef(id, exported){
         this.__id = id;
         this.__exported = exported;
     },
@@ -266,7 +266,7 @@ exports.Identdef = ChainedContext.extend({
     handleIdent: function(id){this.__id = id;},
     handleLiteral: function(){this.__export = true;},
     endParse: function(){
-        this.parent().handleIdentdef(new Identdef(this.__id, this.__export));
+        this.parent().handleIdentdef(new IdentdefInfo(this.__id, this.__export));
     }
 });
 
@@ -1898,3 +1898,5 @@ exports.Context = Class.extend({
 });
 
 exports.Chained = ChainedContext;
+exports.getTypeSymbol = getTypeSymbol;
+exports.IdentdefInfo = IdentdefInfo;

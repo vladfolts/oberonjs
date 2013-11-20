@@ -156,13 +156,6 @@ var procedureType = and("PROCEDURE"
 var strucType = or(arrayType, recordType, pointerType, procedureType);
 var typeDeclaration = context(and(identdef, "=", strucType), Context.TypeDeclaration);
 
-exports.makeProcedureDeclaration = function(procedureHeading, procedureBody){
-    return context(and(procedureHeading, ";",
-                       procedureBody,
-                       ident),
-                   Context.ProcDecl);
-    };
-
 var constantDeclaration = context(and(identdef, "=", constExpression), Context.ConstDecl);
 
 var imprt = and(ident, optional(and(":=", ident)));

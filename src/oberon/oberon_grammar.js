@@ -13,7 +13,10 @@ var procedureHeading = and("PROCEDURE"
                          , context(optional(Grammar.formalParameters), Context.FormalParametersProcDecl));
 
 function makeProcedureDeclaration(procedureBody){
-    return Grammar.makeProcedureDeclaration(procedureHeading, procedureBody);
+    return context(and(procedureHeading, ";",
+                       procedureBody,
+                       Grammar.ident),
+                   Context.ProcDecl);
 }
 
 exports.grammar = Grammar.make(makeProcedureDeclaration);

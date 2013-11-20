@@ -1045,18 +1045,6 @@ function makeSuiteForGrammar(grammar){
          "VAR a: ARRAY 10, 5 OF BOOLEAN; BEGIN a[0][0] := TRUE END",
          "VAR a: ARRAY 10, 5 OF BOOLEAN; BEGIN a[0, 0] := TRUE END")
     ),
-"procedure heading": testWithSetup(
-    function(){
-        function innerMakeContext(cx){
-            return new Context.ProcDecl(TestUnitCommon.makeContext());}
-        return setupParser(grammar.procedureHeading, innerMakeContext);
-    },
-    pass("PROCEDURE p",
-         "PROCEDURE p(a1: INTEGER)",
-         "PROCEDURE p(a1, a2: INTEGER; b1: BOOLEAN)"),
-    fail(["PROCEDURE p(a1: INTEGER; a1: BOOLEAN)", "'a1' already declared"],
-         ["PROCEDURE p(p: INTEGER)", "argument 'p' has the same name as procedure"])
-    ),
 "procedure body": testWithGrammar(
     grammar.procedureBody,
     pass("END",
@@ -1088,6 +1076,7 @@ function makeSuiteForGrammar(grammar){
     pass("PROCEDURE p; END p",
          "PROCEDURE p; VAR i: INTEGER; BEGIN i := i + 1 END p",
          "PROCEDURE p(a: INTEGER); BEGIN a := a + 1 END p",
+         "PROCEDURE p(a1, a2: INTEGER); END p",
          "PROCEDURE p; BEGIN p() END p",
          "PROCEDURE p(a: INTEGER); BEGIN p(a) END p",
          "PROCEDURE p(a: INTEGER; b: BOOLEAN); BEGIN p(a, b) END p",
@@ -1100,7 +1089,10 @@ function makeSuiteForGrammar(grammar){
          ["PROCEDURE p(a: INTEGER); BEGIN p(1, 2) END p", "1 argument(s) expected, got 2"],
          ["PROCEDURE p(a: INTEGER; b: BOOLEAN); BEGIN p(b, a) END p",
           "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
-         ["PROCEDURE p; BEGIN p1() END p", "undeclared identifier: 'p1'"])
+         ["PROCEDURE p; BEGIN p1() END p", "undeclared identifier: 'p1'"],
+         ["PROCEDURE p(a1: INTEGER; a1: BOOLEAN)", "'a1' already declared"],
+         ["PROCEDURE p(p: INTEGER)", "argument 'p' has the same name as procedure"]         
+         )
     ),
 "procedure RETURN": testWithContext(
     context(
