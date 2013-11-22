@@ -1112,9 +1112,13 @@ var testSuite = {
                 + "v5: PROCEDURE(p: ProcType1); v6: PROCEDURE(p: ProcType2);"
                 + "v7: ProcType3; v8: ProcType4; v8VAR: ProcType4VAR; v9: ProcType5; v10: ProcType6; v11: ProcType7;"
                 + "vProcCharArray: PROCEDURE (a: ARRAY OF CHAR);"
+                + "vProcInt: PROCEDURE (i: INTEGER);"
+                + "vProcReturnInt: PROCEDURE(): INTEGER;"
             + "PROCEDURE p1(): ProcType1; RETURN p1 END p1;"
             + "PROCEDURE procCharArray(a: ARRAY OF CHAR); END procCharArray;"
             + "PROCEDURE procIntArray(a: ARRAY OF INTEGER); END procIntArray;"
+            + "PROCEDURE procByte(b: BYTE); END procByte;"
+            + "PROCEDURE procReturnByte(): BYTE; RETURN 0 END procReturnByte;"
             ),
     pass("v1 := v2",
          "v5 := v6",
@@ -1133,7 +1137,11 @@ var testSuite = {
          ["v10 := v11", "type mismatch: 'v10' is 'ProcType6' and cannot be assigned to 'ProcType7' expression" ],
          ["v8 := v8VAR", "type mismatch: 'v8' is 'ProcType4' and cannot be assigned to 'ProcType4VAR' expression" ],
          ["vProcCharArray := procIntArray",
-          "type mismatch: 'vProcCharArray' is 'PROCEDURE(ARRAY OF CHAR)' and cannot be assigned to 'PROCEDURE(ARRAY OF INTEGER)' expression"]
+          "type mismatch: 'vProcCharArray' is 'PROCEDURE(ARRAY OF CHAR)' and cannot be assigned to 'PROCEDURE(ARRAY OF INTEGER)' expression"],
+         ["vProcInt := procByte",
+          "type mismatch: 'vProcInt' is 'PROCEDURE(INTEGER)' and cannot be assigned to 'PROCEDURE(BYTE)' expression"],
+         ["vProcReturnInt := procReturnByte",
+          "type mismatch: 'vProcReturnInt' is 'PROCEDURE(): INTEGER' and cannot be assigned to 'PROCEDURE(): BYTE' expression"]
          )
     ),
 "string assignment": testWithContext(
