@@ -107,6 +107,7 @@ function implicitCast(from, to, ops){
     return undefined;
 }
 
+exports.areProceduresMatch = areProceduresMatch;
 exports.areTypesMatch = areTypesMatch;
 exports.implicit = implicitCast;
 exports.findPointerBaseType = findPointerBaseType;
