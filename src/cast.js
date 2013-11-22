@@ -23,10 +23,8 @@ function matchesToNIL(t){
     return t instanceof PointerType || t instanceof ProcedureType;
 }
 
-function areTypesMatch(t1, t2){
+function areTypesExactlyMatch(t1, t2){
     if (t1 == t2)
-        return true;
-    if (Type.isInt(t1) && Type.isInt(t2))
         return true;
     if (t1 instanceof ArrayType && t2 instanceof ArrayType)
         return t1.length() === t2.length() && areTypesMatch(t1.elementsType(), t2.elementsType());
@@ -34,10 +32,15 @@ function areTypesMatch(t1, t2){
         return areTypesMatch(t1.baseType(), t2.baseType());
     if (t1 instanceof ProcedureType && t2 instanceof ProcedureType)
         return areProceduresMatch(t1, t2);
-    if (t1 == Type.nil && matchesToNIL(t2)
-        || t2 == Type.nil && matchesToNIL(t1))
-        return true;
     return false;
+}
+
+function areTypesMatch(t1, t2){
+    return areTypesExactlyMatch(t1, t2)
+        || (Type.isInt(t1) && Type.isInt(t2))
+        || (t1 == Type.nil && matchesToNIL(t2)
+            || t2 == Type.nil && matchesToNIL(t1))
+        ;
 }
 
 function areProceduresMatch(p1, p2){
@@ -52,7 +55,7 @@ function areProceduresMatch(p1, p2){
         if (a1.isVar != a2.isVar)
             return false;
         if (a1.type != p1 && a2.type != p2
-            &&!areTypesMatch(a1.type, a2.type))
+            &&!areTypesExactlyMatch(a1.type, a2.type))
             return false;
     }
 
@@ -60,7 +63,7 @@ function areProceduresMatch(p1, p2){
     var r2 = p2.result();
     if (r1 == p1 && r2 == p2)
         return true;
-    return areTypesMatch(r1, r2);
+    return areTypesExactlyMatch(r1, r2);
 }
 
 function implicitCast(from, to, ops){
