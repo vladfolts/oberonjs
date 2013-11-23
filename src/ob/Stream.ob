@@ -79,10 +79,10 @@ VAR
     line: INTEGER;
     lastPos: INTEGER;
 BEGIN
-    lastPos := JsString.indexOf(self.s, 0DX);
+    lastPos := JsString.indexOf(self.s, 0AX);
     WHILE (lastPos # -1) & (lastPos < self.pos) DO
         INC(line);
-        lastPos := JsString.indexOfFrom(self.s, 0DX, lastPos + 1);
+        lastPos := JsString.indexOfFrom(self.s, 0AX, lastPos + 1);
     END;
     RETURN line + 1
 END lineNumber;

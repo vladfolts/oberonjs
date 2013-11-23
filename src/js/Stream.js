@@ -71,11 +71,11 @@ function read(self/*Type*/, f/*ReaderProc*/){
 function lineNumber(self/*Type*/){
 	var line = 0;
 	var lastPos = 0;
-	lastPos = JsString.indexOf(self.s, 13);
+	lastPos = JsString.indexOf(self.s, 10);
 	while (true){
 		if (lastPos != -1 && lastPos < self.pos){
 			++line;
-			lastPos = JsString.indexOfFrom(self.s, 13, lastPos + 1 | 0);
+			lastPos = JsString.indexOfFrom(self.s, 10, lastPos + 1 | 0);
 		} else break;
 	}
 	return line + 1 | 0;
