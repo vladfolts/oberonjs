@@ -98,6 +98,7 @@ function checkTypeCast(from, to, msg){
 var ChainedContext = Class.extend({
     init: function ChainedContext(parent){this.__parent = parent;},
     parent: function(){return this.__parent;},
+    handleMessage: function(msg){return this.__parent.handleMessage(msg);},
     codeGenerator: function(){return this.__parent.codeGenerator();},
     findSymbol: function(id){return this.__parent.findSymbol(id);},
     currentScope: function(s){return this.__parent.currentScope();},
@@ -1673,8 +1674,8 @@ exports.RecordDecl = ChainedContext.extend({
         var gen = this.codeGenerator();
         var qualifiedBase = baseType ? this.qualifyScope(baseType.scope()) + baseType.name() : undefined; 
         gen.write((baseType ? qualifiedBase + ".extend" 
-						    : this.rtl().extendId())
-			   + "(");
+                            : this.rtl().extendId())
+                + "(");
         gen.openScope();
         gen.write("init: function " + this.__type.cons() + "()");
         gen.openScope();

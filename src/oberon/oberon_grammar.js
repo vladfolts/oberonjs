@@ -7,18 +7,26 @@ var Parser = require("parser.js");
 var and = Parser.and;
 var context = Parser.context;
 var optional = Parser.optional;
+var repeat = Parser.repeat;
 
-var procedureHeading = and("PROCEDURE"
-                         , Grammar.identdef
-                         , context(optional(Grammar.formalParameters), Context.FormalParametersProcDecl));
+function makeProcedureHeading(formalParameters){
+    return and("PROCEDURE"
+             , Grammar.identdef
+             , context(optional(formalParameters), Context.FormalParametersProcDecl));
+}
 
-function makeProcedureDeclaration(procedureBody){
+function makeDesignator(selector){
+    return context(and(Grammar.qualident, repeat(selector)), Context.Designator);
+}
+
+function makeProcedureDeclaration(formalParameters, procedureBody){
+    var procedureHeading = makeProcedureHeading(formalParameters);
     return context(and(procedureHeading, ";",
                        procedureBody,
                        Grammar.ident),
                    Context.ProcDecl);
 }
 
-exports.grammar = Grammar.make(makeProcedureDeclaration);
-exports.grammar.procedureHeading = procedureHeading;
+exports.grammar = Grammar.make(makeDesignator, makeProcedureDeclaration);
+//exports.grammar.procedureHeading = procedureHeading;
 

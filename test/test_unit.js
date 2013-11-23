@@ -26,9 +26,10 @@ function testWithModule(src, pass, fail){
     return TestUnitCommon.testWithModule(src, oberonGrammar, pass, fail);
 }
 
-var testSuite = {
+function makeSuiteForGrammar(grammar){
+return {
 "comment": testWithGrammar(
-    Grammar.expression,
+    grammar.expression,
     pass("(**)123",
          "(*abc*)123",
          "(*abc*)(*def*)123",
@@ -36,7 +37,7 @@ var testSuite = {
     fail(["(*123", "comment was not closed"])
     ),
 "spaces are required to separate keywords and integers": testWithGrammar(
-    Grammar.typeDeclaration,
+    grammar.typeDeclaration,
     pass(),
     fail(["T = ARRAY10OFARRAY5OFINTEGER", "not parsed"],
          ["T = ARRAY10 OF ARRAY 5 OF INTEGER", "not parsed"],
@@ -47,7 +48,7 @@ var testSuite = {
          ["T = ARRAY 10 OF ARRAY 5 OFINTEGER", "not parsed"])
     ),
 "expression": testWithContext(
-    context(Grammar.expression,
+    context(grammar.expression,
             "TYPE ProcType = PROCEDURE(): INTEGER;"
             + "PROCEDURE p1(): INTEGER; RETURN 1 END p1;"
             + "PROCEDURE p2(): ProcType; RETURN p1 END p2;"
@@ -67,7 +68,7 @@ var testSuite = {
          )
     ),
 "string expression": testWithGrammar(
-    Grammar.expression,
+    grammar.expression,
     pass("\"\"",
          "\"a\"",
          "\"abc\"",
@@ -81,7 +82,7 @@ var testSuite = {
         )
     ),
 "parentheses": testWithGrammar(
-    Grammar.expression,
+    grammar.expression,
     pass("(1)",
          "(1 + 2)",
          "(1 + 2) * 3",
@@ -106,13 +107,13 @@ var testSuite = {
          )
     ),
 "variable declaration": testWithGrammar(
-    Grammar.variableDeclaration,
+    grammar.variableDeclaration,
     pass("i: INTEGER",
          "i, j: INTEGER"),
     fail(["i: T", "undeclared identifier: 'T'"])
     ),
 "record declaration": testWithGrammar(
-    Grammar.typeDeclaration,
+    grammar.typeDeclaration,
     pass("T = RECORD END",
          "T = RECORD i: INTEGER END",
          "T = RECORD i, j: INTEGER END",
@@ -130,7 +131,7 @@ var testSuite = {
          )
     ),
 "record extension": testWithContext(
-    context(Grammar.typeDeclaration,
+    context(grammar.typeDeclaration,
             "TYPE B = RECORD END;"),
     pass("T = RECORD(B) END"
          ),
@@ -139,7 +140,7 @@ var testSuite = {
          )
     ),
 "array declaration": testWithContext(
-    context(Grammar.typeDeclaration,
+    context(grammar.typeDeclaration,
             "CONST c1 = 5; VAR v1: INTEGER; p: POINTER TO RECORD END;"),
     pass("T = ARRAY 10 OF INTEGER",
          "T = ARRAY 10 OF BOOLEAN",
@@ -163,12 +164,12 @@ var testSuite = {
          )
     ),
 "multi-dimensional array declaration": testWithGrammar(
-    Grammar.typeDeclaration,
+    grammar.typeDeclaration,
     pass("T = ARRAY 10 OF ARRAY 5 OF INTEGER",
          "T = ARRAY 10, 5 OF INTEGER")
     ),
 "PROCEDURE type declaration": testWithGrammar(
-    Grammar.typeDeclaration,
+    grammar.typeDeclaration,
     pass("T = PROCEDURE",
          "T = PROCEDURE()",
          "T = PROCEDURE(a: INTEGER)",
@@ -176,7 +177,7 @@ var testSuite = {
          "T = PROCEDURE(): T")
     ),
 "POINTER declaration": testWithGrammar(
-    Grammar.typeDeclaration,
+    grammar.typeDeclaration,
     pass("T = POINTER TO RECORD END",
          "T = RECORD p: POINTER TO T END",
          "T = POINTER TO RECORD p: T END"),
@@ -189,7 +190,7 @@ var testSuite = {
         )
     ),
 "POINTER dereference": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "TYPE PT = POINTER TO RECORD END;"
             + "VAR pt: PT; p: POINTER TO RECORD field: INTEGER END; i: INTEGER; r: RECORD END;"),
     pass("p^.field := 1",
@@ -200,7 +201,7 @@ var testSuite = {
          ["pt.unknown := 0", "type 'PT' has no 'unknown' field"])
     ),
 "POINTER assignment": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "TYPE Base = RECORD END;"
                 + "Derived = RECORD (Base) END;"
                 + "PDerivedAnonymous = POINTER TO RECORD(Base) END;"
@@ -222,7 +223,7 @@ var testSuite = {
           ["NIL := p1", "not parsed"])
     ),
 "typeguard": testWithContext(
-    context(Grammar.expression,
+    context(grammar.expression,
             "TYPE Base = RECORD END; PBase = POINTER TO Base; Derived = RECORD (Base) END; PDerived = POINTER TO Derived;"
             + "VAR p1, p2: POINTER TO RECORD END; pBase: POINTER TO Base; pDerived: POINTER TO Derived;"
             + "vb: Base; i: INTEGER;"),
@@ -242,7 +243,7 @@ var testSuite = {
           "invalid type cast: a value variable and cannot be used in typeguard"])
     ),
 "POINTER relations": testWithContext(
-    context(Grammar.expression,
+    context(grammar.expression,
             "TYPE B = RECORD END; D = RECORD(B) END;"
           + "VAR p1, p2: POINTER TO RECORD END; pb: POINTER TO B; pd: POINTER TO D;"),
     pass("p1 = p2",
@@ -258,7 +259,7 @@ var testSuite = {
          )
     ),
 "IS expression": testWithContext(
-    context(Grammar.expression,
+    context(grammar.expression,
             "TYPE Base = RECORD END; Derived = RECORD (Base) END; PDerived = POINTER TO Derived;"
             + "VAR p: POINTER TO RECORD END; pBase: POINTER TO Base; pDerived: POINTER TO Derived; vDerived: Derived; i: INTEGER;"),
     pass("pBase IS Derived"),
@@ -276,7 +277,7 @@ var testSuite = {
          ["pDerived IS INTEGER", "RECORD type expected after 'IS'"])
     ),
 "BYTE": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
               "VAR b1, b2: BYTE; i: INTEGER; set: SET; a: ARRAY 3 OF BYTE;"
             + "PROCEDURE varIntParam(VAR i: INTEGER); END varIntParam;"
             + "PROCEDURE varByteParam(VAR b: BYTE); END varByteParam;"
@@ -306,7 +307,7 @@ var testSuite = {
         )
     ),
 "NEW": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "TYPE P = POINTER TO RECORD END;"
             + "VAR p: P; i: INTEGER;"
             + "PROCEDURE proc(): P; RETURN NIL END proc;"
@@ -319,7 +320,7 @@ var testSuite = {
          ["NEW(proc())", "expression cannot be used as VAR parameter"])
     ),
 "ABS": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR i: INTEGER; r: REAL; c: CHAR;"),
     pass("i := ABS(i)",
          "r := ABS(r)"),
@@ -329,21 +330,21 @@ var testSuite = {
          )
     ),
 "FLOOR": testWithContext(
-    context(Grammar.statement, "VAR i: INTEGER; r: REAL;"),
+    context(grammar.statement, "VAR i: INTEGER; r: REAL;"),
     pass("i := FLOOR(r)"),
     fail(["i := FLOOR(i)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'REAL'"],
          ["i := FLOOR(r, r)", "1 argument(s) expected, got 2"]
          )
     ),
 "FLT": testWithContext(
-    context(Grammar.statement, "VAR i: INTEGER; r: REAL;"),
+    context(grammar.statement, "VAR i: INTEGER; r: REAL;"),
     pass("r := FLT(i)"),
     fail(["r := FLT(r)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'"],
          ["i := FLT(i, i)", "1 argument(s) expected, got 2"]
          )
     ),
 "LSL": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR i: INTEGER; r: REAL; c: CHAR;"),
     pass("i := LSL(i, i)"),
     fail(["i := LSL(i, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
@@ -353,7 +354,7 @@ var testSuite = {
          )
     ),
 "ASR": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR i: INTEGER; r: REAL; c: CHAR;"),
     pass("i := ASR(i, i)"),
     fail(["i := ASR(i, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
@@ -363,7 +364,7 @@ var testSuite = {
          )
     ),
 "ROR": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR i: INTEGER; r: REAL; c: CHAR;"),
     pass("i := ROR(i, i)"),
     fail(["i := ROR(i, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
@@ -373,7 +374,7 @@ var testSuite = {
          )
     ),
 "ODD": testWithContext(
-    context(Grammar.statement, "VAR b: BOOLEAN;"),
+    context(grammar.statement, "VAR b: BOOLEAN;"),
     pass("b := ODD(1)",
          "b := ODD(123)"
          ),
@@ -382,7 +383,7 @@ var testSuite = {
          )
 ),
 "ORD": testWithContext(
-    context(Grammar.statement, "VAR ch: CHAR; i: INTEGER; b: BOOLEAN;"),
+    context(grammar.statement, "VAR ch: CHAR; i: INTEGER; b: BOOLEAN;"),
     pass("i := ORD(ch)",
          "i := ORD(TRUE)",
          "i := ORD({1})",
@@ -393,12 +394,12 @@ var testSuite = {
          )
 ),
 "CHR": testWithContext(
-    context(Grammar.statement, "VAR i: INTEGER; ch: CHAR;"),
+    context(grammar.statement, "VAR i: INTEGER; ch: CHAR;"),
     pass("ch := CHR(i)"),
     fail(["ch := CHR(ch)", "type mismatch for argument 1: 'CHAR' cannot be converted to 'INTEGER'"])
 ),
 "INC": testWithContext(
-    context(Grammar.statement, "VAR i: INTEGER;"),
+    context(grammar.statement, "VAR i: INTEGER;"),
     pass("INC(i)",
          "INC(i, 3)",
          "INC(i, i)"),
@@ -408,7 +409,7 @@ var testSuite = {
          )
 ),
 "DEC": testWithContext(
-    context(Grammar.statement, "VAR i: INTEGER;"),
+    context(grammar.statement, "VAR i: INTEGER;"),
     pass("DEC(i)",
          "DEC(i, 3)",
          "DEC(i, i)"),
@@ -418,13 +419,13 @@ var testSuite = {
          )
 ),
 "PACK": testWithContext(
-    context(Grammar.statement, "VAR r: REAL; i: INTEGER;"),
+    context(grammar.statement, "VAR r: REAL; i: INTEGER;"),
     pass("PACK(r, i)",
          "PACK(r, 3)"),
     fail(["PACK(r, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"])
 ),
 "UNPACK": testWithContext(
-    context(Grammar.statement, "VAR r: REAL; i: INTEGER;"),
+    context(grammar.statement, "VAR r: REAL; i: INTEGER;"),
     pass("UNPACK(r, i)"),
     fail(["UNPACK(r, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
          ["UNPACK(r, 3)", "expression cannot be used as VAR parameter"],
@@ -432,12 +433,12 @@ var testSuite = {
          )
 ),
 "standard procedure cannot be referenced" : testWithContext(
-    context(Grammar.expression, "VAR chr: PROCEDURE(c: CHAR): INTEGER;"),
+    context(grammar.expression, "VAR chr: PROCEDURE(c: CHAR): INTEGER;"),
     pass(),
     fail(["CHR", "standard procedure CHR cannot be referenced"])
     ),
 "assignment statement": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "CONST c = 15;"
             + "VAR ch: CHAR; i, n: INTEGER; b: BOOLEAN;"
                 + "proc1: PROCEDURE; proc2: PROCEDURE(): INTEGER;"
@@ -466,7 +467,7 @@ var testSuite = {
          ["i := noResult()", "procedure returning no result cannot be used in an expression"])
     ),
 "INTEGER number": testWithGrammar(
-    Grammar.expression,
+    grammar.expression,
     pass("0",
          "123",
          "1H",
@@ -481,7 +482,7 @@ var testSuite = {
          ["1F FH", "not parsed"])
     ),
 "SET statement": testWithContext(
-    context(Grammar.statement, "VAR s: SET;"),
+    context(grammar.statement, "VAR s: SET;"),
     pass("s := {}",
          "s := {0}",
          "s := {0, 1}",
@@ -489,7 +490,7 @@ var testSuite = {
     //fail("s := {32}", "0..31")
     ),
 "REAL number": testWithGrammar(
-    Grammar.expression,
+    grammar.expression,
     pass("1.2345",
          "1.",
          "1.2345E6",
@@ -501,13 +502,13 @@ var testSuite = {
          ["1.2345E-1 2", "not parsed"])
     ),
 "LONGREAL number": testWithGrammar(
-    Grammar.expression,
+    grammar.expression,
     pass("1.2345D6",
          "1.2345D+6",
          "1.2345D-6")
     ),
 "IF statement": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR b1: BOOLEAN; i1: INTEGER; p: POINTER TO RECORD END;"),
     pass("IF b1 THEN i1 := 0 END",
          "IF FALSE THEN i1 := 0 ELSE i1 := 1 END",
@@ -521,7 +522,7 @@ var testSuite = {
          ["IF b1 THEN i1 := 0 ELSIF ~b1 (*THEN*) i1 := 0 END", "THEN expected"])
     ),
 "CASE statement": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
               "CONST ci = 15; cc = \"A\";"
             + "VAR c1: CHAR; b1: BOOLEAN; i1, i2: INTEGER; byte: BYTE; p: POINTER TO RECORD END;"),
     pass("CASE i1 OF END",
@@ -553,7 +554,7 @@ var testSuite = {
           "label must be 'CHAR' (the same as case expression), got 'INTEGER'"])
     ),
 "WHILE statement": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR b1: BOOLEAN; i1: INTEGER;"),
     pass("WHILE TRUE DO i1 := 0 END",
          "WHILE b1 DO i1 := 0 ELSIF FALSE DO i1 := 1 END"),
@@ -561,14 +562,14 @@ var testSuite = {
          ["WHILE b1 DO i1 := 0 ELSIF i1 DO i1 := 1 END", "'BOOLEAN' expression expected, got 'INTEGER'"])
     ),
 "REPEAT statement": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR b1: BOOLEAN; i1: INTEGER;"),
     pass("REPEAT i1 := 0 UNTIL TRUE",
          "REPEAT i1 := 0 UNTIL b1"),
     fail(["REPEAT i1 := 0 UNTIL i1", "'BOOLEAN' expression expected, got 'INTEGER'"])
     ),
 "FOR statement": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
               "CONST c = 15;"
             + "VAR b: BOOLEAN; i, n: INTEGER; ch: CHAR; p: POINTER TO RECORD END;"),
     pass("FOR i := 0 TO 10 DO n := 1 END",
@@ -600,7 +601,7 @@ var testSuite = {
           "END expected (FOR)"])
     ),
 "logical operators": testWithContext(
-    context(Grammar.statement, "VAR b1, b2: BOOLEAN; i1: INTEGER; p: POINTER TO RECORD END;"),
+    context(grammar.statement, "VAR b1, b2: BOOLEAN; i1: INTEGER; p: POINTER TO RECORD END;"),
     pass("b1 := b1 OR b2",
          "b1 := b1 & b2",
          "b1 := ~b2"),
@@ -612,7 +613,7 @@ var testSuite = {
          ["b1 := ~i1", "type mismatch: expected 'BOOLEAN', got 'INTEGER'"])
     ),
 "arithmetic operators": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR b1: BOOLEAN; i1, i2: INTEGER; r1, r2: REAL; c1: CHAR; s1: SET;"
             + "p1: PROCEDURE; ptr1: POINTER TO RECORD END;"),
     pass("i1 := i1 + i2",
@@ -635,7 +636,7 @@ var testSuite = {
          ["s1 := +b1", "operator '+' type mismatch: numeric type expected, got 'BOOLEAN'"])
     ),
 "relations are BOOLEAN": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "TYPE Base = RECORD END; Derived = RECORD (Base) END;"
             + "VAR pBase: POINTER TO Base; proc1, proc2: PROCEDURE;"
                 + "set1, set2: SET;"
@@ -652,7 +653,7 @@ var testSuite = {
          "b := r1 >= r2")
     ),
 "SET relations": testWithContext(
-    context(Grammar.expression,
+    context(grammar.expression,
             "VAR set1, set2: SET; b: BOOLEAN; i: INTEGER;"),
     pass("set1 <= set2",
          "set1 >= set2",
@@ -664,7 +665,7 @@ var testSuite = {
          ["i IN b", "type mismatch: expected 'SET', got 'BOOLEAN'"])
     ),
 "SET operators": testWithContext(
-    context(Grammar.expression,
+    context(grammar.expression,
             "VAR set1, set2: SET; b: BOOLEAN; i: INTEGER;"),
     pass("set1 + set2",
          "set1 - set2",
@@ -677,7 +678,7 @@ var testSuite = {
          ["set1 / b", "type mismatch: expected 'SET', got 'BOOLEAN'"])
     ),
 "SET functions": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR set1, set2: SET; b: BOOLEAN; i: INTEGER;"),
     pass("INCL(set1, 0)",
          "EXCL(set1, 3)",
@@ -689,7 +690,7 @@ var testSuite = {
         )
     ),
 "PROCEDURE relations": testWithContext(
-    context(Grammar.expression,
+    context(grammar.expression,
             "VAR p1: PROCEDURE; p2: PROCEDURE;"),
     pass("p1 = p2",
          "p1 # p2",
@@ -698,7 +699,7 @@ var testSuite = {
          )
     ),
 "VAR parameter": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "CONST c = 123;"
             + "VAR i1: INTEGER; b1: BOOLEAN; a1: ARRAY 5 OF INTEGER;"
                 + "r1: RECORD f1: INTEGER END;"
@@ -718,7 +719,7 @@ var testSuite = {
          ["p2(~b1)", "expression cannot be used as VAR parameter"])
     ),
 "procedure call": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "TYPE ProcType = PROCEDURE;" +
             "VAR notProcedure: INTEGER; ptr: POINTER TO RECORD END;" +
             "PROCEDURE p; END p;" +
@@ -740,7 +741,7 @@ var testSuite = {
          )
 ),
 "procedure assignment": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "TYPE ProcType1 = PROCEDURE(): ProcType1;"
               + "ProcType2 = PROCEDURE(): ProcType2;"
               + "ProcType3 = PROCEDURE(p: ProcType3): ProcType3;"
@@ -787,7 +788,7 @@ var testSuite = {
          )
     ),
 "string assignment": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR a1: ARRAY 3 OF CHAR;"
             + "ch1: CHAR;"
             + "intArray: ARRAY 10 OF INTEGER;"
@@ -803,7 +804,7 @@ var testSuite = {
           "type mismatch: 'intArray' is 'ARRAY 10 OF INTEGER' and cannot be assigned to 'multi-character string' expression"])
     ),
 "string relations": testWithContext(
-    context(Grammar.expression,
+    context(grammar.expression,
             "VAR ch: CHAR;"),
     pass("ch = \"a\"",
          "\"a\" = ch",
@@ -813,7 +814,7 @@ var testSuite = {
     fail(["ch = \"ab\"", "type mismatch: expected 'CHAR', got 'multi-character string'"])
     ),
 "array assignment": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "VAR charArray: ARRAY 3 OF CHAR;"
             + "intArray: ARRAY 10 OF INTEGER;"
             + "intArray2: ARRAY 10 OF INTEGER;"
@@ -839,7 +840,7 @@ var testSuite = {
           )
     ),
 "record assignment": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "TYPE Base1 = RECORD END;"
                 + "T1 = RECORD (Base1) END;"
                 + "T2 = RECORD END;"
@@ -851,7 +852,7 @@ var testSuite = {
          ["r1 := b1", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'Base1' expression"])
     ),
 "string argument": testWithContext(
-    context(Grammar.statement,
+    context(grammar.statement,
             "PROCEDURE p1(s: ARRAY OF CHAR); END p1;"
             + "PROCEDURE p2(VAR s: ARRAY OF CHAR); END p2;"
             + "PROCEDURE p3(i: INTEGER); END p3;"
@@ -863,7 +864,7 @@ var testSuite = {
          ["p4(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'ARRAY OF INTEGER'"])
     ),
 "assert": testWithGrammar(
-    Grammar.statement,
+    grammar.statement,
     pass("ASSERT(TRUE)"),
     fail(["ASSERT()", "1 argument(s) expected, got 0"],
          ["ASSERT(TRUE, 123)", "1 argument(s) expected, got 2"],
@@ -935,11 +936,7 @@ var testSuite = {
     pass(),
     fail(["MODULE m; IMPORT test; BEGIN ASSERT(test.p.i = 0) END m.",
           "POINTER TO non-exported RECORD type cannot be dereferenced"])
-    )
-};
-
-function makeSuiteForGrammar(grammar){
-    return {
+    ),
 "procedure VAR section": testWithGrammar(
     grammar.declarationSequence,
     pass("VAR",
@@ -1316,7 +1313,6 @@ function makeSuiteForGrammar(grammar){
 }
 
 Test.run({
-    "basic": testSuite,
     "common": {
         "oberon": makeSuiteForGrammar(oberonGrammar),
         "eberon": makeSuiteForGrammar(eberonGrammar)

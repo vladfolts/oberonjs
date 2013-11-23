@@ -48,5 +48,11 @@ exports.suite = {
          ["PROCEDURE T.p(a: INTEGER); END T.p;",
           "overridden method 'p' signature mismatch: should be 'PROCEDURE', got 'PROCEDURE(INTEGER)'"]
         )
+    ),
+"SELF": testWithContext(
+    context(grammar.declarationSequence,
+            "TYPE T = RECORD i: INTEGER END;"),
+    pass("PROCEDURE T.p(), NEW; BEGIN SELF.i := 0; END T.p;"),
+    fail()
     )
 };

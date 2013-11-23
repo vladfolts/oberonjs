@@ -3,6 +3,7 @@
 var Cast = require("cast.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
+var Symbol = require("symbol.js");
 var Type = require("type.js");
 
 var MethodType = Type.Procedure.extend({
@@ -35,18 +36,33 @@ var ProcOrMethodId = Context.Chained.extend({
     }
 });
 
+function getMethodSelf(){}
+
+var Designator = Context.Designator.extend({
+    init: function EberonContext$Designator(parent){
+        Context.Designator.prototype.init.call(this, parent);
+    },
+    handleLiteral: function(s){
+        if (s == "SELF")
+            this.handleSymbol(new Symbol.Found(this.handleMessage(getMethodSelf)), "this");
+        else
+            Context.Designator.prototype.handleLiteral.call(this, s);
+    }
+});
+
 var ProcOrMethodDecl = Context.ProcDecl.extend({
     init: function EberonContext$ProcOrMethodDecl(parent){
         Context.ProcDecl.prototype.init.call(this, parent);
-        this.__boundType = undefined;
+        this.__selfSymbol = undefined;
         this.__methodId = undefined;
         this.__methodType = undefined;
         this.__isNew = undefined;
         this.__endingId = undefined;
     },
+    handleMessage: function(msg){return this.__selfSymbol;},
     handleMethodOrProc: function(id, type){
         if (type){
-            this.__boundType = type;
+            this.__selfSymbol = new Symbol.Symbol("SELF", type);
             this.__methodId = id;
         }
 
@@ -64,7 +80,8 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     handleLiteral: function(s){
         if (s == "NEW"){
             var id = this.__methodId.id();
-            var existingField = this.__boundType.findSymbol(id);
+            var boundType = this.__selfSymbol.info();
+            var existingField = boundType.findSymbol(id);
             if (existingField)
                 throw new Errors.Error(
                       existingField instanceof MethodType
@@ -72,12 +89,12 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                       + "' (unwanted NEW attribute?)"
                     : "cannot declare method, record already has field '" + id + "'");
 
-            this.__boundType.addField(this.__methodId, this.__methodType);
+            boundType.addField(this.__methodId, this.__methodType);
             this.__isNew = true;
         }
     },
     handleIdent: function(id){
-        if (this.__boundType){
+        if (this.__selfSymbol){
             if (!this.__endingId)
                 this.__endingId = id + ".";
             else {
@@ -89,20 +106,21 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             Context.ProcDecl.prototype.handleIdent.call(this, id);
     },
     endParse: function(){
-        if (this.__boundType){
+        if (this.__selfSymbol){
             if (this.__endingId)
                 // should throw
                 Context.ProcDecl.prototype.handleIdent.call(this, this.__endingId);
 
             if (!this.__isNew){
-                var base = this.__boundType.baseType();
+                var boundType = this.__selfSymbol.info();
+                var base = boundType.baseType();
                 var id = this.__methodId.id();
                 var existing = base ? base.findSymbol(id) : undefined;
                 if (!existing){
                     throw new Errors.Error(
                           "there is no method '" + id 
                         + "' to override in base type(s) of '" 
-                        + this.__boundType.name() + "' (NEW attribute is missed?)");
+                        + boundType.name() + "' (NEW attribute is missed?)");
                 }
                 if (!Cast.areProceduresMatch(existing, this.__methodType))
                     throw new Errors.Error(
@@ -115,5 +133,6 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     }
 });
 
+exports.Designator = Designator;
 exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;

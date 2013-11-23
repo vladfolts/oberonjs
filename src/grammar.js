@@ -25,13 +25,16 @@ var qualident = context(and(optional(and(ident, ".")), ident),
                         Context.QualifiedIdentificator);
 var identdef = context(and(ident, optional("*")),
                        Context.Identdef);
+
+function make(makeDesignator, makeProcedureDeclaration){
+
 var selector = or(and(point, ident)
                 // break recursive declaration of expList
                 , and("[", function(stream, context){return expList(stream, context);}, "]")
                 , "^"
                 , context(and("(", qualident, ")"), Context.TypeCast)
                 );
-var designator = context(and(qualident, repeat(selector)), Context.Designator);
+var designator = makeDesignator(selector);
 var type = or(context(qualident, Context.Type),
               function(stream, context){return strucType(stream, context);} // break recursive declaration of strucType
              );
@@ -64,6 +67,7 @@ var factor = context(
                     return factor(stream, context);}) // break recursive declaration of factor
      )
     , Context.Factor);
+
 var addOperator = context(or("+", "-", "OR"), Context.AddOperator);
 var mulOperator = context(or("*", "/", "DIV", "MOD", "&"), Context.MulOperator);
 var term = context(and(factor, repeat(and(mulOperator, factor))), Context.Term);
@@ -161,39 +165,39 @@ var constantDeclaration = context(and(identdef, "=", constExpression), Context.C
 var imprt = and(ident, optional(and(":=", ident)));
 var importList = and("IMPORT", imprt, repeat(and(",", imprt)));
 
-function make(makeProcedureDeclaration){
-    var result = {};
-    result.procedureDeclaration
-        // break recursive declaration of procedureBody
-        = makeProcedureDeclaration(
-            function(stream, context){
-                return result.procedureBody(stream, context);}
-        );
-    result.declarationSequence
-        = and(optional(and("CONST", repeat(and(constantDeclaration, required(";"))))),
-              optional(and("TYPE", context(repeat(and(typeDeclaration, required(";"))), Context.TypeSection))),
-              optional(and("VAR", repeat(and(variableDeclaration, required(";"))))),
-              repeat(and(result.procedureDeclaration, ";")));
-    result.procedureBody
-        = and(result.declarationSequence,
-              optional(and("BEGIN", statementSequence)),
-              optional(context(and("RETURN", expression), Context.Return)),
-              required("END", "END expected (PROCEDURE)"));
-    result.module
-        = context(and("MODULE", ident, ";",
-                      context(optional(and(importList, ";")), Context.ModuleImport),
-                      result.declarationSequence,
-                      optional(and("BEGIN", statementSequence)),
-                      required("END", "END expected (MODULE)"), ident, point),
-                  Context.ModuleDeclaration);
-    return result;
-    }
+var result = {};
+result.expression = expression;
+result.statement = statement;
+result.typeDeclaration = typeDeclaration;
+result.variableDeclaration = variableDeclaration;
+result.procedureDeclaration
+    // break recursive declaration of procedureBody
+    = makeProcedureDeclaration(
+        formalParameters,
+        function(stream, context){
+            return result.procedureBody(stream, context);}
+    );
+result.declarationSequence
+    = and(optional(and("CONST", repeat(and(constantDeclaration, required(";"))))),
+          optional(and("TYPE", context(repeat(and(typeDeclaration, required(";"))), Context.TypeSection))),
+          optional(and("VAR", repeat(and(variableDeclaration, required(";"))))),
+          repeat(and(result.procedureDeclaration, ";")));
+result.procedureBody
+    = and(result.declarationSequence,
+          optional(and("BEGIN", statementSequence)),
+          optional(context(and("RETURN", expression), Context.Return)),
+          required("END", "END expected (PROCEDURE)"));
+result.module
+    = context(and("MODULE", ident, ";",
+                  context(optional(and(importList, ";")), Context.ModuleImport),
+                  result.declarationSequence,
+                  optional(and("BEGIN", statementSequence)),
+                  required("END", "END expected (MODULE)"), ident, point),
+              Context.ModuleDeclaration);
+return result;
+}
 
 exports.make = make;
-exports.expression = expression;
-exports.formalParameters = formalParameters;
 exports.ident = ident;
 exports.identdef = identdef;
-exports.statement = statement;
-exports.typeDeclaration = typeDeclaration;
-exports.variableDeclaration = variableDeclaration;
+exports.qualident = qualident;
