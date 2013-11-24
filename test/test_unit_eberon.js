@@ -54,5 +54,15 @@ exports.suite = {
             "TYPE T = RECORD i: INTEGER END;"),
     pass("PROCEDURE T.p(), NEW; BEGIN SELF.i := 0; END T.p;"),
     fail()
+    ),
+"method call": testWithContext(
+    context(grammar.expression,
+              "TYPE T = RECORD END;"
+            + "VAR o: T;"
+            + "PROCEDURE T.p(), NEW; END T.p;"
+            + "PROCEDURE T.f(): INTEGER, NEW; RETURN 0 END T.f;"
+            ),
+    pass("o.f()"),
+    fail(["o.p()", "procedure returning no result cannot be used in an expression"])
     )
 };

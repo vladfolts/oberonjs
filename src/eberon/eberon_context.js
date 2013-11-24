@@ -4,16 +4,20 @@ var Cast = require("cast.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var Symbol = require("symbol.js");
+var Procedure = require("procedure.js");
 var Type = require("type.js");
 
 var MethodType = Type.Procedure.extend({
-    init: function(type){
+    init: function EberonContext$MethodType(type){
         Type.Procedure.prototype.init.call(this);
         this.__type = type;
     },
     args: function(){return this.__type.args();},
     result: function(){return this.__type.result();},
-    description: function(){return this.__type.description();}
+    description: function(){return this.__type.description();},
+    callGenerator: function(context, id){
+        return new Procedure.CallGenerator(context, id, this);
+    }
 });
 
 var ProcOrMethodId = Context.Chained.extend({
