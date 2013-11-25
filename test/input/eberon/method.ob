@@ -1,0 +1,8 @@
+MODULE m;
+TYPE
+    T = RECORD END;
+
+PROCEDURE T.p(), NEW;
+END T.p;
+
+END m.

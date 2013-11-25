@@ -60,14 +60,20 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         this.__selfSymbol = undefined;
         this.__methodId = undefined;
         this.__methodType = undefined;
+        this.__boundType = undefined;
         this.__isNew = undefined;
         this.__endingId = undefined;
     },
-    handleMessage: function(msg){return this.__selfSymbol;},
+    handleMessage: function(msg){
+        if (msg == getMethodSelf)
+            return this.__selfSymbol;
+        return Context.ProcDecl.prototype.handleMessage.call(this, msg);
+    },
     handleMethodOrProc: function(id, type){
         if (type){
             this.__selfSymbol = new Symbol.Symbol("SELF", type);
             this.__methodId = id;
+            this.__boundType = type;
         }
 
         Context.ProcDecl.prototype.handleIdentdef.call(
@@ -76,6 +82,11 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                                             id.exported()) 
                  : id
             );
+    },
+    _prolog: function(){
+        return this.__boundType
+            ? this.__boundType.name() + ".prototype." + this.__methodId.id() + " = function("
+            : Context.ProcDecl.prototype._prolog.call(this);
     },
     setType: function(type){
         Context.ProcDecl.prototype.setType.call(this, type);

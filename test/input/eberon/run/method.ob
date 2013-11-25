@@ -1,0 +1,33 @@
+MODULE m;
+TYPE
+    T = RECORD END;
+	TD = RECORD(T) END;
+
+VAR
+    pCalled: BOOLEAN;
+    pDerivedCalled: BOOLEAN;
+	r: T;
+	rd: TD;
+
+PROCEDURE T.p(), NEW;
+BEGIN
+	pCalled := TRUE;
+END T.p;
+
+PROCEDURE TD.p();
+BEGIN
+	pDerivedCalled := TRUE;
+END TD.p;
+
+BEGIN
+	ASSERT(~pCalled);
+	ASSERT(~pDerivedCalled);
+	r.p();
+	ASSERT(pCalled);
+	ASSERT(~pDerivedCalled);
+
+	pCalled := FALSE;
+	rd.p();
+	ASSERT(~pCalled);
+	ASSERT(pDerivedCalled);
+END m.

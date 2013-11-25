@@ -523,7 +523,7 @@ exports.ProcDecl = ChainedContext.extend({
     },
     handleIdentdef: function(id){
         this.__id = id;
-        this.codeGenerator().write("\nfunction " + id.id() + "(");
+        this.codeGenerator().write(this._prolog());
         this.parent().pushScope(new Scope.Procedure());
     },
     handleIdent: function(id){
@@ -533,6 +533,7 @@ exports.ProcDecl = ChainedContext.extend({
         this.codeGenerator().closeScope();
         this.parent().popScope();
     },
+    _prolog: function(){return "\nfunction " + this.__id.id() + "(";},
     typeName: function(){return undefined;},
     setType: function(type){
         var procSymbol = new Symbol.Symbol(this.__id.id(), type);
