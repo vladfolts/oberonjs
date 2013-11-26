@@ -53,7 +53,7 @@ def encode_to_js_string(s):
 		s = s.replace(e[0], e[1])
 	return '"%s"' % s
 
-def link(input_path, output_path, dirs, version = None):
+def link(input_paths, output_path, dirs, version = None):
 	with open(output_path, "w") as out:
 		prolog = ""
 		if not version is None:
@@ -62,7 +62,10 @@ def link(input_path, output_path, dirs, version = None):
 		prolog += "var imports = {};\n"
 		prolog += 'function require(module){return imports[module];}\n'
 		out.write(prolog)
-		process(input_path, out, [], [], dirs)
+		resolved = []
+		resolving = []
+		for input_path in input_paths:
+			process(input_path, out, resolved, resolving, dirs)
 
 def parse_args(args):
 	parser = OptionParser('Usage: linkjs.py [options] <input js> <output js>')

@@ -3,7 +3,6 @@
 var Class = require("rtl.js").Class;
 var Code = require("code.js");
 var Context = require("context.js");
-var defaultGrammar = require("oberon/oberon_grammar.js").grammar;
 var Errors = require("js/Errors.js");
 var Lexer = require("js/Lexer.js");
 var RTL = require("rtl_code.js").RTL;
@@ -110,7 +109,7 @@ function compile(text, grammar, handleErrors){
     var rtl = new RTL();
     var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
     var resolver = makeResolver(
-            grammar || defaultGrammar,
+            grammar,
             function(moduleResolver){
                 return new Context.Context(new Code.Generator(),
                                            moduleCode,

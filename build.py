@@ -74,7 +74,10 @@ def build(out, use_git):
     if not os.path.exists(out):
         os.mkdir(out)
 
-    link('oc.js', os.path.join(out, 'oc.js'), ['src', 'src/oberon.js'], version)
+    link(['oc.js', 'oberon/oberon_grammar.js', 'eberon/eberon_grammar.js'],
+         os.path.join(out, 'oc.js'),
+         ['src', 'src/oberon.js'],
+         version)
     copy('browser/oberonjs.html', out)
     for d in ['codemirror', 'jslibs']:
         copytree(os.path.join('browser', d), os.path.join(out, d))

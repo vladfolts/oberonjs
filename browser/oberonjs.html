@@ -16,7 +16,14 @@
         </style>
     </head>
 <body>
-    <p>Oberon module(s):</p>
+
+<p>
+<form action="">
+Oberon module(s):
+<input type="radio" name="compiler" value="oberon" checked>Oberon
+<input type="radio" name="compiler" value="eberon" id="eberon">Eberon
+</form>
+</p>
 
 <div class="code">
 <textarea id="source" rows="10" cols="80">
@@ -71,7 +78,11 @@ END test.
         var errors = "";
         var start = new Date();
         try {
-            result = require("oc.js").compile(src, undefined, function(e){
+            var grammar = require(
+                document.getElementById("eberon").checked
+                    ? "eberon/eberon_grammar.js"
+                    : "oberon/oberon_grammar.js").grammar;
+            result = require("oc.js").compile(src, grammar, function(e){
                 errors += e;
             });
             }
