@@ -17,8 +17,10 @@ var RTL$ = {
 var m = function (){
 var T = RTL$.extend({
 	init: function T(){
+		this.i = 0;
 	}
 });
 T.prototype.p = function(){
+	this.i = 123;
 }
 }();

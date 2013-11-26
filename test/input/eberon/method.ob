@@ -1,8 +1,12 @@
 MODULE m;
 TYPE
-    T = RECORD END;
+    T = RECORD
+		i: INTEGER
+	END;
 
 PROCEDURE T.p(), NEW;
+BEGIN
+	SELF.i := 123;
 END T.p;
 
 END m.
