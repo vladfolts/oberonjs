@@ -6,6 +6,7 @@ TYPE
 VAR
     pCalled: BOOLEAN;
     pDerivedCalled: BOOLEAN;
+    pSuperCalled: INTEGER;
 	r: T;
 	rd: TD;
 
@@ -14,10 +15,20 @@ BEGIN
 	pCalled := TRUE;
 END T.p;
 
+PROCEDURE T.pSuper(i: INTEGER), NEW;
+BEGIN
+	pSuperCalled := i;
+END T.pSuper;
+
 PROCEDURE TD.p();
 BEGIN
 	pDerivedCalled := TRUE;
 END TD.p;
+
+PROCEDURE TD.pSuper(i: INTEGER);
+BEGIN
+	SUPER(i);
+END TD.pSuper;
 
 BEGIN
 	ASSERT(~pCalled);
@@ -30,4 +41,7 @@ BEGIN
 	rd.p();
 	ASSERT(~pCalled);
 	ASSERT(pDerivedCalled);
+
+	rd.pSuper(123);
+	ASSERT(pSuperCalled = 123);
 END m.

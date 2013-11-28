@@ -7,17 +7,37 @@ var Symbol = require("symbol.js");
 var Procedure = require("procedure.js");
 var Type = require("type.js");
 
+function methodCallGenerator(context, id, type){
+    return new Procedure.CallGenerator(context, id, type);
+}
+
+var SuperCallGenerator = Procedure.CallGenerator.extend({
+    init: function(context, id, type){
+        Procedure.CallGenerator.prototype.init.call(this, context, id, type);
+    },
+    prolog: function(){
+        return Procedure.CallGenerator.prototype.prolog.call(this) + "this";
+    },
+    writeArgumentCode: function(e, pos, isVar, convert){
+        Procedure.CallGenerator.prototype.writeArgumentCode.call(this, e, pos + 1, isVar, convert);
+    }
+});
+
+function superMethodCallGenerator(context, id, type){
+    return new SuperCallGenerator(context, id, type);
+}
+
 var MethodType = Type.Procedure.extend({
-    init: function EberonContext$MethodType(type){
+    init: function EberonContext$MethodType(type, callGenerator){
         Type.Procedure.prototype.init.call(this);
         this.__type = type;
+        this.__callGenerator = callGenerator;
     },
+    procType: function(){return this.__type;},
     args: function(){return this.__type.args();},
     result: function(){return this.__type.result();},
     description: function(){return this.__type.description();},
-    callGenerator: function(context, id){
-        return new Procedure.CallGenerator(context, id, this);
-    }
+    callGenerator: function(context, id){return this.__callGenerator(context, id, this);}
 });
 
 var ProcOrMethodId = Context.Chained.extend({
@@ -41,6 +61,7 @@ var ProcOrMethodId = Context.Chained.extend({
 });
 
 function getMethodSelf(){}
+function getMethodSuper(){}
 
 var Designator = Context.Designator.extend({
     init: function EberonContext$Designator(parent){
@@ -49,6 +70,10 @@ var Designator = Context.Designator.extend({
     handleLiteral: function(s){
         if (s == "SELF")
             this.handleSymbol(new Symbol.Found(this.handleMessage(getMethodSelf)), "this");
+        else if (s == "SUPER"){
+            var ms = this.handleMessage(getMethodSuper);
+            this.handleSymbol(new Symbol.Found(ms.symbol), ms.code);
+        }
         else
             Context.Designator.prototype.handleLiteral.call(this, s);
     }
@@ -67,6 +92,14 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     handleMessage: function(msg){
         if (msg == getMethodSelf)
             return this.__selfSymbol;
+        if (msg == getMethodSuper){
+            if (this.__isNew)
+                throw new Errors.Error("there is no super method in base type(s)");
+            return {
+                symbol: new Symbol.Symbol("method", new MethodType(this.__methodType.procType(), superMethodCallGenerator)),
+                code: this.__boundType.baseType().name() + ".prototype." + this.__methodId.id() + ".call"
+            };
+        }
         return Context.ProcDecl.prototype.handleMessage.call(this, msg);
     },
     handleMethodOrProc: function(id, type){
@@ -90,7 +123,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     },
     setType: function(type){
         Context.ProcDecl.prototype.setType.call(this, type);
-        this.__methodType = new MethodType(type);
+        this.__methodType = new MethodType(type, methodCallGenerator);
     },
     handleLiteral: function(s){
         if (s == "NEW"){

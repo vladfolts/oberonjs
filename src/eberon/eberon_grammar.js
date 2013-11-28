@@ -24,7 +24,7 @@ function makeProcedureHeading(formalParameters){
 
 function makeDesignator(selector){
     return context(
-        and(or("SELF", Grammar.qualident), repeat(selector)), EbContext.Designator);
+        and(or("SELF", "SUPER", Grammar.qualident), repeat(selector)), EbContext.Designator);
 }
 
 function makeProcedureDeclaration(formalParameters, procedureBody){

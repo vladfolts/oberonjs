@@ -20,7 +20,21 @@ var T = RTL$.extend({
 		this.i = 0;
 	}
 });
+var D = T.extend({
+	init: function D(){
+		T.prototype.init.call(this);
+	}
+});
 T.prototype.p = function(){
 	this.i = 123;
+}
+T.prototype.p2 = function(i/*INTEGER*/){
+	return i;
+}
+D.prototype.p = function(){
+	T.prototype.p.call(this);
+}
+D.prototype.p2 = function(i/*INTEGER*/){
+	return T.prototype.p2.call(this, i);
 }
 }();

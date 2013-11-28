@@ -64,5 +64,14 @@ exports.suite = {
             ),
     pass("o.f()"),
     fail(["o.p()", "procedure returning no result cannot be used in an expression"])
+    ),
+"method super call": testWithContext(
+    context(grammar.declarationSequence,
+              "TYPE T = RECORD END; D = RECORD(T) END;"
+            + "PROCEDURE T.p(), NEW; END T.p;"
+            ),
+    pass("PROCEDURE D.p(); BEGIN SUPER() END D.p;"),
+    fail(["PROCEDURE D.pNoSuper(), NEW; BEGIN SUPER() END D.pNoSuper;",
+          "there is no super method in base type(s)"])
     )
 };
