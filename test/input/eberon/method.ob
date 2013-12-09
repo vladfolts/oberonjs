@@ -1,16 +1,20 @@
 MODULE m;
 TYPE
     T = RECORD
+        PROCEDURE p();
+        PROCEDURE p2(i: INTEGER): INTEGER;
 		i: INTEGER
 	END;
     D = RECORD(T) END;
+VAR
+    d: D;
 
-PROCEDURE T.p(), NEW;
+PROCEDURE T.p();
 BEGIN
 	SELF.i := 123;
 END T.p;
 
-PROCEDURE T.p2(i: INTEGER): INTEGER, NEW;
+PROCEDURE T.p2(i: INTEGER): INTEGER;
     RETURN i
 END T.p2;
 
@@ -23,4 +27,6 @@ PROCEDURE D.p2(i: INTEGER): INTEGER;
     RETURN SUPER(i)
 END D.p2;
 
+BEGIN
+    d.p();
 END m.

@@ -466,6 +466,11 @@ var ProcArg = Class.extend({
     }
 });
 
+function AddArgumentMsg(name, arg){
+    this.name = name;
+    this.arg = arg;
+}
+
 exports.FormalParameters = ChainedContext.extend({
     init: function FormalParametersContext(context){
         ChainedContext.prototype.init.call(this, context);
@@ -476,8 +481,12 @@ exports.FormalParameters = ChainedContext.extend({
         this.__type = new Procedure.Type(parent.typeName());
         parent.setType(this.__type);
     },
-    addArgument: function(name, arg){
-        this.__arguments.push(arg);
+    handleMessage: function(msg){
+        if (msg instanceof AddArgumentMsg){
+            this.__arguments.push(msg.arg);
+            return undefined;
+        }
+        return ChainedContext.prototype.handleMessage.call(this, msg);
     },
     handleSymbol: function(s){
         var resultType = unwrapType(s.symbol().info());
@@ -492,23 +501,21 @@ exports.FormalParameters = ChainedContext.extend({
     }
 });
 
+function endParametersMsg(){}
+
 exports.FormalParametersProcDecl = exports.FormalParameters.extend({
     init: function FormalParametersProcDeclContext(context){
         exports.FormalParameters.prototype.init.call(this, context);
     },
-    addArgument: function(name, arg){
-        exports.FormalParameters.prototype.addArgument.call(this, name, arg);
-        this.parent().addArgument(name, arg);
+    handleMessage: function(msg){
+        var result = exports.FormalParameters.prototype.handleMessage.call(this, msg);
+        if (msg instanceof AddArgumentMsg)
+            this.parent().handleMessage(msg);
+        return result;
     },
-    /*
-    handleSymbol: function(s){
-        exports.FormalParameters.prototype.handleSymbol.call(this, s);
-        this.parent().checkResultType(s);
-    },
-    */
     endParse: function(){
         exports.FormalParameters.prototype.endParse.call(this);
-        this.parent().endParameters();
+        this.handleMessage(endParametersMsg);
     }
 });
 
@@ -540,7 +547,7 @@ exports.ProcDecl = ChainedContext.extend({
         this.__outerScope.addSymbol(procSymbol, this.__id.exported());
         this.__type = type;
     },
-    addArgument: function(name, arg){
+    __addArgument: function(name, arg){
         if (name == this.__id.id())
             throw new Errors.Error("argument '" + name + "' has the same name as procedure");
         var readOnly = !arg.isVar && (arg.type instanceof Type.Array);
@@ -556,10 +563,16 @@ exports.ProcDecl = ChainedContext.extend({
             this.__firstArgument = false;
         code.write(name + "/*" + arg.description() + "*/");
     },
-    endParameters: function(){
-        var code = this.codeGenerator();
-        code.write(")");
-        code.openScope();
+    handleMessage: function(msg){
+        if (msg == endParametersMsg){
+            var code = this.codeGenerator();
+            code.write(")");
+            code.openScope();
+            return undefined;
+        }
+        if (msg instanceof AddArgumentMsg)
+            return this.__addArgument(msg.name, msg.arg);
+        return ChainedContext.prototype.handleMessage.call(this, msg);
     },
     /*
     checkResultType: function(s){
@@ -618,7 +631,8 @@ exports.ProcParams = HandleSymbolAsType.extend({
         var names = this.__argNamesForType;
         for(var i = 0; i < names.length; ++i){
             var name = names[i];
-            this.parent().addArgument(name, new Procedure.Arg(type, this.__isVar));
+            this.handleMessage(
+                new AddArgumentMsg(name, new Procedure.Arg(type, this.__isVar)));
         }
         this.__isVar = false;
         this.__argNamesForType = [];
@@ -650,7 +664,7 @@ exports.PointerDecl = ChainedContext.extend({
     },
     setType: function(type){
         var typeId = new Type.TypeId(type);
-        this.currentScope().addType(typeId);
+        this.currentScope().addFinalizer(function(){typeId.strip();});
         this.__setTypeId(typeId);
     },
     findSymbol: function(id){
@@ -1641,15 +1655,16 @@ function isTypeRecursive(type, base){
 }
 
 exports.RecordDecl = ChainedContext.extend({
-    init: function RecordDeclContext(context){
+    init: function RecordDeclContext(context, RecordType){
         ChainedContext.prototype.init.call(this, context);
         var parent = this.parent();
         var cons = parent.genTypeName();
         var name = parent.isAnonymousDeclaration() ? undefined : cons;
-        this.__type = new Type.Record(name, cons, context.currentScope());
+        this.__type = new RecordType(name, cons, context.currentScope());
         parent.setType(this.__type);
         parent.codeGenerator().write("var " + cons + " = ");
     },
+    type: function(){return this.__type;},
     addField: function(field, type){
         if (isTypeRecursive(type, this.__type))
             throw new Errors.Error("recursive field definition: '"
@@ -1699,7 +1714,10 @@ exports.TypeDeclaration = ChainedContext.extend({
     },
     handleIdentdef: function(id){
         var typeId = new Type.LazyTypeId();
-        var symbol = this.currentScope().addType(typeId, id);
+        var symbol = new Symbol.Symbol(id.id(), typeId);
+        this.currentScope().addSymbol(symbol, id.exported());
+        if (!id.exported())
+            this.currentScope().addFinalizer(function(){typeId.strip();});
         this.__id = id;
         this.__symbol = symbol;
     },
@@ -1763,7 +1781,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
         }
         else if (id === this.__name){
             var scope = parent.currentScope();
-            scope.strip();
+            scope.close();
             var exports = scope.exports();
             scope.module().info().defineExports(exports);
             this.codeGenerator().write(this.__moduleGen.epilog(exports));
@@ -1883,7 +1901,10 @@ exports.Context = Class.extend({
     },
     currentScope: function(){return this.__scopes[this.__scopes.length - 1];},
     pushScope: function(scope){this.__scopes.push(scope);},
-    popScope: function(){this.__scopes.pop();},
+    popScope: function(){
+        var scope = this.__scopes.pop();
+        scope.close();
+    },
     handleExpression: function(){},
     handleLiteral: function(){},
     codeGenerator: function(){return this.__code;},
@@ -1899,6 +1920,9 @@ exports.Context = Class.extend({
     }
 });
 
+exports.AddArgumentMsg = AddArgumentMsg;
 exports.Chained = ChainedContext;
-exports.getTypeSymbol = getTypeSymbol;
+exports.endParametersMsg = endParametersMsg;
+exports.getSymbolAndScope = getSymbolAndScope;
+exports.unwrapType = unwrapType;
 exports.IdentdefInfo = IdentdefInfo;

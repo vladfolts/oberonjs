@@ -35,7 +35,7 @@ var TestContext = Context.Context.extend({
                 new RTL());
         this.pushScope(new Scope.Module("test"));
     },
-    qualifyScope: function(){return "";}
+    qualifyScope: function(){return "";},
 });
 
 function makeContext(){return new TestContext();}
@@ -105,6 +105,7 @@ function parseUsingGrammar(grammar, s, cxFactory){
     var baseContext = makeContext();
     var context = cxFactory ? cxFactory(baseContext) : baseContext;
     parseInContext(grammar, s, context);
+    context.currentScope().close();
 }
 
 function setupParser(parser, contextFactory){

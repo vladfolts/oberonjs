@@ -28,6 +28,7 @@ var Scope = Class.extend({
         for(var p in stdSymbols)
             this.__symbols[p] = stdSymbols[p];
         this.__unresolved = [];
+        this.__finalizers = [];
     },
     id: function(){return this.__id;},
     addSymbol: function(symbol){
@@ -36,14 +37,7 @@ var Scope = Class.extend({
             throw new Errors.Error( "'" + id + "' already declared");
         this.__symbols[id] = symbol;
     },
-    addType: function(type, id){
-        if (!id)
-            return undefined;
-
-        var symbol = new Symbol.Symbol(id.id(), type);
-        this.addSymbol(symbol, id.exported());
-        return symbol;
-    },
+    addFinalizer: function(f){this.__finalizers.push(f);},
     resolve: function(symbol){
         var id = symbol.id();
         var i = this.__unresolved.indexOf(id);
@@ -61,7 +55,11 @@ var Scope = Class.extend({
         if (this.__unresolved.indexOf(id) == -1)
             this.__unresolved.push(id);
     },
-    unresolved: function(){return this.__unresolved;}
+    unresolved: function(){return this.__unresolved;},
+    close: function(){
+        for(var i = 0; i < this.__finalizers.length; ++i)
+            this.__finalizers[i]();
+    }
 });
 
 var ProcedureScope = Scope.extend({
@@ -104,7 +102,6 @@ var Module = Scope.extend({
         Scope.prototype.init.call(this, "module");
         this.__name = name;
         this.__exports = {};
-        this.__stripTypes = [];
         this.__symbol = new Symbol.Symbol(name, new CompiledModule(name));
         this.addSymbol(this.__symbol);
     },
@@ -114,17 +111,7 @@ var Module = Scope.extend({
         if (exported)
             this.__exports[symbol.id()] = symbol;
     },
-    addType: function(type, id){
-        var result = Scope.prototype.addType.call(this, type, id);
-        if (!id || !id.exported())
-            this.__stripTypes.push(type);
-        return result;
-    },
-    exports: function(){return this.__exports;},
-    strip: function(){
-        for(var i = 0; i < this.__stripTypes.length; ++i)
-            this.__stripTypes[i].strip();
-    }
+    exports: function(){return this.__exports;}
 });
 
 exports.Procedure = ProcedureScope;

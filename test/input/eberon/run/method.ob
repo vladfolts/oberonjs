@@ -1,6 +1,9 @@
 MODULE m;
 TYPE
-    T = RECORD END;
+    T = RECORD 
+    	PROCEDURE p();
+    	PROCEDURE pSuper(i: INTEGER)
+    END;
 	TD = RECORD(T) END;
 
 VAR
@@ -10,12 +13,12 @@ VAR
 	r: T;
 	rd: TD;
 
-PROCEDURE T.p(), NEW;
+PROCEDURE T.p();
 BEGIN
 	pCalled := TRUE;
 END T.p;
 
-PROCEDURE T.pSuper(i: INTEGER), NEW;
+PROCEDURE T.pSuper(i: INTEGER);
 BEGIN
 	pSuperCalled := i;
 END T.pSuper;

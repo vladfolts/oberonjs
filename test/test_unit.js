@@ -18,15 +18,16 @@ var setupParser = TestUnitCommon.setupParser;
 var testWithGrammar = TestUnitCommon.testWithGrammar;
 var testWithSetup = TestUnitCommon.testWithSetup;
 
-function testWithContext(context, pass, fail){
-    return TestUnitCommon.testWithContext(context, oberonGrammar.declarationSequence, pass, fail);
-}
-
-function testWithModule(src, pass, fail){
-    return TestUnitCommon.testWithModule(src, oberonGrammar, pass, fail);
-}
-
 function makeSuiteForGrammar(grammar){
+
+    function testWithContext(context, pass, fail){
+        return TestUnitCommon.testWithContext(context, grammar.declarationSequence, pass, fail);
+    }
+
+    function testWithModule(src, pass, fail){
+        return TestUnitCommon.testWithModule(src, grammar, pass, fail);
+    }
+
 return {
 "comment": testWithGrammar(
     grammar.expression,
@@ -95,7 +96,8 @@ return {
             init: function IdentDeclarationContext(){this.__ident = undefined;},
             handleIdent: function(id){this.__ident = id;},
             ident: function() {return this.__ident;},
-            getResult: function() {return this.__ident;}
+            getResult: function() {return this.__ident;},
+            currentScope: function(){return {close: function(){}};}
         });
         function makeContext() {return new IdentDeclarationContext();}
 

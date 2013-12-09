@@ -13,13 +13,11 @@ var repeat = Parser.repeat;
 
 var ident = Grammar.ident;
 
-var methAttributes = optional(and(",", "NEW"));
-
 function makeProcedureHeading(formalParameters){
     return and("PROCEDURE",
                context(and(optional(and(ident, ".")), Grammar.identdef), EbContext.ProcOrMethodId),
-               context(optional(formalParameters), Context.FormalParametersProcDecl),
-               methAttributes);
+               context(optional(formalParameters), Context.FormalParametersProcDecl)
+               );
 }
 
 function makeDesignator(selector){
@@ -27,12 +25,32 @@ function makeDesignator(selector){
         and(or("SELF", "SUPER", Grammar.qualident), repeat(selector)), EbContext.Designator);
 }
 
-function makeProcedureDeclaration(formalParameters, procedureBody){
-    var procedureHeading = makeProcedureHeading(formalParameters);
+function makeProcedureDeclaration(procedureHeading, procedureBody){
     return context(and(procedureHeading, ";",
                        procedureBody,
                        and(ident, optional(and(".", ident)))),
                    EbContext.ProcOrMethodDecl);
 }
 
-exports.grammar = Grammar.make(makeDesignator, makeProcedureDeclaration);
+function makeMethodHeading(formalParameters){
+    return context(
+        and("PROCEDURE",
+            Grammar.identdef,
+            context(optional(formalParameters), Context.FormalParametersProcDecl)),
+        EbContext.MethodHeading);
+}
+
+function makeFieldList(identList, type, formalParameters){
+    return context(
+        or(makeMethodHeading(formalParameters),
+           and(identList, ":", type)),
+        Context.FieldListDeclaration);
+}
+
+exports.grammar = Grammar.make(
+    makeDesignator,
+    makeProcedureHeading,
+    makeProcedureDeclaration,
+    makeFieldList,
+    EbContext.RecordDecl
+    );

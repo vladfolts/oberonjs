@@ -26,7 +26,13 @@ var qualident = context(and(optional(and(ident, ".")), ident),
 var identdef = context(and(ident, optional("*")),
                        Context.Identdef);
 
-function make(makeDesignator, makeProcedureDeclaration){
+function make(makeDesignator,
+              makeProcedureHeading, 
+              makeProcedureDeclaration,
+              makeFieldList,
+              recordDeclContext
+              ){
+var result = {};
 
 var selector = or(and(point, ident)
                 // break recursive declaration of expList
@@ -132,7 +138,11 @@ var forStatement = context(and("FOR", ident, ":=", expression, "TO", expression
                              , statementSequence, required("END", "END expected (FOR)"))
                          , Context.For);
 
-var fieldList = context(and(identList, ":", type), Context.FieldListDeclaration);
+var fieldList = makeFieldList(
+        identList,
+        type,
+        function(stream, context){return formalParameters(stream, context);}
+        );
 var fieldListSequence = and(fieldList, repeat(and(";", fieldList)));
 
 var arrayType = and("ARRAY", context(and(
@@ -142,7 +152,7 @@ var arrayType = and("ARRAY", context(and(
 
 var baseType = context(qualident, Context.BaseType);
 var recordType = and("RECORD", context(and(optional(and("(", baseType, ")")), optional(fieldListSequence)
-                                     , "END"), Context.RecordDecl));
+                                     , "END"), recordDeclContext));
 
 var pointerType = and("POINTER", "TO", context(type, Context.PointerDecl));
 
@@ -165,15 +175,15 @@ var constantDeclaration = context(and(identdef, "=", constExpression), Context.C
 var imprt = and(ident, optional(and(":=", ident)));
 var importList = and("IMPORT", imprt, repeat(and(",", imprt)));
 
-var result = {};
 result.expression = expression;
 result.statement = statement;
 result.typeDeclaration = typeDeclaration;
 result.variableDeclaration = variableDeclaration;
+var procedureHeading = makeProcedureHeading(formalParameters);
 result.procedureDeclaration
     // break recursive declaration of procedureBody
     = makeProcedureDeclaration(
-        formalParameters,
+        procedureHeading,
         function(stream, context){
             return result.procedureBody(stream, context);}
     );

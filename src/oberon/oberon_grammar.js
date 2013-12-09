@@ -2,6 +2,7 @@
 
 var Context = require("context.js");
 var Grammar = require("grammar.js");
+var ObContext = require("oberon/oberon_context.js");
 var Parser = require("parser.js");
 
 var and = Parser.and;
@@ -19,14 +20,21 @@ function makeDesignator(selector){
     return context(and(Grammar.qualident, repeat(selector)), Context.Designator);
 }
 
-function makeProcedureDeclaration(formalParameters, procedureBody){
-    var procedureHeading = makeProcedureHeading(formalParameters);
+function makeProcedureDeclaration(procedureHeading, procedureBody){
     return context(and(procedureHeading, ";",
                        procedureBody,
                        Grammar.ident),
                    Context.ProcDecl);
 }
 
-exports.grammar = Grammar.make(makeDesignator, makeProcedureDeclaration);
-//exports.grammar.procedureHeading = procedureHeading;
+function makeFieldList(identList, type){
+    return context(and(identList, ":", type), Context.FieldListDeclaration);
+}
 
+exports.grammar = Grammar.make(
+    makeDesignator,
+    makeProcedureHeading,
+    makeProcedureDeclaration,
+    makeFieldList,
+    ObContext.RecordDecl
+    );

@@ -306,10 +306,7 @@ exports.predefined = [
                 return new CheckArgumentResult(type, false);
             },
             epilog: function(){
-                return " = new " 
-                     + this.context().qualifyScope(this.__baseType.scope()) 
-                     + this.__baseType.cons()
-                     + "()";
+                return " = " + this.__baseType.initializer(this.context());
             }
         });
 
