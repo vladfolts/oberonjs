@@ -67,6 +67,8 @@ var ProcOrMethodId = Context.Chained.extend({
         this.__type = type;
     },
     handleIdentdef: function(id){
+        if (this.__type && id.exported())
+            throw new Errors.Error("method implementation cannot be exported: " + id.id());
         this.handleMessage(new MethodOrProcMsg(id, this.__type));
     }
 });
@@ -108,11 +110,11 @@ var RecordType = Type.Record.extend({
     init: function EberonContext$RecordType(name, cons, scope){
         Type.Record.prototype.init.call(this, name, cons, scope);
         this.__finalized = false;
-        scope.addFinalizer(this.finalize.bind(this));
         this.__declaredMethods = {};
         this.__definedMethods = [];
         this.__instantiated = false;
         this.__lazyDefinitions = [];
+        this.__nonExportedMethods = [];
     },
     initializer: function(context){
         if (this.__finalized)
@@ -145,6 +147,9 @@ var RecordType = Type.Record.extend({
                 : "cannot declare method, record already has field '" + id + "'");
 
         this.__declaredMethods[id] = type;
+
+        if (!methodId.exported())
+            this.__nonExportedMethods.push(id);
     },
     defineMethod: function(methodId, type){
         var base = this.baseType();
@@ -191,6 +196,12 @@ var RecordType = Type.Record.extend({
         if (this.__instantiated)
             this.__ensureNonAbstract();
         this.__ensureMethodDefinitions(this.__lazyDefinitions);
+
+        for(var i = 0; i < this.__nonExportedMethods.length; ++i)
+            delete this.__declaredMethods[this.__nonExportedMethods[i]];
+        delete this.__nonExportedMethods;
+
+        Type.Record.prototype.finalize.call(this);
     },
     __ensureMethodDefinitions: function(ids){
         var result = [];

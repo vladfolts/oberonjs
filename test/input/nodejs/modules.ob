@@ -2,7 +2,7 @@ MODULE m1;
 CONST
     ci* = 123;
 TYPE
-	Base* = RECORD i: INTEGER END;
+	Base* = RECORD i*: INTEGER END;
 	T* = RECORD(Base) END;
 	TP* = POINTER TO T;
 	TPA* = POINTER TO RECORD END;

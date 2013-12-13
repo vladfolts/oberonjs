@@ -11,6 +11,10 @@ function testWithContext(context, pass, fail){
     return TestUnitCommon.testWithContext(context, grammar.declarationSequence, pass, fail);
 }
 
+function testWithModule(src, pass, fail){
+    return TestUnitCommon.testWithModule(src, grammar, pass, fail);
+}
+
 exports.suite = {
 "abstract method declaration": testWithContext(
     context(grammar.declarationSequence, 
@@ -28,8 +32,7 @@ exports.suite = {
 "new method declaration": testWithContext(
     context(grammar.declarationSequence, 
             "TYPE T = RECORD PROCEDURE p(); intField: INTEGER END; A = ARRAY 1 OF INTEGER;"),
-    pass("PROCEDURE T.p(); END T.p;",
-         "PROCEDURE T.p*(); END T.p;"
+    pass("PROCEDURE T.p(); END T.p;"
          ),
         fail(["PROCEDURE TUnk.p(), NEW; END TUnk.p;", "undeclared identifier: 'TUnk'"],
          ["PROCEDURE A.p(), NEW; END A.p;",
@@ -105,5 +108,26 @@ exports.suite = {
          ["PROCEDURE D.pAbstract(); BEGIN SUPER() END D.pAbstract; PROCEDURE D.pAbstract2(); BEGIN SUPER() END D.pAbstract2;",
           "cannot use abstract method(s) in SUPER calls: pAbstract, pAbstract2"]
           )
+    ),
+"export method": testWithContext(
+    context(grammar.declarationSequence, 
+            "TYPE T = RECORD PROCEDURE p() END;"
+            ),
+    pass(),
+    fail(["PROCEDURE T.p*(); END T.p;",
+          "method implementation cannot be exported: p"])
+    ),
+"import method": testWithModule(
+      "MODULE test;"
+    + "TYPE T* = RECORD PROCEDURE m*(); PROCEDURE mNotExported() END;"
+    + "PROCEDURE T.m(); END T.m; PROCEDURE T.mNotExported(); END T.mNotExported;"
+    + "END test.",
+    pass("MODULE m; IMPORT test; VAR r: test.T; BEGIN r.m(); END m.",
+         "MODULE m; IMPORT test; TYPE T = RECORD(test.T) END; PROCEDURE T.m(); END T.m; END m."
+        ),
+    fail(["MODULE m; IMPORT test; VAR r: test.T; BEGIN r.mNotExported(); END m.",
+          "type 'T' has no 'mNotExported' field"],
+         ["MODULE m; IMPORT test; TYPE T = RECORD(test.T) END; PROCEDURE T.mNotExported(); END T.mNotExported; END m.",
+          "'T' has no declaration for method 'mNotExported'"])
     )
 };

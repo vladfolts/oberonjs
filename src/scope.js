@@ -59,6 +59,9 @@ var Scope = Class.extend({
     close: function(){
         for(var i = 0; i < this.__finalizers.length; ++i)
             this.__finalizers[i]();
+
+        // make second close() call safe and free memory
+        this.__finalizers = []; 
     }
 });
 
