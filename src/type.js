@@ -117,7 +117,9 @@ var Record = BasicType.extend({
         this.__cons = cons;        
         this.__scope = scope;
         this.__fields = {};
+        this.__notExported = [];
         this.__base = undefined;
+        scope.addFinalizer(this.finalize.bind(this));
     },
     initializer: function(context){
         return "new " + context.qualifyScope(this.__scope) + this.__cons + "()";
@@ -131,6 +133,8 @@ var Record = BasicType.extend({
         if (this.__base && this.__base.findSymbol(name))
             throw new Errors.Error("base record already has field: '" + name + "'");
         this.__fields[name] = type;
+        if (!field.exported())
+            this.__notExported.push(name);
     },
     ownFields: function() {return this.__fields;},
     findSymbol: function(field){
@@ -143,6 +147,11 @@ var Record = BasicType.extend({
     setBaseType: function(type) {this.__base = type;},
     description: function(){
         return this.name() || "anonymous RECORD";
+    },
+    finalize: function(){
+        for(var i = 0; i < this.__notExported.length; ++i)
+            delete this.__fields[this.__notExported[i]];
+        delete this.__notExported;
     }
 });
 

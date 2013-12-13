@@ -880,6 +880,12 @@ return {
          ["MODULE m; IMPORT t := test; BEGIN t.p(); END m.",
           "identifier 'p' is not exported by module 'test'"]
         )),
+"import record type": testWithModule(
+    "MODULE test; TYPE T* = RECORD f*: INTEGER; notExported: BOOLEAN END; END test.",
+    pass("MODULE m; IMPORT test; VAR r: test.T; BEGIN r.f := 0; END m."),
+    fail(["MODULE m; IMPORT test; VAR r: test.T; BEGIN r.notExported := FALSE; END m.",
+          "type 'T' has no 'notExported' field"]
+        )),
 "imported variables are read-only": testWithModule(
     "MODULE test; VAR i*: INTEGER; END test.",
     pass("MODULE m; IMPORT test; PROCEDURE p(i: INTEGER); END p; BEGIN p(test.i); END m."),
