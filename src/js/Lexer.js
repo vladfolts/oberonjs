@@ -1,12 +1,11 @@
 var RTL$ = require("rtl.js");
 var JS = GLOBAL;
-var JsString = require("js/JsString.js");
-var Errors = require("js/Errors.js");
-var Stream = require("js/Stream.js");
+var JsString = require("JsString.js");
+var Errors = require("Errors.js");
+var Stream = require("Stream.js");
 var quote = "\"";
 var commentBegin = "(*";
 var commentEnd = "*)";
-var reservedWords = "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN";
 var jsReservedWords = "break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math";
 var Context = RTL$.extend({
 	init: function Context(){
@@ -113,7 +112,7 @@ function isReservedWorld(s/*Type*/, words/*ARRAY OF CHAR*/){
 	return i == JsString.len(s);
 }
 
-function ident(stream/*Type*/, context/*Context*/){
+function ident(stream/*Type*/, context/*Context*/, reservedWords/*ARRAY OF CHAR*/){
 	var result = false;
 	var c = 0;
 	var s = null;

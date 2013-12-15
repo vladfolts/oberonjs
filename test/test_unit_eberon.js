@@ -16,6 +16,12 @@ function testWithModule(src, pass, fail){
 }
 
 exports.suite = {
+"key words": TestUnitCommon.testWithGrammar(
+    grammar.variableDeclaration,
+    pass(),
+    fail(["SELF: INTEGER", "not parsed"],
+         ["SUPER: INTEGER", "not parsed"])
+    ),
 "abstract method declaration": testWithContext(
     context(grammar.declarationSequence, 
             "TYPE T = RECORD PROCEDURE p() END;"
@@ -75,8 +81,11 @@ exports.suite = {
     ),
 "SELF": testWithContext(
     context(grammar.declarationSequence,
-            "TYPE T = RECORD PROCEDURE p(); i: INTEGER END;"),
-    pass("PROCEDURE T.p(); BEGIN SELF.i := 0; END T.p;"),
+              "TYPE T = RECORD PROCEDURE p(); i: INTEGER END;"
+            + "PROCEDURE proc(i: INTEGER); END proc;"),
+    pass("PROCEDURE T.p(); BEGIN SELF.i := 0; END T.p;",
+         "PROCEDURE T.p(); BEGIN proc(SELF.i); END T.p;"
+         ),
     fail(["PROCEDURE p(); BEGIN SELF.i := 0; END p;",
           "SELF can be used only in methods"])
     ),

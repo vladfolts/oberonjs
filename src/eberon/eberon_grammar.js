@@ -11,38 +11,36 @@ var optional = Parser.optional;
 var or = Parser.or;
 var repeat = Parser.repeat;
 
-var ident = Grammar.ident;
-
-function makeProcedureHeading(formalParameters){
+function makeProcedureHeading(ident, identdef, formalParameters){
     return and("PROCEDURE",
-               context(and(optional(and(ident, ".")), Grammar.identdef), EbContext.ProcOrMethodId),
+               context(and(optional(and(ident, ".")), identdef), EbContext.ProcOrMethodId),
                context(optional(formalParameters), Context.FormalParametersProcDecl)
                );
 }
 
-function makeDesignator(selector){
+function makeDesignator(qualident, selector){
     return context(
-        and(or("SELF", "SUPER", Grammar.qualident), repeat(selector)), EbContext.Designator);
+        and(or("SELF", "SUPER", qualident), repeat(selector)), EbContext.Designator);
 }
 
-function makeProcedureDeclaration(procedureHeading, procedureBody){
+function makeProcedureDeclaration(ident, procedureHeading, procedureBody){
     return context(and(procedureHeading, ";",
                        procedureBody,
                        and(ident, optional(and(".", ident)))),
                    EbContext.ProcOrMethodDecl);
 }
 
-function makeMethodHeading(formalParameters){
+function makeMethodHeading(identdef, formalParameters){
     return context(
         and("PROCEDURE",
-            Grammar.identdef,
+            identdef,
             context(optional(formalParameters), Context.FormalParametersProcDecl)),
         EbContext.MethodHeading);
 }
 
-function makeFieldList(identList, type, formalParameters){
+function makeFieldList(identdef, identList, type, formalParameters){
     return context(
-        or(makeMethodHeading(formalParameters),
+        or(makeMethodHeading(identdef, formalParameters),
            and(identList, ":", type)),
         Context.FieldListDeclaration);
 }
@@ -52,5 +50,6 @@ exports.grammar = Grammar.make(
     makeProcedureHeading,
     makeProcedureDeclaration,
     makeFieldList,
-    EbContext.RecordDecl
+    EbContext.RecordDecl,
+    Grammar.reservedWords + " SELF SUPER"
     );

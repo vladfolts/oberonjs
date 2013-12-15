@@ -8,7 +8,6 @@ var Class = require("rtl.js").Class;
 var literal = Parser.literal;
 var digit = Lexer.digit;
 var hexDigit = Lexer.hexDigit;
-var ident = Lexer.ident;
 var point = Lexer.point;
 var separator = Lexer.separator;
 
@@ -21,18 +20,25 @@ var context = Parser.context;
 var emit = Parser.emit;
 var required = Parser.required;
 
-var qualident = context(and(optional(and(ident, ".")), ident),
-                        Context.QualifiedIdentificator);
-var identdef = context(and(ident, optional("*")),
-                       Context.Identdef);
+var reservedWords = "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN";
 
 function make(makeDesignator,
               makeProcedureHeading, 
               makeProcedureDeclaration,
               makeFieldList,
-              recordDeclContext
+              recordDeclContext,
+              reservedWords
               ){
 var result = {};
+
+var ident = function(stream, context){
+    return Lexer.ident(stream, context, reservedWords);
+};
+
+var qualident = context(and(optional(and(ident, ".")), ident),
+                        Context.QualifiedIdentificator);
+var identdef = context(and(ident, optional("*")),
+                       Context.Identdef);
 
 var selector = or(and(point, ident)
                 // break recursive declaration of expList
@@ -40,7 +46,7 @@ var selector = or(and(point, ident)
                 , "^"
                 , context(and("(", qualident, ")"), Context.TypeCast)
                 );
-var designator = makeDesignator(selector);
+var designator = makeDesignator(qualident, selector);
 var type = or(context(qualident, Context.Type),
               function(stream, context){return strucType(stream, context);} // break recursive declaration of strucType
              );
@@ -139,6 +145,7 @@ var forStatement = context(and("FOR", ident, ":=", expression, "TO", expression
                          , Context.For);
 
 var fieldList = makeFieldList(
+        identdef,
         identList,
         type,
         function(stream, context){return formalParameters(stream, context);}
@@ -179,10 +186,12 @@ result.expression = expression;
 result.statement = statement;
 result.typeDeclaration = typeDeclaration;
 result.variableDeclaration = variableDeclaration;
-var procedureHeading = makeProcedureHeading(formalParameters);
+var procedureHeading = makeProcedureHeading(ident, identdef, formalParameters);
+result.ident = ident;
 result.procedureDeclaration
     // break recursive declaration of procedureBody
     = makeProcedureDeclaration(
+        ident,
         procedureHeading,
         function(stream, context){
             return result.procedureBody(stream, context);}
@@ -208,6 +217,4 @@ return result;
 }
 
 exports.make = make;
-exports.ident = ident;
-exports.identdef = identdef;
-exports.qualident = qualident;
+exports.reservedWords = reservedWords;

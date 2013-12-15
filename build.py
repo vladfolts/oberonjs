@@ -76,7 +76,7 @@ def build(out, use_git):
 
     link(['oc.js', 'oberon/oberon_grammar.js', 'eberon/eberon_grammar.js'],
          os.path.join(out, 'oc.js'),
-         ['src', 'src/oberon.js'],
+         ['src', 'src/js'],
          version)
     copy('browser/oberonjs.html', out)
     for d in ['codemirror', 'jslibs']:

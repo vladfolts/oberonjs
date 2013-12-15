@@ -101,7 +101,7 @@ return {
         });
         function makeContext() {return new IdentDeclarationContext();}
 
-        return setupParser(Grammar.ident, makeContext);},
+        return setupParser(grammar.ident, makeContext);},
     pass("i", "abc1"),
     fail(["", "not parsed"],
          [";", "not parsed"],

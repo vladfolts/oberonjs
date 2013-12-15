@@ -5,7 +5,6 @@ CONST
     quote = 22X; (* " *)
     commentBegin = "(*";
     commentEnd = "*)";
-    reservedWords = "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN";
     jsReservedWords = "break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math"; (* Math is used in generated code for some functions so it is reserved word from code generator standpoint *)
 
 TYPE
@@ -123,7 +122,7 @@ BEGIN
     RETURN i = JsString.len(s)
 END isReservedWorld;
 
-PROCEDURE ident*(stream: Stream.Type; context: Context): BOOLEAN;
+PROCEDURE ident*(stream: Stream.Type; context: Context; reservedWords: ARRAY OF CHAR): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;

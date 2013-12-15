@@ -10,24 +10,24 @@ var context = Parser.context;
 var optional = Parser.optional;
 var repeat = Parser.repeat;
 
-function makeProcedureHeading(formalParameters){
+function makeProcedureHeading(ident, identdef, formalParameters){
     return and("PROCEDURE"
-             , Grammar.identdef
+             , identdef
              , context(optional(formalParameters), Context.FormalParametersProcDecl));
 }
 
-function makeDesignator(selector){
-    return context(and(Grammar.qualident, repeat(selector)), Context.Designator);
+function makeDesignator(qualident, selector){
+    return context(and(qualident, repeat(selector)), Context.Designator);
 }
 
-function makeProcedureDeclaration(procedureHeading, procedureBody){
+function makeProcedureDeclaration(ident, procedureHeading, procedureBody){
     return context(and(procedureHeading, ";",
                        procedureBody,
-                       Grammar.ident),
+                       ident),
                    Context.ProcDecl);
 }
 
-function makeFieldList(identList, type){
+function makeFieldList(identdef, identList, type){
     return context(and(identList, ":", type), Context.FieldListDeclaration);
 }
 
@@ -36,5 +36,6 @@ exports.grammar = Grammar.make(
     makeProcedureHeading,
     makeProcedureDeclaration,
     makeFieldList,
-    ObContext.RecordDecl
+    ObContext.RecordDecl,
+    Grammar.reservedWords
     );

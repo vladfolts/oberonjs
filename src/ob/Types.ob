@@ -3,15 +3,98 @@ IMPORT JsString;
 
 TYPE
     Id = RECORD END;
-    Type = POINTER TO RECORD(Id)
+    
+    Type = RECORD(Id)
+        PROCEDURE idType(): JsString.Type;
         PROCEDURE description(): JsString.Type
     END;
+    PType = POINTER TO Type;
+    
     TypeId = RECORD(Id)
-        type: Type
+        PROCEDURE type(): PType;
+        PROCEDURE description(): JsString.Type;
+        PROCEDURE strip();
+
+        mType: PType
     END;
 
-PROCEDURE description*(t: TypeId): JsString.Type;
-    RETURN JsString.concat(JsString.make("type "), t.type.description())
-END description;
+    ResolveTypeCallback = PROCEDURE(): PType;
+
+    ForwardTypeId = RECORD(TypeId)
+        resolve: ResolveTypeCallback
+    END;
+
+    LazyTypeId = RECORD(TypeId)
+    END;
+
+    String = RECORD(Type)
+        s: JsString.Type
+    END;
+
+    Record = RECORD(Type) END;
+    
+    NonExportedRecord = RECORD(Record) END;
+    PNonExportedRecord = POINTER TO NonExportedRecord;
+
+PROCEDURE TypeId.description(): JsString.Type;
+VAR
+    t: PType;
+BEGIN
+    t := SELF.type()
+    RETURN JsString.concat(JsString.make("type "), t.description())
+END TypeId.description;
+
+PROCEDURE makeNonExportedRecord(): PNonExportedRecord;
+VAR
+    result: PNonExportedRecord;
+BEGIN
+    NEW(result);
+    RETURN result
+END makeNonExportedRecord;    
+
+PROCEDURE TypeId.strip();
+BEGIN
+    IF SELF.mType IS Record THEN
+        SELF.mType := makeNonExportedRecord();
+    ELSE
+        SELF.mType := NIL;
+    END;
+END TypeId.strip;
+
+PROCEDURE makeForwardTypeId(p: ResolveTypeCallback);
+END makeForwardTypeId;
+
+PROCEDURE ForwardTypeId.type(): PType;
+BEGIN
+    IF SELF.mType = NIL THEN
+        SELF.mType := SELF.resolve();
+    END;
+    RETURN SELF.mType
+END ForwardTypeId.type;
+
+PROCEDURE defineTypeId(VAR tId: LazyTypeId; t: PType);
+BEGIN
+    tId.mType := t;
+END defineTypeId;
+
+PROCEDURE String.idType(): JsString.Type;
+    RETURN JsString.make("string")
+END String.idType;
+
+PROCEDURE String.description(): JsString.Type;
+VAR
+    prefix: JsString.Type;
+BEGIN
+    IF JsString.len(SELF.s) = 1 THEN
+        prefix := JsString.make("single-");
+    ELSE
+        prefix := JsString.make("multi-");
+    END;
+    RETURN JsString.concat(prefix, JsString.make("character string"))
+END String.description;
+
+PROCEDURE stringValue(s: String): JsString.Type;
+    RETURN s.s
+END stringValue
 
 END Types.
