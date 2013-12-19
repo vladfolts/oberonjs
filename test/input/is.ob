@@ -13,7 +13,7 @@ BEGIN
     NEW(pd2);
     pb := pd2;
     pd1 := pd2;
-    b := pb IS Derived1;
-    b := pb IS Derived2;
-    b := pd1 IS Derived2
+    b := pb^ IS Derived1;
+    b := pb^ IS Derived2;
+    b := pd1^ IS Derived2
 END m.

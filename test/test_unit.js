@@ -264,19 +264,28 @@ return {
     context(grammar.expression,
             "TYPE Base = RECORD END; Derived = RECORD (Base) END; PDerived = POINTER TO Derived;"
             + "VAR p: POINTER TO RECORD END; pBase: POINTER TO Base; pDerived: POINTER TO Derived; vDerived: Derived; i: INTEGER;"),
-    pass("pBase IS Derived"),
+    pass("pBase IS PDerived",
+         "pBase^ IS Derived"
+        ),
     fail(["pBase IS pDerived", "type name expected"],
          ["pBase IS TRUE", "type name expected"],
          ["pBase IS vDerived", "type name expected"],
-         ["Derived IS Derived", "POINTER to type expected before 'IS'"],
-         ["i IS Derived", "POINTER to type expected before 'IS'"],
-         ["p IS Derived", 
+         ["Derived IS Derived", "POINTER to type or RECORD expected before 'IS'"],
+         ["i IS Derived", "POINTER to type or RECORD expected before 'IS'"],
+         ["p^ IS Derived", 
           "invalid type test: 'Derived' is not an extension of 'anonymous RECORD'"],
-         ["pDerived IS Derived", 
+         ["p IS PDerived", 
+          "invalid type test: 'Derived' is not an extension of 'anonymous RECORD'"],
+         ["pDerived^ IS Derived", 
          "invalid type test: 'Derived' is not an extension of 'Derived'"],
-         ["pDerived IS Base", 
+         ["pDerived IS PDerived", 
+         "invalid type test: 'Derived' is not an extension of 'Derived'"],
+         ["pDerived^ IS Base", 
           "invalid type test: 'Base' is not an extension of 'Derived'"],
-         ["pDerived IS INTEGER", "RECORD type expected after 'IS'"])
+         ["pDerived IS INTEGER", "POINTER to type expected after 'IS'"],
+         ["pBase IS Derived", "POINTER to type expected after 'IS'"],
+         ["pBase^ IS PDerived", "RECORD type expected after 'IS'"]
+         )
     ),
 "BYTE": testWithContext(
     context(grammar.statement,
@@ -643,7 +652,7 @@ return {
             + "VAR pBase: POINTER TO Base; proc1, proc2: PROCEDURE;"
                 + "set1, set2: SET;"
                 + "b: BOOLEAN; i1, i2: INTEGER; r1, r2: REAL; c1, c2: CHAR; ca1, ca2: ARRAY 10 OF CHAR;"),
-    pass("b := pBase IS Derived",
+    pass("b := pBase^ IS Derived",
          "b := pBase = pBase",
          "b := proc1 # proc2",
          "b := set1 <= set2",

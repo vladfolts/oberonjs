@@ -1127,12 +1127,15 @@ exports.Expression = ChainedContext.extend({
             code = "1 << " + leftCode + " & " + rightCode;
         }
         else if (this.__relation == "IS"){
-            if (!(leftType instanceof Type.Pointer))
-                throw new Errors.Error("POINTER to type expected before 'IS'");
+            var pointerExpected = leftType instanceof Type.Pointer;
+            if (!pointerExpected && !(leftType instanceof Type.Record))
+                throw new Errors.Error("POINTER to type or RECORD expected before 'IS'");
 
             rightType = unwrapType(rightType);
-            if (!(rightType instanceof Type.Record))
+            if (!pointerExpected && !(rightType instanceof Type.Record))
                 throw new Errors.Error("RECORD type expected after 'IS'");
+            if (pointerExpected && !(rightType instanceof Type.Pointer))
+                throw new Errors.Error("POINTER to type expected after 'IS'");
 
             checkTypeCast(leftType, rightType, "invalid type test");
 
