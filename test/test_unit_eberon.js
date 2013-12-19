@@ -25,6 +25,7 @@ exports.suite = {
 "abstract method declaration": testWithContext(
     context(grammar.declarationSequence, 
             "TYPE T = RECORD PROCEDURE p() END;"
+            + "D = RECORD(T) END;"
             + "T2 = RECORD PROCEDURE p1(); PROCEDURE p2(i: INTEGER): BOOLEAN END;"
             ),
     pass(),
@@ -33,7 +34,12 @@ exports.suite = {
          ["VAR r: T2;",
           "cannot instantiate 'T2' because it has abstract method(s): p1, p2"],
          ["PROCEDURE p(); VAR p: POINTER TO T; BEGIN NEW(p); END p;",
-          "cannot instantiate 'T' because it has abstract method(s): p"])
+          "cannot instantiate 'T' because it has abstract method(s): p"],
+         ["VAR r: D;",
+          "cannot instantiate 'D' because it has abstract method(s): p"],
+         ["PROCEDURE p(); VAR p: POINTER TO D; BEGIN NEW(p); END p;",
+          "cannot instantiate 'D' because it has abstract method(s): p"]
+        )
     ),
 "new method declaration": testWithContext(
     context(grammar.declarationSequence, 

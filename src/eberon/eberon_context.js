@@ -112,6 +112,7 @@ var RecordType = Type.Record.extend({
         this.__finalized = false;
         this.__declaredMethods = {};
         this.__definedMethods = [];
+        this.__abstractMethods = [];
         this.__instantiated = false;
         this.__lazyDefinitions = [];
         this.__nonExportedMethods = [];
@@ -179,20 +180,21 @@ var RecordType = Type.Record.extend({
         else if (this.__lazyDefinitions.indexOf(id) == -1)
             this.__lazyDefinitions.push(id);
     },
-    abstractMethods: function(){
+    abstractMethods: function(){return this.__abstractMethods;},
+    __collectAbstractMethods: function(){
+        var selfMethods = Object.keys(this.__declaredMethods);
         var baseType = this.baseType();
-        var methods = baseType ? baseType.abstractMethods().concat(Object.keys(this.__declaredMethods))
-                               : Object.keys(this.__declaredMethods);
-        var result = [];
+        var methods = baseType ? baseType.abstractMethods().concat(selfMethods)
+                               : selfMethods;
         for(var i = 0; i < methods.length; ++i){
             var m = methods[i];
             if (this.__definedMethods.indexOf(m) == -1)
-                result.push(m);
+                this.__abstractMethods.push(m);
         }
-        return result;
     },
     finalize: function(){
         this.__finalized = true;
+        this.__collectAbstractMethods();
         if (this.__instantiated)
             this.__ensureNonAbstract();
         this.__ensureMethodDefinitions(this.__lazyDefinitions);
