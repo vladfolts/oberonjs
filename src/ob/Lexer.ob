@@ -1,5 +1,5 @@
 MODULE Lexer;
-IMPORT JS, JsString, Errors, Stream;
+IMPORT Context, JS, JsString, Errors, Stream;
 
 CONST
     quote = 22X; (* " *)
@@ -8,14 +8,6 @@ CONST
     jsReservedWords = "break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math"; (* Math is used in generated code for some functions so it is reserved word from code generator standpoint *)
 
 TYPE
-    Context = RECORD
-        handleChar: PROCEDURE(c: CHAR);
-        handleLiteral: PROCEDURE(s: JsString.Type): BOOLEAN;
-        handleString: PROCEDURE(s: JsString.Type);
-        handleIdent: PROCEDURE(s: JsString.Type);
-        isLexem: PROCEDURE(): BOOLEAN
-    END;
-
     Literal = POINTER TO RECORD
         s: ARRAY 1 OF CHAR
     END;
@@ -28,7 +20,7 @@ PROCEDURE isLetter(c: CHAR): BOOLEAN;
     RETURN ((c >= "a") & (c <= "z")) OR ((c >= "A") & (c <= "Z"))
 END isLetter;
 
-PROCEDURE digit*(stream: Stream.Type; context: Context): BOOLEAN;
+PROCEDURE digit*(stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;
@@ -43,7 +35,7 @@ BEGIN
     RETURN result
 END digit;
 
-PROCEDURE hexDigit*(stream: Stream.Type; context: Context): BOOLEAN;
+PROCEDURE hexDigit*(stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;
@@ -56,14 +48,14 @@ BEGIN
     RETURN result
 END hexDigit;
 
-PROCEDURE handleLiteral(context: Context; s: ARRAY OF CHAR): BOOLEAN;
+PROCEDURE handleLiteral(context: Context.Type; s: ARRAY OF CHAR): BOOLEAN;
 VAR result: BOOLEAN;
 BEGIN
     JS.do("var r = context.handleLiteral(JsString.make(s)); result = (r === undefined || r)");
     RETURN result
 END handleLiteral;
 
-PROCEDURE point*(stream: Stream.Type; context: Context): BOOLEAN;
+PROCEDURE point*(stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR result: BOOLEAN;
 BEGIN
     IF    ~Stream.eof(stream)
@@ -75,7 +67,7 @@ BEGIN
     RETURN result
 END point;
 
-PROCEDURE string*(stream: Stream.Type; context: Context): BOOLEAN;
+PROCEDURE string*(stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;
@@ -122,7 +114,7 @@ BEGIN
     RETURN i = JsString.len(s)
 END isReservedWorld;
 
-PROCEDURE ident*(stream: Stream.Type; context: Context; reservedWords: ARRAY OF CHAR): BOOLEAN;
+PROCEDURE ident*(stream: Stream.Type; context: Context.Type; reservedWords: ARRAY OF CHAR): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;
@@ -154,7 +146,7 @@ BEGIN
     RETURN result
 END ident;
 
-PROCEDURE skipComment(stream: Stream.Type; context: Context): BOOLEAN;
+PROCEDURE skipComment(stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN
@@ -182,7 +174,7 @@ PROCEDURE readSpaces(c: CHAR): BOOLEAN;
         OR (c = 0DX)
 END readSpaces;
 
-PROCEDURE skipSpaces*(stream: Stream.Type; context: Context);
+PROCEDURE skipSpaces*(stream: Stream.Type; context: Context.Type);
 BEGIN
     IF (context.isLexem = NIL) OR ~context.isLexem() THEN
         WHILE Stream.read(stream, readSpaces)
@@ -190,7 +182,7 @@ BEGIN
     END
 END skipSpaces;
 
-PROCEDURE separator*(stream: Stream.Type; context: Context): BOOLEAN;
+PROCEDURE separator*(stream: Stream.Type; context: Context.Type): BOOLEAN;
     RETURN Stream.eof(stream) OR ~isLetter(Stream.peekChar(stream))
 END separator;
 
@@ -203,7 +195,7 @@ BEGIN
     RETURN result
 END makeLiteral;
 
-PROCEDURE literal*(l: Literal; stream: Stream.Type; context: Context): BOOLEAN;
+PROCEDURE literal*(l: Literal; stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN

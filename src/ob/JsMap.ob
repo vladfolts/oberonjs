@@ -1,0 +1,40 @@
+MODULE JsMap;
+IMPORT JS, JsString, Object;
+TYPE
+    Type* = POINTER TO RECORD END;
+
+PROCEDURE make*(): Type;
+VAR
+    result: Type;
+BEGIN
+    JS.do("result = {}");
+    RETURN result    
+END make;
+
+PROCEDURE has*(m: Type; s: JsString.Type): BOOLEAN;
+VAR
+    result: BOOLEAN;
+BEGIN
+    JS.do("result = m.hasOwnProperty(s)");
+    RETURN result
+END has;
+
+PROCEDURE find*(m: Type; s: JsString.Type; VAR r: Object.PType): BOOLEAN;
+VAR
+    result: BOOLEAN;
+BEGIN
+    JS.do("var value = m[s]; if (value !== undefined){result = true; r.set(value);}");
+    RETURN result
+END find;
+
+PROCEDURE put*(m: Type; s: JsString.Type; o: Object.PType);
+BEGIN
+    JS.do("m[s] = o");
+END put;
+
+PROCEDURE erase*(m: Type; s: JsString.Type);
+BEGIN
+    JS.do("delete m[s]");
+END erase;
+
+END JsMap.

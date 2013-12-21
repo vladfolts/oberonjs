@@ -1,0 +1,20 @@
+MODULE Context;
+IMPORT JsString, Object;
+TYPE
+    FinalizerProc = PROCEDURE(closure: Object.PType);
+
+    Scope* = RECORD
+        PROCEDURE addFinalizer*(closure: Object.PType; finalizer: FinalizerProc)
+    END;
+    PScope* = POINTER TO Scope;
+
+    Type* = RECORD
+        handleChar*:    PROCEDURE(c: CHAR);
+        handleLiteral*: PROCEDURE(s: JsString.Type): BOOLEAN;
+        handleString*:  PROCEDURE(s: JsString.Type);
+        handleIdent*:   PROCEDURE(s: JsString.Type);
+        isLexem*:       PROCEDURE(): BOOLEAN;
+        qualifyScope*:  PROCEDURE(scope: PScope): JsString.Type
+    END;
+
+END Context.

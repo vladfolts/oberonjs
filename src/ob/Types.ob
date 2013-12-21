@@ -1,16 +1,20 @@
 MODULE Types;
-IMPORT JsString;
+IMPORT Context, Errors, JS, JsArray, JsMap, JsString, Object;
 
 TYPE
-    Id = RECORD END;
+    Id = RECORD (Object.Type)
+        PROCEDURE idType(): JsString.Type
+    END;
+
+    PId = POINTER TO Id;
     
     Type = RECORD(Id)
-        PROCEDURE idType(): JsString.Type;
-        PROCEDURE description(): JsString.Type
+        PROCEDURE description(): JsString.Type;
+        PROCEDURE initializer(cx: Context.Type): JsString.Type
     END;
     PType = POINTER TO Type;
     
-    TypeId = RECORD(Id)
+    TypeId = RECORD
         PROCEDURE type(): PType;
         PROCEDURE description(): JsString.Type;
         PROCEDURE strip();
@@ -24,44 +28,136 @@ TYPE
         resolve: ResolveTypeCallback
     END;
 
+    PForwardTypeId = POINTER TO ForwardTypeId;
+
     LazyTypeId = RECORD(TypeId)
+    END;
+
+    PLazyTypeId = POINTER TO LazyTypeId;
+
+    Const = RECORD(Id)
+        mType: PType;
+        mValue: JS.var
+    END;
+
+    Variable = RECORD(Id)
+        mType: PType;
+        isReadOnly: BOOLEAN
+    END;
+
+    VariableRef = RECORD(Variable)
+    END;
+
+    ExportedVariable = RECORD(Variable)
     END;
 
     String = RECORD(Type)
         s: JsString.Type
     END;
 
-    Record = RECORD(Type) END;
+    PString = POINTER TO String;
+
+    Array = RECORD(Type)
+        name: JsString.Type;
+        elementsType: PType;
+        len: INTEGER
+    END;
+
+    PArray = POINTER TO Array;
+
+    PRecord = POINTER TO Record;
+
+    Pointer = RECORD(Type)
+        name: JsString.Type;
+        base: PRecord
+    END;
+
+    PPointer = POINTER TO Pointer;
+
+    Procedure = RECORD(Type)
+    END;
+
+    BasicType = RECORD(Type)
+        name: JsString.Type;
+        mInitializer: JsString.Type
+    END;
+
+    PBasicType = POINTER TO BasicType;
+
+    Field = RECORD
+        id: JsString.Type;
+        exported: BOOLEAN
+    END;
+
+    Record = RECORD(Type)
+        PROCEDURE addField(f: Field; type: PType);
+        PROCEDURE findSymbol(id: JsString.Type): PType;
+
+        name:   JsString.Type;
+        fields: JsMap.Type;
+        base:   PRecord;
+        cons:   JsString.Type;
+        scope:  Context.PScope;
+        notExported: JsArray.Strings
+    END;
     
-    NonExportedRecord = RECORD(Record) END;
+    NonExportedRecord = RECORD(Record)
+    END;
     PNonExportedRecord = POINTER TO NonExportedRecord;
+
+    Nil = RECORD(Id)
+    END;
+
+    Module = RECORD(Id)
+        name: JsString.Type
+    END;
+
+VAR
+    basic*: POINTER TO RECORD
+        bool, ch, integer, uint8, real, set: PBasicType
+    END;
+
+    numeric*: JsArray.Type;
+    nil*: POINTER TO Nil;
 
 PROCEDURE TypeId.description(): JsString.Type;
 VAR
     t: PType;
 BEGIN
-    t := SELF.type()
+    t := SELF.type();
     RETURN JsString.concat(JsString.make("type "), t.description())
 END TypeId.description;
 
-PROCEDURE makeNonExportedRecord(): PNonExportedRecord;
+PROCEDURE makeNonExportedRecord(cons: JsString.Type; scope: Context.PScope; base: PRecord): PNonExportedRecord;
 VAR
     result: PNonExportedRecord;
 BEGIN
     NEW(result);
+    result.cons := cons;
+    result.scope := scope;
+    result.base := base;
     RETURN result
 END makeNonExportedRecord;    
 
 PROCEDURE TypeId.strip();
+VAR
+    r: PRecord;
 BEGIN
-    IF SELF.mType IS Record THEN
-        SELF.mType := makeNonExportedRecord();
+    IF SELF.mType IS PRecord THEN
+        r := SELF.mType(PRecord);
+        SELF.mType := makeNonExportedRecord(r.cons, r.scope, r.base);
     ELSE
         SELF.mType := NIL;
     END;
 END TypeId.strip;
 
-PROCEDURE makeForwardTypeId(p: ResolveTypeCallback);
+PROCEDURE makeForwardTypeId(resolve: ResolveTypeCallback): PForwardTypeId;
+VAR
+    result: PForwardTypeId;
+BEGIN
+    NEW(result);
+    result.resolve := resolve;
+    RETURN result
 END makeForwardTypeId;
 
 PROCEDURE ForwardTypeId.type(): PType;
@@ -72,10 +168,18 @@ BEGIN
     RETURN SELF.mType
 END ForwardTypeId.type;
 
+PROCEDURE LazyTypeId.type(): PType;
+    RETURN SELF.mType
+END LazyTypeId.type;
+
 PROCEDURE defineTypeId(VAR tId: LazyTypeId; t: PType);
 BEGIN
     tId.mType := t;
 END defineTypeId;
+
+PROCEDURE Procedure.idType(): JsString.Type;
+    RETURN JsString.make("procedure")
+END Procedure.idType;
 
 PROCEDURE String.idType(): JsString.Type;
     RETURN JsString.make("string")
@@ -95,6 +199,337 @@ END String.description;
 
 PROCEDURE stringValue(s: String): JsString.Type;
     RETURN s.s
-END stringValue
+END stringValue;
 
+PROCEDURE stringLen(s: String): INTEGER;
+    RETURN JsString.len(s.s)
+END stringLen;
+
+PROCEDURE stringAsChar(s: String; VAR c: CHAR): BOOLEAN;
+VAR
+    result: BOOLEAN;
+BEGIN
+    result := stringLen(s) = 1;
+    IF result THEN
+        c := JsString.at(s.s, 0);
+    END;
+    RETURN result
+END stringAsChar;
+
+PROCEDURE Const.idType(): JsString.Type;
+    RETURN JsString.make("constant")
+END Const.idType;
+
+PROCEDURE constType(c: Const): PType;
+    RETURN c.mType
+END constType;
+
+PROCEDURE constValue(c: Const): JS.var;
+    RETURN c.mValue
+END constValue;
+
+PROCEDURE Variable.idType(): JsString.Type;
+VAR
+    result: JsString.Type;
+BEGIN
+    IF SELF.isReadOnly THEN
+        result := JsString.make("read-only variable");
+    ELSE
+        result := JsString.make("variable");
+    END;
+    RETURN result
+END Variable.idType;
+
+PROCEDURE variableType(v: Variable): PType;
+    RETURN v.mType
+END variableType;
+
+PROCEDURE isVariableReadOnly(v: Variable): BOOLEAN;
+    RETURN v.isReadOnly
+END isVariableReadOnly;
+
+PROCEDURE ExportedVariable.idType(): JsString.Type;
+    RETURN JsString.make("imported variable")
+END ExportedVariable.idType;
+
+PROCEDURE BasicType.idType(): JsString.Type;
+    RETURN JsString.make("type")
+END BasicType.idType;
+
+PROCEDURE BasicType.description(): JsString.Type;
+    RETURN SELF.name
+END BasicType.description;
+
+PROCEDURE BasicType.initializer(cx: Context.Type): JsString.Type;
+    RETURN SELF.mInitializer
+END BasicType.initializer;
+
+PROCEDURE Nil.idType(): JsString.Type;
+    RETURN JsString.make("NIL")
+END Nil.idType;
+(*
+PROCEDURE Nil.description(): JsString.Type;
+    RETURN SELF.idType()
+END Nil.description;
+*)
+PROCEDURE isInt(t: PType): BOOLEAN;
+    RETURN (t = basic.integer) OR (t = basic.uint8)
+END isInt;
+
+PROCEDURE intsDescription(): JsString.Type;
+    RETURN JsString.make("'INTEGER' or 'BYTE'")
+END intsDescription;
+
+PROCEDURE isString(t: PType): BOOLEAN;
+    RETURN ((t^ IS Array) & (t^(Array).elementsType = basic.ch))
+           OR (t^ IS String)
+END isString;
+
+PROCEDURE moduleName(m: Module): JsString.Type;
+    RETURN m.name
+END moduleName;
+
+PROCEDURE makeBasic(name: ARRAY OF CHAR; initializer: ARRAY OF CHAR): PBasicType;
+VAR
+    result: PBasicType;
+BEGIN
+    NEW(result);
+    result.mInitializer := JsString.make(initializer);
+    RETURN result
+END makeBasic;
+
+PROCEDURE Record.idType(): JsString.Type;
+    RETURN JsString.make("record")
+END Record.idType;
+
+PROCEDURE Record.description(): JsString.Type;
+VAR
+    result: JsString.Type;
+BEGIN
+    IF SELF.name # NIL THEN
+        result := SELF.name;
+    ELSE
+        result := JsString.make("anonymous RECORD");
+    END;
+    RETURN result
+END Record.description;
+
+PROCEDURE Record.initializer(cx: Context.Type): JsString.Type;
+    RETURN JsString.concat(JsString.concat(JsString.concat(
+        JsString.make("new "), 
+        cx.qualifyScope(SELF.scope)), 
+        SELF.cons), 
+        JsString.make("()"))
+END Record.initializer;
+
+PROCEDURE Record.addField(f: Field; type: PType);
+BEGIN
+    IF JsMap.has(SELF.fields, f.id) THEN
+        Errors.raise(JsString.concat(JsString.concat(
+            JsString.make("duplicated field: '"), 
+            f.id), 
+            JsString.make("'")));
+    END;
+    IF (SELF.base # NIL) & (SELF.base.findSymbol(f.id) # NIL) THEN
+        Errors.raise(JsString.concat(JsString.concat(
+            JsString.make("base record already has field: '"),
+            f.id),
+            JsString.make("'")));
+    END;
+    JsMap.put(SELF.fields, f.id, type);
+    IF ~f.exported THEN
+        SELF.notExported.add(f.id);
+    END;
+END Record.addField;
+
+PROCEDURE Record.findSymbol(id: JsString.Type): PType;
+VAR
+    result: PType;
+BEGIN
+    IF ~JsMap.find(SELF.fields, id, result) & (SELF.base # NIL) THEN
+        result := SELF.base.findSymbol(id);
+    END;
+    RETURN result
+END Record.findSymbol;
+
+PROCEDURE recordBase(r: Record): PType;
+    RETURN r.base
+END recordBase;
+
+PROCEDURE setRecordBase(r: Record; type: PRecord);
+BEGIN
+    r.base := type;
+END setRecordBase;
+
+PROCEDURE recordScope(r: Record): Context.PScope;
+    RETURN r.scope
+END recordScope;
+
+PROCEDURE recordConstructor(r: Record): JsString.Type;
+    RETURN r.cons
+END recordConstructor;
+
+PROCEDURE recordOwnFields(r: Record): JsMap.Type;
+    RETURN r.fields
+END recordOwnFields;
+
+PROCEDURE finalizeRecord(closure: Object.PType);
+VAR
+    record: PRecord;
+    i: INTEGER;
+BEGIN
+    record := closure(PRecord);
+    FOR i := 0 TO record.notExported.len() - 1 DO
+        JsMap.erase(record.fields, record.notExported.at(i))
+    END;
+    record.notExported := NIL;
+END finalizeRecord;
+
+PROCEDURE Pointer.idType(): JsString.Type;
+    RETURN JsString.make("pointer")
+END Pointer.idType;
+
+PROCEDURE Pointer.description(): JsString.Type;
+VAR
+    result: JsString.Type;
+BEGIN
+    IF SELF.name # NIL THEN
+        result := SELF.name;
+    ELSE
+        result := JsString.concat(JsString.make("POINTER TO "), SELF.base.description());
+    END;
+    RETURN result
+END Pointer.description;
+
+PROCEDURE Pointer.initializer(cx: Context.Type): JsString.Type;
+    RETURN JsString.make("null")
+END Pointer.initializer;
+
+PROCEDURE pointerBase(p: Pointer): PRecord;
+    RETURN p.base
+END pointerBase;
+
+PROCEDURE Array.idType(): JsString.Type;
+    RETURN JsString.make("array")
+END Array.idType;
+
+PROCEDURE foldArrayDimensions(a: Array; VAR sizes, of: JsString.Type);
+BEGIN  
+    IF (a.len # 0) & (a.elementsType IS PArray) THEN
+        foldArrayDimensions(a.elementsType^(Array), sizes, of);
+        sizes := JsString.concat(JsString.concat(
+            JsString.fromInt(a.len),
+            JsString.make(", ")),
+            sizes);
+    ELSE
+        IF a.len # 0 THEN
+            sizes := JsString.fromInt(a.len);
+        END;
+        of := a.elementsType.description();
+    END
+END foldArrayDimensions;
+
+PROCEDURE Array.description(): JsString.Type;
+VAR
+    result: JsString.Type;
+    sizes, of: JsString.Type;
+BEGIN
+    IF SELF.elementsType = NIL THEN (* special arrays, see procedure "LEN" *)
+        result := SELF.name;
+    ELSE
+        foldArrayDimensions(SELF, sizes, of);
+        IF sizes = NIL THEN
+            sizes := JsString.make("");
+        ELSE
+            sizes := JsString.concat(JsString.make(" "), sizes);
+        END;
+        result := JsString.concat(JsString.concat(JsString.concat(
+            JsString.make("ARRAY"),
+            sizes),
+            JsString.make(" OF")),
+            of);
+    END;
+    RETURN result
+END Array.description;
+
+PROCEDURE Array.initializer(cx: Context.Type): JsString.Type;
+    RETURN JsString.make("null")
+END Array.initializer;
+
+PROCEDURE arrayElementsType(a: Array): PType;
+    RETURN a.elementsType
+END arrayElementsType;
+
+PROCEDURE arrayLength(a: Array): INTEGER;
+    RETURN a.len
+END arrayLength;
+
+PROCEDURE String.initializer(cx: Context.Type): JsString.Type;
+    RETURN JsString.make("null")
+END String.initializer;
+
+PROCEDURE makeLazyTypeId(): PLazyTypeId;
+VAR
+    result: PLazyTypeId;
+BEGIN
+    NEW(result);
+    RETURN result
+END makeLazyTypeId;
+
+PROCEDURE makeString(s: JsString.Type): PString;
+VAR
+    result: PString;
+BEGIN
+    NEW(result);
+    result.s := s;
+    RETURN result
+END makeString;
+
+PROCEDURE makeArray(): PArray;
+VAR
+    result: PArray;
+BEGIN
+    NEW(result);
+    RETURN result
+END makeArray;
+
+PROCEDURE makePointer(name: JsString.Type; base: PRecord): PPointer;
+VAR
+    result: PPointer;
+BEGIN
+    NEW(result);
+    result.name := name;
+    result.base := base;
+    RETURN result
+END makePointer;
+
+PROCEDURE makeRecord(name: JsString.Type; cons: JsString.Type; scope: Context.PScope): PRecord;
+VAR
+    result: PRecord;
+BEGIN
+    NEW(result);
+    result.name := name;
+    result.fields := JsMap.make();
+    result.cons := cons;
+    result.scope := scope;
+    result.notExported := JsArray.makeStrings();
+    scope.addFinalizer(result, finalizeRecord);
+    RETURN result
+END makeRecord;
+
+BEGIN
+    NEW(basic);
+    basic.bool := makeBasic("BOOLEAN", "false");
+    basic.ch := makeBasic("CHAR", "0");
+    basic.integer := makeBasic("INTEGER", "0");
+    basic.uint8 := makeBasic("BYTE", "0");
+    basic.real := makeBasic("REAL", "0");
+    basic.set := makeBasic("SET", "0");
+
+    numeric := JsArray.make();
+    numeric.add(basic.integer);
+    numeric.add(basic.uint8);
+    numeric.add(basic.real);
+
+    NEW(nil);
 END Types.

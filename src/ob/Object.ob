@@ -1,0 +1,5 @@
+MODULE Object;
+TYPE
+    Type* = RECORD END;
+    PType* = POINTER TO Type;
+END Object.

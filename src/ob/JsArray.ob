@@ -1,0 +1,34 @@
+MODULE JsArray;
+IMPORT JS, Object, JsString;
+TYPE
+    Methods* = RECORD
+        PROCEDURE len*(): INTEGER;
+        PROCEDURE add*(s: Object.PType);
+        PROCEDURE at*(i: INTEGER): Object.PType
+    END;
+    Type* = POINTER TO Methods;
+
+    StringMethods* = RECORD
+        PROCEDURE len*(): INTEGER;
+        PROCEDURE add*(s: JsString.Type);
+        PROCEDURE at*(i: INTEGER): JsString.Type
+    END;
+    Strings* = POINTER TO StringMethods;
+
+PROCEDURE make*(): Type;
+VAR
+    result: Type;
+BEGIN
+    JS.do("result = []");
+    RETURN result
+END make;
+
+PROCEDURE makeStrings*(): Strings;
+VAR
+    result: Strings;
+BEGIN
+    JS.do("result = []");
+    RETURN result
+END makeStrings;
+
+END JsArray.
