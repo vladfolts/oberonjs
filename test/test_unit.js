@@ -624,12 +624,12 @@ var testSuite = {
          "PACK(r, 3)"),
     fail(["PACK(r, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"])
 ),
-"UNPACK": testWithContext(
+"UNPK": testWithContext(
     context(Grammar.statement, "VAR r: REAL; i: INTEGER;"),
-    pass("UNPACK(r, i)"),
-    fail(["UNPACK(r, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
-         ["UNPACK(r, 3)", "expression cannot be used as VAR parameter"],
-         ["UNPACK(123.456, i)", "expression cannot be used as VAR parameter"]
+    pass("UNPK(r, i)"),
+    fail(["UNPK(r, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
+         ["UNPK(r, 3)", "expression cannot be used as VAR parameter"],
+         ["UNPK(123.456, i)", "expression cannot be used as VAR parameter"]
          )
 ),
 "standard procedure cannot be referenced" : testWithContext(
