@@ -562,7 +562,7 @@ exports.predefined = [
                    "; " +
                    op.divInplace(x, op.pow2(y));
         }
-        var name = "UNPACK";
+        var name = "UNPK";
         var proc = new Std(
             name,
             args,
