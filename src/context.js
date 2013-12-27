@@ -271,6 +271,11 @@ exports.Identdef = ChainedContext.extend({
     }
 });
 
+function castCode(type, context){
+    var baseType = type instanceof Type.Pointer ? type.baseType() : type;
+    return context.qualifyScope(baseType.scope()) + baseType.cons();
+}
+
 exports.Designator = ChainedContext.extend({
     init: function Context$Designator(context){
         ChainedContext.prototype.init.call(this, context);
@@ -380,9 +385,7 @@ exports.Designator = ChainedContext.extend({
 
         checkTypeCast(this.__currentType, type, "invalid type cast");
 
-        var baseType = type instanceof Type.Pointer ? type.baseType() : type;
-        var castName = this.qualifyScope(baseType.scope()) + baseType.cons();
-        var code = this.rtl().typeGuard(this.__code, castName);
+        var code = this.rtl().typeGuard(this.__code, castCode(type, this));
         this.__code = code;
 
         this.__currentType = type;
@@ -1139,7 +1142,7 @@ exports.Expression = ChainedContext.extend({
 
             checkTypeCast(leftType, rightType, "invalid type test");
 
-            code = leftCode + " instanceof " + rightCode;
+            code = leftCode + " instanceof " + castCode(rightType, this);
         }
         else {
             leftExpression = promoteTypeInExpression(leftExpression, rightType);
