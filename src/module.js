@@ -4,7 +4,7 @@ var Code = require("code.js");
 var Errors = require("js/Errors.js");
 var Procedure = require("procedure.js");
 var Symbol = require("symbol.js");
-var Type = require("type.js");
+var Type = require("js/Types.js");
 
 var AnyTypeProc = Type.Procedure.extend({
     init: function AnyTypeProc(){
@@ -15,10 +15,12 @@ var AnyTypeProc = Type.Procedure.extend({
 
 var anyProc = new AnyTypeProc();
 
-var AnyType = Type.Basic.extend({
+var AnyType = Type.Type.extend({
     init: function AnyType(){
-        Type.Basic.prototype.init.call(this, "JS.var");
+        Type.Type.prototype.init.call(this);
     },
+    description: function(){return "JS.var";},
+    initializer: function(){return undefined;},
     findSymbol: function(){return this;},
     callGenerator: function(context, id){
         return new Procedure.CallGenerator(context, id, anyProc);
@@ -46,7 +48,7 @@ var doProcSymbol = (function(){
                     "string is expected as an argument of " + description
                     + ", got " + type.description());
             
-            this.__code = type.value();
+            this.__code = Type.stringValue(type);
             return Procedure.CallGenerator.prototype.checkArgument.call(this, pos, e);
         },
         epilog: function(){return "";},
@@ -59,7 +61,8 @@ var doProcSymbol = (function(){
     var args = [new Procedure.Arg(undefined, false)];
     var ProcType = Type.Procedure.extend({
         init: function(){
-            Type.Procedure.prototype.init.call(this, doProcId);
+            Type.Procedure.prototype.init.call(this);
+            Type.initProcedure(this, doProcId);
         },
         description: function(){return description;},
         args: function(){return args;},
@@ -73,14 +76,14 @@ var doProcSymbol = (function(){
 })();
 
 var varTypeSymbol = function(){
-    return new Symbol.Symbol(varTypeId, new Type.TypeId(any));
+    return new Symbol.Symbol(varTypeId, Type.makeTypeId(any));
 }();
 
 var JSModule = Type.Module.extend({
     init: function Module$JSModule(){
         Type.Module.prototype.init.call(this);
+        Type.initModule(this, "this");
     },
-    name: function(){return "this";},
     findSymbol: function(id){
         return new Symbol.Found(
             id == doProcId ? doProcSymbol

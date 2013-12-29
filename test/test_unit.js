@@ -240,9 +240,9 @@ return {
          ["i(Derived)",
           "invalid type cast: 'Derived' is not an extension of 'INTEGER'"],
          ["vb(Derived)",
-          "invalid type cast: a value variable and cannot be used in typeguard"],
+          "invalid type cast: a value variable cannot be used in typeguard"],
          ["vb(PDerived)",
-          "invalid type cast: a value variable and cannot be used in typeguard"])
+          "invalid type cast: a value variable cannot be used in typeguard"])
     ),
 "POINTER relations": testWithContext(
     context(grammar.expression,
@@ -400,8 +400,8 @@ return {
          "i := ORD({1})",
          "i := ORD(\"a\")",
          "b := ORD(22X) = 022H"),
-    fail(["i := ORD(1.2)", "type mismatch for argument 1: 'REAL' cannot be converted to 'CHAR or BOOLEAN or SET'"],
-         ["i := ORD(\"abc\")", "type mismatch for argument 1: 'multi-character string' cannot be converted to 'CHAR or BOOLEAN or SET'"]
+    fail(["i := ORD(1.2)", "ORD function expects CHAR or BOOLEAN or SET as an argument, got 'REAL'"],
+         ["i := ORD(\"abc\")", "ORD function expects CHAR or BOOLEAN or SET as an argument, got 'multi-character string'"]
          )
 ),
 "CHR": testWithContext(
@@ -540,6 +540,8 @@ return {
          "CASE i1 OF | END",
          "CASE i1 OF | 0: b1 := TRUE END",
          "CASE i1 OF 0: b1 := TRUE END",
+         "CASE cc OF \"A\": b1 := TRUE END",
+         "CASE \"A\" OF \"A\": b1 := TRUE END",
          "CASE c1 OF \"A\": b1 := TRUE END",
          "CASE byte OF 3: b1 := TRUE END",
          "CASE i1 OF 0: b1 := TRUE | 1: b1 := FALSE END",
@@ -555,6 +557,7 @@ return {
          ["CASE i1 OF i2: b1 := TRUE END",
           "'i2' is not a constant"],
          ["CASE b1 OF END", "'INTEGER' or 'BYTE' or 'CHAR' expected as CASE expression"],
+         ["CASE \"AA\" OF \"A\": b1 := TRUE END", "'INTEGER' or 'BYTE' or 'CHAR' expected as CASE expression"],
          ["CASE i1 OF \"A\": b1 := TRUE END",
           "label must be 'INTEGER' (the same as case expression), got 'CHAR'"],
          ["CASE i1 OF p: b1 := TRUE END",
@@ -1009,11 +1012,11 @@ return {
             + "T = RECORD END; TD = RECORD(T) b: Base END;"),
     pass("PROCEDURE proc(VAR p: Base); BEGIN p(Derived).i := 1; END proc"),
     fail(["PROCEDURE proc(p: Base); BEGIN p(Derived).i := 1; END proc",
-          "invalid type cast: a value variable and cannot be used in typeguard"],
+          "invalid type cast: a value variable cannot be used in typeguard"],
          ["PROCEDURE proc(p: TD); BEGIN p.b(Derived).i := 1; END proc",
-          "invalid type cast: a value variable and cannot be used in typeguard"],
+          "invalid type cast: a value variable cannot be used in typeguard"],
          ["PROCEDURE proc(VAR p: T); BEGIN p(TD).b(Derived).i := 1; END proc",
-          "invalid type cast: a value variable and cannot be used in typeguard"])
+          "invalid type cast: a value variable cannot be used in typeguard"])
     ),
 "NEW for read only array element fails": testWithContext(
     context(grammar.procedureDeclaration,

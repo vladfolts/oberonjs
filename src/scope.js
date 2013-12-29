@@ -4,13 +4,15 @@ var Class = require("rtl.js").Class;
 var Errors = require("js/Errors.js");
 var Procedure = require("procedure.js");
 var Symbol = require("symbol.js");
-var Type = require("type.js");
+var Type = require("js/Types.js");
 
 var stdSymbols = function(){
     var symbols = {};
-    for(var t in Type.basic){
-        var type = Type.basic[t];
-        symbols[type.name()] = new Symbol.Symbol(type.name(), new Type.TypeId(type));
+    var basicTypes = Type.basic();
+    for(var t in basicTypes){
+        var type = basicTypes[t];
+        var name = Type.typeName(type);
+        symbols[name] = new Symbol.Symbol(name, Type.makeTypeId(type));
     }
     
     var predefined = Procedure.predefined;
@@ -37,7 +39,7 @@ var Scope = Class.extend({
             throw new Errors.Error( "'" + id + "' already declared");
         this.__symbols[id] = symbol;
     },
-    addFinalizer: function(f){this.__finalizers.push(f);},
+    addFinalizer: function(f, closure){this.__finalizers.push(f.bind(undefined, closure));},
     resolve: function(symbol){
         var id = symbol.id();
         var i = this.__unresolved.indexOf(id);
@@ -79,7 +81,8 @@ var ProcedureScope = Scope.extend({
 
 var CompiledModule = Type.Module.extend({
     init: function Scope$CompiledModule(id){
-        Type.Module.prototype.init.call(this, id);
+        Type.Module.prototype.init.call(this);
+        Type.initModule(this, id);
         this.__exports = {};
     },
     defineExports: function(exports){
@@ -88,7 +91,7 @@ var CompiledModule = Type.Module.extend({
             if (symbol.isVariable())
                 symbol = new Symbol.Symbol(
                     id,
-                    new Type.ExportedVariable(symbol.info()));
+                    Type.makeExportedVariable(symbol.info()));
             this.__exports[id] = symbol;
         }
     },  

@@ -1,20 +1,22 @@
 "use strict";
 var Code = require("code.js");
-var Type = require("type.js");
+var Type = require("js/Types.js");
 var ArrayType = Type.Array;
 var PointerType = Type.Pointer;
 var ProcedureType = Type.Procedure;
+
+var basicTypes = Type.basic();
 
 function doNoting(context, e){return e;}
 
 function findBaseType(base, type){
     while (type && type != base)
-        type = type.baseType();
+        type = Type.recordBase(type);
     return type;
 }
 
 function findPointerBaseType(pBase, pType){
-    if (!findBaseType(pBase.baseType(), pType.baseType()))
+    if (!findBaseType(Type.pointerBase(pBase), Type.pointerBase(pType)))
         return undefined;
     return pBase;
 }
@@ -27,9 +29,10 @@ function areTypesExactlyMatch(t1, t2){
     if (t1 == t2)
         return true;
     if (t1 instanceof ArrayType && t2 instanceof ArrayType)
-        return t1.length() === t2.length() && areTypesMatch(t1.elementsType(), t2.elementsType());
+        return Type.arrayLength(t1) == Type.arrayLength(t2) 
+            && areTypesMatch(Type.arrayElementsType(t1), Type.arrayElementsType(t2));
     if (t1 instanceof PointerType && t2 instanceof PointerType)
-        return areTypesMatch(t1.baseType(), t2.baseType());
+        return areTypesMatch(Type.pointerBase(t1), Type.pointerBase(t2));
     if (t1 instanceof ProcedureType && t2 instanceof ProcedureType)
         return areProceduresMatch(t1, t2);
     return false;
@@ -70,26 +73,27 @@ function implicitCast(from, to, ops){
     if (from == to)
         return doNoting;
 
-    if (from == Type.basic.uint8 && to == Type.basic.integer)
+    if (from == basicTypes.uint8 && to == basicTypes.integer)
         return doNoting;
 
-    if (from == Type.basic.integer && to == Type.basic.uint8)
+    if (from == basicTypes.integer && to == basicTypes.uint8)
         return function(context, e){
-            return ops.setIntersection(e, new Code.Expression("0xFF", Type.basic.integer, undefined, 0xFF));
+            return ops.setIntersection(e, new Code.Expression("0xFF", basicTypes.integer, undefined, 0xFF));
         };
 
     if (from instanceof Type.String){
-        if (to === Type.basic.ch){
-            var v = from.asChar();
-            if (v !== undefined)
+        if (to === basicTypes.ch){
+            var v;
+            if (Type.stringAsChar(from, {set: function(value){v = value;}}))
                 return function(){return new Code.Expression(v, to);};
         }
-        else if (to instanceof Type.Array && to.elementsType() == Type.basic.ch)
+        else if (to instanceof Type.Array && Type.arrayElementsType(to) == basicTypes.ch)
             return doNoting;
     }
     else if (from instanceof ArrayType && to instanceof ArrayType)
-        return (to.length() === undefined || to.length() === from.length())
-            && implicitCast(from.elementsType(), to.elementsType());
+        return (Type.arrayLength(to) == Type.openArrayLength || Type.arrayLength(to) == Type.arrayLength(from))
+            ? implicitCast(Type.arrayElementsType(from), Type.arrayElementsType(to))
+            : undefined;
     else if (from instanceof PointerType && to instanceof PointerType){
         if (findPointerBaseType(to, from))
             return doNoting;

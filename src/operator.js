@@ -3,7 +3,9 @@
 var Cast = require("cast.js");
 var Code = require("code.js");
 var Errors = require("js/Errors.js");
-var Type = require("type.js");
+var Type = require("js/Types.js");
+
+var basicTypes = Type.basic();
 
 var precedence = {
     unary: 4,
@@ -53,7 +55,7 @@ function makeUnary(op, code){
 var mul = makeBinary(function(x, y){return x * y;}, " * ", precedence.mulDivMod);
 var div = makeBinary(function(x, y){return x / y;}, " / ", precedence.mulDivMod);
 
-var openArrayChar = new Type.Array(undefined, undefined, Type.basic.ch);
+var openArrayChar = Type.makeArray(undefined, undefined, basicTypes.ch, 0);
 
 function castToStr(e, context){
     var type = e.type();
@@ -67,24 +69,24 @@ function makeStrCmp(op){
             context.rtl().strCmp(castToStr(left, context),
                                  castToStr(right, context))
                 + op + "0",
-            Type.basic.bool
+            basicTypes.bool
         );
     };
 }
 
 function pow2(e){
     return new Code.Expression("Math.pow(2, " + e.deref().code() + ")",
-                               Type.basic.real);
+                               basicTypes.real);
 }
 
 function log2(e){
     return new Code.Expression("(Math.log(" + e.deref().code() + ") / Math.LN2) | 0",
-                               Type.basic.integer, undefined, undefined, precedence.bitOr);
+                               basicTypes.integer, undefined, undefined, precedence.bitOr);
 }
 
 function assign(left, right, context){
     var info = left.designator().info();
-    if (!(info instanceof Type.Variable) || info.isReadOnly())
+    if (!(info instanceof Type.Variable) || Type.isVariableReadOnly(info))
         throw new Errors.Error("cannot assign to " + info.idType());
 
     var leftCode = left.lval();
@@ -94,14 +96,14 @@ function assign(left, right, context){
 
     var isArray = leftType instanceof Type.Array;
     if (isArray
-        && leftType.elementsType() == Type.basic.ch
+        && Type.arrayElementsType(leftType) == basicTypes.ch
         && rightType instanceof Type.String){
-        if (leftType.length() === undefined)
+        if (Type.arrayLength(leftType) == Type.openArrayLength)
             throw new Errors.Error("string cannot be assigned to open " + leftType.description());
-        if (rightType.length() > leftType.length())
+        if (Type.stringLen(rightType) > Type.arrayLength(leftType))
             throw new Errors.Error(
-                leftType.length() + "-character ARRAY is too small for "
-                + rightType.length() + "-character string");
+                Type.arrayLength(leftType) + "-character ARRAY is too small for "
+                + Type.stringLen(rightType) + "-character string");
         return context.rtl().assignArrayFromString(leftCode, rightCode);
     }
 
@@ -112,7 +114,7 @@ function assign(left, right, context){
                              + "' and cannot be assigned to '" + rightType.description() + "' expression");
 
     if (isArray && rightType instanceof Type.Array){
-        if (leftType.length() === undefined)
+        if (Type.arrayLength(leftType) == Type.openArrayLength)
             throw new Errors.Error("'" + leftCode
                                  + "' is open '" + leftType.description()
                                  + "' and cannot be assigned");
@@ -140,10 +142,10 @@ function makeInplace(code, altOp){
 function promoteToWideIfNeeded(op){
     return function(){
         var result = op.apply(this, arguments);
-        if (result.type() == Type.basic.uint8)
+        if (result.type() == basicTypes.uint8)
             result = new Code.Expression(
                 result.code(),
-                Type.basic.integer,
+                basicTypes.integer,
                 result.designator(),
                 result.constValue(),
                 result.maxPrecedence());

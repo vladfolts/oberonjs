@@ -5,7 +5,7 @@ var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var Symbol = require("symbol.js");
 var Procedure = require("procedure.js");
-var Type = require("type.js");
+var Type = require("js/Types.js");
 
 function methodCallGenerator(context, id, type){
     return new Procedure.CallGenerator(context, id, type);
@@ -108,7 +108,8 @@ var Designator = Context.Designator.extend({
 
 var RecordType = Type.Record.extend({
     init: function EberonContext$RecordType(name, cons, scope){
-        Type.Record.prototype.init.call(this, name, cons, scope);
+        Type.Record.prototype.init.call(this);
+        Type.initRecord(this, name, cons, scope)
         this.__finalized = false;
         this.__declaredMethods = {};
         this.__definedMethods = [];
@@ -153,12 +154,12 @@ var RecordType = Type.Record.extend({
             this.__nonExportedMethods.push(id);
     },
     defineMethod: function(methodId, type){
-        var base = this.baseType();
+        var base = Type.recordBase(this);
         var id = methodId.id();
         var existing = this.findSymbol(id);
         if (!(existing instanceof MethodType)){
             throw new Errors.Error(
-                  "'" + this.name() + "' has no declaration for method '" + id 
+                  "'" + Type.typeName(this) + "' has no declaration for method '" + id 
                 + "'");
         }
         //if (this.__definedMethods.indexOf(id) != -1)
@@ -183,7 +184,7 @@ var RecordType = Type.Record.extend({
     abstractMethods: function(){return this.__abstractMethods;},
     __collectAbstractMethods: function(){
         var selfMethods = Object.keys(this.__declaredMethods);
-        var baseType = this.baseType();
+        var baseType = Type.recordBase(this);
         var methods = baseType ? baseType.abstractMethods().concat(selfMethods)
                                : selfMethods;
         for(var i = 0; i < methods.length; ++i){
@@ -221,7 +222,7 @@ var RecordType = Type.Record.extend({
         var am = this.abstractMethods();
         if (am.length)
             throw new Errors.Error(
-                  "cannot instantiate '" + this.name() 
+                  "cannot instantiate '" + Type.typeName(this) 
                 + "' because it has abstract method(s): "
                 + am.join(", ")
                 );
@@ -230,20 +231,21 @@ var RecordType = Type.Record.extend({
         var type = this;
         var result;
         while (type && !(result = type.__declaredMethods[id]))
-            type = type.baseType();
+            type = Type.recordBase(type);
         return result;
     },
     __hasMethodDefinition: function(id){
         var type = this;
         while (type && type.__definedMethods.indexOf(id) == -1)
-            type = type.baseType();
+            type = Type.recordBase(type);
         return type;
     }
 });
 
 var RecordDecl = Context.RecordDecl.extend({
     init: function EberonContext$RecordDecl(context){
-        Context.RecordDecl.prototype.init.call(this, context, RecordType);
+        var makeRecord = function(name, cons, scope){return new RecordType(name, cons, scope);};
+        Context.RecordDecl.prototype.init.call(this, context, makeRecord);
     },
     handleMessage: function(msg){
         if (msg instanceof MethodOrProcMsg)
@@ -287,7 +289,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
 
             Context.ProcDecl.prototype.handleIdentdef.call(
                 this,
-                type ? new Context.IdentdefInfo(type.name() + "." + id.id(),
+                type ? new Context.IdentdefInfo(Type.typeName(type) + "." + id.id(),
                                                 id.exported()) 
                      : id
                 );
@@ -297,7 +299,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     },
     _prolog: function(){
         return this.__boundType
-            ? this.__boundType.name() + ".prototype." + this.__methodId.id() + " = function("
+            ? Type.typeName(this.__boundType) + ".prototype." + this.__methodId.id() + " = function("
             : Context.ProcDecl.prototype._prolog.call(this);
     },
     setType: function(type){
@@ -340,17 +342,17 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         if (!this.__methodId)
             throw new Errors.Error("SUPER can be used only in methods");
 
-        var baseType = this.__boundType.baseType();
+        var baseType = Type.recordBase(this.__boundType);
         if (!baseType)
             throw new Errors.Error(
-                  "'" + this.__boundType.name()
+                  "'" + Type.typeName(this.__boundType)
                 + "' has no base type - SUPER cannot be used");
 
         var id = this.__methodId.id();
         baseType.requireMethodDefinition(id);
         return {
             symbol: new Symbol.Symbol("method", new MethodType(this.__methodType.procType(), superMethodCallGenerator)),
-            code: this.__boundType.baseType().name() + ".prototype." + id + ".call"
+            code: Type.typeName(baseType) + ".prototype." + id + ".call"
         };
     }
 });

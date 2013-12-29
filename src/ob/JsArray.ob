@@ -1,19 +1,50 @@
 MODULE JsArray;
 IMPORT JS, Object, JsString;
 TYPE
-    Methods* = RECORD
-        PROCEDURE len*(): INTEGER;
-        PROCEDURE add*(s: Object.PType);
-        PROCEDURE at*(i: INTEGER): Object.PType
-    END;
-    Type* = POINTER TO Methods;
+    Type* = POINTER TO RECORD END;
+    Strings* = POINTER TO RECORD END;
 
-    StringMethods* = RECORD
-        PROCEDURE len*(): INTEGER;
-        PROCEDURE add*(s: JsString.Type);
-        PROCEDURE at*(i: INTEGER): JsString.Type
-    END;
-    Strings* = POINTER TO StringMethods;
+PROCEDURE len*(a: Type): INTEGER;
+VAR
+    result: INTEGER;
+BEGIN
+    JS.do("result = a.length");
+    RETURN result
+END len;
+
+PROCEDURE stringsLen*(a: Strings): INTEGER;
+VAR
+    result: INTEGER;
+BEGIN
+    JS.do("result = a.length");
+    RETURN result
+END stringsLen;
+
+PROCEDURE add*(a: Type; o: Object.PType);
+BEGIN
+    JS.do("a.push(o)");
+END add;
+
+PROCEDURE stringsAdd*(a: Strings; o: JsString.Type);
+BEGIN
+    JS.do("a.push(o)");
+END stringsAdd;
+
+PROCEDURE at*(a: Strings; i: INTEGER): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    JS.do("result = a[i]");
+    RETURN result
+END at;
+
+PROCEDURE stringsAt*(a: Strings; i: INTEGER): JsString.Type;
+VAR
+    result: JsString.Type;
+BEGIN
+    JS.do("result = a[i]");
+    RETURN result
+END stringsAt;
 
 PROCEDURE make*(): Type;
 VAR

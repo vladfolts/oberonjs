@@ -4,7 +4,7 @@ TYPE
     FinalizerProc = PROCEDURE(closure: Object.PType);
 
     Scope* = RECORD
-        PROCEDURE addFinalizer*(closure: Object.PType; finalizer: FinalizerProc)
+        PROCEDURE addFinalizer*(finalizer: FinalizerProc; closure: Object.PType)
     END;
     PScope* = POINTER TO Scope;
 

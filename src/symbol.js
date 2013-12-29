@@ -2,7 +2,7 @@
 
 var Class = require("rtl.js").Class;
 var Errors = require("js/Errors.js");
-var Type = require("type.js");
+var Type = require("js/Types.js");
 
 var Symbol = Class.extend({
 	init: function Symbol(id, info){

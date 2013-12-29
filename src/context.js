@@ -10,16 +10,16 @@ var Procedure = require("procedure.js");
 var Class = require("rtl.js").Class;
 var Scope = require("scope.js");
 var Symbol = require("symbol.js");
-var Type = require("type.js");
+var Type = require("js/Types.js");
 
-var basicTypes = Type.basic;
+var basicTypes = Type.basic();
 
 function getSymbolAndScope(context, id){
     var s = context.findSymbol(id);
     if (!s)
         throw new Errors.Error(
             context instanceof Type.Module
-                ? "identifier '" + id + "' is not exported by module '" + context.name() + "'"
+                ? "identifier '" + id + "' is not exported by module '" + Type.moduleName(context) + "'"
                 : "undeclared identifier: '" + id + "'");
     return s;
 }
@@ -61,9 +61,9 @@ function checkImplicitCast(from, to){
 
 function promoteTypeInExpression(e, type){
     var fromType = e.type();
-    if (type == Type.basic.ch && fromType instanceof Type.String){
-        var v = fromType.asChar();
-        if (v !== undefined)
+    if (type == basicTypes.ch && fromType instanceof Type.String){
+        var v;
+        if (Type.stringAsChar(fromType, {set: function(value){v = value;}}))
             return new Code.Expression(v, type);
     }
     return e;
@@ -83,13 +83,13 @@ function promoteExpressionType(context, left, right){
 
 function checkTypeCast(from, to, msg){
     if (from instanceof Type.Pointer)
-        from = from.baseType();
+        from = Type.pointerBase(from);
     if (to instanceof Type.Pointer)
-        to = to.baseType();
+        to = Type.pointerBase(to);
 
-    var t = to.baseType();
+    var t = Type.recordBase(to);
     while (t && t != from)
-        t = t.baseType();
+        t = Type.recordBase(t);
     if (!t)
         throw new Errors.Error(msg + ": '" + to.description()
                              + "' is not an extension of '" + from.description() + "'");
@@ -183,7 +183,7 @@ exports.String = ChainedContext.extend({
     toStr: function(s){return s;},
     endParse: function(){
         var s = this.toStr(this.__result);
-        this.parent().handleConst(new Type.String(s), s, escapeString(s));
+        this.parent().handleConst(Type.makeString(s), s, escapeString(s));
         }
 });
 
@@ -289,8 +289,10 @@ exports.Designator = ChainedContext.extend({
         var info = s.info();
         if (info instanceof Type.Type || s.isType() || s.isProcedure())
             this.__currentType = info;
-        else if (s.isVariable() || s.isConst())
-            this.__currentType = info.type();
+        else if (s.isConst())
+            this.__currentType = Type.constType(info);
+        else if (s.isVariable())
+            this.__currentType = Type.variableType(info);
         this.__info = info;
         this.__code += code;
     },
@@ -298,7 +300,7 @@ exports.Designator = ChainedContext.extend({
         var t = this.__currentType;
         var pointerType;
         var isReadOnly = this.__info instanceof Type.Variable 
-                      && this.__info.isReadOnly();
+                      && Type.isVariableReadOnly(this.__info);
         if (t instanceof Type.Pointer){
             pointerType = t;
             this.__handleDeref();
@@ -310,7 +312,7 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error("cannot designate '" + t.description() + "'");
 
         this.__denote(id, pointerType);
-        this.__info = new Type.Variable(this.__currentType, isReadOnly);
+        this.__info = Type.makeVariable(this.__currentType, isReadOnly);
         this.__scope = undefined;
     },
     handleExpression: function(e){this.__indexExpression = e;},
@@ -325,13 +327,14 @@ exports.Designator = ChainedContext.extend({
         if (!(type instanceof Type.Array))
             throw new Errors.Error("ARRAY expected, got '" + type.description() + "'");
         var value = e.constValue();
-        if (value !== undefined && value >= type.length())
+        var arrayLen = Type.arrayLength(type);
+        if (value !== undefined && arrayLen != Type.openArrayLength && value >= arrayLen)
             throw new Errors.Error("index out of bounds: maximum possible index is "
-                                 + (type.length() - 1)
+                                 + (Type.arrayLength(type) - 1)
                                  + ", got " + value );
 
-        this.__currentType = type.elementsType();
-        this.__info = new Type.Variable(this.__currentType, this.__info.isReadOnly());
+        this.__currentType = Type.arrayElementsType(type);
+        this.__info = Type.makeVariable(this.__currentType, Type.isVariableReadOnly(this.__info));
     },
     handleLiteral: function(s){
         if (s == "]" || s == ","){
@@ -351,14 +354,14 @@ exports.Designator = ChainedContext.extend({
         }
         else if (s == "^"){
             this.__handleDeref();
-            this.__info = new Type.VariableRef(this.__currentType);
+            this.__info = Type.makeVariableRef(this.__currentType, false);
         }
     },
     __handleDeref: function(){
         if (!(this.__currentType instanceof Type.Pointer))
             throw new Errors.Error("POINTER TO type expected, got '"
                                  + this.__currentType.description() + "'");
-        this.__currentType = this.__currentType.baseType();
+        this.__currentType = Type.pointerBase(this.__currentType);
         if (this.__currentType instanceof Type.NonExportedRecord)
             throw new Errors.Error("POINTER TO non-exported RECORD type cannot be dereferenced");
     },
@@ -366,7 +369,7 @@ exports.Designator = ChainedContext.extend({
         if (this.__currentType instanceof Type.Record){
             if (!(this.__info instanceof Type.VariableRef))
                 throw new Errors.Error(
-                    "invalid type cast: a value variable and cannot be used in typeguard");
+                    "invalid type cast: a value variable cannot be used in typeguard");
             if (!(type instanceof Type.Record))
                 throw new Errors.Error(
                     "invalid type cast: RECORD type expected as an argument of RECORD type guard, got '"
@@ -380,8 +383,8 @@ exports.Designator = ChainedContext.extend({
 
         checkTypeCast(this.__currentType, type, "invalid type cast");
 
-        var baseType = type instanceof Type.Pointer ? type.baseType() : type;
-        var castName = this.qualifyScope(baseType.scope()) + baseType.cons();
+        var baseType = type instanceof Type.Pointer ? Type.pointerBase(type) : type;
+        var castName = this.qualifyScope(Type.recordScope(baseType)) + Type.recordConstructor(baseType);
         var code = this.rtl().typeGuard(this.__code, castName);
         this.__code = code;
 
@@ -391,8 +394,8 @@ exports.Designator = ChainedContext.extend({
         var t = this.__currentType;
         var fieldType = t.findSymbol(id);
         if (!fieldType){
-            var typeDesc = !t.name() && pointerType && pointerType.name()
-                ? pointerType.name()
+            var typeDesc = !Type.typeName(t) && pointerType && Type.typeName(pointerType)
+                ? Type.typeName(pointerType)
                 : t.description();
             throw new Errors.Error("type '" + typeDesc + "' has no '" + id + "' field");
         }
@@ -444,9 +447,10 @@ exports.FormalType = HandleSymbolAsType.extend({
     },
     setType: function(type){           
         for(var i = 0; i < this.__arrayDimension; ++i)
-            type = new Type.Array("ARRAY OF " + type.name()
-                               , undefined
-                               , type);
+            type = Type.makeArray("ARRAY OF " + Type.typeName(type),
+                                  undefined,
+                                  type,
+                                  0);
         this.parent().setType(type);
 
     },
@@ -551,8 +555,8 @@ exports.ProcDecl = ChainedContext.extend({
         if (name == this.__id.id())
             throw new Errors.Error("argument '" + name + "' has the same name as procedure");
         var readOnly = !arg.isVar && (arg.type instanceof Type.Array);
-        var v = arg.isVar ? new Type.VariableRef(arg.type)
-                          : new Type.Variable(arg.type, readOnly);
+        var v = arg.isVar ? Type.makeVariableRef(arg.type)
+                          : Type.makeVariable(arg.type, readOnly);
         var s = new Symbol.Symbol(name, v);
         this.currentScope().addSymbol(s);
 
@@ -598,7 +602,7 @@ exports.ProcDecl = ChainedContext.extend({
         var result = this.__type.result();
         if (result && !this.__returnParsed)
             throw new Errors.Error("RETURN expected at the end of PROCEDURE declared with '"
-                                 + result.name() + "' result type");
+                                 + Type.typeName(result) + "' result type");
     }
 });
 
@@ -659,11 +663,11 @@ exports.PointerDecl = ChainedContext.extend({
         var name = parent.isAnonymousDeclaration() 
             ? undefined
             : parent.genTypeName();
-        var pointerType = new Type.Pointer(name, typeId);
+        var pointerType = Type.makePointer(name, typeId);
         parent.setType(pointerType);
     },
     setType: function(type){
-        var typeId = new Type.TypeId(type);
+        var typeId = Type.makeTypeId(type);
         this.currentScope().addFinalizer(function(){typeId.strip();});
         this.__setTypeId(typeId);
     },
@@ -678,7 +682,7 @@ exports.PointerDecl = ChainedContext.extend({
         var resolve = function(){return getSymbol(parent, id).info().type();};
 
         return new Symbol.Found(
-            new Symbol.Symbol(id, new Type.ForwardTypeId(resolve)),
+            new Symbol.Symbol(id, Type.makeForwardTypeId(resolve)),
             scope
             );
     },
@@ -707,10 +711,10 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
                 ? isCharArray ? this.rtl().makeCharArray(dimensions)
                               : this.rtl().makeArray(dimensions + ", " + initializer)
                 : undefined;
-            type = new Type.Array("ARRAY OF " + type.name()
-                               , arrayInit
-                               , type
-                               , length);
+            type = Type.makeArray("ARRAY OF " + Type.typeName(type),
+                                  arrayInit,
+                                  type,
+                                  length);
         }
 
         this.__type = type;
@@ -743,7 +747,7 @@ exports.ArrayDimensions = ChainedContext.extend({
 
 var numericOpTypeCheck = {
     expect: "numeric type",
-    check: function(t){return Type.numeric.indexOf(t) != -1;}
+    check: function(t){return Type.numeric().indexOf(t) != -1;}
 };
 
 var intOpTypeCheck = {
@@ -931,7 +935,7 @@ exports.Term = ChainedContext.extend({
         var value;
         var info = d.info();
         if (info instanceof Type.Const)
-            value = info.value();
+            value = Type.constValue(info);
         this.handleExpression(
             new Code.Expression(d.code(), d.type(), d, value));
     },
@@ -1121,7 +1125,7 @@ exports.Expression = ChainedContext.extend({
         if (this.__relation == "IN"){
             if (!Type.isInt(leftType))
                 throw new Errors.Error(
-                    Type.intsDescription() + " expected as an element of SET, got '" + leftType.name() + "'");
+                    Type.intsDescription() + " expected as an element of SET, got '" + Type.typeName(leftType) + "'");
             checkImplicitCast(rightType, basicTypes.set);
 
             code = "1 << " + leftCode + " & " + rightCode;
@@ -1234,8 +1238,8 @@ exports.Case = ChainedContext.extend({
         var type = e.type();
         var gen = this.codeGenerator();
         if (type instanceof Type.String){
-            var v = type.asChar();
-            if (v !== undefined){
+            var v;
+            if (Type.stringAsChar(type, {set: function(value){v = value;}})){
                 gen.write(v);
                 type = basicTypes.ch;
             }
@@ -1255,8 +1259,8 @@ exports.Case = ChainedContext.extend({
     handleLabelType: function(type){
         if (!Cast.areTypesMatch(type, this.__type))
             throw new Errors.Error(
-                "label must be '" + this.__type.name() + "' (the same as case expression), got '"
-                + type.name() + "'");
+                "label must be '" + Type.typeName(this.__type) + "' (the same as case expression), got '"
+                + Type.typeName(type) + "'");
     }
 });
 
@@ -1313,8 +1317,7 @@ exports.CaseRange = ChainedContext.extend({
     },
     handleConst: function(type, value){
         if (type instanceof Type.String){
-            value = type.asChar();
-            if (value === undefined)
+            if (!Type.stringAsChar(type, {set: function(v){value = v;}}))
                 throw new Errors.Error("single-character string expected");
             type = basicTypes.ch;
         }
@@ -1325,11 +1328,11 @@ exports.CaseRange = ChainedContext.extend({
         if (!s.isConst())
             throw new Errors.Error("'" + id + "' is not a constant");
         
-        var type = s.info().type();
+        var type = Type.constType(s.info());
         if (type instanceof Type.String)
             this.handleConst(type, undefined);
         else
-            this.handleLabel(type, s.info().value());
+            this.handleLabel(type, Type.constValue(s.info()));
     },
     endParse: function(){this.parent().handleRange(this.__from, this.__to);}
 });
@@ -1389,7 +1392,7 @@ exports.For = ChainedContext.extend({
         var s = getSymbol(this.parent(), id);
         if (!s.isVariable())
             throw new Errors.Error("'" + s.id() + "' is not a variable");
-        var type = s.info().type();
+        var type = Type.variableType(s.info());
         if (type !== basicTypes.integer)
             throw new Errors.Error(
                   "'" + s.id() + "' is a '" 
@@ -1488,7 +1491,7 @@ exports.ConstDecl = ChainedContext.extend({
         this.__value = value;
     },
     endParse: function(){
-        var c = new Type.Const(this.__type, this.__value);
+        var c = Type.makeConst(this.__type, this.__value);
         this.currentScope().addSymbol(new Symbol.Symbol(this.__id.id(), c), this.__id.exported());
         this.codeGenerator().write(";\n");
     }
@@ -1518,7 +1521,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
     typeName: function(){return undefined;},
     isAnonymousDeclaration: function(){return true;},
     endParse: function(){
-        var v = new Type.Variable(this.__type);
+        var v = Type.makeVariable(this.__type, false);
         var idents = this.__idents;
         var gen = this.codeGenerator();
         for(var i = 0; i < idents.length; ++i){
@@ -1529,7 +1532,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
                 throw new Errors.Error("only scalar type variables can be exported");
             var varName = id.id();
             this.currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
-            var t = v.type();
+            var t = Type.variableType(v);
             gen.write("var " + varName + " = " + t.initializer(this) + ";");
         }
 
@@ -1644,26 +1647,26 @@ function isTypeRecursive(type, base){
     if (type == base)
         return true;
     if (type instanceof Type.Record){
-        if (isTypeRecursive(type.baseType(), base))
+        if (isTypeRecursive(Type.recordBase(type), base))
             return true;
-        var fields = type.ownFields();
+        var fields = Type.recordOwnFields(type);
         for(var fieldName in fields){
             if (isTypeRecursive(fields[fieldName], base))
                 return true;
         }
     }
     else if (type instanceof Type.Array)
-        return isTypeRecursive(type.elementsType(), base);
+        return isTypeRecursive(Type.arrayElementsType(type), base);
     return false;
 }
 
 exports.RecordDecl = ChainedContext.extend({
-    init: function RecordDeclContext(context, RecordType){
+    init: function RecordDeclContext(context, makeRecord){
         ChainedContext.prototype.init.call(this, context);
         var parent = this.parent();
         var cons = parent.genTypeName();
         var name = parent.isAnonymousDeclaration() ? undefined : cons;
-        this.__type = new RecordType(name, cons, context.currentScope());
+        this.__type = makeRecord(name, cons, context.currentScope());
         parent.setType(this.__type);
         parent.codeGenerator().write("var " + cons + " = ");
     },
@@ -1684,23 +1687,23 @@ exports.RecordDecl = ChainedContext.extend({
                 + "'");
         if (isTypeRecursive(type, this.__type))
             throw new Errors.Error("recursive inheritance: '"
-                + this.__type.name() + "'");
-        this.__type.setBaseType(type);
+                + Type.typeName(this.__type) + "'");
+        Type.setRecordBase(this.__type, type);
     },
     endParse: function(){
         var type = this.__type;
-        var baseType = type.baseType();
+        var baseType = Type.recordBase(type);
         var gen = this.codeGenerator();
-        var qualifiedBase = baseType ? this.qualifyScope(baseType.scope()) + baseType.name() : undefined; 
+        var qualifiedBase = baseType ? this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType) : undefined; 
         gen.write((baseType ? qualifiedBase + ".extend" 
                             : this.rtl().extendId())
                 + "(");
         gen.openScope();
-        gen.write("init: function " + this.__type.cons() + "()");
+        gen.write("init: function " + Type.recordConstructor(this.__type) + "()");
         gen.openScope();
         if (baseType)
             gen.write(qualifiedBase + ".prototype.init.call(this);\n");
-        var ownFields = type.ownFields();
+        var ownFields = Type.recordOwnFields(type);
         for(var f in ownFields)
             gen.write("this." + f + " = " + ownFields[f].initializer(this) + ";\n");
 
@@ -1716,7 +1719,7 @@ exports.TypeDeclaration = ChainedContext.extend({
         this.__symbol = undefined;
     },
     handleIdentdef: function(id){
-        var typeId = new Type.LazyTypeId();
+        var typeId = Type.makeLazyTypeId();
         var symbol = new Symbol.Symbol(id.id(), typeId);
         this.currentScope().addSymbol(symbol, id.exported());
         if (!id.exported())
@@ -1725,7 +1728,7 @@ exports.TypeDeclaration = ChainedContext.extend({
         this.__symbol = symbol;
     },
     setType: function(type){
-        this.__symbol.info().define(type);
+        Type.defineTypeId(this.__symbol.info(), type);
         this.currentScope().resolve(this.__symbol);
     },
     typeName: function(){return this.__id.id();},
@@ -1802,7 +1805,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
         var moduleAliases = {};
         for(var i = 0; i < modules.length; ++i){
             var s = modules[i];
-            var name = s.info().name();
+            var name = Type.moduleName(s.info());
             this.__imports[name] = s;
             scope.addSymbol(s);
             moduleAliases[name] = s.id();
@@ -1813,8 +1816,10 @@ exports.ModuleDeclaration = ChainedContext.extend({
         this.codeGenerator().write(this.__moduleGen.prolog());
     },
     qualifyScope: function(scope){
-        if (scope != this.__moduleScope && scope instanceof Scope.Module)
-            return this.__imports[scope.module().id()].id() + ".";
+        if (scope != this.__moduleScope && scope instanceof Scope.Module){
+            var id = scope.module().id();
+            return this.__imports[id].id() + ".";
+        }
         return "";
     }
 });

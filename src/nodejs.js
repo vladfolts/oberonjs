@@ -10,18 +10,21 @@ var fs = require("fs");
 var path = require("path");
 
 var ModuleGenerator = Class.extend({
-    init: function Nodejs$ModuleGenerator(name, imports){
+    init: function Nodejs$ModuleGenerator(name, imports, importDir){
         this.__name = name;
         this.__imports = imports;
+        this.__importDir = importDir;
     },
     prolog: function(){
         var result = "";            
         var modules = this.__imports;
         for(var name in modules){
             var alias = modules[name];
+            var importName = this.__importDir ? this.__importDir + "/" + name
+                                              : name;
             result += "var " + alias + " = " + (name == "this" 
                 ? "GLOBAL"
-                : "require(\"" + name + ".js\")") + ";\n";
+                : "require(\"" + importName + ".js\")") + ";\n";
         }
         return result;
     },
@@ -50,10 +53,11 @@ function writeCompiledModule(name, code, outDir){
     fs.writeFileSync(filePath, code);
     }
 
-function compile(sources, grammar, handleErrors, outDir){
+function compile(sources, grammar, handleErrors, outDir, importDir){
     var rtlCodeWatcher = new RtlCodeUsingWatcher();
     var rtl = new RTL(rtlCodeWatcher.using.bind(rtlCodeWatcher));
-    var moduleCode = function(name, imports){return new ModuleGenerator(name, imports);};
+    var moduleCode = function(name, imports){
+        return new ModuleGenerator(name, imports, importDir);};
 
     var compiledFilesStack = [];
     oc.compileModules(

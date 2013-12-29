@@ -7,7 +7,9 @@ var Errors = require("js/Errors.js");
 var op = require("operator.js");
 var precedence = require("operator.js").precedence;
 var Symbol = require("symbol.js");
-var Type = require("type.js");
+var Type = require("js/Types.js");
+
+var basicTypes = Type.basic();
 
 var Arg = Class.extend({
     init: function(type, isVar){
@@ -101,7 +103,7 @@ var ProcCallGenerator = Class.extend({
             var info = designator.info();
             if (info instanceof Type.Const)
                 throw new Errors.Error("constant cannot be used as VAR parameter");
-            if (info.isReadOnly())
+            if (Type.isVariableReadOnly(info))
                 throw new Errors.Error(info.idType() + " cannot be used as VAR parameter");
         }
         return new CheckArgumentResult(arg.type, arg.isVar, castOperation);
@@ -112,7 +114,8 @@ var ProcCallGenerator = Class.extend({
 
 var DefinedProc = Type.Procedure.extend({
     init: function DefinedProc(name){
-        Type.Procedure.prototype.init.call(this, name);
+        Type.Procedure.prototype.init.call(this);
+        Type.initProcedure(this, name);
         this.__arguments = undefined;
         this.__result = undefined;
     },
@@ -123,11 +126,11 @@ var DefinedProc = Type.Procedure.extend({
     args: function(){return this.__arguments;},
     result: function(){return this.__result;},
     description: function(){
-        var name = this.name();
+        var name = Type.typeName(this);
         if (name)
             return name;
         return 'PROCEDURE' + this.__dumpProcArgs()
-            + (this.__result ? ": " + this.__result.name() : "");
+            + (this.__result ? ": " + Type.typeName(this.__result) : "");
         },
     callGenerator: function(context, id){
         return new ProcCallGenerator(context, id, this);
@@ -149,12 +152,13 @@ var DefinedProc = Type.Procedure.extend({
 
 var Std = Type.Procedure.extend({
     init: function Std(name, args, result, callGeneratorFactory){
-        Type.Procedure.prototype.init.call(this, name);
+        Type.Procedure.prototype.init.call(this);
+        Type.initProcedure(this, name);
         this.__arguments = args;
         this.__result = result;
         this.__callGeneratorFactory = callGeneratorFactory;
     },
-    description: function(){return "standard procedure " + this.name();},
+    description: function(){return "standard procedure " + Type.typeName(this);},
     args: function(){return this.__arguments;},
     result: function(){return this.__result;},
     callGenerator: function(context, id){
@@ -189,8 +193,8 @@ var TwoArgToOperatorProcCallGenerator = ExpCallGenerator.extend({
 });
 
 function setBitImpl(name, bitOp){
-    var args = [new Arg(Type.basic.set, true),
-                new Arg(Type.basic.integer, false)];
+    var args = [new Arg(basicTypes.set, true),
+                new Arg(basicTypes.integer, false)];
     function operator(x, y){
         var value = y.constValue();
         var valueCode;
@@ -218,8 +222,8 @@ function setBitImpl(name, bitOp){
 }
 
 function incImpl(name, unary, op){
-    var args = [new Arg(Type.basic.integer, true),
-                new Arg(Type.basic.integer, false)];
+    var args = [new Arg(basicTypes.integer, true),
+                new Arg(basicTypes.integer, false)];
     function operator(x, y){
         if (!y)
             return unary + x.code();
@@ -264,13 +268,13 @@ function bitShiftImpl(name, op){
             return op(args[0], args[1]);
         }
     });
-    var args = [new Arg(Type.basic.integer, false),
-                new Arg(Type.basic.integer, false)
+    var args = [new Arg(basicTypes.integer, false),
+                new Arg(basicTypes.integer, false)
                ];
     var proc = new Std(
         name,
         args,
-        Type.basic.integer,
+        basicTypes.integer,
         function(context, id, type){
             return new CallGenerator(context, id, type);
         });
@@ -299,8 +303,8 @@ exports.predefined = [
                 var type = e.type();
                 if (!(type instanceof Type.Pointer))
                     throw new Errors.Error("POINTER variable expected, got '"
-                                         + type.name() + "'");
-                this.__baseType = type.baseType();
+                                         + Type.typeName(type) + "'");
+                this.__baseType = Type.pointerBase(type);
                 if (this.__baseType instanceof Type.NonExportedRecord)
                     throw new Errors.Error("non-exported RECORD type cannot be used in NEW");
                 return new CheckArgumentResult(type, false);
@@ -340,11 +344,11 @@ exports.predefined = [
         });
 
         var name = "LEN";
-        var args = [new Arg(new Type.Array("ARRAY OF any type"), false)];
+        var args = [new Arg(Type.makeArray("ARRAY OF any type", undefined, undefined, 0), false)];
         var type = new Std(
             name,
             args,
-            Type.basic.integer,
+            basicTypes.integer,
             function(context, id, type){
                 return new LenProcCallGenerator(context, id, type);
             });
@@ -359,15 +363,15 @@ exports.predefined = [
             callExpression: function(){
                 var e = this.args()[0];
                 var code = Code.adjustPrecedence(e, precedence.bitAnd);
-                return new Code.Expression(code + " & 1", Type.basic.bool, undefined, e.constValue(), precedence.bitAnd);
+                return new Code.Expression(code + " & 1", basicTypes.bool, undefined, e.constValue(), precedence.bitAnd);
             }
         });
         var name = "ODD";
-        var args = [new Arg(Type.basic.integer, false)];
+        var args = [new Arg(basicTypes.integer, false)];
         var type = new Std(
             "ODD",
             args,
-            Type.basic.bool,
+            basicTypes.bool,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
@@ -382,7 +386,7 @@ exports.predefined = [
             prolog: function(){return this.context().rtl().assertId() + "(";}
         });
 
-        var args = [new Arg(Type.basic.bool)];
+        var args = [new Arg(basicTypes.bool)];
         var proc = new Std(
             "ASSERT",
             args,
@@ -406,7 +410,7 @@ exports.predefined = [
             prolog: function(){return "Math.abs(";},
             checkArgument: function(pos, e){
                 var type = e.type();
-                if (Type.numeric.indexOf(type) == -1)
+                if (Type.numeric().indexOf(type) == -1)
                     throw new Errors.Error("type mismatch: expected numeric type, got '" +
                                            type.description() + "'");
                 this.__argType = type;
@@ -432,11 +436,11 @@ exports.predefined = [
             },
             prolog: function(){return "Math.floor(";}
         });
-        var args = [new Arg(Type.basic.real, false)];
+        var args = [new Arg(basicTypes.real, false)];
         var proc = new Std(
             "FLOOR",
             args,
-            Type.basic.integer,
+            basicTypes.integer,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
@@ -450,14 +454,14 @@ exports.predefined = [
             },
             callExpression: function(){
                 var e = this.args()[0];
-                return new Code.Expression(e.code(), Type.basic.real, undefined, e.constValue(), e.maxPrecedence());
+                return new Code.Expression(e.code(), basicTypes.real, undefined, e.constValue(), e.maxPrecedence());
             }
         });
-        var args = [new Arg(Type.basic.integer, false)];
+        var args = [new Arg(basicTypes.integer, false)];
         var proc = new Std(
             "FLT",
             args,
-            Type.basic.real,
+            basicTypes.real,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
@@ -477,39 +481,39 @@ exports.predefined = [
             epilog: function(){return "";},
             checkArgument: function(pos, e){
                 var type = e.type();
-                if (type == Type.basic.ch || type == Type.basic.set)
+                if (type == basicTypes.ch || type == basicTypes.set)
                     this.__callExpression = new Code.Expression(
-                        e.code(), Type.basic.integer, undefined, e.constValue());
-                else if (type == Type.basic.bool){
+                        e.code(), basicTypes.integer, undefined, e.constValue());
+                else if (type == basicTypes.bool){
                     var code = Code.adjustPrecedence(e, precedence.conditional) + " ? 1 : 0";
                     var value = e.constValue();
                     if (value !== undefined)
                         value = value ? 1 : 0;
                     this.__callExpression = new Code.Expression(
-                        code, Type.basic.integer, undefined, value, precedence.conditional);
+                        code, basicTypes.integer, undefined, value, precedence.conditional);
                 }
                 else if (type instanceof Type.String){
-                    var ch = type.asChar();
-                    if (ch !== undefined)
+                    var ch;
+                    if (Type.stringAsChar(type, {set: function(v){ch = v;}}))
                         this.__callExpression = new Code.Expression(
-                            "" + ch, Type.basic.integer);
+                            "" + ch, basicTypes.integer);
                 }
                 
                 if (this.__callExpression)
                     return new CheckArgumentResult(type, false);
 
-                // should throw error
-                return ProcCallGenerator.prototype.checkArgument.call(this, pos, e);
+                throw new Errors.Error(
+                      "ORD function expects CHAR or BOOLEAN or SET as an argument, got '" + type.description()+ "'");
             },
             callExpression: function(){return this.__callExpression;}
         });
         var name = "ORD";
-        var argType = new Type.Basic("CHAR or BOOLEAN or SET");
-        var args = [new Arg(argType, false)];
+        //var argType = new basicTypes("CHAR or BOOLEAN or SET");
+        var args = [new Arg(undefined, false)];
         var type = new Std(
             name,
             args,
-            Type.basic.integer,
+            basicTypes.integer,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
@@ -522,14 +526,14 @@ exports.predefined = [
                 ExpCallGenerator.prototype.init.call(this, context, id, type);
             },
             callExpression: function(){
-                return new Code.Expression(this.args()[0].code(), Type.basic.ch);
+                return new Code.Expression(this.args()[0].code(), basicTypes.ch);
             }
         });
         var name = "CHR";
         var type = new Std(
             name,
-            [new Arg(Type.basic.integer, false)],
-            Type.basic.ch,
+            [new Arg(basicTypes.integer, false)],
+            basicTypes.ch,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
             });
@@ -537,8 +541,8 @@ exports.predefined = [
         return symbol;
     }(),
     function(){
-        var args = [new Arg(Type.basic.real, true),
-                    new Arg(Type.basic.integer, false)];
+        var args = [new Arg(basicTypes.real, true),
+                    new Arg(basicTypes.integer, false)];
         function operator(x, y){
             return op.mulInplace(x, op.pow2(y));
         }
@@ -555,8 +559,8 @@ exports.predefined = [
         return symbol;
     }(),
     function(){
-        var args = [new Arg(Type.basic.real, true),
-                    new Arg(Type.basic.integer, true)];
+        var args = [new Arg(basicTypes.real, true),
+                    new Arg(basicTypes.integer, true)];
         function operator(x, y){
             return op.assign(y, op.log2(x)) +
                    "; " +

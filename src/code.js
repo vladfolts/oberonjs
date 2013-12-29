@@ -1,7 +1,7 @@
 "use strict";
 
 var Class = require("rtl.js").Class;
-var Type = require("type.js");
+var Type = require("js/Types.js");
 
 var NullCodeGenerator = Class.extend({
 	init: function NullCodeGenerator(){},
@@ -90,7 +90,7 @@ function genExport(symbol){
     if (symbol.isType()){
         var type = symbol.info().type();
         if (!(type instanceof Type.Record 
-              || (type instanceof Type.Pointer && !type.baseType().name())))
+              || (type instanceof Type.Pointer && !Type.typeName(Type.pointerBase(type)))))
             return undefined;
     }
     return symbol.id();

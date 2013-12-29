@@ -15,6 +15,12 @@ function make(s/*ARRAY OF CHAR*/){
 	return result;
 }
 
+function fromInt(i/*INTEGER*/){
+	var result = null;
+	result = '' + i;
+	return result;
+}
+
 function len(self/*Type*/){
 	var result = 0;
 	result = self.length;
@@ -51,11 +57,19 @@ function appendChar(self/*Type*/, c/*CHAR*/){
 	result += JS.String.fromCharCode(c);
 	return result;
 }
+
+function concat(self/*Type*/, add/*Type*/){
+	var result = null;
+	result = self + add;
+	return result;
+}
 exports.Type = Type;
 exports.make = make;
+exports.fromInt = fromInt;
 exports.len = len;
 exports.at = at;
 exports.indexOf = indexOf;
 exports.indexOfFrom = indexOfFrom;
 exports.substr = substr;
 exports.appendChar = appendChar;
+exports.concat = concat;
