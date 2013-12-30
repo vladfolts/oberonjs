@@ -1,21 +1,13 @@
 var RTL$ = require("rtl.js");
+var Context = require("js/Context.js");
 var JS = GLOBAL;
-var JsString = require("JsString.js");
-var Errors = require("Errors.js");
-var Stream = require("Stream.js");
+var JsString = require("js/JsString.js");
+var Errors = require("js/Errors.js");
+var Stream = require("js/Stream.js");
 var quote = "\"";
 var commentBegin = "(*";
 var commentEnd = "*)";
-var jsReservedWords = "break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with Math";
-var Context = RTL$.extend({
-	init: function Context(){
-		this.handleChar = null;
-		this.handleLiteral = null;
-		this.handleString = null;
-		this.handleIdent = null;
-		this.isLexem = null;
-	}
-});
+var jsReservedWords = "break case catch continue debugger default delete do else finally for function if in instanceof new return switch this throw try typeof var void while with false true null class enum export extends import super implements interface let package private protected public static yield Math";
 var Literal = RTL$.extend({
 	init: function Literal(){
 		this.s = RTL$.makeCharArray(1);
@@ -30,7 +22,7 @@ function isLetter(c/*CHAR*/){
 	return c >= 97 && c <= 122 || c >= 65 && c <= 90;
 }
 
-function digit(stream/*Type*/, context/*Context*/){
+function digit(stream/*Type*/, context/*Type*/){
 	var result = false;
 	var c = 0;
 	if (!Stream.eof(stream)){
@@ -43,7 +35,7 @@ function digit(stream/*Type*/, context/*Context*/){
 	return result;
 }
 
-function hexDigit(stream/*Type*/, context/*Context*/){
+function hexDigit(stream/*Type*/, context/*Type*/){
 	var result = false;
 	var c = 0;
 	c = Stream.getChar(stream);
@@ -54,13 +46,13 @@ function hexDigit(stream/*Type*/, context/*Context*/){
 	return result;
 }
 
-function handleLiteral(context/*Context*/, s/*ARRAY OF CHAR*/){
+function handleLiteral(context/*Type*/, s/*ARRAY OF CHAR*/){
 	var result = false;
 	var r = context.handleLiteral(JsString.make(s)); result = (r === undefined || r);
 	return result;
 }
 
-function point(stream/*Type*/, context/*Context*/){
+function point(stream/*Type*/, context/*Type*/){
 	var result = false;
 	if (!Stream.eof(stream) && Stream.getChar(stream) == 46 && (Stream.eof(stream) || Stream.peekChar(stream) != 46)){
 		result = handleLiteral(context, ".");
@@ -68,7 +60,7 @@ function point(stream/*Type*/, context/*Context*/){
 	return result;
 }
 
-function string(stream/*Type*/, context/*Context*/){
+function string(stream/*Type*/, context/*Type*/){
 	var result = false;
 	var c = 0;
 	var s = null;
@@ -112,7 +104,7 @@ function isReservedWorld(s/*Type*/, words/*ARRAY OF CHAR*/){
 	return i == JsString.len(s);
 }
 
-function ident(stream/*Type*/, context/*Context*/, reservedWords/*ARRAY OF CHAR*/){
+function ident(stream/*Type*/, context/*Type*/, reservedWords/*ARRAY OF CHAR*/){
 	var result = false;
 	var c = 0;
 	var s = null;
@@ -144,7 +136,7 @@ function ident(stream/*Type*/, context/*Context*/, reservedWords/*ARRAY OF CHAR*
 	return result;
 }
 
-function skipComment(stream/*Type*/, context/*Context*/){
+function skipComment(stream/*Type*/, context/*Type*/){
 	var result = false;
 	if (Stream.peekStr(stream, commentBegin)){
 		Stream.next(stream, commentBegin.length);
@@ -168,7 +160,7 @@ function readSpaces(c/*CHAR*/){
 	return c == 32 || c == 8 || c == 9 || c == 10 || c == 13;
 }
 
-function skipSpaces(stream/*Type*/, context/*Context*/){
+function skipSpaces(stream/*Type*/, context/*Type*/){
 	if (context.isLexem == null || !context.isLexem()){
 		while (true){
 			if (Stream.read(stream, readSpaces) && skipComment(stream, context)){
@@ -177,7 +169,7 @@ function skipSpaces(stream/*Type*/, context/*Context*/){
 	}
 }
 
-function separator(stream/*Type*/, context/*Context*/){
+function separator(stream/*Type*/, context/*Type*/){
 	return Stream.eof(stream) || !isLetter(Stream.peekChar(stream));
 }
 
@@ -188,7 +180,7 @@ function makeLiteral(s/*ARRAY OF CHAR*/){
 	return result;
 }
 
-function literal(l/*Literal*/, stream/*Type*/, context/*Context*/){
+function literal(l/*Literal*/, stream/*Type*/, context/*Type*/){
 	var result = false;
 	if (Stream.peekStr(stream, l.s)){
 		Stream.next(stream, l.s.length);
