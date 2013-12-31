@@ -136,7 +136,7 @@ var anonymous$1 = RTL$.extend({
 		this.set = null;
 	}
 });
-var basic = null;
+var basic = new anonymous$1();
 var numeric = null;
 var nil = null;
 TypeId.prototype.description = function(){
@@ -528,7 +528,6 @@ function initProcedure(p/*Procedure*/, name/*Type*/){
 function initModule(m/*Module*/, name/*Type*/){
 	m.name = name;
 }
-basic = new anonymous$1();
 basic.bool = makeBasic("BOOLEAN", "false");
 basic.ch = makeBasic("CHAR", "0");
 basic.integer = makeBasic("INTEGER", "0");

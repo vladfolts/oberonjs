@@ -131,7 +131,7 @@ TYPE
     PModule = POINTER TO Module;
 
 VAR
-    basic*: POINTER TO RECORD
+    basic*: RECORD
         bool, ch, integer, uint8, real, set: PBasicType
     END;
 
@@ -634,7 +634,6 @@ BEGIN
 END initModule;
 
 BEGIN
-    NEW(basic);
     basic.bool := makeBasic("BOOLEAN", "false");
     basic.ch := makeBasic("CHAR", "0");
     basic.integer := makeBasic("INTEGER", "0");
