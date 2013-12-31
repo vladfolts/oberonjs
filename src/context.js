@@ -1521,19 +1521,19 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
         checkIfFieldCanBeExported(name, this.__idents, "variable");
     },
     setType: function(type){this.__type = type;},
+    type: function(){return this.__type;},
     typeName: function(){return undefined;},
     isAnonymousDeclaration: function(){return true;},
+    checkExport: function(){},
     endParse: function(){
         var v = Type.makeVariable(this.__type, false);
         var idents = this.__idents;
         var gen = this.codeGenerator();
         for(var i = 0; i < idents.length; ++i){
             var id = idents[i];
-            if (id.exported()
-                && (this.__type instanceof Type.Record
-                    || this.__type instanceof Type.Array))
-                throw new Errors.Error("only scalar type variables can be exported");
             var varName = id.id();
+            if (id.exported())
+                this.checkExport(varName);
             this.currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
             var t = Type.variableType(v);
             gen.write("var " + varName + " = " + t.initializer(this) + ";");

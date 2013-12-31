@@ -1,0 +1,13 @@
+MODULE Code;
+IMPORT Types;
+TYPE
+    Generator = RECORD
+        PROCEDURE write();
+        PROCEDURE getResult();
+        PROCEDURE openScope();
+        PROCEDURE closeScope()
+    END;
+
+    NullGenerator = RECORD(Generator)
+    END;
+END Code.

@@ -51,5 +51,6 @@ exports.grammar = Grammar.make(
     makeProcedureDeclaration,
     makeFieldList,
     EbContext.RecordDecl,
+    Context.VariableDeclaration,
     Grammar.reservedWords + " SELF SUPER"
     );

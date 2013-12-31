@@ -144,5 +144,13 @@ exports.suite = {
           "type 'T' has no 'mNotExported' field"],
          ["MODULE m; IMPORT test; TYPE T = RECORD(test.T) END; PROCEDURE T.mNotExported(); END T.mNotExported; END m.",
           "'T' has no declaration for method 'mNotExported'"])
-    )
+    ),
+"non-scalar variables can be exported": testWithContext(
+    context(grammar.declarationSequence, 
+            "TYPE T = RECORD END; A = ARRAY 3 OF INTEGER;"
+            ),
+    pass("VAR r*: T;",
+         "VAR a*: A;"),
+    fail()
+    ),
 };

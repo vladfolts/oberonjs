@@ -109,7 +109,7 @@ var Designator = Context.Designator.extend({
 var RecordType = Type.Record.extend({
     init: function EberonContext$RecordType(name, cons, scope){
         Type.Record.prototype.init.call(this);
-        Type.initRecord(this, name, cons, scope)
+        Type.initRecord(this, name, cons, scope);
         this.__finalized = false;
         this.__declaredMethods = {};
         this.__definedMethods = [];

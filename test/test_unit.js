@@ -7,6 +7,7 @@ var Grammar = require("grammar.js");
 var Test = require("test.js");
 var TestUnitCommon = require("test_unit_common.js");
 var TestUnitEberon = require("test_unit_eberon.js");
+var TestUnitOberon = require("test_unit_oberon.js");
 
 var eberonGrammar = require("eberon/eberon_grammar.js").grammar;
 var oberonGrammar = require("oberon/oberon_grammar.js").grammar;
@@ -1249,11 +1250,7 @@ return {
          "VAR i*: INTEGER;",
          "PROCEDURE p*; END p;"
          ),
-    fail(["VAR r*: RECORD END;",
-          "only scalar type variables can be exported"],
-         ["VAR a*: ARRAY 5 OF INTEGER;",
-          "only scalar type variables can be exported"],
-         ["TYPE T = RECORD f*: INTEGER END;",
+    fail(["TYPE T = RECORD f*: INTEGER END;",
           "field 'f' can be exported only if record 'T' itself is exported too"],
          ["TYPE PT* = POINTER TO RECORD f*: INTEGER END;",
           "cannot export anonymous RECORD field: 'f'"],
@@ -1337,5 +1334,6 @@ Test.run({
         "oberon": makeSuiteForGrammar(oberonGrammar),
         "eberon": makeSuiteForGrammar(eberonGrammar)
     },
-    "eberon": TestUnitEberon.suite
+    "eberon": TestUnitEberon.suite,
+    "oberon": TestUnitOberon.suite
 });

@@ -37,5 +37,6 @@ exports.grammar = Grammar.make(
     makeProcedureDeclaration,
     makeFieldList,
     ObContext.RecordDecl,
+    ObContext.VariableDeclaration,
     Grammar.reservedWords
     );

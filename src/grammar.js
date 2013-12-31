@@ -27,6 +27,7 @@ function make(makeDesignator,
               makeProcedureDeclaration,
               makeFieldList,
               recordDeclContext,
+              varDeclContext,
               reservedWords
               ){
 var result = {};
@@ -51,7 +52,7 @@ var type = or(context(qualident, Context.Type),
               function(stream, context){return strucType(stream, context);} // break recursive declaration of strucType
              );
 var identList = and(identdef, repeat(and(",", identdef)));
-var variableDeclaration = context(and(identList, ":", type), Context.VariableDeclaration);
+var variableDeclaration = context(and(identList, ":", type), varDeclContext);
 
 var integer = or(context(and(digit, repeat(hexDigit), "H", separator), Context.HexInteger)
                , context(and(digit, repeat(digit), separator), Context.Integer));
