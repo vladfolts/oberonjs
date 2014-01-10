@@ -1,5 +1,5 @@
 "use strict";
-var Code = require("code.js");
+var Code = require("js/Code.js");
 var Type = require("js/Types.js");
 var ArrayType = Type.Array;
 var PointerType = Type.Pointer;
@@ -78,14 +78,14 @@ function implicitCast(from, to, ops){
 
     if (from == basicTypes.integer && to == basicTypes.uint8)
         return function(context, e){
-            return ops.setIntersection(e, new Code.Expression("0xFF", basicTypes.integer, undefined, 0xFF));
+            return ops.setIntersection(e, Code.makeExpression("0xFF", basicTypes.integer, null, 0xFF));
         };
 
     if (from instanceof Type.String){
         if (to === basicTypes.ch){
             var v;
             if (Type.stringAsChar(from, {set: function(value){v = value;}}))
-                return function(){return new Code.Expression(v, to);};
+                return function(){return Code.makeExpression(v, to);};
         }
         else if (to instanceof Type.Array && Type.arrayElementsType(to) == basicTypes.ch)
             return doNoting;

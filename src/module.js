@@ -1,9 +1,9 @@
 "use strict";
 
-var Code = require("code.js");
+var Code = require("js/Code.js");
 var Errors = require("js/Errors.js");
 var Procedure = require("procedure.js");
-var Symbol = require("symbol.js");
+var Symbol = require("js/Symbols.js");
 var Type = require("js/Types.js");
 
 var AnyTypeProc = Type.Procedure.extend({
@@ -54,7 +54,7 @@ var doProcSymbol = (function(){
         epilog: function(){return "";},
         writeArgumentCode: function(){},
         callExpression: function(){
-            return new Code.Expression(this.__code);
+            return Code.makeExpression(this.__code);
         }
     });
 
@@ -72,11 +72,11 @@ var doProcSymbol = (function(){
         }
         });
 
-    return new Symbol.Symbol(doProcId, new ProcType());
+    return Symbol.makeSymbol(doProcId, new ProcType());
 })();
 
 var varTypeSymbol = function(){
-    return new Symbol.Symbol(varTypeId, Type.makeTypeId(any));
+    return Symbol.makeSymbol(varTypeId, Type.makeTypeId(any));
 }();
 
 var JSModule = Type.Module.extend({
@@ -85,10 +85,10 @@ var JSModule = Type.Module.extend({
         Type.initModule(this, "this");
     },
     findSymbol: function(id){
-        return new Symbol.Found(
+        return Symbol.makeFound(
             id == doProcId ? doProcSymbol
           : id == varTypeId ? varTypeSymbol
-          : new Symbol.Symbol(id, any));
+          : Symbol.makeSymbol(id, any));
     }
 });
 

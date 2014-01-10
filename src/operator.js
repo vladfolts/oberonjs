@@ -1,7 +1,7 @@
 "use strict";
 
 var Cast = require("cast.js");
-var Code = require("code.js");
+var Code = require("js/Code.js");
 var Errors = require("js/Errors.js");
 var Type = require("js/Types.js");
 
@@ -23,21 +23,21 @@ var precedence = {
     assignment: 17
 };
 
-function makeBinary(op, code, precedence, resultPrecedence){
+function makeBinary(op, code, precedence, resultPrecedence, resultType){
     return function(left, right, context){
         var leftValue = left.constValue();
         var rightValue = right.constValue();
         var value = (leftValue !== undefined && rightValue !== undefined)
             ? op(leftValue, rightValue) : undefined;
 
-        var leftCode = Code.adjustPrecedence(left.deref(), precedence);
+        var leftCode = Code.adjustPrecedence(Code.derefExpression(left), precedence);
 
         // right code needs parentheses even if it has the same percedence
-        var rightCode = Code.adjustPrecedence(right.deref(), precedence - 1);
+        var rightCode = Code.adjustPrecedence(Code.derefExpression(right), precedence - 1);
         var expCode = (typeof code == "function")
                     ? code(leftCode, rightCode, context)
                     : leftCode + code + rightCode;
-        return new Code.Expression(expCode, left.type(), undefined, value, resultPrecedence ? resultPrecedence : precedence);
+        return Code.makeExpressionWithPrecedence(expCode, resultType ? resultType : left.type(), undefined, value, resultPrecedence ? resultPrecedence : precedence);
     };
 }
 
@@ -47,8 +47,8 @@ function makeUnary(op, code){
         var value = e.constValue();
         if (value !== undefined)
             value = op(value, type) ;
-        var expCode = code + Code.adjustPrecedence(e.deref(), precedence.unary);
-        return new Code.Expression(expCode, type, undefined, value);
+        var expCode = code + Code.adjustPrecedence(Code.derefExpression(e), precedence.unary);
+        return Code.makeExpression(expCode, type, undefined, value);
     };
 }
 
@@ -65,7 +65,7 @@ function castToStr(e, context){
 
 function makeStrCmp(op){
     return function(left, right, context){
-        return new Code.Expression(
+        return Code.makeExpression(
             context.rtl().strCmp(castToStr(left, context),
                                  castToStr(right, context))
                 + op + "0",
@@ -75,13 +75,14 @@ function makeStrCmp(op){
 }
 
 function pow2(e){
-    return new Code.Expression("Math.pow(2, " + e.deref().code() + ")",
+    return Code.makeExpression("Math.pow(2, " + Code.derefExpression(e).code() + ")",
                                basicTypes.real);
 }
 
 function log2(e){
-    return new Code.Expression("(Math.log(" + e.deref().code() + ") / Math.LN2) | 0",
-                               basicTypes.integer, undefined, undefined, precedence.bitOr);
+    return Code.makeExpressionWithPrecedence(
+        "(Math.log(" + Code.derefExpression(e).code() + ") / Math.LN2) | 0",
+        basicTypes.integer, undefined, undefined, precedence.bitOr);
 }
 
 function assign(left, right, context){
@@ -123,7 +124,7 @@ function assign(left, right, context){
     if (isArray || rightType instanceof Type.Record)
         return context.rtl().copy(rightCode, leftCode);
 
-    var castCode = castOperation(context, right.deref()).code();
+    var castCode = castOperation(context, Code.derefExpression(right)).code();
     rightCode = castCode ? castCode : rightCode;
     return leftCode + (info instanceof Type.VariableRef 
                       ? ".set(" + rightCode + ")"
@@ -135,7 +136,7 @@ function makeInplace(code, altOp){
         var info = left.designator().info();
         if (info instanceof Type.VariableRef)
             return assign(left, altOp(left, right));
-        return left.code() + code + right.deref().code();
+        return left.code() + code + Code.derefExpression(right).code();
     };
 }
 
@@ -143,7 +144,7 @@ function promoteToWideIfNeeded(op){
     return function(){
         var result = op.apply(this, arguments);
         if (result.type() == basicTypes.uint8)
-            result = new Code.Expression(
+            result = Code.makeExpressionWithPrecedence(
                 result.code(),
                 basicTypes.integer,
                 result.designator(),
@@ -189,6 +190,7 @@ var operators = {
     equalStr:   makeStrCmp(" == "),
     notEqual:   makeBinary(function(x, y){return x != y;}, " != ", precedence.equal),
     notEqualStr: makeStrCmp(" != "),
+    is:         makeBinary(undefined, " instanceof ", precedence.relational, undefined, basicTypes.bool),
     less:       makeBinary(function(x, y){return x < y;}, " < ", precedence.relational),
     lessStr:    makeStrCmp(" < "),
     greater:    makeBinary(function(x, y){return x > y;}, " > ", precedence.relational),

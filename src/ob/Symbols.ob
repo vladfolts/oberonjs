@@ -1,0 +1,85 @@
+MODULE Symbols;
+IMPORT Context, JsString, Object, Types;
+TYPE
+    Symbol* = RECORD(Object.Type)
+        PROCEDURE id*(): JsString.Type;
+        PROCEDURE info*(): Types.PId;
+        PROCEDURE isModule*(): BOOLEAN;
+        PROCEDURE isVariable*(): BOOLEAN;
+        PROCEDURE isConst*(): BOOLEAN;
+        PROCEDURE isType*(): BOOLEAN;
+        PROCEDURE isProcedure*(): BOOLEAN;
+
+        mId: JsString.Type;
+        mInfo: Types.PId
+    END;
+
+    PSymbol* = POINTER TO Symbol;
+
+    FoundSymbol* = RECORD
+        PROCEDURE symbol(): PSymbol;
+        PROCEDURE scope(): Context.PScope;
+
+        mSymbol: PSymbol;
+        mScope: Context.PScope
+    END;
+
+    PFoundSymbol = POINTER TO FoundSymbol;
+
+PROCEDURE Symbol.id(): JsString.Type;
+    RETURN SELF.mId
+END Symbol.id;
+
+PROCEDURE Symbol.info(): Types.PId;
+    RETURN SELF.mInfo
+END Symbol.info;
+
+PROCEDURE Symbol.isModule(): BOOLEAN;
+    RETURN SELF.mInfo IS Types.PModule
+END Symbol.isModule;
+
+PROCEDURE Symbol.isVariable(): BOOLEAN;
+    RETURN SELF.mInfo IS Types.PVariable
+END Symbol.isVariable;
+
+PROCEDURE Symbol.isConst(): BOOLEAN;
+    RETURN SELF.mInfo IS Types.PConst
+END Symbol.isConst;
+
+PROCEDURE Symbol.isType(): BOOLEAN;
+    RETURN SELF.mInfo IS Types.PTypeId
+END Symbol.isType;
+
+PROCEDURE Symbol.isProcedure(): BOOLEAN;
+    RETURN SELF.mInfo IS Types.PProcedureId
+END Symbol.isProcedure;
+
+PROCEDURE FoundSymbol.scope(): Context.PScope;
+    RETURN SELF.mScope
+END FoundSymbol.scope;
+
+PROCEDURE FoundSymbol.symbol(): PSymbol;
+    RETURN SELF.mSymbol
+END FoundSymbol.symbol;
+
+PROCEDURE makeSymbol*(id: JsString.Type; info: Types.PId): PSymbol;
+VAR
+    result: PSymbol;
+BEGIN
+    NEW(result);
+    result.mId := id;
+    result.mInfo := info;
+    RETURN result
+END makeSymbol;
+
+PROCEDURE makeFound*(s: PSymbol; scope: Context.PScope): PFoundSymbol;
+VAR
+    result: PFoundSymbol;
+BEGIN
+    NEW(result);
+    result.mSymbol := s;
+    result.mScope := scope;
+    RETURN result
+END makeFound;
+
+END Symbols.

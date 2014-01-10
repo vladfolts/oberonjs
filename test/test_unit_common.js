@@ -1,7 +1,7 @@
 "use strict";
 
 var Class = require("rtl.js").Class;
-var Code = require("code.js");
+var Code = require("js/Code.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var oc = require("oc.js");
@@ -30,12 +30,12 @@ var TestContext = Context.Context.extend({
     init: function TestContext(){
         Context.Context.prototype.init.call(
                 this,
-                Code.nullGenerator,
+                Code.nullGenerator(),
                 function(){return new TestModuleGenerator();},
                 new RTL());
         this.pushScope(new Scope.Module("test"));
     },
-    qualifyScope: function(){return "";},
+    qualifyScope: function(){return "";}
 });
 
 function makeContext(){return new TestContext();}

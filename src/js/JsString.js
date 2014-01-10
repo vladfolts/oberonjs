@@ -15,6 +15,12 @@ function make(s/*ARRAY OF CHAR*/){
 	return result;
 }
 
+function makeEmpty(){
+	var result = null;
+	result = '';
+	return result;
+}
+
 function fromInt(i/*INTEGER*/){
 	var result = null;
 	result = '' + i;
@@ -65,6 +71,7 @@ function concat(self/*Type*/, add/*Type*/){
 }
 exports.Type = Type;
 exports.make = make;
+exports.makeEmpty = makeEmpty;
 exports.fromInt = fromInt;
 exports.len = len;
 exports.at = at;

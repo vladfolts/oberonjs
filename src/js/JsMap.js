@@ -6,6 +6,10 @@ var Type = RTL$.extend({
 	init: function Type(){
 	}
 });
+var Strings = RTL$.extend({
+	init: function Strings(){
+	}
+});
 
 function make(){
 	var result = null;
@@ -32,9 +36,20 @@ function put(m/*Type*/, s/*Type*/, o/*PType*/){
 function erase(m/*Type*/, s/*Type*/){
 	delete m[s];
 }
+
+function forEach(m/*Type*/, p/*forEachProc*/, closure/*VAR Type*/){
+	for(var key in m){p(key, m[key], closure)};
+}
+
+function forEachString(m/*Strings*/, p/*forEachStringProc*/, closure/*VAR Type*/){
+	for(var key in m){p(key, m[key], closure)};
+}
 exports.Type = Type;
+exports.Strings = Strings;
 exports.make = make;
 exports.has = has;
 exports.find = find;
 exports.put = put;
 exports.erase = erase;
+exports.forEach = forEach;
+exports.forEachString = forEachString;

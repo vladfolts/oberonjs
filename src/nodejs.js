@@ -1,7 +1,7 @@
 "use strict";
 
 var Class = require("rtl.js").Class;
-var Code = require("code.js");
+var Code = require("js/Code.js");
 var Context = require("context.js");
 var oc = require("oc.js");
 var RTL = require("rtl_code.js").RTL;
@@ -71,7 +71,7 @@ function compile(sources, grammar, handleErrors, outDir, importDir){
             },
             grammar,
             function(moduleResolver){return new Context.Context(
-                new Code.Generator(),
+                Code.makeGenerator(),
                 moduleCode,
                 rtl,
                 moduleResolver);},

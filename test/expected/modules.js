@@ -14,8 +14,23 @@ var RTL$ = {
         return result;
     },
     typeGuard: function (from, to){
-        if (!(from instanceof to))
-            throw new Error("typeguard assertion failed");
+        if (!(from instanceof to)){
+            var fromStr;
+            var toStr;
+            if (!from)
+                fromStr = "" + fromStr;
+            else if (from.constructor && from.constructor.name)
+                fromStr = "" + from.constructor.name;
+            if (!to)
+                toStr = "" + to;
+            else if (to.constructor && to.constructor.name)
+                toStr = "" + to.constructor.name;
+            
+            var msg = "typeguard assertion failed";
+            if (fromStr || toStr)               
+                msg += ": '" + fromStr + "' is not an extension of '" + toStr + "'";
+            throw new Error(msg);
+        }
         return from;
     },
     makeRef: function (obj, prop){

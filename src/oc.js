@@ -1,7 +1,7 @@
 "use strict";
 
 var Class = require("rtl.js").Class;
-var Code = require("code.js");
+var Code = require("js/Code.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var Lexer = require("js/Lexer.js");
@@ -38,7 +38,7 @@ function compileModule(grammar, stream, context, handleErrors){
     var scope = context.currentScope();
     return new CompiledModule(
             scope.module(),
-            context.codeGenerator().getResult(),
+            context.codeGenerator().result(),
             scope.exports());
 }
 
@@ -107,11 +107,11 @@ function compileModules(names, moduleReader, grammar, contextFactory, handleErro
 function compile(text, grammar, handleErrors){
     var result = "";
     var rtl = new RTL();
-    var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
+    var moduleCode = function(name, imports){return Code.makeModuleGenerator(name, imports);};
     var resolver = makeResolver(
             grammar,
             function(moduleResolver){
-                return new Context.Context(new Code.Generator(),
+                return new Context.Context(Code.makeGenerator(),
                                            moduleCode,
                                            rtl,
                                            moduleResolver);

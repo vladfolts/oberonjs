@@ -1,6 +1,9 @@
 MODULE Stream;
 IMPORT JsString;
 
+CONST
+    kCR* = 0AX;
+
 TYPE
     Type* = POINTER TO RECORD
         s: JsString.Type;
@@ -79,10 +82,10 @@ VAR
     line: INTEGER;
     lastPos: INTEGER;
 BEGIN
-    lastPos := JsString.indexOf(self.s, 0AX);
+    lastPos := JsString.indexOf(self.s, kCR);
     WHILE (lastPos # -1) & (lastPos < self.pos) DO
         INC(line);
-        lastPos := JsString.indexOfFrom(self.s, 0AX, lastPos + 1);
+        lastPos := JsString.indexOfFrom(self.s, kCR, lastPos + 1);
     END;
     RETURN line + 1
 END lineNumber;

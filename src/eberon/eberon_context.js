@@ -3,7 +3,7 @@
 var Cast = require("cast.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
-var Symbol = require("symbol.js");
+var Symbol = require("js/Symbols.js");
 var Procedure = require("procedure.js");
 var Type = require("js/Types.js");
 
@@ -96,10 +96,10 @@ var Designator = Context.Designator.extend({
     },
     handleLiteral: function(s){
         if (s == "SELF")
-            this.handleSymbol(new Symbol.Found(this.handleMessage(getMethodSelf)), "this");
+            this.handleSymbol(Symbol.makeFound(this.handleMessage(getMethodSelf)), "this");
         else if (s == "SUPER"){
             var ms = this.handleMessage(getMethodSuper);
-            this.handleSymbol(new Symbol.Found(ms.symbol), ms.code);
+            this.handleSymbol(Symbol.makeFound(ms.symbol), ms.code);
         }
         else
             Context.Designator.prototype.handleLiteral.call(this, s);
@@ -282,7 +282,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             var id = msg.id;
             var type = msg.type;
             if (type){
-                this.__selfSymbol = new Symbol.Symbol("SELF", type);
+                this.__selfSymbol = Symbol.makeSymbol("SELF", type);
                 this.__methodId = id;
                 this.__boundType = type;
             }
@@ -351,7 +351,9 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         var id = this.__methodId.id();
         baseType.requireMethodDefinition(id);
         return {
-            symbol: new Symbol.Symbol("method", new MethodType(this.__methodType.procType(), superMethodCallGenerator)),
+            symbol: Symbol.makeSymbol(
+                "method",  
+                Type.makeProcedure(new MethodType(this.__methodType.procType(), superMethodCallGenerator))),
             code: Type.typeName(baseType) + ".prototype." + id + ".call"
         };
     }

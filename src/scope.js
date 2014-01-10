@@ -3,7 +3,7 @@
 var Class = require("rtl.js").Class;
 var Errors = require("js/Errors.js");
 var Procedure = require("procedure.js");
-var Symbol = require("symbol.js");
+var Symbol = require("js/Symbols.js");
 var Type = require("js/Types.js");
 
 var stdSymbols = function(){
@@ -12,7 +12,7 @@ var stdSymbols = function(){
     for(var t in basicTypes){
         var type = basicTypes[t];
         var name = Type.typeName(type);
-        symbols[name] = new Symbol.Symbol(name, Type.makeTypeId(type));
+        symbols[name] = Symbol.makeSymbol(name, Type.makeTypeId(type));
     }
     
     var predefined = Procedure.predefined;
@@ -89,7 +89,7 @@ var CompiledModule = Type.Module.extend({
         for(var id in exports){
             var symbol = exports[id];
             if (symbol.isVariable())
-                symbol = new Symbol.Symbol(
+                symbol = Symbol.makeSymbol(
                     id,
                     Type.makeExportedVariable(symbol.info()));
             this.__exports[id] = symbol;
@@ -99,7 +99,7 @@ var CompiledModule = Type.Module.extend({
         var s = this.__exports[id];
         if (!s)
             return undefined;
-        return new Symbol.Found(s);
+        return Symbol.makeFound(s);
     }
 });
 
@@ -108,7 +108,7 @@ var Module = Scope.extend({
         Scope.prototype.init.call(this, "module");
         this.__name = name;
         this.__exports = {};
-        this.__symbol = new Symbol.Symbol(name, new CompiledModule(name));
+        this.__symbol = Symbol.makeSymbol(name, new CompiledModule(name));
         this.addSymbol(this.__symbol);
     },
     module: function(){return this.__symbol;},

@@ -12,13 +12,14 @@ var Id = Object.Type.extend({
 		Object.Type.prototype.init.call(this);
 	}
 });
-var Type = Id.extend({
+var Type = Object.Type.extend({
 	init: function Type(){
-		Id.prototype.init.call(this);
+		Object.Type.prototype.init.call(this);
 	}
 });
-var TypeId = RTL$.extend({
+var TypeId = Id.extend({
 	init: function TypeId(){
+		Id.prototype.init.call(this);
 		this.mType = null;
 	}
 });
@@ -55,6 +56,12 @@ var VariableRef = Variable.extend({
 var ExportedVariable = Variable.extend({
 	init: function ExportedVariable(){
 		Variable.prototype.init.call(this);
+	}
+});
+var ProcedureId = Id.extend({
+	init: function ProcedureId(){
+		Id.prototype.init.call(this);
+		this.type = null;
 	}
 });
 var String = Type.extend({
@@ -206,11 +213,8 @@ function defineTypeId(tId/*VAR LazyTypeId*/, t/*PType*/){
 function typeName(type/*NamedType*/){
 	return type.name;
 }
-Procedure.prototype.idType = function(){
+ProcedureId.prototype.idType = function(){
 	return JsString.make("procedure");
-}
-String.prototype.idType = function(){
-	return JsString.make("string");
 }
 String.prototype.description = function(){
 	var prefix = null;
@@ -265,13 +269,17 @@ function variableType(v/*Variable*/){
 	return v.type;
 }
 
+function procedureType(p/*ProcedureId*/){
+	return p.type;
+}
+
 function isVariableReadOnly(v/*Variable*/){
 	return v.readOnly;
 }
 ExportedVariable.prototype.idType = function(){
 	return JsString.make("imported variable");
 }
-BasicType.prototype.idType = function(){
+TypeId.prototype.idType = function(){
 	return JsString.make("type");
 }
 BasicType.prototype.description = function(){
@@ -306,9 +314,6 @@ function makeBasic(name/*ARRAY OF CHAR*/, initializer/*ARRAY OF CHAR*/){
 	result.name = JsString.make(name);
 	result.mInitializer = JsString.make(initializer);
 	return result;
-}
-Record.prototype.idType = function(){
-	return JsString.make("record");
 }
 Record.prototype.description = function(){
 	var result = null;
@@ -362,9 +367,6 @@ function recordConstructor(r/*Record*/){
 function recordOwnFields(r/*Record*/){
 	return r.fields;
 }
-Pointer.prototype.idType = function(){
-	return JsString.make("pointer");
-}
 
 function pointerBase(p/*Pointer*/){
 	var result = null;
@@ -385,9 +387,6 @@ Pointer.prototype.description = function(){
 }
 Pointer.prototype.initializer = function(cx/*Type*/){
 	return JsString.make("null");
-}
-Array.prototype.idType = function(){
-	return JsString.make("array");
 }
 
 function foldArrayDimensions(a/*Array*/, sizes/*VAR Type*/, of/*VAR Type*/){
@@ -521,6 +520,13 @@ function makeExportedVariable(v/*Variable*/){
 	return result;
 }
 
+function makeProcedure(type/*PType*/){
+	var result = null;
+	result = new ProcedureId();
+	result.type = type;
+	return result;
+}
+
 function initProcedure(p/*Procedure*/, name/*Type*/){
 	p.name = name;
 }
@@ -540,12 +546,14 @@ JsArray.add(numeric, basic.uint8);
 JsArray.add(numeric, basic.real);
 nil = new Nil();
 exports.openArrayLength = openArrayLength;
+exports.Id = Id;
 exports.Type = Type;
 exports.TypeId = TypeId;
 exports.ForwardTypeId = ForwardTypeId;
 exports.Const = Const;
 exports.Variable = Variable;
 exports.VariableRef = VariableRef;
+exports.ProcedureId = ProcedureId;
 exports.String = String;
 exports.Array = Array;
 exports.Pointer = Pointer;
@@ -566,6 +574,7 @@ exports.stringAsChar = stringAsChar;
 exports.constType = constType;
 exports.constValue = constValue;
 exports.variableType = variableType;
+exports.procedureType = procedureType;
 exports.isVariableReadOnly = isVariableReadOnly;
 exports.isInt = isInt;
 exports.intsDescription = intsDescription;
@@ -589,5 +598,6 @@ exports.makeConst = makeConst;
 exports.makeVariable = makeVariable;
 exports.makeVariableRef = makeVariableRef;
 exports.makeExportedVariable = makeExportedVariable;
+exports.makeProcedure = makeProcedure;
 exports.initProcedure = initProcedure;
 exports.initModule = initModule;

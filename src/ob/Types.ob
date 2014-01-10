@@ -5,26 +5,26 @@ CONST
     openArrayLength* = 0;
 
 TYPE
-    Id = RECORD (Object.Type)
+    Id* = RECORD(Object.Type)
         PROCEDURE idType(): JsString.Type
     END;
 
-    PId = POINTER TO Id;
+    PId* = POINTER TO Id;
     
-    Type* = RECORD(Id)
+    Type* = RECORD(Object.Type)
         PROCEDURE description(): JsString.Type;
         PROCEDURE initializer(cx: Context.Type): JsString.Type
     END;
-    PType = POINTER TO Type;
+    PType* = POINTER TO Type;
     
-    TypeId* = RECORD
-        PROCEDURE type(): PType;
+    TypeId* = RECORD(Id)
+        PROCEDURE type*(): PType;
         PROCEDURE description(): JsString.Type;
         PROCEDURE strip();
 
         mType: PType
     END;
-    PTypeId = POINTER TO TypeId;
+    PTypeId* = POINTER TO TypeId;
 
     ResolveTypeCallback = PROCEDURE(): PType;
 
@@ -44,24 +44,30 @@ TYPE
         value: JS.var
     END;
 
-    PConst = POINTER TO Const;
+    PConst* = POINTER TO Const;
 
     Variable* = RECORD(Id)
         type: PType;
         readOnly: BOOLEAN
     END;
 
-    PVariable = POINTER TO Variable;
+    PVariable* = POINTER TO Variable;
 
     VariableRef* = RECORD(Variable)
     END;
 
-    PVariableRef = POINTER TO VariableRef;
+    PVariableRef* = POINTER TO VariableRef;
 
     ExportedVariable = RECORD(Variable)
     END;
 
     PExportedVariable = POINTER TO ExportedVariable;
+
+    ProcedureId* = RECORD(Id)
+        type: PType
+    END;
+
+    PProcedureId* = POINTER TO ProcedureId;
 
     String* = RECORD(Type)
         s: JsString.Type
@@ -79,20 +85,20 @@ TYPE
         len: INTEGER
     END;
 
-    PArray = POINTER TO Array;
+    PArray* = POINTER TO Array;
 
-    PRecord = POINTER TO Record;
+    PRecord* = POINTER TO Record;
 
     Pointer* = RECORD(NamedType)
         base: PTypeId
     END;
 
-    PPointer = POINTER TO Pointer;
+    PPointer* = POINTER TO Pointer;
 
     Procedure* = RECORD(NamedType)
     END;
 
-    PProcedure = POINTER TO Procedure;
+    PProcedure* = POINTER TO Procedure;
 
     BasicType = RECORD(NamedType)
         mInitializer: JsString.Type
@@ -128,7 +134,7 @@ TYPE
         name: JsString.Type
     END;
 
-    PModule = POINTER TO Module;
+    PModule* = POINTER TO Module;
 
 VAR
     basic*: RECORD
@@ -223,14 +229,14 @@ PROCEDURE typeName*(type: NamedType): JsString.Type;
     RETURN type.name
 END typeName;
 
-PROCEDURE Procedure.idType(): JsString.Type;
+PROCEDURE ProcedureId.idType(): JsString.Type;
     RETURN JsString.make("procedure")
-END Procedure.idType;
-
+END ProcedureId.idType;
+(*
 PROCEDURE String.idType(): JsString.Type;
     RETURN JsString.make("string")
 END String.idType;
-
+*)
 PROCEDURE String.description(): JsString.Type;
 VAR
     prefix: JsString.Type;
@@ -290,6 +296,10 @@ PROCEDURE variableType*(v: Variable): PType;
     RETURN v.type
 END variableType;
 
+PROCEDURE procedureType*(p: ProcedureId): PType;
+    RETURN p.type
+END procedureType;
+
 PROCEDURE isVariableReadOnly*(v: Variable): BOOLEAN;
     RETURN v.readOnly
 END isVariableReadOnly;
@@ -297,10 +307,14 @@ END isVariableReadOnly;
 PROCEDURE ExportedVariable.idType(): JsString.Type;
     RETURN JsString.make("imported variable")
 END ExportedVariable.idType;
-
+(*
 PROCEDURE BasicType.idType(): JsString.Type;
     RETURN JsString.make("type")
 END BasicType.idType;
+*)
+PROCEDURE TypeId.idType(): JsString.Type;
+    RETURN JsString.make("type")
+END TypeId.idType;
 
 PROCEDURE BasicType.description(): JsString.Type;
     RETURN SELF.name
@@ -344,11 +358,11 @@ BEGIN
     result.mInitializer := JsString.make(initializer);
     RETURN result
 END makeBasic;
-
+(*
 PROCEDURE Record.idType(): JsString.Type;
     RETURN JsString.make("record")
 END Record.idType;
-
+*)
 PROCEDURE Record.description(): JsString.Type;
 VAR
     result: JsString.Type;
@@ -419,11 +433,11 @@ END recordConstructor;
 PROCEDURE recordOwnFields*(r: Record): JsMap.Type;
     RETURN r.fields
 END recordOwnFields;
-
+(*
 PROCEDURE Pointer.idType(): JsString.Type;
     RETURN JsString.make("pointer")
 END Pointer.idType;
-
+*)
 PROCEDURE pointerBase*(p: Pointer): PRecord;
 VAR
     result: PType;
@@ -449,11 +463,11 @@ END Pointer.description;
 PROCEDURE Pointer.initializer(cx: Context.Type): JsString.Type;
     RETURN JsString.make("null")
 END Pointer.initializer;
-
+(*
 PROCEDURE Array.idType(): JsString.Type;
     RETURN JsString.make("array")
 END Array.idType;
-
+*)
 PROCEDURE foldArrayDimensions(a: Array; VAR sizes, of: JsString.Type);
 BEGIN  
     IF (a.len # openArrayLength) & (a.elementsType IS PArray) THEN
@@ -622,6 +636,15 @@ BEGIN
     result.readOnly := TRUE;
     RETURN result
 END makeExportedVariable;
+
+PROCEDURE makeProcedure*(type: PType): PProcedureId;
+VAR
+    result: PProcedureId;
+BEGIN
+    NEW(result);
+    result.type := type;
+    RETURN result
+END makeProcedure;
 
 PROCEDURE initProcedure*(p: Procedure; name: JsString.Type);
 BEGIN

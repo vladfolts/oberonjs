@@ -16,6 +16,14 @@ BEGIN
     RETURN result
 END make;
 
+PROCEDURE makeEmpty*(): Type;
+VAR 
+    result: Type;
+BEGIN
+    JS.do("result = ''");
+    RETURN result
+END makeEmpty;
+
 PROCEDURE fromInt*(i: INTEGER): Type;
 VAR 
     result: Type;

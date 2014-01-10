@@ -42,4 +42,5 @@ b = pb instanceof Derived1;
 b = pb instanceof Derived1;
 b = pb instanceof Derived2;
 b = pd1 instanceof Derived2;
+b = !(pb instanceof Derived1);
 }();

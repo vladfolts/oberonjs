@@ -17,5 +17,8 @@ BEGIN
     b := pb^ IS Derived1;
     b := pb IS PDerived1;
     b := pb^ IS Derived2;
-    b := pd1^ IS Derived2
+    b := pd1^ IS Derived2;
+
+    (* check operator precedence*)
+    b := ~(pb IS PDerived1);
 END m.

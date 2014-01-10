@@ -1,13 +1,456 @@
 MODULE Code;
-IMPORT Types;
+IMPORT JS, JsMap, JsString, Context, Object, Stream, Symbols, Types;
+
+CONST
+    kTab = 09X;
+    kNoPrecedence = 0;
+
 TYPE
-    Generator = RECORD
-        PROCEDURE write();
-        PROCEDURE getResult();
+    IGenerator = RECORD
+        PROCEDURE write(s: JsString.Type);
         PROCEDURE openScope();
-        PROCEDURE closeScope()
+        PROCEDURE closeScope(ending: JsString.Type);
+        PROCEDURE result(): JsString.Type
     END;
 
-    NullGenerator = RECORD(Generator)
+    PIGenerator = POINTER TO IGenerator;
+
+    NullGenerator = RECORD(IGenerator)
     END;
+
+    SimpleGenerator = RECORD(NullGenerator)
+        mResult: JsString.Type
+    END;
+
+    Generator = RECORD(SimpleGenerator)
+        indent: INTEGER
+    END;
+
+    RefCodeProc = PROCEDURE(s: JsString.Type): JsString.Type;
+
+    Designator = RECORD
+        PROCEDURE code(): JsString.Type;
+        PROCEDURE lval(): JsString.Type;
+        PROCEDURE refCode(): RefCodeProc;
+        PROCEDURE type(): Types.PType;
+        PROCEDURE info(): Types.PId;
+        PROCEDURE scope(): Context.PScope;
+
+        mCode: JsString.Type;
+        mLval: JsString.Type;
+        mRefCode: RefCodeProc;
+        mType: Types.PType;
+        mInfo: Types.PId;
+        mScope: Context.PScope
+    END;
+
+    PDesigantor = POINTER TO Designator;
+
+    PExpression = POINTER TO Expression;
+
+    Expression = RECORD
+        PROCEDURE code(): JsString.Type;
+        PROCEDURE lval(): JsString.Type;
+        PROCEDURE type(): Types.PType;
+        PROCEDURE designator(): PDesigantor;
+        PROCEDURE constValue(): JS.var;
+        PROCEDURE maxPrecedence(): INTEGER;
+        PROCEDURE isTerm(): BOOLEAN;
+
+        mCode: JsString.Type;
+        mType: Types.PType;
+        mDesignator: PDesigantor;
+        mConstValue: JS.var;
+        mMaxPrecedence: INTEGER
+    END;
+
+    ModuleGenerator = RECORD
+        PROCEDURE prolog(): JsString.Type;
+        PROCEDURE epilog(exports: JsMap.Type): JsString.Type;
+
+        name: JsString.Type;
+        imports: JsMap.Strings
+    END;
+
+    PModuleGenerator = POINTER TO ModuleGenerator;
+
+    Closure = RECORD(Object.Type)
+        result: JsString.Type
+    END;
+
+VAR
+    nullGenerator*: NullGenerator;
+    undefined: JS.var;
+
+PROCEDURE NullGenerator.write(s: JsString.Type);
+END NullGenerator.write;
+
+PROCEDURE NullGenerator.openScope();
+END NullGenerator.openScope;
+
+PROCEDURE NullGenerator.closeScope(ending: JsString.Type);
+END NullGenerator.closeScope;
+
+PROCEDURE NullGenerator.result(): JsString.Type;
+    RETURN NIL
+END NullGenerator.result;
+
+PROCEDURE SimpleGenerator.write(s: JsString.Type);
+BEGIN
+    SELF.mResult := JsString.concat(SELF.mResult, s);
+END SimpleGenerator.write;
+
+PROCEDURE SimpleGenerator.result(): JsString.Type;
+    RETURN SELF.mResult
+END SimpleGenerator.result;
+
+PROCEDURE putIndent(s: JsString.Type; indent: INTEGER): JsString.Type;
+VAR
+    i: INTEGER;
+BEGIN
+    FOR i := 0 TO indent - 1 DO
+        s := JsString.appendChar(s, kTab);
+    END;
+    RETURN s
+END putIndent;
+
+PROCEDURE Generator.write(s: JsString.Type);
+VAR
+    pos: INTEGER;
+    index: INTEGER;
+BEGIN
+    index := JsString.indexOf(s, Stream.kCR);
+    WHILE index # -1 DO
+        INC(index);
+        SELF.mResult := JsString.concat(SELF.mResult, JsString.substr(s, pos, index - pos));
+        SELF.mResult := putIndent(SELF.mResult, SELF.indent);
+        pos := index;
+        index := JsString.indexOfFrom(s, Stream.kCR, pos);
+    END;
+    SELF.mResult := JsString.concat(SELF.mResult, 
+                                    JsString.substr(s, pos, JsString.len(s) - pos));
+END Generator.write;
+
+PROCEDURE Generator.openScope();
+BEGIN
+    INC(SELF.indent);
+    SELF.mResult := JsString.appendChar(SELF.mResult, "{");
+    SELF.mResult := JsString.appendChar(SELF.mResult, Stream.kCR);
+    SELF.mResult := putIndent(SELF.mResult, SELF.indent);
+END Generator.openScope;
+
+PROCEDURE Generator.closeScope(ending: JsString.Type);
+BEGIN
+    DEC(SELF.indent);
+    SELF.mResult := JsString.substr(SELF.mResult, 0, JsString.len(SELF.mResult) - 1);
+    SELF.mResult := JsString.appendChar(SELF.mResult, "}");
+    IF ending # NIL THEN
+        SELF.write(ending);
+    ELSE
+        SELF.mResult := JsString.appendChar(SELF.mResult, Stream.kCR);
+        SELF.mResult := putIndent(SELF.mResult, SELF.indent);
+    END;
+END Generator.closeScope;
+
+PROCEDURE Expression.code(): JsString.Type;
+    RETURN SELF.mCode
+END Expression.code;
+
+PROCEDURE Expression.lval(): JsString.Type;
+VAR
+    result: JsString.Type;
+BEGIN
+    IF SELF.mDesignator # NIL THEN
+        result := SELF.mDesignator.mLval;
+    ELSE
+        result := SELF.mCode;
+    END;
+    RETURN result
+END Expression.lval;
+
+PROCEDURE Expression.type(): Types.PType;
+    RETURN SELF.mType
+END Expression.type;
+
+PROCEDURE Expression.designator(): PDesigantor;
+    RETURN SELF.mDesignator
+END Expression.designator;
+
+PROCEDURE Expression.constValue(): JS.var;
+    RETURN SELF.mConstValue
+END Expression.constValue;
+
+PROCEDURE Expression.maxPrecedence(): INTEGER;
+    RETURN SELF.mMaxPrecedence
+END Expression.maxPrecedence;
+
+PROCEDURE Expression.isTerm(): BOOLEAN;
+    RETURN (SELF.mDesignator = NIL) & (SELF.mMaxPrecedence = kNoPrecedence)
+END Expression.isTerm;
+
+PROCEDURE makeExpressionWithPrecedence*(
+    code: JsString.Type; 
+    type: Types.PType; 
+    designator: PDesigantor; 
+    constValue: JS.var; 
+    maxPrecedence: INTEGER): PExpression;
+VAR
+    result: PExpression;
+BEGIN
+    NEW(result);
+    result.mCode := code;
+    result.mType := type;
+    result.mDesignator := designator;
+    result.mConstValue := constValue;
+    result.mMaxPrecedence := maxPrecedence;
+    RETURN result
+END makeExpressionWithPrecedence;
+
+PROCEDURE makeExpression*(
+    code: JsString.Type; 
+    type: Types.PType; 
+    designator: PDesigantor; 
+    constValue: JS.var)
+    : PExpression;
+    RETURN makeExpressionWithPrecedence(code, type, designator, constValue, kNoPrecedence)
+END makeExpression;
+
+PROCEDURE Designator.code(): JsString.Type;
+    RETURN SELF.mCode
+END Designator.code;
+
+PROCEDURE Designator.lval(): JsString.Type;
+    RETURN SELF.mLval
+END Designator.lval;
+
+PROCEDURE Designator.refCode(): RefCodeProc;
+    RETURN SELF.mRefCode
+END Designator.refCode;
+
+PROCEDURE Designator.type(): Types.PType;
+    RETURN SELF.mType
+END Designator.type;
+
+PROCEDURE Designator.info(): Types.PId;
+    RETURN SELF.mInfo
+END Designator.info;
+
+PROCEDURE Designator.scope(): Context.PScope;
+    RETURN SELF.mScope
+END Designator.scope;
+
+PROCEDURE makeDesignator*(code: JsString.Type; lval: JsString.Type; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: Context.PScope): PDesigantor;
+VAR
+    result: PDesigantor;
+BEGIN
+    NEW(result);
+    result.mCode := code;
+    result.mLval := lval;
+    result.mRefCode := refCode;
+    result.mType := type;
+    result.mInfo := info;
+    result.mScope := scope;
+    RETURN result
+END makeDesignator;
+
+PROCEDURE derefExpression*(e: PExpression): PExpression;
+VAR
+    result: PExpression;
+BEGIN
+    IF     (e.mDesignator = NIL)
+        OR ((e.mType IS Types.PArray) OR (e.mType IS Types.PRecord)) 
+        OR ~(e.mDesignator.mInfo IS Types.PVariableRef) THEN
+        result := e;
+    ELSE
+        result := makeExpression(JsString.concat(e.mCode, JsString.make(".get()")),
+                                 e.mType,
+                                 NIL,
+                                 undefined);
+    END;
+    RETURN result
+END derefExpression;
+
+PROCEDURE refExpression*(e: PExpression): PExpression;
+VAR
+    result: PExpression;
+BEGIN
+    IF     (e.mDesignator = NIL) 
+        OR (e.mDesignator.mInfo IS Types.PVariableRef) THEN
+        result := e;
+    ELSE
+        result := makeExpression(e.mDesignator.mRefCode(e.mDesignator.mCode),
+                                 e.mType,
+                                 NIL,
+                                 undefined);
+    END;
+    RETURN result
+END refExpression;
+
+PROCEDURE adjustPrecedence*(e: Expression; precedence: INTEGER): JsString.Type;
+VAR
+    result: JsString.Type;
+BEGIN
+    result := e.mCode;
+    IF e.mMaxPrecedence > precedence THEN
+        result := JsString.concat(JsString.concat(
+            JsString.make("("), 
+            result), 
+            JsString.make(")"));
+    END;
+    RETURN result
+END adjustPrecedence;
+
+PROCEDURE isPointerShouldBeExported(type: Types.Pointer): BOOLEAN;
+VAR
+    r: Types.PRecord;
+BEGIN
+    r := Types.pointerBase(type);
+    RETURN Types.typeName(r^) = NIL
+END isPointerShouldBeExported;
+
+PROCEDURE typeShouldBeExported(typeId: Types.PId): BOOLEAN;
+VAR
+    type: Types.PType;
+BEGIN
+    type := typeId(Types.PTypeId).type();
+    RETURN (type IS Types.PRecord)
+        OR ((type IS Types.PPointer) 
+            & isPointerShouldBeExported(type^(Types.Pointer)))
+END typeShouldBeExported;
+
+PROCEDURE genExport*(s: Symbols.Symbol): JsString.Type;
+VAR
+    result: JsString.Type;
+BEGIN
+    IF s.isVariable() THEN
+        result := JsString.concat(JsString.concat(
+            JsString.make("function(){return "),
+            s.id()),
+            JsString.make(";}"));
+    ELSIF ~s.isType() OR typeShouldBeExported(s.info()) THEN
+        result := s.id();
+    END;
+    RETURN result
+END genExport;
+
+PROCEDURE genCommaList(name: JsString.Type; closure: Closure);
+BEGIN
+    IF JsString.len(closure.result) # 0 THEN
+        closure.result := JsString.concat(closure.result, JsString.make(", "));
+    END;
+    closure.result := JsString.concat(closure.result, name);
+END genCommaList;
+
+PROCEDURE genAliasesAdaptor(key: JsString.Type; value: JsString.Type; VAR closure: Object.Type);
+BEGIN
+    genCommaList(value, closure(Closure));
+END genAliasesAdaptor;
+
+PROCEDURE ModuleGenerator.prolog(): JsString.Type;
+VAR
+    closure: Closure;
+BEGIN
+    closure.result := JsString.makeEmpty();
+    JsMap.forEachString(SELF.imports, genAliasesAdaptor, closure);
+    RETURN JsString.appendChar(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
+        JsString.make("var "),
+        SELF.name),
+        JsString.make(" = function (")),
+        closure.result),
+        JsString.make("){")),
+        Stream.kCR)
+END ModuleGenerator.prolog;
+
+PROCEDURE genExports(s: Symbols.Symbol; closure: Closure);
+VAR
+    code: JsString.Type;
+BEGIN
+    code := genExport(s);
+    IF code # NIL THEN
+        IF JsString.len(closure.result) # 0 THEN
+            closure.result := JsString.appendChar(JsString.appendChar(
+                closure.result,
+                ","),
+                Stream.kCR);
+        END;
+        closure.result := JsString.concat(JsString.concat(JsString.concat(JsString.appendChar(
+            closure.result, 
+            kTab),
+            s.id()),
+            JsString.make(": ")),
+            code);
+    END;
+END genExports;
+
+PROCEDURE genExportsAdaptor(key: JsString.Type; value: Object.PType; VAR closure: Object.Type);
+BEGIN
+    genExports(value^(Symbols.Symbol), closure(Closure));
+END genExportsAdaptor;
+
+PROCEDURE genImportListAdaptor(key: JsString.Type; value: JsString.Type; VAR closure: Object.Type);
+BEGIN
+    genCommaList(key, closure(Closure));
+END genImportListAdaptor;
+
+PROCEDURE ModuleGenerator.epilog(exports: JsMap.Type): JsString.Type;
+VAR
+    result: JsString.Type;
+    closure: Closure;
+BEGIN
+    closure.result := JsString.makeEmpty();
+    JsMap.forEach(exports, genExportsAdaptor, closure);
+    result := closure.result;
+    IF JsString.len(result) # 0 THEN
+        result := JsString.appendChar(JsString.appendChar(JsString.appendChar(JsString.concat(JsString.appendChar(
+            JsString.make("return {"),
+            Stream.kCR),
+            result),
+            Stream.kCR),
+            "}"),
+            Stream.kCR);
+    END;
+    result := JsString.concat(result, JsString.make("}("));
+
+    closure.result := JsString.makeEmpty();
+    JsMap.forEachString(SELF.imports, genImportListAdaptor, closure);
+    result := JsString.appendChar(JsString.concat(JsString.concat(
+        result, 
+        closure.result), 
+        JsString.make(");")), 
+        Stream.kCR);
+    RETURN result
+END ModuleGenerator.epilog;
+
+PROCEDURE initSimpleGenerator(g: SimpleGenerator);
+BEGIN
+    g.mResult := JsString.makeEmpty();
+END initSimpleGenerator;
+
+PROCEDURE makeSimpleGenerator*(): PIGenerator;
+VAR
+    result: POINTER TO SimpleGenerator;
+BEGIN
+    NEW(result);
+    initSimpleGenerator(result^);
+    RETURN result
+END makeSimpleGenerator;
+
+PROCEDURE makeGenerator*(): PIGenerator;
+VAR
+    result: POINTER TO Generator;
+BEGIN
+    NEW(result);
+    initSimpleGenerator(result^);
+    RETURN result
+END makeGenerator;
+
+PROCEDURE makeModuleGenerator*(name: JsString.Type; imports: JsMap.Strings): PModuleGenerator;
+VAR
+    result: PModuleGenerator;
+BEGIN
+    NEW(result);
+    result.name := name;
+    result.imports := imports;
+    RETURN result
+END makeModuleGenerator;
 END Code.

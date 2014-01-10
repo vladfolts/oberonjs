@@ -1,7 +1,7 @@
 "use strict";
 
 var Cast = require("cast.js");
-var Code = require("code.js");
+var Code = require("js/Code.js");
 var Errors = require("js/Errors.js");
 var Module = require("module.js");
 var op = require("operator.js");
@@ -9,10 +9,11 @@ var Parser = require("parser.js");
 var Procedure = require("procedure.js");
 var Class = require("rtl.js").Class;
 var Scope = require("scope.js");
-var Symbol = require("symbol.js");
+var Symbol = require("js/Symbols.js");
 var Type = require("js/Types.js");
 
 var basicTypes = Type.basic();
+var nullCodeGenerator = Code.nullGenerator();
 
 function getSymbolAndScope(context, id){
     var s = context.findSymbol(id);
@@ -64,7 +65,7 @@ function promoteTypeInExpression(e, type){
     if (type == basicTypes.ch && fromType instanceof Type.String){
         var v;
         if (Type.stringAsChar(fromType, {set: function(value){v = value;}}))
-            return new Code.Expression(v, type);
+            return Code.makeExpression(v, type);
     }
     return e;
 }
@@ -204,7 +205,7 @@ exports.BaseType = ChainedContext.extend({
         this.parent().setBaseType(unwrapType(s.symbol().info()));
     }
 });
-
+/*
 var DesignatorInfo = Class.extend({
     init: function(code, lval, refCode, type, info, scope){
         this.__code = code;
@@ -221,7 +222,7 @@ var DesignatorInfo = Class.extend({
     info: function(){return this.__info;},
     scope: function(){return this.__scope;}
 });
-
+*/
 exports.QualifiedIdentificator = ChainedContext.extend({
     init: function QualifiedIdentificator(context){
         ChainedContext.prototype.init.call(this, context);
@@ -292,12 +293,14 @@ exports.Designator = ChainedContext.extend({
         this.__scope = found.scope();
         var s = found.symbol();
         var info = s.info();
-        if (info instanceof Type.Type || s.isType() || s.isProcedure())
+        if (info instanceof Type.Type || s.isType())
             this.__currentType = info;
         else if (s.isConst())
             this.__currentType = Type.constType(info);
         else if (s.isVariable())
             this.__currentType = Type.variableType(info);
+        else if (s.isProcedure())
+            this.__currentType = Type.procedureType(info);
         this.__info = info;
         this.__code += code;
     },
@@ -344,7 +347,7 @@ exports.Designator = ChainedContext.extend({
     handleLiteral: function(s){
         if (s == "]" || s == ","){
             this.__handleIndexExpression();
-            var indexCode = this.__indexExpression.deref().code();
+            var indexCode = Code.derefExpression(this.__indexExpression).code();
             this.__propCode = indexCode;
             var code = this.__derefCode + "[" + indexCode + "]";
             if (this.__currentType == basicTypes.ch){
@@ -412,7 +415,7 @@ exports.Designator = ChainedContext.extend({
         var self = this;
         var refCode = function(code){return self.__makeRefCode(code);};
         this.parent().setDesignator(
-            new DesignatorInfo(code, this.__lval ? this.__lval : code, refCode, this.__currentType, this.__info, this.__scope));
+            Code.makeDesignator(code, this.__lval ? this.__lval : code, refCode, this.__currentType, this.__info, this.__scope));
     },
     __makeRefCode: function(code){
         if (   this.__currentType instanceof Type.Array
@@ -550,7 +553,9 @@ exports.ProcDecl = ChainedContext.extend({
     _prolog: function(){return "\nfunction " + this.__id.id() + "(";},
     typeName: function(){return undefined;},
     setType: function(type){
-        var procSymbol = new Symbol.Symbol(this.__id.id(), type);
+        var procSymbol = Symbol.makeSymbol(
+            this.__id.id(), 
+            Type.makeProcedure(type));
         this.__outerScope.addSymbol(procSymbol, this.__id.exported());
         this.__type = type;
     },
@@ -560,7 +565,7 @@ exports.ProcDecl = ChainedContext.extend({
         var readOnly = !arg.isVar && (arg.type instanceof Type.Array);
         var v = arg.isVar ? Type.makeVariableRef(arg.type)
                           : Type.makeVariable(arg.type, readOnly);
-        var s = new Symbol.Symbol(name, v);
+        var s = Symbol.makeSymbol(name, v);
         this.currentScope().addSymbol(s);
 
         var code = this.codeGenerator();
@@ -614,11 +619,11 @@ exports.Return = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.__expr = undefined;
     },
-    codeGenerator: function(){return Code.nullGenerator;},
+    codeGenerator: function(){return nullCodeGenerator;},
     handleExpression: function(e){this.__expr = e;},
     endParse: function(){
         var parent = this.parent();
-        parent.codeGenerator().write("return " + this.__expr.deref().code() + ";\n");
+        parent.codeGenerator().write("return " + Code.derefExpression(this.__expr).code() + ";\n");
         parent.handleReturn(this.__expr.type());
     }
 });
@@ -684,8 +689,8 @@ exports.PointerDecl = ChainedContext.extend({
         scope.addUnresolved(id);
         var resolve = function(){return getSymbol(parent, id).info().type();};
 
-        return new Symbol.Found(
-            new Symbol.Symbol(id, Type.makeForwardTypeId(resolve)),
+        return Symbol.makeFound(
+            Symbol.makeSymbol(id, Type.makeForwardTypeId(resolve)),
             scope
             );
     },
@@ -731,7 +736,7 @@ exports.ArrayDimensions = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.__dimensions = [];
     },
-    codeGenerator: function(){return Code.nullGenerator;},
+    codeGenerator: function(){return nullCodeGenerator;},
     handleExpression: function(e){
         var type = e.type();
         if (type !== basicTypes.integer)
@@ -940,7 +945,7 @@ exports.Term = ChainedContext.extend({
         if (info instanceof Type.Const)
             value = Type.constValue(info);
         this.handleExpression(
-            new Code.Expression(d.code(), d.type(), d, value));
+            Code.makeExpression(d.code(), d.type(), d, value));
     },
     handleLogicalNot: function(){
         this.__logicalNot = !this.__logicalNot;
@@ -948,7 +953,7 @@ exports.Term = ChainedContext.extend({
     },
     handleOperator: function(o){this.__operator = o;},
     handleConst: function(type, value, code){
-        this.handleExpression(new Code.Expression(
+        this.handleExpression(Code.makeExpression(
             code, type, undefined, value));
     },
     handleFactor: function(e){
@@ -1022,7 +1027,7 @@ exports.Set = ChainedContext.extend({
             var code = this.rtl().makeSet(this.__expr);
             if (this.__value)
                 code += " | " + this.__value;
-            var e = new Code.Expression(code, basicTypes.set);
+            var e = Code.makeExpression(code, basicTypes.set);
             parent.handleFactor(e);
         }
     }
@@ -1035,7 +1040,7 @@ exports.SetElement = ChainedContext.extend({
         this.__fromValue = undefined;
         this.__to = undefined;
         this.__toValue = undefined;
-        this.__expr = new Code.SimpleGenerator();
+        this.__expr = Code.makeSimpleGenerator();
     },
     codeGenerator: function(){return this.__expr;},
     handleExpression: function(e){
@@ -1044,7 +1049,7 @@ exports.SetElement = ChainedContext.extend({
             {
             this.__from = this.__expr.result();
             this.__fromValue = value;
-            this.__expr = new Code.SimpleGenerator();
+            this.__expr = Code.makeSimpleGenerator();
             }
         else{
             this.__to = this.__expr.result();
@@ -1123,6 +1128,7 @@ exports.Expression = ChainedContext.extend({
         var rightExpression = e;
         var rightType = rightExpression.type();
         var rightCode = rightExpression.code();
+        var resultExpression;
         var code;
 
         if (this.__relation == "IN"){
@@ -1145,8 +1151,10 @@ exports.Expression = ChainedContext.extend({
                 throw new Errors.Error("POINTER to type expected after 'IS'");
 
             checkTypeCast(leftType, rightType, "invalid type test");
-
-            code = leftCode + " instanceof " + castCode(rightType, this);
+            //rightExpression = , rightType);
+            resultExpression = op.is(leftExpression, Code.makeExpression(castCode(rightType, this)));
+            code = resultExpression.code();
+            //code = leftCode + " instanceof " + castCode(rightType, this);
         }
         else {
             leftExpression = promoteTypeInExpression(leftExpression, rightType);
@@ -1164,12 +1172,14 @@ exports.Expression = ChainedContext.extend({
             value = oResult.constValue();
         }
 
-        this.__expression = new Code.Expression(code, basicTypes.bool, undefined, value);
+        this.__expression = resultExpression 
+                          ? resultExpression
+                          : Code.makeExpression(code, basicTypes.bool, undefined, value);
     },
     handleLiteral: function(relation){
         this.__relation = relation;
     },
-    codeGenerator: function(){return Code.nullGenerator;},
+    codeGenerator: function(){return nullCodeGenerator;},
     endParse: function(){
         var parent = this.parent();
         parent.codeGenerator().write(this.__expression.code());
@@ -1310,7 +1320,7 @@ exports.CaseRange = ChainedContext.extend({
         this.__from = undefined;
         this.__to = undefined;
     },
-    codeGenerator: function(){return Code.nullGenerator;}, // suppress any output
+    codeGenerator: function(){return nullCodeGenerator;}, // suppress any output
     handleLabel: function(type, v){
         this.parent().handleLabelType(type);
         if (this.__from === undefined )
@@ -1386,7 +1396,7 @@ exports.For = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.__var = undefined;
         this.__initExprParsed = false;
-        this.__toExpr = new Code.SimpleGenerator();
+        this.__toExpr = Code.makeSimpleGenerator();
         this.__toParsed = false;
         this.__by_parsed = false;
         this.__by = undefined;
@@ -1428,7 +1438,7 @@ exports.For = ChainedContext.extend({
         if (this.__initExprParsed && !this.__toParsed)
             return this.__toExpr;
         if (this.__toParsed && !this.__by_parsed)
-            return Code.nullGenerator; // suppress output for BY expression
+            return nullCodeGenerator; // suppress output for BY expression
         
         return this.parent().codeGenerator();
     },
@@ -1466,9 +1476,9 @@ exports.Assignment = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.__left = undefined;
     },
-    codeGenerator: function(){return Code.nullGenerator;},
+    codeGenerator: function(){return nullCodeGenerator;},
     setDesignator: function(d){
-        this.__left = new Code.Expression(d.code(), d.type(), d);
+        this.__left = Code.makeExpression(d.code(), d.type(), d);
     },
     handleExpression: function(e){
         this.parent().codeGenerator().write(op.assign(this.__left, e, this));
@@ -1495,7 +1505,7 @@ exports.ConstDecl = ChainedContext.extend({
     },
     endParse: function(){
         var c = Type.makeConst(this.__type, this.__value);
-        this.currentScope().addSymbol(new Symbol.Symbol(this.__id.id(), c), this.__id.exported());
+        this.currentScope().addSymbol(Symbol.makeSymbol(this.__id.id(), c), this.__id.exported());
         this.codeGenerator().write(";\n");
     }
 });
@@ -1534,7 +1544,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
             var varName = id.id();
             if (id.exported())
                 this.checkExport(varName);
-            this.currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
+            this.currentScope().addSymbol(Symbol.makeSymbol(varName, v), id.exported());
             var t = Type.variableType(v);
             gen.write("var " + varName + " = " + t.initializer(this) + ";");
         }
@@ -1581,7 +1591,7 @@ var ProcedureCall = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.__type = undefined;
         this.__procCall = undefined;
-        this.__code = new Code.SimpleGenerator();
+        this.__code = Code.makeSimpleGenerator();
     },
     setDesignator: function(d){
         var type = d.type();
@@ -1634,9 +1644,10 @@ exports.ExpressionProcedureCall = ProcedureCall.extend({
         else{
             var d = this.__designator;
             var info = d.info();
-            if (info instanceof Type.Procedure){
-                if (info instanceof Procedure.Std)
-                    throw new Errors.Error(info.description() + " cannot be referenced");
+            if (info instanceof Type.ProcedureId){
+                var proc = Type.procedureType(info);
+                if (proc instanceof Procedure.Std)
+                    throw new Errors.Error(proc.description() + " cannot be referenced");
                 var scope = d.scope();
                 if (scope && scope.id() == "procedure")
                     throw new Errors.Error("local procedure '" + d.code() + "' cannot be referenced");
@@ -1723,7 +1734,7 @@ exports.TypeDeclaration = ChainedContext.extend({
     },
     handleIdentdef: function(id){
         var typeId = Type.makeLazyTypeId();
-        var symbol = new Symbol.Symbol(id.id(), typeId);
+        var symbol = Symbol.makeSymbol(id.id(), typeId);
         this.currentScope().addSymbol(symbol, id.exported());
         if (!id.exported())
             this.currentScope().addFinalizer(function(){typeId.strip();});
@@ -1855,7 +1866,7 @@ var ModuleImport = ChainedContext.extend({
             if (!module)
                 unresolved.push(moduleName);
             else
-                modules.push(new Symbol.Symbol(alias, module));
+                modules.push(Symbol.makeSymbol(alias, module));
         }
         if (unresolved.length)
             throw new Errors.Error("module(s) not found: " + unresolved.join(", "));
@@ -1906,7 +1917,7 @@ exports.Context = Class.extend({
             var s = scope.findSymbol(ident);
 
             if (s)
-                return new Symbol.Found(s, scope);
+                return Symbol.makeFound(s, scope);
         }
         return undefined;
     },

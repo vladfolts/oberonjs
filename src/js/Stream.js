@@ -1,5 +1,6 @@
 var RTL$ = require("rtl.js");
 var JsString = require("js/JsString.js");
+var kCR = "\n";
 var Type = RTL$.extend({
 	init: function Type(){
 		this.s = null;
@@ -80,6 +81,7 @@ function lineNumber(self/*Type*/){
 	}
 	return line + 1 | 0;
 }
+exports.kCR = kCR;
 exports.Type = Type;
 exports.make = make;
 exports.eof = eof;
