@@ -205,24 +205,7 @@ exports.BaseType = ChainedContext.extend({
         this.parent().setBaseType(unwrapType(s.symbol().info()));
     }
 });
-/*
-var DesignatorInfo = Class.extend({
-    init: function(code, lval, refCode, type, info, scope){
-        this.__code = code;
-        this.__lval = lval;
-        this.__refCode = refCode;
-        this.__type = type;
-        this.__info = info;
-        this.__scope = scope;
-    },
-    code: function(){return this.__code;},
-    lval: function(){return this.__lval;},
-    refCode: function(){return this.__refCode(this.__code);},
-    type: function(){return this.__type;},
-    info: function(){return this.__info;},
-    scope: function(){return this.__scope;}
-});
-*/
+
 exports.QualifiedIdentificator = ChainedContext.extend({
     init: function QualifiedIdentificator(context){
         ChainedContext.prototype.init.call(this, context);
