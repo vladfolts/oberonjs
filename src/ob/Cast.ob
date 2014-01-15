@@ -1,0 +1,177 @@
+MODULE Cast;
+IMPORT Code, Context, JsArray, JsString, Object, Types;
+
+TYPE
+    CastOp = RECORD
+        PROCEDURE make(c: Context.Type; e: Code.PExpression): Code.PExpression
+    END;
+
+    PCastOp = POINTER TO CastOp;
+
+    CastOpDoNothing = RECORD (CastOp)
+    END;
+
+    CastOpStrToChar = RECORD (CastOp)
+        c: CHAR
+    END;
+
+    Operations = RECORD
+        castToUint8: PCastOp
+    END;
+
+VAR
+    (*workaround recursive usage*)
+    areTypesExactlyMatch: PROCEDURE (t1: Types.PType; t2: Types.PType): BOOLEAN;
+    doNothing: POINTER TO CastOpDoNothing;
+
+PROCEDURE CastOpDoNothing.make(c: Context.Type; e: Code.PExpression): Code.PExpression;
+    RETURN e
+END CastOpDoNothing.make;
+
+PROCEDURE findBaseType(base: Types.PRecord; type: Types.PRecord): Types.PRecord;
+BEGIN
+    WHILE (type # NIL) & (type # base) DO
+        type := Types.recordBase(type^);
+    END;
+    RETURN type
+END findBaseType;
+
+PROCEDURE findPointerBaseType*(base: Types.PPointer; type: Types.Pointer): Types.PPointer;
+VAR
+    result: Types.PPointer;
+BEGIN
+    IF findBaseType(Types.pointerBase(base^), Types.pointerBase(type)) # NIL THEN
+        result := base;
+    END;
+    RETURN result
+END findPointerBaseType;
+
+PROCEDURE matchesToNIL(t: Types.Type): BOOLEAN;
+    RETURN (t IS Types.Pointer) OR (t IS Types.Procedure)
+END matchesToNIL;
+
+PROCEDURE areTypesMatch*(t1: Types.PType; t2: Types.PType): BOOLEAN;
+    RETURN areTypesExactlyMatch(t1, t2)
+        OR (Types.isInt(t1) & Types.isInt(t2))
+        OR (((t1 = Types.nil) & (matchesToNIL(t2^)))
+            OR ((t2 = Types.nil) & (matchesToNIL(t1^))))
+END areTypesMatch;
+
+PROCEDURE areArgsMatch(oa1, oa2: Object.PType; p1, p2: Types.PProcedure): BOOLEAN;
+VAR
+    a1: Types.PProcedureArgument;
+    a2: Types.PProcedureArgument;
+BEGIN
+    a1 := oa1(Types.PProcedureArgument);
+    a2 := oa2(Types.PProcedureArgument);
+    RETURN (a1.isVar = a2.isVar)
+        & (    ((a1.type = p1) & (a2.type = p2))
+            OR areTypesExactlyMatch(a1.type, a2.type))
+END areArgsMatch;
+
+PROCEDURE areProceduresMatch*(p1: Types.PProcedure; p2: Types.PProcedure): BOOLEAN;
+VAR
+    result: BOOLEAN;
+    args1, args2: JsArray.Type;
+    argsLen: INTEGER;
+    i: INTEGER;
+    r1, r2: Types.PType;
+BEGIN
+    args1 := p1.args();
+    args2 := p2.args();
+    argsLen := JsArray.len(args1);
+    IF JsArray.len(args2) = argsLen THEN
+        WHILE (i < argsLen) 
+            & areArgsMatch(JsArray.at(args1, i), JsArray.at(args2, i), p1, p2) DO
+            INC(i);
+        END;
+        IF i = argsLen THEN
+            r1 := p1.result();
+            r2 := p2.result();
+            result := ((r1 = p1) & (r2 = p2)) OR areTypesExactlyMatch(r1, r2);
+        END;
+    END;
+    RETURN result
+END areProceduresMatch;
+
+PROCEDURE areTypesExactlyMatchImpl(t1: Types.PType; t2: Types.PType): BOOLEAN;
+VAR
+    result: BOOLEAN;
+BEGIN
+    IF t1 = t2 THEN
+        result := TRUE;
+    ELSIF (t1 IS Types.PArray) & (t2 IS Types.PArray) THEN
+        result := (Types.arrayLength(t1(Types.PArray)^) = Types.arrayLength(t2(Types.PArray)^)) 
+                & (areTypesMatch(Types.arrayElementsType(t1(Types.PArray)^), 
+                                 Types.arrayElementsType(t2(Types.PArray)^)));
+    ELSIF (t1 IS Types.PPointer) & (t2 IS Types.PPointer) THEN
+        result := areTypesMatch(Types.pointerBase(t1(Types.PPointer)^), 
+                                Types.pointerBase(t2(Types.PPointer)^));
+    ELSIF (t1 IS Types.PProcedure) & (t2 IS Types.PProcedure) THEN
+        result := areProceduresMatch(t1(Types.PProcedure), 
+                                     t2(Types.PProcedure));
+    END;
+    RETURN result
+END areTypesExactlyMatchImpl;
+
+PROCEDURE CastOpStrToChar.make(c: Context.Type; e: Code.PExpression): Code.PExpression;
+    RETURN Code.makeSimpleExpression(JsString.fromInt(ORD(SELF.c)), Types.basic.ch)
+END CastOpStrToChar.make;
+
+PROCEDURE makeCastOpStrToChar(c: CHAR): PCastOp;
+VAR
+    result: POINTER TO CastOpStrToChar;
+BEGIN
+    NEW(result);
+    result.c := c;
+    RETURN result
+END makeCastOpStrToChar;
+
+PROCEDURE implicit*(from, to: Types.PType; ops: Operations): PCastOp;
+VAR
+    result: PCastOp;
+    c: CHAR;
+BEGIN
+    IF from = to THEN
+        result := doNothing;
+    ELSIF (from = Types.basic.uint8) & (to = Types.basic.integer) THEN
+        result := doNothing;
+    ELSIF (from = Types.basic.integer) & (to = Types.basic.uint8) THEN
+        result := ops.castToUint8;
+    ELSIF from IS Types.PString THEN
+        IF to = Types.basic.ch THEN
+            IF Types.stringAsChar(from(Types.PString)^, c) THEN
+                result := makeCastOpStrToChar(c);
+            END;
+        ELSIF (to IS Types.PArray) & (Types.arrayElementsType(to(Types.PArray)^) = Types.basic.ch) THEN
+            result := doNothing;
+        END;
+    ELSIF (from IS Types.PArray) & (to IS Types.PArray) THEN
+        IF     (Types.arrayLength(to(Types.PArray)^) = Types.openArrayLength)
+            OR (Types.arrayLength(to(Types.PArray)^) = Types.arrayLength(from(Types.PArray)^)) THEN
+            result := implicit(Types.arrayElementsType(from(Types.PArray)^), 
+                               Types.arrayElementsType(to(Types.PArray)^),
+                               ops);
+        END;
+    ELSIF (from IS Types.PPointer) & (to IS Types.PPointer) THEN
+        IF findPointerBaseType(to(Types.PPointer), from(Types.PPointer)^) # NIL THEN
+            result := doNothing;
+        END;
+    ELSIF (from IS Types.PRecord) & (to IS Types.PRecord) THEN
+        IF findBaseType(to(Types.PRecord), from(Types.PRecord)) # NIL THEN
+            result := doNothing;
+        END;
+    ELSIF (from = Types.nil) & matchesToNIL(to^) THEN
+        result := doNothing;
+    ELSIF (from IS Types.PProcedure) & (to IS Types.PProcedure) THEN
+        IF areProceduresMatch(from(Types.PProcedure), to(Types.PProcedure)) THEN
+            result := doNothing;
+        END
+    END;
+    RETURN result
+END implicit;
+
+BEGIN
+    areTypesExactlyMatch := areTypesExactlyMatchImpl;
+    NEW(doNothing);
+END Cast.

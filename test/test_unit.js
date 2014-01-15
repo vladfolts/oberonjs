@@ -245,6 +245,12 @@ return {
          ["vb(PDerived)",
           "invalid type cast: a value variable cannot be used in typeguard"])
     ),
+"NIL": testWithContext(
+    context(grammar.expression,
+            "VAR i: INTEGER;"),
+    pass(),
+    fail(["i = NIL", "type mismatch: expected 'INTEGER', got 'NIL'"])
+        ),
 "POINTER relations": testWithContext(
     context(grammar.expression,
             "TYPE B = RECORD END; D = RECORD(B) END;"

@@ -31,7 +31,7 @@ function stringsAdd(a/*Strings*/, o/*Type*/){
 	a.push(o);
 }
 
-function at(a/*Strings*/, i/*INTEGER*/){
+function at(a/*Type*/, i/*INTEGER*/){
 	var result = null;
 	result = a[i];
 	return result;

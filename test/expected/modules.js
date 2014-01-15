@@ -17,14 +17,16 @@ var RTL$ = {
         if (!(from instanceof to)){
             var fromStr;
             var toStr;
-            if (!from)
-                fromStr = "" + fromStr;
-            else if (from.constructor && from.constructor.name)
+            
+            if (from && from.constructor && from.constructor.name)
                 fromStr = "" + from.constructor.name;
-            if (!to)
-                toStr = "" + to;
-            else if (to.constructor && to.constructor.name)
+            else
+                fromStr = "" + from;
+            
+            if (to && to.constructor && to.constructor.name)
                 toStr = "" + to.constructor.name;
+            else
+                toStr = "" + to;
             
             var msg = "typeguard assertion failed";
             if (fromStr || toStr)               

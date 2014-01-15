@@ -58,7 +58,7 @@ var doProcSymbol = (function(){
         }
     });
 
-    var args = [new Procedure.Arg(undefined, false)];
+    var args = [Type.makeProcedureArgument(undefined, false)];
     var ProcType = Type.Procedure.extend({
         init: function(){
             Type.Procedure.prototype.init.call(this);

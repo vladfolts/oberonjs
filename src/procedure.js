@@ -1,6 +1,6 @@
 "use strict";
 
-var Cast = require("cast.js");
+var Cast = require("js/Cast.js");
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var Errors = require("js/Errors.js");
@@ -11,20 +11,14 @@ var Type = require("js/Types.js");
 
 var basicTypes = Type.basic();
 
-var Arg = Class.extend({
-    init: function(type, isVar){
-        this.type = type;
-        this.isVar = isVar;
-    },
-    description: function(){
-        return (this.isVar ? "VAR " : "") + this.type.description();
-    }
-});
-exports.Arg = Arg;
+var Arg = Type.ProcedureArgument;
+var makeArg = Type.makeProcedureArgument;
 
 var CheckArgumentResult = Arg.extend({
     init: function(type, isVar, convert){
-        Arg.prototype.init.call(this, type, isVar);
+        Arg.prototype.init.call(this);
+        this.type = type;
+        this.isVar = isVar;
         this.convert = convert;
     }
 });
@@ -91,6 +85,7 @@ var ProcCallGenerator = Class.extend({
                 throw new Errors.Error(
                       "type mismatch for argument " + (pos + 1) + ": '" + type.description()
                     + "' cannot be converted to '" + expectType.description() + "'");
+            castOperation = castOperation.make.bind(castOperation);
             if (arg.isVar && expectType != type && Type.isInt(type))
                 throw new Errors.Error(
                       "type mismatch for argument " + (pos + 1) + ": cannot pass '" 
@@ -197,8 +192,8 @@ function makeProcSymbol(name, proc){
 }
 
 function setBitImpl(name, bitOp){
-    var args = [new Arg(basicTypes.set, true),
-                new Arg(basicTypes.integer, false)];
+    var args = [makeArg(basicTypes.set, true),
+                makeArg(basicTypes.integer, false)];
     function operator(x, y){
         var value = y.constValue();
         var valueCode;
@@ -226,8 +221,8 @@ function setBitImpl(name, bitOp){
 }
 
 function incImpl(name, unary, op){
-    var args = [new Arg(basicTypes.integer, true),
-                new Arg(basicTypes.integer, false)];
+    var args = [makeArg(basicTypes.integer, true),
+                makeArg(basicTypes.integer, false)];
     function operator(x, y){
         if (!y)
             return unary + x.code();
@@ -272,8 +267,8 @@ function bitShiftImpl(name, op){
             return op(args[0], args[1]);
         }
     });
-    var args = [new Arg(basicTypes.integer, false),
-                new Arg(basicTypes.integer, false)
+    var args = [makeArg(basicTypes.integer, false),
+                makeArg(basicTypes.integer, false)
                ];
     var proc = new Std(
         name,
@@ -319,7 +314,7 @@ exports.predefined = [
         });
 
         var name = "NEW";
-        var args = [new Arg(undefined, true)];
+        var args = [makeArg(undefined, true)];
         var type = new Std(
             name,
             args,
@@ -348,7 +343,7 @@ exports.predefined = [
         });
 
         var name = "LEN";
-        var args = [new Arg(Type.makeArray("ARRAY OF any type", undefined, undefined, 0), false)];
+        var args = [makeArg(Type.makeArray("ARRAY OF any type", undefined, undefined, 0), false)];
         var type = new Std(
             name,
             args,
@@ -372,7 +367,7 @@ exports.predefined = [
             }
         });
         var name = "ODD";
-        var args = [new Arg(basicTypes.integer, false)];
+        var args = [makeArg(basicTypes.integer, false)];
         var type = new Std(
             "ODD",
             args,
@@ -391,7 +386,7 @@ exports.predefined = [
             prolog: function(){return this.context().rtl().assertId() + "(";}
         });
 
-        var args = [new Arg(basicTypes.bool)];
+        var args = [makeArg(basicTypes.bool)];
         var proc = new Std(
             "ASSERT",
             args,
@@ -423,7 +418,7 @@ exports.predefined = [
             },
             resultType: function(){return this.__argType;}
         });
-        var args = [new Arg(undefined, false)];
+        var args = [makeArg(undefined, false)];
         var proc = new Std(
             "ABS",
             args,
@@ -441,7 +436,7 @@ exports.predefined = [
             },
             prolog: function(){return "Math.floor(";}
         });
-        var args = [new Arg(basicTypes.real, false)];
+        var args = [makeArg(basicTypes.real, false)];
         var proc = new Std(
             "FLOOR",
             args,
@@ -463,7 +458,7 @@ exports.predefined = [
                     e.code(), basicTypes.real, undefined, e.constValue(), e.maxPrecedence());
             }
         });
-        var args = [new Arg(basicTypes.integer, false)];
+        var args = [makeArg(basicTypes.integer, false)];
         var proc = new Std(
             "FLT",
             args,
@@ -515,7 +510,7 @@ exports.predefined = [
         });
         var name = "ORD";
         //var argType = new basicTypes("CHAR or BOOLEAN or SET");
-        var args = [new Arg(undefined, false)];
+        var args = [makeArg(undefined, false)];
         var type = new Std(
             name,
             args,
@@ -538,7 +533,7 @@ exports.predefined = [
         var name = "CHR";
         var type = new Std(
             name,
-            [new Arg(basicTypes.integer, false)],
+            [makeArg(basicTypes.integer, false)],
             basicTypes.ch,
             function(context, id, type){
                 return new CallGenerator(context, id, type);
@@ -547,8 +542,8 @@ exports.predefined = [
         return symbol;
     }(),
     function(){
-        var args = [new Arg(basicTypes.real, true),
-                    new Arg(basicTypes.integer, false)];
+        var args = [makeArg(basicTypes.real, true),
+                    makeArg(basicTypes.integer, false)];
         function operator(x, y){
             return op.mulInplace(x, op.pow2(y));
         }
@@ -565,8 +560,8 @@ exports.predefined = [
         return symbol;
     }(),
     function(){
-        var args = [new Arg(basicTypes.real, true),
-                    new Arg(basicTypes.integer, true)];
+        var args = [makeArg(basicTypes.real, true),
+                    makeArg(basicTypes.integer, true)];
         function operator(x, y){
             return op.assign(y, op.log2(x)) +
                    "; " +

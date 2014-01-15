@@ -30,7 +30,7 @@ BEGIN
     JS.do("a.push(o)");
 END stringsAdd;
 
-PROCEDURE at*(a: Strings; i: INTEGER): Object.PType;
+PROCEDURE at*(a: Type; i: INTEGER): Object.PType;
 VAR
     result: Object.PType;
 BEGIN

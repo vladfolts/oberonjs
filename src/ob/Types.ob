@@ -12,11 +12,14 @@ TYPE
     PId* = POINTER TO Id;
     
     Type* = RECORD(Object.Type)
-        PROCEDURE description(): JsString.Type;
-        PROCEDURE initializer(cx: Context.Type): JsString.Type
+        PROCEDURE description(): JsString.Type
     END;
     PType* = POINTER TO Type;
-    
+
+    StorageType = RECORD(Type)    
+        PROCEDURE initializer(cx: Context.Type): JsString.Type
+    END;
+
     TypeId* = RECORD(Id)
         PROCEDURE type*(): PType;
         PROCEDURE description(): JsString.Type;
@@ -73,9 +76,9 @@ TYPE
         s: JsString.Type
     END;
 
-    PString = POINTER TO String;
+    PString* = POINTER TO String;
 
-    NamedType = RECORD(Type)
+    NamedType = RECORD(StorageType)
         name: JsString.Type
     END;
 
@@ -96,9 +99,22 @@ TYPE
     PPointer* = POINTER TO Pointer;
 
     Procedure* = RECORD(NamedType)
+        PROCEDURE args*(): JsArray.Type;
+        PROCEDURE result*(): PType
     END;
 
     PProcedure* = POINTER TO Procedure;
+
+    ProcedureArgument* = RECORD (Object.Type)
+        PROCEDURE description(): JsString.Type;
+
+        type*: PType;
+        isVar*: BOOLEAN
+    END;
+
+    PProcedureArgument* = POINTER TO ProcedureArgument;
+
+
 
     BasicType = RECORD(NamedType)
         mInitializer: JsString.Type
@@ -127,7 +143,7 @@ TYPE
     END;
     PNonExportedRecord = POINTER TO NonExportedRecord;
 
-    Nil = RECORD(Id)
+    Nil = RECORD(Type)
     END;
 
     Module* = RECORD(Id)
@@ -138,7 +154,7 @@ TYPE
 
 VAR
     basic*: RECORD
-        bool, ch, integer, uint8, real, set: PBasicType
+        bool*, ch*, integer*, uint8*, real*, set*: PBasicType
     END;
 
     numeric*: JsArray.Type;
@@ -323,15 +339,15 @@ END BasicType.description;
 PROCEDURE BasicType.initializer(cx: Context.Type): JsString.Type;
     RETURN SELF.mInitializer
 END BasicType.initializer;
-
+(*
 PROCEDURE Nil.idType(): JsString.Type;
     RETURN JsString.make("NIL")
 END Nil.idType;
-(*
-PROCEDURE Nil.description(): JsString.Type;
-    RETURN SELF.idType()
-END Nil.description;
 *)
+PROCEDURE Nil.description(): JsString.Type;
+    RETURN JsString.make("NIL")
+END Nil.description;
+
 PROCEDURE isInt*(t: PType): BOOLEAN;
     RETURN (t = basic.integer) OR (t = basic.uint8)
 END isInt;
@@ -413,7 +429,7 @@ BEGIN
     RETURN result
 END Record.findSymbol;
 
-PROCEDURE recordBase*(r: Record): PType;
+PROCEDURE recordBase*(r: Record): PRecord;
     RETURN r.base
 END recordBase;
 
@@ -518,11 +534,11 @@ END arrayElementsType;
 PROCEDURE arrayLength*(a: Array): INTEGER;
     RETURN a.len
 END arrayLength;
-
+(*
 PROCEDURE String.initializer(cx: Context.Type): JsString.Type;
     RETURN JsString.make("null")
 END String.initializer;
-
+*)
 PROCEDURE Procedure.initializer(cx: Context.Type): JsString.Type;
     RETURN JsString.make("null")
 END Procedure.initializer;
@@ -530,6 +546,28 @@ END Procedure.initializer;
 PROCEDURE Procedure.description(): JsString.Type;
     RETURN SELF.name
 END Procedure.description;
+
+PROCEDURE ProcedureArgument.description(): JsString.Type;
+VAR
+    result: JsString.Type;
+BEGIN
+    IF SELF.isVar THEN
+        result := JsString.make("VAR ");
+    ELSE
+        result := JsString.makeEmpty();
+    END;
+    RETURN JsString.concat(result, SELF.type.description())
+END ProcedureArgument.description;
+
+PROCEDURE makeProcedureArgument*(type: PType; isVar: BOOLEAN): PProcedureArgument;
+VAR
+    result: PProcedureArgument;
+BEGIN
+    NEW(result);
+    result.type := type;
+    result.isVar := isVar;
+    RETURN result
+END makeProcedureArgument;
 
 PROCEDURE Module.idType(): JsString.Type;
     RETURN JsString.make("module")

@@ -1,6 +1,6 @@
 "use strict";
 
-var Cast = require("cast.js");
+var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
 var Errors = require("js/Errors.js");
 var Module = require("module.js");
@@ -14,6 +14,7 @@ var Type = require("js/Types.js");
 
 var basicTypes = Type.basic();
 var nullCodeGenerator = Code.nullGenerator();
+var nilType = Type.nil();
 
 function getSymbolAndScope(context, id){
     var s = context.findSymbol(id);
@@ -57,7 +58,7 @@ function checkImplicitCast(from, to){
     var result = Cast.implicit(from, to, op);
     if (!result)
         throwTypeMismatch(from, to);
-    return result;
+    return result.make.bind(result);
 }
 
 function promoteTypeInExpression(e, type){
@@ -627,7 +628,7 @@ exports.ProcParams = HandleSymbolAsType.extend({
         for(var i = 0; i < names.length; ++i){
             var name = names[i];
             this.handleMessage(
-                new AddArgumentMsg(name, new Procedure.Arg(type, this.__isVar)));
+                new AddArgumentMsg(name, Type.makeProcedureArgument(type, this.__isVar)));
         }
         this.__isVar = false;
         this.__argNamesForType = [];
@@ -771,7 +772,7 @@ var equalOpTypeCheck = {
             || Type.isString(t)
             || t instanceof Type.Pointer
             || t instanceof Type.Procedure
-            || t == Type.nil;
+            || t == nilType;
     }
 };
 
@@ -967,7 +968,7 @@ exports.Factor = ChainedContext.extend({
     handleLiteral: function(s){
         var parent = this.parent();
         if (s == "NIL")
-            parent.handleConst(Type.nil, undefined, "null");
+            parent.handleConst(nilType, undefined, "null");
         else if (s == "TRUE")
             parent.handleConst(basicTypes.bool, true, "true");
         else if (s == "FALSE")

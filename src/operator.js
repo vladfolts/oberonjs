@@ -1,6 +1,6 @@
 "use strict";
 
-var Cast = require("cast.js");
+var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
 var Errors = require("js/Errors.js");
 var Type = require("js/Types.js");
@@ -60,8 +60,14 @@ var openArrayChar = Type.makeArray(undefined, undefined, basicTypes.ch, 0);
 function castToStr(e, context){
     var type = e.type();
     var opCast = Cast.implicit(type, openArrayChar);
-    return opCast(context, e).code();
+    return opCast.make(context, e).code();
 }
+
+var castToUint8 = {
+    make: function (context, e){
+        return exports.setIntersection(e, Code.makeExpression("0xFF", basicTypes.integer, null, 0xFF));
+    }
+};
 
 function makeStrCmp(op){
     return function(left, right, context){
@@ -124,7 +130,7 @@ function assign(left, right, context){
     if (isArray || rightType instanceof Type.Record)
         return context.rtl().copy(rightCode, leftCode);
 
-    var castCode = castOperation(context, Code.derefExpression(right)).code();
+    var castCode = castOperation.make(context, Code.derefExpression(right)).code();
     rightCode = castCode ? castCode : rightCode;
     return leftCode + (info instanceof Type.VariableRef 
                       ? ".set(" + rightCode + ")"
@@ -214,7 +220,9 @@ var operators = {
     divInplace: makeInplace(" /= ", div),
     
     pow2:       pow2,
-    log2:       log2
+    log2:       log2,
+
+    castToUint8: castToUint8
 };
 
 for(var p in operators)

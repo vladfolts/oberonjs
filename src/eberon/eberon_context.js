@@ -1,6 +1,6 @@
 "use strict";
 
-var Cast = require("cast.js");
+var Cast = require("js/Cast.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var Symbol = require("js/Symbols.js");

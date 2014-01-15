@@ -162,6 +162,10 @@ function makeExpressionWithPrecedence(code/*Type*/, type/*PType*/, designator/*P
 function makeExpression(code/*Type*/, type/*PType*/, designator/*PDesigantor*/, constValue/*JS.var*/){
 	return makeExpressionWithPrecedence(code, type, designator, constValue, kNoPrecedence);
 }
+
+function makeSimpleExpression(code/*Type*/, type/*PType*/){
+	return makeExpression(code, type, null, undefined);
+}
 Designator.prototype.code = function(){
 	return this.mCode;
 }
@@ -323,9 +327,11 @@ function makeModuleGenerator(name/*Type*/, imports/*Strings*/){
 	result.imports = imports;
 	return result;
 }
+exports.Expression = Expression;
 exports.nullGenerator = function(){return nullGenerator;};
 exports.makeExpressionWithPrecedence = makeExpressionWithPrecedence;
 exports.makeExpression = makeExpression;
+exports.makeSimpleExpression = makeSimpleExpression;
 exports.makeDesignator = makeDesignator;
 exports.derefExpression = derefExpression;
 exports.refExpression = refExpression;

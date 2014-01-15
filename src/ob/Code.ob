@@ -46,9 +46,9 @@ TYPE
 
     PDesigantor = POINTER TO Designator;
 
-    PExpression = POINTER TO Expression;
+    PExpression* = POINTER TO Expression;
 
-    Expression = RECORD
+    Expression* = RECORD
         PROCEDURE code(): JsString.Type;
         PROCEDURE lval(): JsString.Type;
         PROCEDURE type(): Types.PType;
@@ -214,6 +214,13 @@ PROCEDURE makeExpression*(
     : PExpression;
     RETURN makeExpressionWithPrecedence(code, type, designator, constValue, kNoPrecedence)
 END makeExpression;
+
+PROCEDURE makeSimpleExpression*(
+    code: JsString.Type; 
+    type: Types.PType)
+    : PExpression;
+    RETURN makeExpression(code, type, NIL, undefined)
+END makeSimpleExpression;
 
 PROCEDURE Designator.code(): JsString.Type;
     RETURN SELF.mCode

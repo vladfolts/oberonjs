@@ -17,6 +17,11 @@ var Type = Object.Type.extend({
 		Object.Type.prototype.init.call(this);
 	}
 });
+var StorageType = Type.extend({
+	init: function StorageType(){
+		Type.prototype.init.call(this);
+	}
+});
 var TypeId = Id.extend({
 	init: function TypeId(){
 		Id.prototype.init.call(this);
@@ -70,9 +75,9 @@ var String = Type.extend({
 		this.s = null;
 	}
 });
-var NamedType = Type.extend({
+var NamedType = StorageType.extend({
 	init: function NamedType(){
-		Type.prototype.init.call(this);
+		StorageType.prototype.init.call(this);
 		this.name = null;
 	}
 });
@@ -93,6 +98,13 @@ var Pointer = NamedType.extend({
 var Procedure = NamedType.extend({
 	init: function Procedure(){
 		NamedType.prototype.init.call(this);
+	}
+});
+var ProcedureArgument = Object.Type.extend({
+	init: function ProcedureArgument(){
+		Object.Type.prototype.init.call(this);
+		this.type = null;
+		this.isVar = false;
 	}
 });
 var BasicType = NamedType.extend({
@@ -122,9 +134,9 @@ var NonExportedRecord = Record.extend({
 		Record.prototype.init.call(this);
 	}
 });
-var Nil = Id.extend({
+var Nil = Type.extend({
 	init: function Nil(){
-		Id.prototype.init.call(this);
+		Type.prototype.init.call(this);
 	}
 });
 var Module = Id.extend({
@@ -288,7 +300,7 @@ BasicType.prototype.description = function(){
 BasicType.prototype.initializer = function(cx/*Type*/){
 	return this.mInitializer;
 }
-Nil.prototype.idType = function(){
+Nil.prototype.description = function(){
 	return JsString.make("NIL");
 }
 
@@ -430,14 +442,29 @@ function arrayElementsType(a/*Array*/){
 function arrayLength(a/*Array*/){
 	return a.len;
 }
-String.prototype.initializer = function(cx/*Type*/){
-	return JsString.make("null");
-}
 Procedure.prototype.initializer = function(cx/*Type*/){
 	return JsString.make("null");
 }
 Procedure.prototype.description = function(){
 	return this.name;
+}
+ProcedureArgument.prototype.description = function(){
+	var result = null;
+	if (this.isVar){
+		result = JsString.make("VAR ");
+	}
+	else {
+		result = JsString.makeEmpty();
+	}
+	return JsString.concat(result, this.type.description());
+}
+
+function makeProcedureArgument(type/*PType*/, isVar/*BOOLEAN*/){
+	var result = null;
+	result = new ProcedureArgument();
+	result.type = type;
+	result.isVar = isVar;
+	return result;
 }
 Module.prototype.idType = function(){
 	return JsString.make("module");
@@ -558,6 +585,7 @@ exports.String = String;
 exports.Array = Array;
 exports.Pointer = Pointer;
 exports.Procedure = Procedure;
+exports.ProcedureArgument = ProcedureArgument;
 exports.Record = Record;
 exports.NonExportedRecord = NonExportedRecord;
 exports.Module = Module;
@@ -588,6 +616,7 @@ exports.recordOwnFields = recordOwnFields;
 exports.pointerBase = pointerBase;
 exports.arrayElementsType = arrayElementsType;
 exports.arrayLength = arrayLength;
+exports.makeProcedureArgument = makeProcedureArgument;
 exports.makeTypeId = makeTypeId;
 exports.makeLazyTypeId = makeLazyTypeId;
 exports.makeString = makeString;
