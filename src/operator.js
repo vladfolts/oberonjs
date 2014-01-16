@@ -27,8 +27,8 @@ function makeBinary(op, code, precedence, resultPrecedence, resultType){
     return function(left, right, context){
         var leftValue = left.constValue();
         var rightValue = right.constValue();
-        var value = (leftValue !== undefined && rightValue !== undefined)
-            ? op(leftValue, rightValue) : undefined;
+        var value = (leftValue && rightValue)
+            ? Code.makeNumberConst(op(leftValue.value, rightValue.value)) : undefined;
 
         var leftCode = Code.adjustPrecedence(Code.derefExpression(left), precedence);
 
@@ -45,8 +45,8 @@ function makeUnary(op, code){
     return function(e){
         var type = e.type();
         var value = e.constValue();
-        if (value !== undefined)
-            value = op(value, type) ;
+        if (value)
+            value = Code.makeNumberConst(op(value.value, type));
         var expCode = code + Code.adjustPrecedence(Code.derefExpression(e), precedence.unary);
         return Code.makeExpression(expCode, type, undefined, value);
     };

@@ -129,7 +129,7 @@ exports.Integer = ChainedContext.extend({
     toInt: function(s){return parseInt(this.__result, 10);},
     endParse: function(){
         var n = this.toInt();
-        this.parent().handleConst(basicTypes.integer, n, n.toString());
+        this.parent().handleConst(basicTypes.integer, Code.makeNumberConst(n), n.toString());
     }
 });
 
@@ -154,7 +154,7 @@ exports.Real = ChainedContext.extend({
     },
     endParse: function(){
         var n = Number(this.__result);
-        this.parent().handleConst(basicTypes.real, n, n.toString());
+        this.parent().handleConst(basicTypes.real, Code.makeNumberConst(n), n.toString());
     }
 });
 
@@ -185,7 +185,7 @@ exports.String = ChainedContext.extend({
     toStr: function(s){return s;},
     endParse: function(){
         var s = this.toStr(this.__result);
-        this.parent().handleConst(Type.makeString(s), s, escapeString(s));
+        this.parent().handleConst(Type.makeString(s), Code.makeStringConst(s), escapeString(s));
         }
 });
 
@@ -320,10 +320,10 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error("ARRAY expected, got '" + type.description() + "'");
         var value = e.constValue();
         var arrayLen = Type.arrayLength(type);
-        if (value !== undefined && arrayLen != Type.openArrayLength && value >= arrayLen)
+        if (value !== undefined && arrayLen != Type.openArrayLength && value.value >= arrayLen)
             throw new Errors.Error("index out of bounds: maximum possible index is "
                                  + (Type.arrayLength(type) - 1)
-                                 + ", got " + value );
+                                 + ", got " + value.value );
 
         this.__currentType = Type.arrayElementsType(type);
         this.__info = Type.makeVariable(this.__currentType, Type.isVariableReadOnly(this.__info));
@@ -728,9 +728,9 @@ exports.ArrayDimensions = ChainedContext.extend({
         var value = e.constValue();
         if (value === undefined)
             throw new Errors.Error("constant expression expected as ARRAY size");
-        if (value <= 0)
-            throw new Errors.Error("array size must be greater than 0, got " + value);
-        this.__dimensions.push(value);
+        if (value.value <= 0)
+            throw new Errors.Error("array size must be greater than 0, got " + value.value);
+        this.__dimensions.push(value.value);
     },
     endParse: function(){
         this.parent().handleDimensions(this.__dimensions);
@@ -970,9 +970,9 @@ exports.Factor = ChainedContext.extend({
         if (s == "NIL")
             parent.handleConst(nilType, undefined, "null");
         else if (s == "TRUE")
-            parent.handleConst(basicTypes.bool, true, "true");
+            parent.handleConst(basicTypes.bool, Code.makeNumberConst(true), "true");
         else if (s == "FALSE")
-            parent.handleConst(basicTypes.bool, false, "false");
+            parent.handleConst(basicTypes.bool, Code.makeNumberConst(false), "false");
         else if (s == "~")
             parent.handleLogicalNot();
     },
@@ -989,10 +989,10 @@ exports.Set = ChainedContext.extend({
     handleElement: function(from, fromValue, to, toValue){
         if (fromValue !== undefined && (!to || toValue !== undefined)){
             if (to)
-                for(var i = fromValue; i <= toValue; ++i)
+                for(var i = fromValue.value; i <= toValue.value; ++i)
                     this.__value |= 1 << i;
             else
-                this.__value |= 1 << fromValue;
+                this.__value |= 1 << fromValue.value;
         }
         else{
             if (this.__expr.length)
@@ -1006,7 +1006,7 @@ exports.Set = ChainedContext.extend({
     endParse: function(){
         var parent = this.parent();
         if (!this.__expr.length)
-            parent.handleConst(basicTypes.set, this.__value, this.__value.toString());
+            parent.handleConst(basicTypes.set, Code.makeNumberConst(this.__value), this.__value.toString());
         else{
             var code = this.rtl().makeSet(this.__expr);
             if (this.__value)
@@ -1272,8 +1272,8 @@ exports.CaseLabelList = ChainedContext.extend({
             this.parent().caseLabelBegin();
 
         var cond = to === undefined
-            ? "$c === " + from
-            : "($c >= " + from + " && $c <= " + to + ")";
+            ? "$c === " + from.value
+            : "($c >= " + from.value + " && $c <= " + to.value + ")";
         this.codeGenerator().write(this.__glue + cond);
         this.__glue = " || ";
     },
@@ -1317,6 +1317,7 @@ exports.CaseRange = ChainedContext.extend({
             if (!Type.stringAsChar(type, {set: function(v){value = v;}}))
                 throw new Errors.Error("single-character string expected");
             type = basicTypes.ch;
+            value = Code.makeNumberConst(value);
         }
         this.handleLabel(type, value);
     },
@@ -1416,7 +1417,7 @@ exports.For = ChainedContext.extend({
         else if ( value === undefined )
             throw new Errors.Error("constant expression expected as 'BY' parameter");
         else
-            this.__by = value;
+            this.__by = value.value;
     },
     codeGenerator: function(){
         if (this.__initExprParsed && !this.__toParsed)

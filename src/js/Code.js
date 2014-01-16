@@ -40,12 +40,28 @@ var Designator = RTL$.extend({
 		this.mScope = null;
 	}
 });
+var Const = RTL$.extend({
+	init: function Const(){
+	}
+});
+var NumberConst = Const.extend({
+	init: function NumberConst(){
+		Const.prototype.init.call(this);
+		this.value = 0;
+	}
+});
+var StringConst = Const.extend({
+	init: function StringConst(){
+		Const.prototype.init.call(this);
+		this.value = null;
+	}
+});
 var Expression = RTL$.extend({
 	init: function Expression(){
 		this.mCode = null;
 		this.mType = null;
 		this.mDesignator = null;
-		this.mConstValue = undefined;
+		this.mConstValue = null;
 		this.mMaxPrecedence = 0;
 	}
 });
@@ -62,7 +78,6 @@ var Closure = Object.Type.extend({
 	}
 });
 var nullGenerator = new NullGenerator();
-var undefined = undefined;
 NullGenerator.prototype.write = function(s/*Type*/){
 }
 NullGenerator.prototype.openScope = function(){
@@ -148,7 +163,21 @@ Expression.prototype.isTerm = function(){
 	return this.mDesignator == null && this.mMaxPrecedence == kNoPrecedence;
 }
 
-function makeExpressionWithPrecedence(code/*Type*/, type/*PType*/, designator/*PDesigantor*/, constValue/*JS.var*/, maxPrecedence/*INTEGER*/){
+function makeNumberConst(n/*REAL*/){
+	var result = null;
+	result = new NumberConst();
+	result.value = n;
+	return result;
+}
+
+function makeStringConst(s/*Type*/){
+	var result = null;
+	result = new StringConst();
+	result.value = s;
+	return result;
+}
+
+function makeExpressionWithPrecedence(code/*Type*/, type/*PType*/, designator/*PDesigantor*/, constValue/*PConst*/, maxPrecedence/*INTEGER*/){
 	var result = null;
 	result = new Expression();
 	result.mCode = code;
@@ -159,12 +188,12 @@ function makeExpressionWithPrecedence(code/*Type*/, type/*PType*/, designator/*P
 	return result;
 }
 
-function makeExpression(code/*Type*/, type/*PType*/, designator/*PDesigantor*/, constValue/*JS.var*/){
+function makeExpression(code/*Type*/, type/*PType*/, designator/*PDesigantor*/, constValue/*PConst*/){
 	return makeExpressionWithPrecedence(code, type, designator, constValue, kNoPrecedence);
 }
 
 function makeSimpleExpression(code/*Type*/, type/*PType*/){
-	return makeExpression(code, type, null, undefined);
+	return makeExpression(code, type, null, null);
 }
 Designator.prototype.code = function(){
 	return this.mCode;
@@ -203,7 +232,7 @@ function derefExpression(e/*PExpression*/){
 		result = e;
 	}
 	else {
-		result = makeExpression(JsString.concat(e.mCode, JsString.make(".get()")), e.mType, null, undefined);
+		result = makeSimpleExpression(JsString.concat(e.mCode, JsString.make(".get()")), e.mType);
 	}
 	return result;
 }
@@ -214,7 +243,7 @@ function refExpression(e/*PExpression*/){
 		result = e;
 	}
 	else {
-		result = makeExpression(e.mDesignator.mRefCode(e.mDesignator.mCode), e.mType, null, undefined);
+		result = makeSimpleExpression(e.mDesignator.mRefCode(e.mDesignator.mCode), e.mType);
 	}
 	return result;
 }
@@ -329,6 +358,8 @@ function makeModuleGenerator(name/*Type*/, imports/*Strings*/){
 }
 exports.Expression = Expression;
 exports.nullGenerator = function(){return nullGenerator;};
+exports.makeNumberConst = makeNumberConst;
+exports.makeStringConst = makeStringConst;
 exports.makeExpressionWithPrecedence = makeExpressionWithPrecedence;
 exports.makeExpression = makeExpression;
 exports.makeSimpleExpression = makeSimpleExpression;

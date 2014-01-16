@@ -197,13 +197,13 @@ function setBitImpl(name, bitOp){
     function operator(x, y){
         var value = y.constValue();
         var valueCode;
-        if (value === undefined)
+        if (!value)
             valueCode = op.lsl(Code.makeExpression("1"), y).code();
         else {
-            if (value < 0 || value > 31)
-                throw new Errors.Error("value (0..31) expected as a second argument of " + name + ", got " + value);
-            var comment = "bit: " + (y.isTerm() ? value : Code.adjustPrecedence(y, precedence.shift));
-            value = 1 << value;
+            if (value.value < 0 || value.value > 31)
+                throw new Errors.Error("value (0..31) expected as a second argument of " + name + ", got " + value.value);
+            var comment = "bit: " + (y.isTerm() ? value.value : Code.adjustPrecedence(y, precedence.shift));
+            value = 1 << value.value;
             valueCode = value + "/*" + comment + "*/";
         }
         return bitOp(Code.adjustPrecedence(x, precedence.assignment), valueCode);
@@ -233,7 +233,7 @@ function incImpl(name, unary, op){
             valueCode = y.code();
         else {
             var comment = y.isTerm() ? "" : "/*" + y.code() + "*/";
-            valueCode = value + comment;
+            valueCode = value.value + comment;
         }
         return op(x.code(), valueCode);
     }
@@ -489,7 +489,7 @@ exports.predefined = [
                     var code = Code.adjustPrecedence(e, precedence.conditional) + " ? 1 : 0";
                     var value = e.constValue();
                     if (value !== undefined)
-                        value = value ? 1 : 0;
+                        value = Code.makeNumberConst(value.value ? 1 : 0);
                     this.__callExpression = Code.makeExpressionWithPrecedence(
                         code, basicTypes.integer, undefined, value, precedence.conditional);
                 }
