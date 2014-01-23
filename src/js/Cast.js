@@ -164,6 +164,8 @@ function implicit(from/*PType*/, to/*PType*/, ops/*Operations*/){
 }
 areTypesExactlyMatch = areTypesExactlyMatchImpl;
 doNothing = new CastOpDoNothing();
+exports.CastOp = CastOp;
+exports.Operations = Operations;
 exports.findPointerBaseType = findPointerBaseType;
 exports.areTypesMatch = areTypesMatch;
 exports.areProceduresMatch = areProceduresMatch;

@@ -404,6 +404,8 @@ return {
     context(grammar.statement, "VAR ch: CHAR; i: INTEGER; b: BOOLEAN;"),
     pass("i := ORD(ch)",
          "i := ORD(TRUE)",
+         "i := ORD(b)",
+         "i := ORD(b = FALSE)",
          "i := ORD({1})",
          "i := ORD(\"a\")",
          "b := ORD(22X) = 022H"),

@@ -1,9 +1,8 @@
 MODULE Code;
-IMPORT JsMap, JsString, Context, Object, Stream, Symbols, Types;
+IMPORT JsMap, JsString, Context, Object, Stream, Symbols, Precedence := CodePrecedence, Types;
 
 CONST
     kTab = 09X;
-    kNoPrecedence = 0;
 
 TYPE
     IGenerator = RECORD
@@ -28,12 +27,12 @@ TYPE
 
     RefCodeProc = PROCEDURE(s: JsString.Type): JsString.Type;
 
-    Designator = RECORD
+    Designator* = RECORD
         PROCEDURE code(): JsString.Type;
         PROCEDURE lval(): JsString.Type;
         PROCEDURE refCode(): RefCodeProc;
         PROCEDURE type(): Types.PType;
-        PROCEDURE info(): Types.PId;
+        PROCEDURE info*(): Types.PId;
         PROCEDURE scope(): Context.PScope;
 
         mCode: JsString.Type;
@@ -44,14 +43,22 @@ TYPE
         mScope: Context.PScope
     END;
 
-    PDesigantor = POINTER TO Designator;
+    PDesignator* = POINTER TO Designator;
 
-    Const = RECORD
+    Const* = RECORD
     END;
-    PConst = POINTER TO Const;
+    PConst* = POINTER TO Const;
 
-    NumberConst = RECORD (Const)
-        value: REAL
+    IntConst* = RECORD (Const)
+        value*: INTEGER
+    END;
+
+    RealConst* = RECORD (Const)
+        value*: REAL
+    END;
+
+    SetConst* = RECORD (Const)
+        value*: SET
     END;
 
     StringConst = RECORD (Const)
@@ -59,17 +66,17 @@ TYPE
     END;
 
     Expression* = RECORD
-        PROCEDURE code(): JsString.Type;
-        PROCEDURE lval(): JsString.Type;
-        PROCEDURE type(): Types.PType;
-        PROCEDURE designator(): PDesigantor;
-        PROCEDURE constValue(): PConst;
-        PROCEDURE maxPrecedence(): INTEGER;
+        PROCEDURE code*(): JsString.Type;
+        PROCEDURE lval*(): JsString.Type;
+        PROCEDURE type*(): Types.PType;
+        PROCEDURE designator*(): PDesignator;
+        PROCEDURE constValue*(): PConst;
+        PROCEDURE maxPrecedence*(): INTEGER;
         PROCEDURE isTerm(): BOOLEAN;
 
         mCode: JsString.Type;
         mType: Types.PType;
-        mDesignator: PDesigantor;
+        mDesignator: PDesignator;
         mConstValue: PConst;
         mMaxPrecedence: INTEGER
     END;
@@ -183,7 +190,7 @@ PROCEDURE Expression.type(): Types.PType;
     RETURN SELF.mType
 END Expression.type;
 
-PROCEDURE Expression.designator(): PDesigantor;
+PROCEDURE Expression.designator(): PDesignator;
     RETURN SELF.mDesignator
 END Expression.designator;
 
@@ -196,17 +203,35 @@ PROCEDURE Expression.maxPrecedence(): INTEGER;
 END Expression.maxPrecedence;
 
 PROCEDURE Expression.isTerm(): BOOLEAN;
-    RETURN (SELF.mDesignator = NIL) & (SELF.mMaxPrecedence = kNoPrecedence)
+    RETURN (SELF.mDesignator = NIL) & (SELF.mMaxPrecedence = Precedence.none)
 END Expression.isTerm;
 
-PROCEDURE makeNumberConst*(n: REAL): PConst;
+PROCEDURE makeIntConst*(n: INTEGER): PConst;
 VAR
-    result: POINTER TO NumberConst;
+    result: POINTER TO IntConst;
 BEGIN
     NEW(result);
     result.value := n;
     RETURN result
-END makeNumberConst;
+END makeIntConst;
+
+PROCEDURE makeRealConst*(n: REAL): PConst;
+VAR
+    result: POINTER TO RealConst;
+BEGIN
+    NEW(result);
+    result.value := n;
+    RETURN result
+END makeRealConst;
+
+PROCEDURE makeSetConst*(s: SET): PConst;
+VAR
+    result: POINTER TO SetConst;
+BEGIN
+    NEW(result);
+    result.value := s;
+    RETURN result
+END makeSetConst;
 
 PROCEDURE makeStringConst*(s: JsString.Type): PConst;
 VAR
@@ -220,7 +245,7 @@ END makeStringConst;
 PROCEDURE makeExpressionWithPrecedence*(
     code: JsString.Type; 
     type: Types.PType; 
-    designator: PDesigantor; 
+    designator: PDesignator; 
     constValue: PConst; 
     maxPrecedence: INTEGER): PExpression;
 VAR
@@ -238,10 +263,10 @@ END makeExpressionWithPrecedence;
 PROCEDURE makeExpression*(
     code: JsString.Type; 
     type: Types.PType; 
-    designator: PDesigantor; 
+    designator: PDesignator; 
     constValue: PConst)
     : PExpression;
-    RETURN makeExpressionWithPrecedence(code, type, designator, constValue, kNoPrecedence)
+    RETURN makeExpressionWithPrecedence(code, type, designator, constValue, Precedence.none)
 END makeExpression;
 
 PROCEDURE makeSimpleExpression*(
@@ -275,9 +300,9 @@ PROCEDURE Designator.scope(): Context.PScope;
     RETURN SELF.mScope
 END Designator.scope;
 
-PROCEDURE makeDesignator*(code: JsString.Type; lval: JsString.Type; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: Context.PScope): PDesigantor;
+PROCEDURE makeDesignator*(code: JsString.Type; lval: JsString.Type; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: Context.PScope): PDesignator;
 VAR
-    result: PDesigantor;
+    result: PDesignator;
 BEGIN
     NEW(result);
     result.mCode := code;
@@ -318,12 +343,12 @@ BEGIN
     RETURN result
 END refExpression;
 
-PROCEDURE adjustPrecedence*(e: Expression; precedence: INTEGER): JsString.Type;
+PROCEDURE adjustPrecedence*(e: PExpression; precedence: INTEGER): JsString.Type;
 VAR
     result: JsString.Type;
 BEGIN
     result := e.mCode;
-    IF e.mMaxPrecedence > precedence THEN
+    IF (precedence # Precedence.none) & (e.mMaxPrecedence > precedence) THEN
         result := JsString.concat(JsString.concat(
             JsString.make("("), 
             result), 

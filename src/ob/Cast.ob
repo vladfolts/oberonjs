@@ -2,11 +2,11 @@ MODULE Cast;
 IMPORT Code, Context, JsArray, JsString, Object, Types;
 
 TYPE
-    CastOp = RECORD
-        PROCEDURE make(c: Context.Type; e: Code.PExpression): Code.PExpression
+    CastOp* = RECORD
+        PROCEDURE make*(c: Context.Type; e: Code.PExpression): Code.PExpression
     END;
 
-    PCastOp = POINTER TO CastOp;
+    PCastOp* = POINTER TO CastOp;
 
     CastOpDoNothing = RECORD (CastOp)
     END;
@@ -15,8 +15,8 @@ TYPE
         c: CHAR
     END;
 
-    Operations = RECORD
-        castToUint8: PCastOp
+    Operations* = RECORD
+        castToUint8*: PCastOp
     END;
 
 VAR

@@ -4,8 +4,8 @@ var Cast = require("js/Cast.js");
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var Errors = require("js/Errors.js");
-var op = require("operator.js");
-var precedence = require("operator.js").precedence;
+var op = require("js/Operator.js");
+var precedence = require("js/CodePrecedence.js");
 var Symbol = require("js/Symbols.js");
 var Type = require("js/Types.js");
 
@@ -80,7 +80,7 @@ var ProcCallGenerator = Class.extend({
         var expectType = arg.type; // can be undefined for predefined functions (like NEW), dont check it in this case
         if (expectType){
             var type = e.type();
-            castOperation = Cast.implicit(type, expectType, op);
+            castOperation = Cast.implicit(type, expectType, op.castOperations());
             if (!castOperation)
                 throw new Errors.Error(
                       "type mismatch for argument " + (pos + 1) + ": '" + type.description()
@@ -229,7 +229,7 @@ function incImpl(name, unary, op){
 
         var value = y.constValue();
         var valueCode;
-        if (value === undefined)
+        if (!value)
             valueCode = y.code();
         else {
             var comment = y.isTerm() ? "" : "/*" + y.code() + "*/";
@@ -454,8 +454,14 @@ exports.predefined = [
             },
             callExpression: function(){
                 var e = this.args()[0];
+                var value = e.constValue();
                 return Code.makeExpressionWithPrecedence(
-                    e.code(), basicTypes.real, undefined, e.constValue(), e.maxPrecedence());
+                    e.code(), 
+                    basicTypes.real, 
+                    undefined, 
+                    value ? Code.makeRealConst(value.value) : value, 
+                    e.maxPrecedence()
+                    );
             }
         });
         var args = [makeArg(basicTypes.integer, false)];
@@ -488,8 +494,8 @@ exports.predefined = [
                 else if (type == basicTypes.bool){
                     var code = Code.adjustPrecedence(e, precedence.conditional) + " ? 1 : 0";
                     var value = e.constValue();
-                    if (value !== undefined)
-                        value = Code.makeNumberConst(value.value ? 1 : 0);
+                    if (value)
+                        value = Code.makeIntConst(value.value ? 1 : 0);
                     this.__callExpression = Code.makeExpressionWithPrecedence(
                         code, basicTypes.integer, undefined, value, precedence.conditional);
                 }

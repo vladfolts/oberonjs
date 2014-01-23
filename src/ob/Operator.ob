@@ -1,0 +1,798 @@
+MODULE Operator;
+IMPORT Cast, Code, Context, Errors, JsString, Precedence := CodePrecedence, Types;
+TYPE
+    BinaryProc = PROCEDURE(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+
+    BinaryOp = PROCEDURE(left, right: Code.PConst): Code.PConst;
+    CodePredicate = PROCEDURE(left, right: JsString.Type; c: Context.Type): JsString.Type;
+
+    UnaryOp = PROCEDURE(value: Code.PConst): Code.PConst;
+
+    CodeMaker = RECORD
+        PROCEDURE make(left, right: JsString.Type; c: Context.Type): JsString.Type
+    END;
+    PCodeMaker = POINTER TO CodeMaker;
+
+    SimpleCodeMaker = RECORD (CodeMaker)
+        code: JsString.Type
+    END;
+
+    IntCodeMaker = RECORD (SimpleCodeMaker)
+    END;
+
+    PredCodeMaker = RECORD (CodeMaker)
+        pred: CodePredicate
+    END;
+
+    CastToUint8 = RECORD (Cast.CastOp)
+    END;
+
+VAR
+    openArrayChar: Types.PType;
+    castOperations*: Cast.Operations;
+    castToUint8: POINTER TO CastToUint8;
+
+PROCEDURE binary(
+    left, right: Code.PExpression; 
+    context: Context.Type;
+    op: BinaryOp;
+    code: PCodeMaker;
+    precedence: INTEGER;
+    optResultType: Types.PType;
+    optResultPrecedence: INTEGER
+    ): Code.PExpression;
+VAR
+    result: Code.PExpression;
+    leftValue, rightValue, resultValue: Code.PConst;
+    leftCode, rightCode, resultCode: JsString.Type;
+    resultType: Types.PType;
+    resultPrecedence: INTEGER;
+    rightExpDeref: Code.PExpression;
+BEGIN
+    leftValue := left.constValue();
+    rightValue := right.constValue();
+    IF (leftValue # NIL) & (rightValue # NIL) THEN
+        resultValue := op(leftValue, rightValue);
+    END;
+
+    leftCode := Code.adjustPrecedence(Code.derefExpression(left), precedence);
+
+    (* right code needs parentheses even if it has the same percedence *)
+    rightExpDeref := Code.derefExpression(right);
+    IF precedence # Precedence.none THEN
+        rightCode := Code.adjustPrecedence(rightExpDeref, precedence - 1);
+    ELSE
+        rightCode := rightExpDeref.code();
+    END;
+
+    resultCode := code.make(leftCode, rightCode, context);
+
+    IF optResultType # NIL THEN
+        resultType := optResultType;
+    ELSE
+        resultType := left.type();
+    END;
+
+    IF optResultPrecedence # Precedence.none THEN
+        resultPrecedence := optResultPrecedence;
+    ELSE
+        resultPrecedence := precedence;
+    END;
+    RETURN Code.makeExpressionWithPrecedence(resultCode, resultType, NIL, resultValue, resultPrecedence)
+END binary;
+
+PROCEDURE SimpleCodeMaker.make(left, right: JsString.Type; c: Context.Type): JsString.Type;
+    RETURN JsString.concat(JsString.concat(
+        left, 
+        SELF.code), 
+        right)
+END SimpleCodeMaker.make;
+
+PROCEDURE IntCodeMaker.make(left, right: JsString.Type; c: Context.Type): JsString.Type;
+BEGIN
+    RETURN JsString.concat(SUPER(left, right, c), JsString.make(" | 0"))
+END IntCodeMaker.make;
+
+PROCEDURE PredCodeMaker.make(left, right: JsString.Type; c: Context.Type): JsString.Type;
+BEGIN
+    RETURN SELF.pred(left, right, c)
+END PredCodeMaker.make;
+
+PROCEDURE makeSimpleCodeMaker(code: ARRAY OF CHAR): PCodeMaker;
+VAR
+    result: POINTER TO SimpleCodeMaker;
+BEGIN
+    NEW(result);
+    result.code := JsString.make(code);
+    RETURN result
+END makeSimpleCodeMaker;
+
+PROCEDURE makeIntCodeMaker(code: ARRAY OF CHAR): PCodeMaker;
+VAR
+    result: POINTER TO IntCodeMaker;
+BEGIN
+    NEW(result);
+    result.code := JsString.make(code);
+    RETURN result
+END makeIntCodeMaker;
+
+PROCEDURE makePredCodeMaker(pred: CodePredicate): PCodeMaker;
+VAR
+    result: POINTER TO PredCodeMaker;
+BEGIN
+    NEW(result);
+    result.pred := pred;
+    RETURN result
+END makePredCodeMaker;
+
+PROCEDURE binaryWithCodeEx(
+    left, right: Code.PExpression; 
+    context: Context.Type;
+    op: BinaryOp;
+    code: ARRAY OF CHAR;
+    precedence: INTEGER;
+    optResultType: Types.PType;
+    optResultPrecedence: INTEGER
+    ): Code.PExpression;
+    RETURN binary(
+        left, 
+        right, 
+        context, 
+        op, 
+        makeSimpleCodeMaker(code), 
+        precedence, 
+        optResultType, 
+        optResultPrecedence)
+END binaryWithCodeEx;
+
+PROCEDURE binaryWithCode(
+    left, right: Code.PExpression; 
+    c: Context.Type;
+    op: BinaryOp;
+    code: ARRAY OF CHAR;
+    precedence: INTEGER
+    ): Code.PExpression;
+    RETURN binaryWithCodeEx(left, right, c, op, code, precedence, NIL, Precedence.none)
+END binaryWithCode;
+
+PROCEDURE promoteToWideIfNeeded(e: Code.PExpression): Code.PExpression;
+VAR
+    result: Code.PExpression;
+BEGIN
+    IF e.type() # Types.basic.uint8 THEN
+        result := e;
+    ELSE
+        result := Code.makeExpressionWithPrecedence(
+                e.code(),
+                Types.basic.integer,
+                e.designator(),
+                e.constValue(),
+                e.maxPrecedence());
+    END;
+    RETURN result
+END promoteToWideIfNeeded;
+
+PROCEDURE binaryInt(
+    left, right: Code.PExpression; 
+    c: Context.Type;
+    op: BinaryOp;
+    code: ARRAY OF CHAR;
+    precedence: INTEGER
+    ): Code.PExpression;
+    RETURN promoteToWideIfNeeded(binary(
+        left, 
+        right, 
+        c, 
+        op, 
+        makeIntCodeMaker(code), 
+        precedence, 
+        NIL, 
+        Precedence.bitOr (* see IntCodeMaker.make *)
+        ))
+END binaryInt;
+
+PROCEDURE binaryPred(
+    left, right: Code.PExpression; 
+    c: Context.Type;
+    op: BinaryOp;
+    pred: CodePredicate
+    ): Code.PExpression;
+    RETURN binary(
+        left, 
+        right, 
+        c, 
+        op, 
+        makePredCodeMaker(pred), 
+        Precedence.none, 
+        NIL, 
+        Precedence.none
+        )
+END binaryPred;
+
+PROCEDURE unary(e: Code.PExpression; op: UnaryOp; code: ARRAY OF CHAR): Code.PExpression;
+VAR
+    value: Code.PConst;
+    resultCode: JsString.Type;
+BEGIN
+    value := e.constValue();
+    IF value # NIL THEN
+        value := op(value);
+    END;
+    resultCode := JsString.concat(
+        JsString.make(code), 
+        Code.adjustPrecedence(Code.derefExpression(e), Precedence.unary));
+    RETURN Code.makeExpression(resultCode, e.type(), NIL, value)
+END unary;
+
+PROCEDURE castToStr(e: Code.PExpression; context: Context.Type): JsString.Type;
+VAR
+    resultExpression: Code.PExpression;
+    op: Cast.PCastOp;
+BEGIN
+    op := Cast.implicit(e.type(), openArrayChar, castOperations);
+    resultExpression := op.make(context, e)
+    RETURN resultExpression.code()
+END castToStr;
+
+PROCEDURE opAddReal(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeRealConst(left^(Code.RealConst).value 
+                            + right^(Code.RealConst).value)
+END opAddReal;
+
+PROCEDURE opAddInt(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(left^(Code.IntConst).value 
+                           + right^(Code.IntConst).value)
+END opAddInt;
+
+PROCEDURE opSubReal(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeRealConst(left^(Code.RealConst).value 
+                            - right^(Code.RealConst).value)
+END opSubReal;
+
+PROCEDURE opSubInt(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(left^(Code.IntConst).value 
+                           - right^(Code.IntConst).value)
+END opSubInt;
+
+PROCEDURE opMulReal(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeRealConst(left^(Code.RealConst).value 
+                            * right^(Code.RealConst).value)
+END opMulReal;
+
+PROCEDURE opMulInt(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(left^(Code.IntConst).value 
+                           * right^(Code.IntConst).value)
+END opMulInt;
+
+PROCEDURE opDivReal(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeRealConst(left^(Code.RealConst).value 
+                            / right^(Code.RealConst).value)
+END opDivReal;
+
+PROCEDURE opDivInt(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(left^(Code.IntConst).value 
+                         DIV right^(Code.IntConst).value)
+END opDivInt;
+
+PROCEDURE opMod(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(left^(Code.IntConst).value 
+                         MOD right^(Code.IntConst).value)
+END opMod;
+
+PROCEDURE opSetUnion(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeSetConst(left^(Code.SetConst).value 
+                           + right^(Code.SetConst).value)
+END opSetUnion;
+
+PROCEDURE opSetDiff(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeSetConst(left^(Code.SetConst).value 
+                           - right^(Code.SetConst).value)
+END opSetDiff;
+
+PROCEDURE opSetIntersection(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeSetConst(left^(Code.SetConst).value 
+                           * right^(Code.SetConst).value)
+END opSetIntersection;
+
+PROCEDURE opSetSymmetricDiff(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeSetConst(left^(Code.SetConst).value 
+                           / right^(Code.SetConst).value)
+END opSetSymmetricDiff;
+
+PROCEDURE opSetInclL(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.SetConst).value 
+                              <= right^(Code.SetConst).value))
+END opSetInclL;
+
+PROCEDURE opSetInclR(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.SetConst).value 
+                              >= right^(Code.SetConst).value))
+END opSetInclR;
+
+PROCEDURE opOr(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD((left^(Code.IntConst).value # 0)
+                              OR (right^(Code.IntConst).value # 0)))
+END opOr;
+
+PROCEDURE opAnd(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD((left^(Code.IntConst).value # 0)
+                               & (right^(Code.IntConst).value # 0)))
+END opAnd;
+
+PROCEDURE opEqualInt(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
+                               = right^(Code.IntConst).value))
+END opEqualInt;
+
+PROCEDURE opEqualReal(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
+                               = right^(Code.RealConst).value))
+END opEqualReal;
+
+PROCEDURE opNotEqualInt(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
+                               # right^(Code.IntConst).value))
+END opNotEqualInt;
+
+PROCEDURE opNotEqualReal(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
+                               # right^(Code.RealConst).value))
+END opNotEqualReal;
+
+PROCEDURE opLessInt(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
+                               < right^(Code.IntConst).value))
+END opLessInt;
+
+PROCEDURE opLessReal(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
+                               < right^(Code.RealConst).value))
+END opLessReal;
+
+PROCEDURE opGreaterInt(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
+                               > right^(Code.IntConst).value))
+END opGreaterInt;
+
+PROCEDURE opGreaterReal(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
+                               > right^(Code.RealConst).value))
+END opGreaterReal;
+
+PROCEDURE opEqLessInt(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
+                              <= right^(Code.IntConst).value))
+END opEqLessInt;
+
+PROCEDURE opEqLessReal(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
+                              <= right^(Code.RealConst).value))
+END opEqLessReal;
+
+PROCEDURE opEqGreaterInt(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
+                              >= right^(Code.IntConst).value))
+END opEqGreaterInt;
+
+PROCEDURE opEqGreaterReal(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
+                              >= right^(Code.RealConst).value))
+END opEqGreaterReal;
+
+PROCEDURE opNot(x: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(~(x^(Code.IntConst).value # 0)))
+END opNot;
+
+PROCEDURE opNegateInt(x: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(-x^(Code.IntConst).value)
+END opNegateInt;
+
+PROCEDURE opNegateReal(x: Code.PConst): Code.PConst;
+    RETURN Code.makeRealConst(-x^(Code.RealConst).value)
+END opNegateReal;
+
+PROCEDURE opUnaryPlus(x: Code.PConst): Code.PConst;
+    RETURN x
+END opUnaryPlus;
+
+PROCEDURE opSetComplement(x: Code.PConst): Code.PConst;
+    RETURN Code.makeSetConst(-x^(Code.SetConst).value)
+END opSetComplement;
+
+PROCEDURE opLsl(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(LSL(left^(Code.IntConst).value,
+                                 right^(Code.IntConst).value))
+END opLsl;
+
+PROCEDURE opAsr(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ASR(left^(Code.IntConst).value,
+                                 right^(Code.IntConst).value))
+END opAsr;
+
+PROCEDURE opRor(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ROR(left^(Code.IntConst).value,
+                                 right^(Code.IntConst).value))
+END opRor;
+
+PROCEDURE codeSetInclL(left, right: JsString.Type; c: Context.Type): JsString.Type;
+VAR
+    rtl: Context.PRtl;
+BEGIN
+    rtl := c.rtl();
+    RETURN rtl.setInclL(left, right)
+END codeSetInclL;
+
+PROCEDURE codeSetInclR(left, right: JsString.Type; c: Context.Type): JsString.Type;
+VAR
+    rtl: Context.PRtl;
+BEGIN
+    rtl := c.rtl();
+    RETURN rtl.setInclR(left, right)
+END codeSetInclR;
+
+PROCEDURE strCmp(op: ARRAY OF CHAR; left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+VAR
+    rtl: Context.PRtl;
+BEGIN   
+    rtl := c.rtl();
+    RETURN Code.makeSimpleExpression(
+            JsString.concat(JsString.concat(
+                rtl.strCmp(castToStr(left, c), castToStr(right, c)),
+                JsString.make(op)), 
+                JsString.make("0")),
+            Types.basic.bool)
+END strCmp;
+
+PROCEDURE assign*(left, right: Code.PExpression; c: Context.Type): JsString.Type;
+VAR
+    designator: Code.PDesignator;
+    info: Types.PId;
+    leftCode, rightCode: JsString.Type;
+    leftType, rightType: Types.PType;
+    isArray: BOOLEAN;
+    castOperation: Cast.PCastOp;
+    rtl: Context.PRtl;
+    castExp: Code.PExpression;
+    result: JsString.Type;
+
+    PROCEDURE assignArrayFromString(a: Types.Array; s: Types.String): JsString.Type;
+    VAR
+        rtl: Context.PRtl;
+    BEGIN
+        IF Types.arrayLength(a) = Types.openArrayLength THEN
+            Errors.raise(JsString.concat(JsString.make("string cannot be assigned to open "),
+                                         a.description()));
+        ELSIF Types.stringLen(s) > Types.arrayLength(a) THEN
+            Errors.raise(JsString.concat(JsString.concat(JsString.concat(
+                JsString.fromInt(Types.arrayLength(a)), 
+                JsString.make("-character ARRAY is too small for ")),
+                JsString.fromInt(Types.stringLen(s))), 
+                JsString.make("-character string")));
+        END;
+        rtl := c.rtl();
+        RETURN rtl.assignArrayFromString(leftCode, rightCode)
+    END assignArrayFromString;
+BEGIN
+    designator := left.designator();
+    info := designator.info();
+    IF ~(info IS Types.PVariable) 
+        OR Types.isVariableReadOnly(info(Types.PVariable)^) THEN
+        Errors.raise(JsString.concat(JsString.make("cannot assign to "), info.idType()));
+    END; 
+
+    leftCode := left.lval();
+    rightCode := right.code();
+    leftType := left.type();
+    rightType := right.type();
+
+    isArray := leftType IS Types.PArray;
+    IF isArray
+        & (Types.arrayElementsType(leftType(Types.PArray)^) = Types.basic.ch)
+        & (rightType IS Types.PString) THEN
+        result := assignArrayFromString(leftType(Types.PArray)^, rightType(Types.PString)^);
+    ELSE
+        castOperation := Cast.implicit(rightType, leftType, castOperations);
+        IF castOperation = NIL THEN
+            Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
+                JsString.make("type mismatch: '"), 
+                leftCode),
+                JsString.make("' is '")),
+                leftType.description()),
+                JsString.make("' and cannot be assigned to '")),
+                rightType.description()),
+                JsString.make("' expression")));
+        END;
+        IF isArray & (rightType IS Types.PArray) 
+            & (Types.arrayLength(leftType(Types.PArray)^) = Types.openArrayLength) THEN
+            Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
+                JsString.make("'"),
+                leftCode),
+                JsString.make("' is open '")),
+                leftType.description()),
+                JsString.make("' and cannot be assigned")));
+        END;
+        IF isArray OR (rightType IS Types.PRecord) THEN
+            rtl := c.rtl();
+            result := rtl.copy(rightCode, leftCode);
+        ELSE
+            castExp := castOperation.make(c, Code.derefExpression(right));
+            rightCode := castExp.code();
+            IF info IS Types.PVariableRef THEN
+                rightCode := JsString.concat(JsString.concat(
+                    JsString.make(".set("), 
+                    rightCode), 
+                    JsString.make(")"));
+            ELSE
+                rightCode := JsString.concat(JsString.make(" = "), rightCode);
+            END;
+            result := JsString.concat(leftCode, rightCode);
+        END;
+    END;
+    RETURN result
+END assign;
+    
+PROCEDURE inplace(left, right: Code.PExpression; c: Context.Type; code: ARRAY OF CHAR; altOp: BinaryProc): JsString.Type;
+VAR
+    designator: Code.PDesignator;
+    rightExp: Code.PExpression;
+    result: JsString.Type;
+BEGIN
+    designator := left.designator();
+    IF designator.info() IS Types.PVariableRef THEN
+        result := assign(left, altOp(left, right, c), c);
+    ELSE
+        rightExp := Code.derefExpression(right);
+        result := JsString.concat(JsString.concat(
+            left.code(), 
+            JsString.make(code)), 
+            rightExp.code());
+    END;
+    RETURN result
+END inplace;
+
+PROCEDURE addReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opAddReal, " + ", Precedence.addSub)
+END addReal;
+
+PROCEDURE addInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryInt(left, right, c, opAddInt, " + ", Precedence.addSub)
+END addInt;
+
+PROCEDURE subReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opSubReal, " - ", Precedence.addSub)
+END subReal;
+
+PROCEDURE subInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryInt(left, right, c, opSubInt, " - ", Precedence.addSub)
+END subInt;
+
+PROCEDURE mulReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opMulReal, " * ", Precedence.mulDivMod)
+END mulReal;
+
+PROCEDURE mulInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryInt(left, right, c, opMulInt, " * ", Precedence.mulDivMod)
+END mulInt;
+
+PROCEDURE divReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opDivReal, " / ", Precedence.mulDivMod)
+END divReal;
+
+PROCEDURE divInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryInt(left, right, c, opDivInt, " / ", Precedence.mulDivMod)
+END divInt;
+
+PROCEDURE mod*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opMod, " % ", Precedence.mulDivMod)
+END mod;
+
+PROCEDURE setUnion*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opSetUnion, " | ", Precedence.bitOr)
+END setUnion;
+
+PROCEDURE setDiff*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opSetDiff, " & ~", Precedence.bitAnd)
+END setDiff;
+
+PROCEDURE setIntersection*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opSetIntersection, " & ", Precedence.bitAnd)
+END setIntersection;
+
+PROCEDURE setSymmetricDiff*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opSetSymmetricDiff, " ^ ", Precedence.bitXor)
+END setSymmetricDiff;
+
+PROCEDURE setInclL*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryPred(left, right, c, opSetInclL, codeSetInclL)
+END setInclL;
+
+PROCEDURE setInclR*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryPred(left, right, c, opSetInclR, codeSetInclR)
+END setInclR;
+
+PROCEDURE or*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opOr, " || ", Precedence.or)
+END or;
+
+PROCEDURE and*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opAnd, " && ", Precedence.and)
+END and;
+
+PROCEDURE equalInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opEqualInt, " == ", Precedence.equal)
+END equalInt;
+
+PROCEDURE equalReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opEqualReal, " == ", Precedence.equal)
+END equalReal;
+
+PROCEDURE equalStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN strCmp(" == ", left, right, c)
+END equalStr;
+
+PROCEDURE notEqualInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opNotEqualInt, " != ", Precedence.equal)
+END notEqualInt;
+
+PROCEDURE notEqualReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opNotEqualReal, " != ", Precedence.equal)
+END notEqualReal;
+
+PROCEDURE notEqualStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN strCmp(" != ", left, right, c)
+END notEqualStr;
+
+PROCEDURE is*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCodeEx(
+        left, 
+        right, 
+        c, 
+        NIL, 
+        " instanceof ", 
+        Precedence.relational, 
+        Types.basic.bool,
+        Precedence.none
+        )
+END is;
+
+PROCEDURE lessInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opLessInt, " < ", Precedence.relational)
+END lessInt;
+
+PROCEDURE lessReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opLessReal, " < ", Precedence.relational)
+END lessReal;
+
+PROCEDURE lessStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN strCmp(" < ", left, right, c)
+END lessStr;
+
+PROCEDURE greaterInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opGreaterInt, " > ", Precedence.relational)
+END greaterInt;
+
+PROCEDURE greaterReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opGreaterReal, " > ", Precedence.relational)
+END greaterReal;
+
+PROCEDURE greaterStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN strCmp(" > ", left, right, c)
+END greaterStr;
+
+PROCEDURE eqLessInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opEqLessInt, " <= ", Precedence.relational)
+END eqLessInt;
+
+PROCEDURE eqLessReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opEqLessReal, " <= ", Precedence.relational)
+END eqLessReal;
+
+PROCEDURE eqLessStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN strCmp(" <= ", left, right, c)
+END eqLessStr;
+
+PROCEDURE eqGreaterInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opEqGreaterInt, " >= ", Precedence.relational)
+END eqGreaterInt;
+
+PROCEDURE eqGreaterReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opEqGreaterReal, " >= ", Precedence.relational)
+END eqGreaterReal;
+
+PROCEDURE eqGreaterStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN strCmp(" >= ", left, right, c)
+END eqGreaterStr;
+
+PROCEDURE not*(x: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN unary(x, opNot, "!")
+END not;
+
+PROCEDURE negateInt*(x: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN promoteToWideIfNeeded(unary(x, opNegateInt, "-"))
+END negateInt;
+
+PROCEDURE negateReal*(x: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN promoteToWideIfNeeded(unary(x, opNegateReal, "-"))
+END negateReal;
+
+PROCEDURE unaryPlus*(x: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN unary(x, opUnaryPlus, "")
+END unaryPlus;
+
+PROCEDURE setComplement*(x: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN unary(x, opSetComplement, "~")
+END setComplement;
+
+PROCEDURE lsl*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opLsl, " << ", Precedence.shift)
+END lsl;
+
+PROCEDURE asr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opAsr, " >> ", Precedence.shift)
+END asr;
+
+PROCEDURE ror*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    RETURN binaryWithCode(left, right, c, opRor, " >>> ", Precedence.shift)
+END ror;
+
+PROCEDURE mulInplace*(left, right: Code.PExpression; c: Context.Type): JsString.Type;
+    RETURN inplace(left, right, c, " *= ", mulReal)
+END mulInplace;
+
+PROCEDURE divInplace*(left, right: Code.PExpression; c: Context.Type): JsString.Type;
+    RETURN inplace(left, right, c, " /= ", divReal)
+END divInplace;
+
+PROCEDURE pow2*(e: Code.PExpression): Code.PExpression;
+VAR
+    derefExp: Code.PExpression;
+BEGIN
+    derefExp := Code.derefExpression(e);
+    RETURN Code.makeSimpleExpression(
+            JsString.concat(JsString.concat(
+                JsString.make("Math.pow(2, "),
+                derefExp.code()),
+                JsString.make(")")),
+            Types.basic.real)
+END pow2;
+
+PROCEDURE log2*(e: Code.PExpression): Code.PExpression;
+VAR
+    derefExp: Code.PExpression;
+BEGIN
+    derefExp := Code.derefExpression(e);
+    RETURN Code.makeExpressionWithPrecedence(
+            JsString.concat(JsString.concat(
+                JsString.make("(Math.log("),
+                derefExp.code()),
+                JsString.make(") / Math.LN2) | 0")),
+            Types.basic.integer,
+            NIL,
+            NIL,
+            Precedence.bitOr)
+END log2;
+
+PROCEDURE opCastToUint8(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(left^(Code.IntConst).value 
+                           * right^(Code.IntConst).value)
+END opCastToUint8;
+
+PROCEDURE CastToUint8.make(context: Context.Type; e: Code.PExpression): Code.PExpression;
+    RETURN binaryWithCode(
+        e, 
+        Code.makeExpression(JsString.make("0xFF"), 
+                            Types.basic.integer, 
+                            NIL, 
+                            Code.makeIntConst(0FFH)), 
+        context, 
+        opCastToUint8, 
+        " & ", 
+        Precedence.bitAnd)
+END CastToUint8.make;
+
+BEGIN
+    openArrayChar := Types.makeArray(NIL, NIL, Types.basic.ch, Types.openArrayLength);
+
+    NEW(castToUint8);
+    castOperations.castToUint8 := castToUint8;
+END Operator.

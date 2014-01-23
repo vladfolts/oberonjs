@@ -6,13 +6,13 @@ CONST
 
 TYPE
     Id* = RECORD(Object.Type)
-        PROCEDURE idType(): JsString.Type
+        PROCEDURE idType*(): JsString.Type
     END;
 
     PId* = POINTER TO Id;
     
     Type* = RECORD(Object.Type)
-        PROCEDURE description(): JsString.Type
+        PROCEDURE description*(): JsString.Type
     END;
     PType* = POINTER TO Type;
 

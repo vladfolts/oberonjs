@@ -8,13 +8,23 @@ TYPE
     END;
     PScope* = POINTER TO Scope;
 
+    Rtl* = RECORD
+        copy*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
+        strCmp*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
+        assignArrayFromString*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
+        setInclL*: PROCEDURE(l, r: JsString.Type): JsString.Type;
+        setInclR*: PROCEDURE(l, r: JsString.Type): JsString.Type
+    END;
+    PRtl* = POINTER TO Rtl;
+
     Type* = RECORD
         handleChar*:    PROCEDURE(c: CHAR);
         handleLiteral*: PROCEDURE(s: JsString.Type): BOOLEAN;
         handleString*:  PROCEDURE(s: JsString.Type);
         handleIdent*:   PROCEDURE(s: JsString.Type);
         isLexem*:       PROCEDURE(): BOOLEAN;
-        qualifyScope*:  PROCEDURE(scope: PScope): JsString.Type
+        qualifyScope*:  PROCEDURE(scope: PScope): JsString.Type;
+        rtl*:           PROCEDURE(): PRtl
     END;
 
 END Context.

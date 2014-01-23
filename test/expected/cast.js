@@ -23,8 +23,8 @@ var RTL$ = {
             else
                 fromStr = "" + from;
             
-            if (to && to.constructor && to.constructor.name)
-                toStr = "" + to.constructor.name;
+            if (to.name)
+                toStr = "" + to.name;
             else
                 toStr = "" + to;
             

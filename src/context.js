@@ -4,7 +4,7 @@ var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
 var Errors = require("js/Errors.js");
 var Module = require("module.js");
-var op = require("operator.js");
+var op = require("js/Operator.js");
 var Parser = require("parser.js");
 var Procedure = require("procedure.js");
 var Class = require("rtl.js").Class;
@@ -15,6 +15,8 @@ var Type = require("js/Types.js");
 var basicTypes = Type.basic();
 var nullCodeGenerator = Code.nullGenerator();
 var nilType = Type.nil();
+
+var castOperations = op.castOperations();
 
 function getSymbolAndScope(context, id){
     var s = context.findSymbol(id);
@@ -55,7 +57,7 @@ function checkTypeMatch(from, to){
 }
 
 function checkImplicitCast(from, to){
-    var result = Cast.implicit(from, to, op);
+    var result = Cast.implicit(from, to, castOperations);
     if (!result)
         throwTypeMismatch(from, to);
     return result.make.bind(result);
@@ -77,7 +79,7 @@ function promoteExpressionType(context, left, right){
         return;
 
     var leftType = left.type();
-    if (rightType === undefined)
+    if (!rightType)
         return;
 
     checkImplicitCast(rightType, leftType);
@@ -129,7 +131,7 @@ exports.Integer = ChainedContext.extend({
     toInt: function(s){return parseInt(this.__result, 10);},
     endParse: function(){
         var n = this.toInt();
-        this.parent().handleConst(basicTypes.integer, Code.makeNumberConst(n), n.toString());
+        this.parent().handleConst(basicTypes.integer, Code.makeIntConst(n), n.toString());
     }
 });
 
@@ -154,7 +156,7 @@ exports.Real = ChainedContext.extend({
     },
     endParse: function(){
         var n = Number(this.__result);
-        this.parent().handleConst(basicTypes.real, Code.makeNumberConst(n), n.toString());
+        this.parent().handleConst(basicTypes.real, Code.makeRealConst(n), n.toString());
     }
 });
 
@@ -320,7 +322,7 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error("ARRAY expected, got '" + type.description() + "'");
         var value = e.constValue();
         var arrayLen = Type.arrayLength(type);
-        if (value !== undefined && arrayLen != Type.openArrayLength && value.value >= arrayLen)
+        if (value && arrayLen != Type.openArrayLength && value.value >= arrayLen)
             throw new Errors.Error("index out of bounds: maximum possible index is "
                                  + (Type.arrayLength(type) - 1)
                                  + ", got " + value.value );
@@ -584,7 +586,7 @@ exports.ProcDecl = ChainedContext.extend({
         var result = this.__type.result();
         if (!result)
             throw new Errors.Error("unexpected RETURN in PROCEDURE declared with no result type");
-        if (!Cast.implicit(type, result, op))
+        if (!Cast.implicit(type, result, castOperations))
             throw new Errors.Error(
                 "RETURN '" + result.description() + "' expected, got '"
                 + type.description() + "'");
@@ -818,26 +820,36 @@ function relationOp(leftType, rightType, literal){
     var type = useTypeInRelation(leftType, rightType);
     switch (literal){
         case "=":
-            o = Type.isString(type) ? op.equalStr : op.equal;
+            o = Type.isString(type) ? op.equalStr 
+              : Type.isInt(type)    ? op.equalInt 
+                                    : op.equalReal;
             check = equalOpTypeCheck;
             break;
         case "#":
-            o = Type.isString(type) ? op.notEqualStr : op.notEqual;
+            o = Type.isString(type) ? op.notEqualStr 
+              : Type.isInt(type)    ? op.notEqualInt
+                                    : op.notEqualReal;
             check = equalOpTypeCheck;
             break;
         case "<":
-            o = Type.isString(type) ? op.lessStr : op.less;
+            o = Type.isString(type) ? op.lessStr 
+              : Type.isInt(type)    ? op.lessInt
+                                    : op.lessReal;
             check = orderOpTypeCheck;
             break;
         case ">":
-            o = Type.isString(type) ? op.greaterStr : op.greater;
+            o = Type.isString(type) ? op.greaterStr 
+              : Type.isInt(type)    ? op.greaterInt
+                                    : op.greaterReal;
             check = orderOpTypeCheck;
             break;
         case "<=":
             if (type == basicTypes.set)
                 o = op.setInclL;
             else {
-                o = Type.isString(type) ? op.eqLessStr : op.eqLess;
+                o = Type.isString(type) ? op.eqLessStr 
+                  : Type.isInt(type)    ? op.eqLessInt
+                                        : op.eqLessReal;
                 check = orderOpTypeCheck;
             }
             break;
@@ -845,7 +857,9 @@ function relationOp(leftType, rightType, literal){
             if (type == basicTypes.set)
                 o = op.setInclR;
             else {
-                o = Type.isString(type) ? op.eqGreaterStr : op.eqGreater;
+                o = Type.isString(type) ? op.eqGreaterStr 
+                  : Type.isInt(type)    ? op.eqGreaterInt
+                                        : op.eqGreaterReal;
                 check = orderOpTypeCheck;
             }
             break;
@@ -865,10 +879,10 @@ exports.AddOperator = ChainedContext.extend({
         var o;
         if (s == "+")
             o = (type == basicTypes.set) ? op.setUnion
-                                         : assertNumericOp(type, s, op.add, op.addInt);
+                                         : assertNumericOp(type, s, op.addReal, op.addInt);
         else if (s == "-")
             o = (type == basicTypes.set) ? op.setDiff
-                                         : assertNumericOp(type, s, op.sub, op.subInt);
+                                         : assertNumericOp(type, s, op.subReal, op.subInt);
         else if (s == "OR"){
             if (type != basicTypes.bool)
                 throw new Errors.Error("BOOLEAN expected as operand of 'OR', got '"
@@ -890,14 +904,14 @@ exports.MulOperator = ChainedContext.extend({
         var o;
         if (s == "*")
             o = (type == basicTypes.set) ? op.setIntersection
-                                         : assertNumericOp(type, s, op.mul, op.mulInt);
+                                         : assertNumericOp(type, s, op.mulReal, op.mulInt);
         else if (s == "/"){
             if (type == basicTypes.set)
                 o = op.setSymmetricDiff;
             else if (Type.isInt(type))
                 throw new Errors.Error("operator DIV expected for integer division");
             else
-                o = assertNumericOp(type, s, op.div);
+                o = assertNumericOp(type, s, op.divReal);
         }
         else if (s == "DIV")
             o = assertIntOp(type, s, op.divInt);
@@ -970,9 +984,9 @@ exports.Factor = ChainedContext.extend({
         if (s == "NIL")
             parent.handleConst(nilType, undefined, "null");
         else if (s == "TRUE")
-            parent.handleConst(basicTypes.bool, Code.makeNumberConst(true), "true");
+            parent.handleConst(basicTypes.bool, Code.makeIntConst(true), "true");
         else if (s == "FALSE")
-            parent.handleConst(basicTypes.bool, Code.makeNumberConst(false), "false");
+            parent.handleConst(basicTypes.bool, Code.makeIntConst(false), "false");
         else if (s == "~")
             parent.handleLogicalNot();
     },
@@ -987,7 +1001,7 @@ exports.Set = ChainedContext.extend({
         this.__expr = "";
     },
     handleElement: function(from, fromValue, to, toValue){
-        if (fromValue !== undefined && (!to || toValue !== undefined)){
+        if (fromValue && (!to || toValue)){
             if (to)
                 for(var i = fromValue.value; i <= toValue.value; ++i)
                     this.__value |= 1 << i;
@@ -1006,7 +1020,7 @@ exports.Set = ChainedContext.extend({
     endParse: function(){
         var parent = this.parent();
         if (!this.__expr.length)
-            parent.handleConst(basicTypes.set, Code.makeNumberConst(this.__value), this.__value.toString());
+            parent.handleConst(basicTypes.set, Code.makeSetConst(this.__value), this.__value.toString());
         else{
             var code = this.rtl().makeSet(this.__expr);
             if (this.__value)
@@ -1067,7 +1081,7 @@ exports.SimpleExpression = ChainedContext.extend({
         switch(this.__unaryOperator){
             case "-":
                 o = (type == basicTypes.set) ? op.setComplement
-                                             : assertNumericOp(type, this.__unaryOperator, op.negate);
+                                             : assertNumericOp(type, this.__unaryOperator, op.negateReal, op.negateInt);
                 break;
             case "+":
                 o = assertNumericOp(type, this.__unaryOperator, op.unaryPlus);
@@ -1317,7 +1331,7 @@ exports.CaseRange = ChainedContext.extend({
             if (!Type.stringAsChar(type, {set: function(v){value = v;}}))
                 throw new Errors.Error("single-character string expected");
             type = basicTypes.ch;
-            value = Code.makeNumberConst(value);
+            value = Code.makeIntConst(value);
         }
         this.handleLabel(type, value);
     },
@@ -1483,7 +1497,7 @@ exports.ConstDecl = ChainedContext.extend({
     },
     handleExpression: function(e){
         var value = e.constValue();
-        if (value === undefined)
+        if (!value)
             throw new Errors.Error("constant expression expected");
         this.__type = e.type();
         this.__value = value;

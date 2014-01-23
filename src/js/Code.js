@@ -1,14 +1,13 @@
 var RTL$ = require("rtl.js");
-var JS = GLOBAL;
 var JsMap = require("js/JsMap.js");
 var JsString = require("js/JsString.js");
 var Context = require("js/Context.js");
 var Object = require("js/Object.js");
 var Stream = require("js/Stream.js");
 var Symbols = require("js/Symbols.js");
+var Precedence = require("js/CodePrecedence.js");
 var Types = require("js/Types.js");
 var kTab = "\t";
-var kNoPrecedence = 0;
 var IGenerator = RTL$.extend({
 	init: function IGenerator(){
 	}
@@ -44,8 +43,20 @@ var Const = RTL$.extend({
 	init: function Const(){
 	}
 });
-var NumberConst = Const.extend({
-	init: function NumberConst(){
+var IntConst = Const.extend({
+	init: function IntConst(){
+		Const.prototype.init.call(this);
+		this.value = 0;
+	}
+});
+var RealConst = Const.extend({
+	init: function RealConst(){
+		Const.prototype.init.call(this);
+		this.value = 0;
+	}
+});
+var SetConst = Const.extend({
+	init: function SetConst(){
 		Const.prototype.init.call(this);
 		this.value = 0;
 	}
@@ -160,13 +171,27 @@ Expression.prototype.maxPrecedence = function(){
 	return this.mMaxPrecedence;
 }
 Expression.prototype.isTerm = function(){
-	return this.mDesignator == null && this.mMaxPrecedence == kNoPrecedence;
+	return this.mDesignator == null && this.mMaxPrecedence == Precedence.none;
 }
 
-function makeNumberConst(n/*REAL*/){
+function makeIntConst(n/*INTEGER*/){
 	var result = null;
-	result = new NumberConst();
+	result = new IntConst();
 	result.value = n;
+	return result;
+}
+
+function makeRealConst(n/*REAL*/){
+	var result = null;
+	result = new RealConst();
+	result.value = n;
+	return result;
+}
+
+function makeSetConst(s/*SET*/){
+	var result = null;
+	result = new SetConst();
+	result.value = s;
 	return result;
 }
 
@@ -177,7 +202,7 @@ function makeStringConst(s/*Type*/){
 	return result;
 }
 
-function makeExpressionWithPrecedence(code/*Type*/, type/*PType*/, designator/*PDesigantor*/, constValue/*PConst*/, maxPrecedence/*INTEGER*/){
+function makeExpressionWithPrecedence(code/*Type*/, type/*PType*/, designator/*PDesignator*/, constValue/*PConst*/, maxPrecedence/*INTEGER*/){
 	var result = null;
 	result = new Expression();
 	result.mCode = code;
@@ -188,8 +213,8 @@ function makeExpressionWithPrecedence(code/*Type*/, type/*PType*/, designator/*P
 	return result;
 }
 
-function makeExpression(code/*Type*/, type/*PType*/, designator/*PDesigantor*/, constValue/*PConst*/){
-	return makeExpressionWithPrecedence(code, type, designator, constValue, kNoPrecedence);
+function makeExpression(code/*Type*/, type/*PType*/, designator/*PDesignator*/, constValue/*PConst*/){
+	return makeExpressionWithPrecedence(code, type, designator, constValue, Precedence.none);
 }
 
 function makeSimpleExpression(code/*Type*/, type/*PType*/){
@@ -248,10 +273,10 @@ function refExpression(e/*PExpression*/){
 	return result;
 }
 
-function adjustPrecedence(e/*Expression*/, precedence/*INTEGER*/){
+function adjustPrecedence(e/*PExpression*/, precedence/*INTEGER*/){
 	var result = null;
 	result = e.mCode;
-	if (e.mMaxPrecedence > precedence){
+	if (precedence != Precedence.none && e.mMaxPrecedence > precedence){
 		result = JsString.concat(JsString.concat(JsString.make("("), result), JsString.make(")"));
 	}
 	return result;
@@ -356,9 +381,16 @@ function makeModuleGenerator(name/*Type*/, imports/*Strings*/){
 	result.imports = imports;
 	return result;
 }
+exports.Designator = Designator;
+exports.Const = Const;
+exports.IntConst = IntConst;
+exports.RealConst = RealConst;
+exports.SetConst = SetConst;
 exports.Expression = Expression;
 exports.nullGenerator = function(){return nullGenerator;};
-exports.makeNumberConst = makeNumberConst;
+exports.makeIntConst = makeIntConst;
+exports.makeRealConst = makeRealConst;
+exports.makeSetConst = makeSetConst;
 exports.makeStringConst = makeStringConst;
 exports.makeExpressionWithPrecedence = makeExpressionWithPrecedence;
 exports.makeExpression = makeExpression;

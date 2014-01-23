@@ -1,0 +1,19 @@
+MODULE CodePrecedence;
+CONST
+    none* = 0;
+
+    unary*      = 4;
+    mulDivMod*  = 5;
+    addSub*     = 6;
+    shift*      = 7;
+    relational* = 8;
+    equal*      = 9;
+    bitAnd*     = 10;
+    bitXor*     = 11;
+    bitOr*      = 12;
+    and*        = 13;
+    or*         = 14;
+    conditional* = 15;
+    assignment* = 17;
+
+END CodePrecedence.
