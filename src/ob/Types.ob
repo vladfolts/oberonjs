@@ -17,7 +17,7 @@ TYPE
     PType* = POINTER TO Type;
 
     StorageType = RECORD(Type)    
-        PROCEDURE initializer(cx: Context.Type): JsString.Type
+        PROCEDURE initializer*(cx: Context.Type): JsString.Type
     END;
 
     TypeId* = RECORD(Id)
@@ -78,8 +78,8 @@ TYPE
 
     PString* = POINTER TO String;
 
-    NamedType = RECORD(StorageType)
-        name: JsString.Type
+    NamedType* = RECORD(StorageType)
+        name*: JsString.Type
     END;
 
     Array* = RECORD(NamedType)
@@ -99,11 +99,14 @@ TYPE
     PPointer* = POINTER TO Pointer;
 
     Procedure* = RECORD(NamedType)
+    END;
+    PProcedure* = POINTER TO Procedure;
+
+    DefinedProcedure* = RECORD(Procedure)
         PROCEDURE args*(): JsArray.Type;
         PROCEDURE result*(): PType
     END;
-
-    PProcedure* = POINTER TO Procedure;
+    PDefinedProcedure* = POINTER TO DefinedProcedure;
 
     ProcedureArgument* = RECORD (Object.Type)
         PROCEDURE description(): JsString.Type;
@@ -113,8 +116,6 @@ TYPE
     END;
 
     PProcedureArgument* = POINTER TO ProcedureArgument;
-
-
 
     BasicType = RECORD(NamedType)
         mInitializer: JsString.Type
@@ -141,7 +142,7 @@ TYPE
     
     NonExportedRecord* = RECORD(Record)
     END;
-    PNonExportedRecord = POINTER TO NonExportedRecord;
+    PNonExportedRecord* = POINTER TO NonExportedRecord;
 
     Nil = RECORD(Type)
     END;
@@ -570,7 +571,7 @@ BEGIN
 END makeProcedureArgument;
 
 PROCEDURE Module.idType(): JsString.Type;
-    RETURN JsString.make("module")
+    RETURN JsString.make("MODULE")
 END Module.idType;
 
 PROCEDURE makeTypeId*(type: PType): PTypeId;

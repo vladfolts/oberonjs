@@ -46,6 +46,14 @@ BEGIN
     RETURN result
 END stringsAt;
 
+PROCEDURE contains*(a: Type; x: Object.PType): BOOLEAN;
+VAR
+    result: BOOLEAN;
+BEGIN
+    JS.do("result = (a.indexOf(x) != -1)");
+    RETURN result
+END contains;
+
 PROCEDURE make*(): Type;
 VAR
     result: Type;

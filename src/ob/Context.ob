@@ -13,7 +13,8 @@ TYPE
         strCmp*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
         assignArrayFromString*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
         setInclL*: PROCEDURE(l, r: JsString.Type): JsString.Type;
-        setInclR*: PROCEDURE(l, r: JsString.Type): JsString.Type
+        setInclR*: PROCEDURE(l, r: JsString.Type): JsString.Type;
+        assertId*: PROCEDURE(): JsString.Type
     END;
     PRtl* = POINTER TO Rtl;
 
@@ -26,5 +27,6 @@ TYPE
         qualifyScope*:  PROCEDURE(scope: PScope): JsString.Type;
         rtl*:           PROCEDURE(): PRtl
     END;
+    PType* = POINTER TO Type;
 
 END Context.

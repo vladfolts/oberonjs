@@ -1,30 +1,21 @@
 "use strict";
 
 var Cast = require("js/Cast.js");
+var Code = require("js/Code.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var Symbol = require("js/Symbols.js");
-var Procedure = require("procedure.js");
+var Procedure = require("js/Procedure.js");
 var Type = require("js/Types.js");
 
 function methodCallGenerator(context, id, type){
-    return new Procedure.CallGenerator(context, id, type);
+    return new Procedure.makeProcCallGenerator(context, id, type);
 }
 
-var SuperCallGenerator = Procedure.CallGenerator.extend({
-    init: function(context, id, type){
-        Procedure.CallGenerator.prototype.init.call(this, context, id, type);
-    },
-    prolog: function(){
-        return Procedure.CallGenerator.prototype.prolog.call(this) + "this";
-    },
-    writeArgumentCode: function(e, pos, isVar, convert){
-        Procedure.CallGenerator.prototype.writeArgumentCode.call(this, e, pos + 1, isVar, convert);
-    }
-});
-
 function superMethodCallGenerator(context, id, type){
-    return new SuperCallGenerator(context, id, type);
+    var args = Procedure.makeArgumentsCode(context);
+    args.write(Code.makeExpression("this"));
+    return Procedure.makeProcCallGeneratorWithCustomArgs(context, id, type, args);
 }
 
 var MethodType = Type.Procedure.extend({
@@ -115,7 +106,7 @@ var RecordType = Type.Record.extend({
         this.__definedMethods = [];
         this.__abstractMethods = [];
         this.__instantiated = false;
-        this.__lazyDefinitions = [];
+        this.__lazyDefinitions = {};
         this.__nonExportedMethods = [];
     },
     initializer: function(context){
@@ -172,14 +163,21 @@ var RecordType = Type.Record.extend({
         
         this.__definedMethods.push(id);
     },
-    requireMethodDefinition: function(id){
+    requireMethodDefinition: function(id, reason){
         if (!this.__hasMethodDeclaration(id))
             throw new Errors.Error(
                 "there is no method '" + id + "' in base type(s)");
         if (this.__finalized)
-            this.__ensureMethodDefinitions([id]);
-        else if (this.__lazyDefinitions.indexOf(id) == -1)
-            this.__lazyDefinitions.push(id);
+            this.__ensureMethodDefinitions({reason: [id]});
+        else {
+            var ids = this.__lazyDefinitions[reason];
+            if (!ids){
+                ids = [id];
+                this.__lazyDefinitions[reason] = ids;
+            }
+            else if (ids.indexOf(id) == -1)
+                ids.push(id);
+            }
     },
     abstractMethods: function(){return this.__abstractMethods;},
     __collectAbstractMethods: function(){
@@ -206,26 +204,43 @@ var RecordType = Type.Record.extend({
 
         Type.Record.prototype.finalize.call(this);
     },
-    __ensureMethodDefinitions: function(ids){
+    __ensureMethodDefinitions: function(reasons){
         var result = [];
-        for(var i = 0; i < ids.length; ++i){
-            var m = ids[i];
-            if (!this.__hasMethodDefinition(m))
-                result.push(m);
+        for(var reason in reasons){
+            var ids = reasons[reason];
+            var report = [];
+            for(var i = 0; i < ids.length; ++i){
+                var m = ids[i];
+                if (!this.__hasMethodDefinition(m))
+                    report.push(m);
+            }
+            if (report.length)
+                result.push(reason + ": " + report.join(", "));
         }
         if (result.length)
-            throw new Errors.Error(
-                  "cannot use abstract method(s) in SUPER calls: "
-                + result.join(", "));
+            throw new Errors.Error(result.join("; "));
     },
     __ensureNonAbstract: function(){
+        function errMsg(self){
+            return "cannot instantiate '" 
+                 + Type.typeName(self) 
+                 + "' because it has abstract method(s)";
+        }
+
         var am = this.abstractMethods();
         if (am.length)
-            throw new Errors.Error(
-                  "cannot instantiate '" + Type.typeName(this) 
-                + "' because it has abstract method(s): "
-                + am.join(", ")
+            throw new Errors.Error(errMsg(this) + ": " + am.join(", ")
                 );
+
+        var baseType = Type.recordBase(this);
+        while (baseType){
+            if (!baseType.__finalized)
+                for(var id in baseType.__declaredMethods){
+                    if (!this.__hasMethodDefinition(id))
+                        baseType.requireMethodDefinition(id, errMsg(this));
+                }
+            baseType = Type.recordBase(baseType);
+        }
     },
     __hasMethodDeclaration: function(id){
         var type = this;
@@ -349,7 +364,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 + "' has no base type - SUPER cannot be used");
 
         var id = this.__methodId.id();
-        baseType.requireMethodDefinition(id);
+        baseType.requireMethodDefinition(id, "cannot use abstract method(s) in SUPER calls");
         return {
             symbol: Symbol.makeSymbol(
                 "method",  

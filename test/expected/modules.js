@@ -14,6 +14,8 @@ var RTL$ = {
         return result;
     },
     typeGuard: function (from, to){
+        if (!from)
+            return from;
         if (!(from instanceof to)){
             var fromStr;
             var toStr;

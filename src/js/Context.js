@@ -12,6 +12,7 @@ var Rtl = RTL$.extend({
 		this.assignArrayFromString = null;
 		this.setInclL = null;
 		this.setInclR = null;
+		this.assertId = null;
 	}
 });
 var Type = RTL$.extend({

@@ -327,12 +327,13 @@ return {
 "NEW": testWithContext(
     context(grammar.statement,
             "TYPE P = POINTER TO RECORD END;"
-            + "VAR p: P; i: INTEGER;"
+            + "VAR p: P; i: INTEGER; r: RECORD END;"
             + "PROCEDURE proc(): P; RETURN NIL END proc;"
             ),
     pass("NEW(p)"),
     fail(["NEW.NEW(p)", "cannot designate 'standard procedure NEW'"],
          ["NEW(i)", "POINTER variable expected, got 'INTEGER'"],
+         ["NEW(r)", "POINTER variable expected, got 'anonymous RECORD'"],
          ["NEW()", "1 argument(s) expected, got 0"],
          ["NEW(p, p)", "1 argument(s) expected, got 2"],
          ["NEW(proc())", "expression cannot be used as VAR parameter"])
@@ -400,6 +401,15 @@ return {
          ["b := ODD(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"]
          )
 ),
+"ODD const expression": testWithGrammar(
+    grammar.typeDeclaration,
+    pass("T = ARRAY ORD(ODD(1)) OF INTEGER",
+         "T = ARRAY ORD(ODD(3)) OF INTEGER"
+         ),
+    fail(["T = ARRAY ORD(ODD(0)) OF INTEGER", "array size must be greater than 0, got 0"],
+         ["T = ARRAY ORD(ODD(2)) OF INTEGER", "array size must be greater than 0, got 0"]
+         )
+),
 "ORD": testWithContext(
     context(grammar.statement, "VAR ch: CHAR; i: INTEGER; b: BOOLEAN;"),
     pass("i := ORD(ch)",
@@ -411,6 +421,20 @@ return {
          "b := ORD(22X) = 022H"),
     fail(["i := ORD(1.2)", "ORD function expects CHAR or BOOLEAN or SET as an argument, got 'REAL'"],
          ["i := ORD(\"abc\")", "ORD function expects CHAR or BOOLEAN or SET as an argument, got 'multi-character string'"]
+         )
+),
+"ORD const expression": testWithGrammar(
+    grammar.typeDeclaration,
+    pass("T = ARRAY ORD({0}) OF INTEGER",
+         "T = ARRAY ORD({0}) + 1 OF INTEGER",
+         "T = ARRAY ORD(TRUE) OF INTEGER",
+         "T = ARRAY ORD(TRUE) + 1 OF INTEGER",
+         "T = ARRAY ORD(\"A\") OF INTEGER",
+         "T = ARRAY ORD(\"A\") + 1 OF INTEGER"
+         ),
+    fail(["T = ARRAY ORD({}) OF INTEGER", "array size must be greater than 0, got 0"],
+         ["T = ARRAY ORD(FALSE) OF INTEGER", "array size must be greater than 0, got 0"],
+         ["T = ARRAY ORD(0X) OF INTEGER", "array size must be greater than 0, got 0"]
          )
 ),
 "CHR": testWithContext(
@@ -891,7 +915,7 @@ return {
     pass("ASSERT(TRUE)"),
     fail(["ASSERT()", "1 argument(s) expected, got 0"],
          ["ASSERT(TRUE, 123)", "1 argument(s) expected, got 2"],
-         ["ASSERT(123, TRUE)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'BOOLEAN'"])
+         ["ASSERT(123)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'BOOLEAN'"])
     ),
 "imported module without exports": testWithModule(
     "MODULE test; END test.",
@@ -899,7 +923,9 @@ return {
     fail(["MODULE m; IMPORT test; BEGIN test.p(); END m.",
           "identifier 'p' is not exported by module 'test'"],
          ["MODULE m; IMPORT t := test; BEGIN t.p(); END m.",
-          "identifier 'p' is not exported by module 'test'"]
+          "identifier 'p' is not exported by module 'test'"],
+         ["MODULE m; IMPORT test; BEGIN test(); END m.",
+          "PROCEDURE expected, got 'MODULE'"]
         )),
 "import record type": testWithModule(
     "MODULE test; TYPE T* = RECORD f*: INTEGER; notExported: BOOLEAN END; END test.",
@@ -1040,7 +1066,7 @@ return {
          "PROCEDURE p(VAR a: ARRAY OF BOOLEAN): INTEGER; RETURN LEN(a) END p",
          "PROCEDURE p(): INTEGER; RETURN LEN(\"abc\") END p"),
     fail(["PROCEDURE p(a: ARRAY OF INTEGER): INTEGER; RETURN LEN(a[0]) END p",
-          "type mismatch for argument 1: 'INTEGER' cannot be converted to 'ARRAY OF any type'"])
+          "ARRAY or string is expected as an argument of LEN, got 'INTEGER'"])
     ),
 "array expression": testWithGrammar(
     grammar.procedureBody,

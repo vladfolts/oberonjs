@@ -65,14 +65,14 @@ TYPE
         value: JsString.Type
     END;
 
-    Expression* = RECORD
+    Expression* = RECORD(Object.Type)
         PROCEDURE code*(): JsString.Type;
         PROCEDURE lval*(): JsString.Type;
         PROCEDURE type*(): Types.PType;
         PROCEDURE designator*(): PDesignator;
         PROCEDURE constValue*(): PConst;
         PROCEDURE maxPrecedence*(): INTEGER;
-        PROCEDURE isTerm(): BOOLEAN;
+        PROCEDURE isTerm*(): BOOLEAN;
 
         mCode: JsString.Type;
         mType: Types.PType;
@@ -251,6 +251,7 @@ PROCEDURE makeExpressionWithPrecedence*(
 VAR
     result: PExpression;
 BEGIN
+    ASSERT(code # NIL);
     NEW(result);
     result.mCode := code;
     result.mType := type;

@@ -2,7 +2,7 @@ MODULE Cast;
 IMPORT Code, Context, JsArray, JsString, Object, Types;
 
 TYPE
-    CastOp* = RECORD
+    CastOp* = RECORD(Object.Type)
         PROCEDURE make*(c: Context.Type; e: Code.PExpression): Code.PExpression
     END;
 
@@ -57,7 +57,7 @@ PROCEDURE areTypesMatch*(t1: Types.PType; t2: Types.PType): BOOLEAN;
             OR ((t2 = Types.nil) & (matchesToNIL(t1^))))
 END areTypesMatch;
 
-PROCEDURE areArgsMatch(oa1, oa2: Object.PType; p1, p2: Types.PProcedure): BOOLEAN;
+PROCEDURE areArgsMatch(oa1, oa2: Object.PType; p1, p2: Types.PDefinedProcedure): BOOLEAN;
 VAR
     a1: Types.PProcedureArgument;
     a2: Types.PProcedureArgument;
@@ -69,7 +69,7 @@ BEGIN
             OR areTypesExactlyMatch(a1.type, a2.type))
 END areArgsMatch;
 
-PROCEDURE areProceduresMatch*(p1: Types.PProcedure; p2: Types.PProcedure): BOOLEAN;
+PROCEDURE areProceduresMatch*(p1, p2: Types.PDefinedProcedure): BOOLEAN;
 VAR
     result: BOOLEAN;
     args1, args2: JsArray.Type;
@@ -107,9 +107,9 @@ BEGIN
     ELSIF (t1 IS Types.PPointer) & (t2 IS Types.PPointer) THEN
         result := areTypesMatch(Types.pointerBase(t1(Types.PPointer)^), 
                                 Types.pointerBase(t2(Types.PPointer)^));
-    ELSIF (t1 IS Types.PProcedure) & (t2 IS Types.PProcedure) THEN
-        result := areProceduresMatch(t1(Types.PProcedure), 
-                                     t2(Types.PProcedure));
+    ELSIF (t1 IS Types.PDefinedProcedure) & (t2 IS Types.PDefinedProcedure) THEN
+        result := areProceduresMatch(t1(Types.PDefinedProcedure), 
+                                     t2(Types.PDefinedProcedure));
     END;
     RETURN result
 END areTypesExactlyMatchImpl;
@@ -163,8 +163,8 @@ BEGIN
         END;
     ELSIF (from = Types.nil) & matchesToNIL(to^) THEN
         result := doNothing;
-    ELSIF (from IS Types.PProcedure) & (to IS Types.PProcedure) THEN
-        IF areProceduresMatch(from(Types.PProcedure), to(Types.PProcedure)) THEN
+    ELSIF (from IS Types.PDefinedProcedure) & (to IS Types.PDefinedProcedure) THEN
+        IF areProceduresMatch(from(Types.PDefinedProcedure), to(Types.PDefinedProcedure)) THEN
             result := doNothing;
         END
     END;

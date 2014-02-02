@@ -1,0 +1,1006 @@
+MODULE Procedure;
+IMPORT
+    Cast,
+    Code, 
+    Context, 
+    Errors, 
+    JsArray, 
+    JsString, 
+    Object, 
+    Operator, 
+    Precedence := CodePrecedence, 
+    Symbols, 
+    Types;
+TYPE
+    Call* = RECORD
+        PROCEDURE make(args: JsArray.Type; cx: Context.Type): Code.PExpression
+    END;
+    PCall = POINTER TO Call;
+
+    StdCall = RECORD(Call)
+        args: JsArray.Type
+    END;
+    PStdCall = POINTER TO StdCall;
+
+    CallGenerator* = RECORD
+        PROCEDURE handleArgument(e: Code.PExpression);
+        PROCEDURE end(): Code.PExpression;
+
+        args: JsArray.Type;
+        cx: Context.PType;
+        call: PCall
+    END;
+    PCallGenerator = POINTER TO CallGenerator;
+
+    Impl = RECORD(Types.Procedure)
+        PROCEDURE callGenerator(cx: Context.PType): PCallGenerator
+    END;
+
+    Type* = RECORD(Types.DefinedProcedure)
+        PROCEDURE callGenerator(cx: Context.PType; id: JsString.Type): PCallGenerator;
+        PROCEDURE define(args: JsArray.Type; result: Types.PType);
+
+        mArgs: JsArray.Type;
+        mResult: Types.PType
+    END;
+    PType = POINTER TO Type;
+
+    Std* = RECORD(Impl)
+        call: PCall
+    END;
+
+    ArgumentsCode = RECORD
+        PROCEDURE write(actual: Code.PExpression; 
+                        expected: Types.PProcedureArgument; 
+                        cast: Cast.PCastOp
+                        );
+        PROCEDURE result(): JsString.Type
+    END;
+    PArgumentsCode = POINTER TO ArgumentsCode;
+
+    GenArgCode = RECORD(ArgumentsCode)
+        code: JsString.Type;
+        cx: Context.PType
+    END;
+
+    BinaryOp = PROCEDURE(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    BinaryOpStr = PROCEDURE (x, y: JsString.Type): JsString.Type;
+VAR
+    predefined*: JsArray.Type;
+
+PROCEDURE checkArgument(
+    actual: Code.PExpression; 
+    expected: Types.PProcedureArgument; 
+    pos: INTEGER;
+    code: PArgumentsCode
+    );
+VAR
+    actualType, expectType: Types.PType;
+    designator: Code.PDesignator;
+    info: Types.PId;
+    result: Cast.PCastOp;
+BEGIN
+    expectType := expected.type; (* can be NIL for predefined functions (like NEW), dont check it in this case *)
+    IF expectType # NIL THEN
+        actualType := actual.type();
+        result := Cast.implicit(actualType, expectType, Operator.castOperations);
+        IF result = NIL THEN
+            Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
+                JsString.make("type mismatch for argument "),
+                JsString.fromInt(pos + 1)),
+                JsString.make(": '")),
+                actualType.description()),
+                JsString.make("' cannot be converted to '")),
+                expectType.description()),
+                JsString.make("'")));
+        END;
+        IF expected.isVar & (expectType # actualType) & Types.isInt(actualType) THEN
+            Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
+                JsString.make("type mismatch for argument "),
+                JsString.fromInt(pos + 1)),
+                JsString.make(": cannot pass '")),
+                actualType.description()),
+                JsString.make("' as VAR parameter of type '")),
+                expectType.description()),
+                JsString.make("'")));
+        END;
+    END;
+    IF expected.isVar THEN
+        designator := actual.designator();
+        IF designator = NIL THEN
+            Errors.raise(JsString.make("expression cannot be used as VAR parameter"));
+        END;
+        info := designator.info();
+        IF info IS Types.PConst THEN
+            Errors.raise(JsString.make("constant cannot be used as VAR parameter"));
+        END;
+        IF (info IS Types.PVariable) 
+         & Types.isVariableReadOnly(info(Types.PVariable)^) THEN
+            Errors.raise(JsString.concat(info.idType(), JsString.make(" cannot be used as VAR parameter")));
+        END;
+    END;
+    IF code # NIL THEN
+        code.write(actual, expected, result);
+    END;
+END checkArgument;
+
+PROCEDURE checkArgumentsType(actual: JsArray.Type; expected: JsArray.Type; code: PArgumentsCode);
+VAR
+    actualLen: INTEGER;
+    i: INTEGER;
+    actualExp: Object.PType;
+    expectedArg: Object.PType;
+BEGIN
+    actualLen := JsArray.len(actual);
+    WHILE i < actualLen DO
+        actualExp := JsArray.at(actual, i);
+        expectedArg := JsArray.at(expected, i);
+        checkArgument(actualExp(Code.PExpression), expectedArg(Types.PProcedureArgument), i, code);
+        INC(i);
+    END;
+END checkArgumentsType;
+
+PROCEDURE checkArgumentsCount*(actual, expected: INTEGER);
+BEGIN
+    IF actual # expected THEN
+        Errors.raise(JsString.concat(JsString.concat(
+            JsString.fromInt(expected),
+            JsString.make(" argument(s) expected, got ")),
+            JsString.fromInt(actual)));
+    END;
+END checkArgumentsCount;
+
+PROCEDURE processArguments(actual: JsArray.Type; expected: JsArray.Type; code: PArgumentsCode);
+BEGIN
+    checkArgumentsCount(JsArray.len(actual), JsArray.len(expected));
+    checkArgumentsType(actual, expected, code);
+END processArguments;
+
+PROCEDURE checkArguments(actual: JsArray.Type; expected: JsArray.Type);
+BEGIN
+    processArguments(actual, expected, NIL);
+END checkArguments;
+
+PROCEDURE makeStd(name: JsString.Type; call: PCall): Types.PProcedure;
+VAR
+    result: POINTER TO Std;
+BEGIN
+    NEW(result);
+    Types.initProcedure(result^, name);
+    result.call := call;
+    RETURN result
+END makeStd;
+
+PROCEDURE CallGenerator.handleArgument(e: Code.PExpression);
+BEGIN
+    JsArray.add(SELF.args, e);
+END CallGenerator.handleArgument;
+
+PROCEDURE CallGenerator.end(): Code.PExpression;
+    RETURN SELF.call.make(SELF.args, SELF.cx^)
+END CallGenerator.end;
+
+PROCEDURE makeCallGenerator*(call: PCall; cx: Context.PType): PCallGenerator;
+VAR
+    result: PCallGenerator;
+BEGIN
+    ASSERT(cx # NIL);
+    NEW(result);
+    result.args := JsArray.make();
+    result.cx := cx;
+    result.call := call;
+    RETURN result
+END makeCallGenerator;
+
+PROCEDURE GenArgCode.write(actual: Code.PExpression; expected: Types.PProcedureArgument; cast: Cast.PCastOp);
+VAR
+    e: Code.PExpression;
+BEGIN
+    IF (expected # NIL) & expected.isVar THEN
+        actual := Code.refExpression(actual);
+    ELSE
+        actual := Code.derefExpression(actual);
+    END;
+    IF JsString.len(SELF.code) # 0 THEN
+        SELF.code := JsString.concat(SELF.code, JsString.make(", "));
+    END;
+    IF cast # NIL THEN
+        e := cast.make(SELF.cx^, actual);
+    ELSE
+        e := actual;
+    END;
+    SELF.code := JsString.concat(SELF.code, e.code());
+END GenArgCode.write;
+
+PROCEDURE GenArgCode.result(): JsString.Type;
+    RETURN SELF.code
+END GenArgCode.result;
+
+PROCEDURE makeProcCallGeneratorWithCustomArgs*(
+    cx: Context.PType; 
+    id: JsString.Type; 
+    type: Types.DefinedProcedure;
+    argumentsCode: PArgumentsCode
+    ) : PCallGenerator;
+TYPE
+    CallImpl = RECORD(Call)
+        id: JsString.Type;
+        args: JsArray.Type;
+        result: Types.PType;
+        argumentsCode: PArgumentsCode
+    END;
+VAR
+    call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        expectedArgs: JsArray.Type;
+        a: Object.PType;
+        i: INTEGER;
+
+    BEGIN
+        expectedArgs := SELF.args;
+        IF expectedArgs # NIL THEN
+            processArguments(args, expectedArgs, SELF.argumentsCode);
+        ELSE
+            FOR i := 0 TO JsArray.len(args) - 1 DO
+                a := JsArray.at(args, i);
+                SELF.argumentsCode.write(a(Code.PExpression), NIL, NIL);
+            END;
+        END;
+        RETURN Code.makeSimpleExpression(
+            JsString.concat(JsString.concat(JsString.concat(
+                SELF.id,
+                JsString.make("(")),
+                SELF.argumentsCode.result()),
+                JsString.make(")")),
+            SELF.result
+            )
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    call.id := id;
+    call.args := type.args();
+    call.result := type.result();
+    call.argumentsCode := argumentsCode;
+    RETURN makeCallGenerator(call, cx)
+END makeProcCallGeneratorWithCustomArgs;
+
+PROCEDURE makeArgumentsCode*(cx: Context.PType): PArgumentsCode;
+VAR
+    result: POINTER TO GenArgCode;
+BEGIN
+    NEW(result);
+    result.code := JsString.makeEmpty();
+    result.cx := cx;
+    RETURN result
+END makeArgumentsCode;
+
+PROCEDURE makeProcCallGenerator*(
+    cx: Context.PType; 
+    id: JsString.Type; 
+    type: Types.DefinedProcedure
+    ) : PCallGenerator;
+    RETURN makeProcCallGeneratorWithCustomArgs(cx, id, type, makeArgumentsCode(cx))
+END makeProcCallGenerator;
+
+PROCEDURE Std.description(): JsString.Type;
+    RETURN JsString.concat(JsString.make("standard procedure "), Types.typeName(SELF))
+END Std.description;
+
+PROCEDURE Std.callGenerator(cx: Context.PType): PCallGenerator;
+    RETURN makeCallGenerator(SELF.call, cx)
+END Std.callGenerator;
+
+PROCEDURE makeSymbol(p: Types.PProcedure): Symbols.PSymbol;
+    RETURN Symbols.makeSymbol(p.name, Types.makeProcedure(p))
+END makeSymbol;
+
+PROCEDURE nthArgument(args: JsArray.Type; i: INTEGER): Code.PExpression;
+VAR
+    arg: Object.PType;
+BEGIN
+    arg := JsArray.at(args, i);
+    RETURN arg(Code.PExpression)
+END nthArgument;
+
+PROCEDURE initStdCall(call: PStdCall);
+BEGIN
+    call.args := JsArray.make();
+END initStdCall;
+
+PROCEDURE hasArgument(call: PStdCall; type: Types.PType);
+VAR
+    a: Types.PProcedureArgument;
+BEGIN
+    NEW(a);
+    a.type := type;
+    JsArray.add(call.args, a);
+END hasArgument;
+
+PROCEDURE hasVarArgument(call: PStdCall; type: Types.PType);
+VAR
+    a: Types.PProcedureArgument;
+BEGIN
+    NEW(a);
+    a.isVar := TRUE;
+    a.type := type;
+    JsArray.add(call.args, a);
+END hasVarArgument;
+
+PROCEDURE hasArgumentWithCustomType(call: PStdCall);
+VAR
+    a: Types.PProcedureArgument;
+BEGIN
+    NEW(a);
+    JsArray.add(call.args, a);
+END hasArgumentWithCustomType;
+
+PROCEDURE hasVarArgumnetWithCustomType(call: PStdCall);
+VAR
+    a: Types.PProcedureArgument;
+BEGIN
+    NEW(a);
+    a.isVar := TRUE;
+    JsArray.add(call.args, a);
+END hasVarArgumnetWithCustomType;
+
+PROCEDURE checkSingleArgument(actual: JsArray.Type; expected: JsArray.Type): Code.PExpression;
+BEGIN
+    ASSERT(JsArray.len(expected) = 1);
+    checkArguments(actual, expected);
+    ASSERT(JsArray.len(actual) = 1);
+    RETURN nthArgument(actual, 0)
+END checkSingleArgument;
+
+PROCEDURE makeNew(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        arg: Code.PExpression;
+        argType: Types.PType;
+        baseType: Types.PRecord;
+    BEGIN
+        arg := checkSingleArgument(args, SELF.args);
+        argType := arg.type();
+        IF ~(argType IS Types.PPointer) THEN
+            Errors.raise(JsString.concat(JsString.concat(
+                JsString.make("POINTER variable expected, got '"),
+                argType.description()),
+                JsString.make("'")));
+        END;
+        baseType := Types.pointerBase(argType(Types.PPointer)^);
+        IF baseType IS Types.PNonExportedRecord THEN
+            Errors.raise(JsString.make("non-exported RECORD type cannot be used in NEW"));
+        END;
+        RETURN Code.makeSimpleExpression(
+            JsString.concat(JsString.concat(
+                arg.code(), 
+                JsString.make(" = ")),
+                baseType.initializer(cx)),
+            NIL)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasVarArgumnetWithCustomType(call);
+    RETURN makeSymbol(makeStd(JsString.make("NEW"), call))
+END makeNew;
+
+PROCEDURE makeLen(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        arg: Code.PExpression;
+        argType: Types.PType;
+    BEGIN
+        arg := checkSingleArgument(args, SELF.args);
+        argType := arg.type();
+        IF ~(argType IS Types.PArray) & ~(argType IS Types.PString) THEN
+            Errors.raise(JsString.concat(JsString.concat(
+                JsString.make("ARRAY or string is expected as an argument of LEN, got '"),
+                argType.description()),
+                JsString.make("'")));
+        END;
+        RETURN Code.makeSimpleExpression(
+            JsString.concat(arg.code(), JsString.make(".length")),
+            Types.basic.integer)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasArgumentWithCustomType(call);
+    (*call.args[0].type := Types.makeArray(
+        JsString.make("ARRAY OF any type"), 
+        NIL, 
+        NIL,
+        Types.openArrayLength);*)
+    RETURN makeSymbol(makeStd(JsString.make("LEN"), call))
+END makeLen;
+
+PROCEDURE makeOdd(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        arg: Code.PExpression;
+        code: JsString.Type;
+        constValue: Code.PConst;
+    BEGIN
+        arg := checkSingleArgument(args, SELF.args);
+        code := Code.adjustPrecedence(arg, Precedence.bitAnd);
+        
+        constValue := arg.constValue();
+        IF constValue # NIL THEN
+            constValue := Code.makeIntConst(
+                ORD(ODD(constValue^(Code.IntConst).value)));
+        END;
+
+        RETURN Code.makeExpressionWithPrecedence(
+            JsString.concat(code, JsString.make(" & 1")),
+            Types.basic.bool,
+            NIL,
+            constValue,
+            Precedence.bitAnd)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasArgument(call, Types.basic.integer);
+    RETURN makeSymbol(makeStd(JsString.make("ODD"), call))
+END makeOdd;
+
+PROCEDURE makeAssert(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        arg: Code.PExpression;
+        rtl: Context.PRtl;
+    BEGIN
+        arg := checkSingleArgument(args, SELF.args);
+        rtl := cx.rtl();
+        RETURN Code.makeSimpleExpression(
+            JsString.concat(JsString.concat(JsString.concat(
+                rtl.assertId(), 
+                JsString.make("(")), 
+                arg.code()), 
+                JsString.make(")")),
+            NIL)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasArgument(call, Types.basic.bool);
+    RETURN makeSymbol(makeStd(JsString.make("ASSERT"), call))
+END makeAssert;
+
+PROCEDURE setBitImpl(name: ARRAY OF CHAR; bitOp: BinaryOpStr): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+            name: JsString.Type;
+            bitOp: BinaryOpStr
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        x, y: Code.PExpression;
+        yValue: INTEGER;
+        value: Code.PConst;
+        valueCodeExp: Code.PExpression;
+        valueCode: JsString.Type;
+        comment: JsString.Type;
+    BEGIN
+        checkArguments(args, SELF.args);
+        ASSERT(JsArray.len(args) = 2);
+        x := nthArgument(args, 0);
+        y := nthArgument(args, 1);
+        value := y.constValue();
+        IF value = NIL THEN
+            valueCodeExp := Operator.lsl(
+                Code.makeExpression(
+                    JsString.make("1"), 
+                    Types.basic.integer,
+                    NIL,
+                    Code.makeIntConst(1)), 
+                y,
+                cx);
+            valueCode := valueCodeExp.code();
+        ELSE
+            yValue := value^(Code.IntConst).value;
+            IF (yValue < 0) OR (yValue > 31) THEN
+                Errors.raise(JsString.concat(JsString.concat(JsString.concat(
+                    JsString.make("value (0..31) expected as a second argument of "),
+                    SELF.name),
+                    JsString.make(", got ")),
+                    JsString.fromInt(yValue)));
+            END;
+            comment := JsString.make("bit: ");
+            IF y.isTerm() THEN
+                comment := JsString.concat(comment, JsString.fromInt(yValue));
+            ELSE
+                comment := JsString.concat(comment, Code.adjustPrecedence(y, Precedence.shift));
+            END;
+            yValue := LSL(1, yValue);
+            valueCode := JsString.concat(JsString.concat(JsString.concat(
+                JsString.fromInt(yValue), 
+                JsString.make("/*")),
+                comment),
+                JsString.make("*/"));
+        END;
+
+        RETURN Code.makeSimpleExpression(
+            SELF.bitOp(Code.adjustPrecedence(x, Precedence.assignment), valueCode),
+            NIL)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    call.name := JsString.make(name);
+    call.bitOp := bitOp;
+    hasVarArgument(call, Types.basic.set);
+    hasArgument(call, Types.basic.integer);
+    RETURN makeSymbol(makeStd(call.name, call))
+END setBitImpl;
+
+PROCEDURE checkVariableArgumentsCount(min, max: INTEGER; actual: JsArray.Type);
+VAR
+    len: INTEGER;
+BEGIN
+    len := JsArray.len(actual);
+    IF len < min THEN
+        Errors.raise(JsString.concat(JsString.concat(JsString.concat(
+            JsString.make("at least "), 
+            JsString.fromInt(min)), 
+            JsString.make(" argument expected, got ")), 
+            JsString.fromInt(len)));
+    ELSIF len > max THEN
+        Errors.raise(JsString.concat(JsString.concat(JsString.concat(
+            JsString.make("at most "),
+            JsString.fromInt(max)),
+            JsString.make(" arguments expected, got ")),
+            JsString.fromInt(len)));
+    END;
+END checkVariableArgumentsCount;
+
+PROCEDURE incImpl(name: ARRAY OF CHAR; unary: ARRAY OF CHAR; incOp: BinaryOpStr): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+            name: JsString.Type;
+            unary: JsString.Type;
+            incOp: BinaryOpStr
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        x, y: Code.PExpression;
+        code: JsString.Type;
+        value: Code.PConst;
+        valueCode: JsString.Type;
+    BEGIN
+        checkVariableArgumentsCount(1, 2, args);
+        checkArgumentsType(args, SELF.args, NIL);
+        x := nthArgument(args, 0);
+        IF JsArray.len(args) = 1 THEN
+            code := JsString.concat(SELF.unary, x.code());
+        ELSE
+            y := nthArgument(args, 1);
+            value := y.constValue();
+            IF value = NIL THEN
+                valueCode := y.code();
+            ELSE
+                valueCode := JsString.fromInt(value^(Code.IntConst).value);
+                IF ~y.isTerm() THEN
+                    valueCode := JsString.concat(JsString.concat(JsString.concat(
+                        valueCode, 
+                        JsString.make("/*")), 
+                        y.code()), 
+                        JsString.make("*/"));
+                END;
+            END;
+            code := SELF.incOp(x.code(), valueCode);
+        END;
+        RETURN Code.makeSimpleExpression(code, NIL)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    call.name := JsString.make(name);
+    call.unary := JsString.make(unary);
+    call.incOp := incOp;
+    hasVarArgument(call, Types.basic.integer);
+    hasArgument(call, Types.basic.integer);
+    RETURN makeSymbol(makeStd(call.name, call))
+END incImpl;
+
+PROCEDURE inclOp(x, y: JsString.Type): JsString.Type;
+    RETURN JsString.concat(JsString.concat(x, JsString.make(" |= ")), y)
+END inclOp;
+
+PROCEDURE exclOp(x, y: JsString.Type): JsString.Type;
+    RETURN JsString.concat(JsString.concat(JsString.concat(
+        x, 
+        JsString.make(" &= ~(" )), 
+        y), 
+        JsString.make(")"))
+END exclOp;
+
+PROCEDURE incOp(x, y: JsString.Type): JsString.Type;
+    RETURN JsString.concat(JsString.concat(x, JsString.make(" += ")), y)
+END incOp;
+
+PROCEDURE decOp(x, y: JsString.Type): JsString.Type;
+    RETURN JsString.concat(JsString.concat(x, JsString.make(" -= ")), y)
+END decOp;
+
+PROCEDURE makeAbs(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        arg: Code.PExpression;
+        argType: Types.PType;
+    BEGIN
+        arg := checkSingleArgument(args, SELF.args);
+        argType := arg.type();
+        IF ~JsArray.contains(Types.numeric, argType) THEN
+            Errors.raise(JsString.concat(JsString.concat(
+                JsString.make("type mismatch: expected numeric type, got '"),
+                argType.description()),
+                JsString.make("'")));
+        END;
+        RETURN Code.makeSimpleExpression(
+            JsString.concat(JsString.concat(
+                JsString.make("Math.abs("), 
+                arg.code()), 
+                JsString.make(")")),
+            argType)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasArgumentWithCustomType(call);
+    RETURN makeSymbol(makeStd(JsString.make("ABS"), call))
+END makeAbs;
+
+PROCEDURE makeFloor(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        arg: Code.PExpression;
+    BEGIN
+        arg := checkSingleArgument(args, SELF.args);
+        RETURN Code.makeSimpleExpression(
+            JsString.concat(JsString.concat(
+                JsString.make("Math.floor("), 
+                arg.code()), 
+                JsString.make(")")),
+            Types.basic.integer)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasArgument(call, Types.basic.real);
+    RETURN makeSymbol(makeStd(JsString.make("FLOOR"), call))
+END makeFloor;
+
+PROCEDURE makeFlt(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        arg: Code.PExpression;
+        value: Code.PConst;
+    BEGIN
+        arg := checkSingleArgument(args, SELF.args);
+        value := arg.constValue();
+        IF value # NIL THEN
+            value := Code.makeRealConst(FLT(value^(Code.IntConst).value));
+        END;
+        RETURN Code.makeExpressionWithPrecedence(
+                arg.code(), 
+                Types.basic.real,
+                NIL,
+                value,
+                arg.maxPrecedence())
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasArgument(call, Types.basic.integer);
+    RETURN makeSymbol(makeStd(JsString.make("FLT"), call))
+END makeFlt;
+
+PROCEDURE bitShiftImpl(name: ARRAY OF CHAR; op: BinaryOp): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+            name: JsString.Type;
+            op: BinaryOp
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        x, y: Code.PExpression;
+    BEGIN
+        checkArguments(args, SELF.args);
+        ASSERT(JsArray.len(args) = 2);
+        x := nthArgument(args, 0);
+        y := nthArgument(args, 1);
+        RETURN SELF.op(x, y, cx)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    call.name := JsString.make(name);
+    call.op := op;
+    hasArgument(call, Types.basic.integer);
+    hasArgument(call, Types.basic.integer);
+    RETURN makeSymbol(makeStd(call.name, call))
+END bitShiftImpl;
+
+PROCEDURE makeOrd(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        arg: Code.PExpression;
+        argType: Types.PType;
+        value: Code.PConst;
+        code: JsString.Type;
+        ch: CHAR;
+        result: Code.PExpression;
+    BEGIN
+        arg := checkSingleArgument(args, SELF.args);
+        argType := arg.type();
+        IF (argType = Types.basic.ch) OR (argType = Types.basic.set) THEN
+            value := arg.constValue();
+            IF (value # NIL) & (argType = Types.basic.set) THEN
+                value := Code.makeIntConst(ORD(value^(Code.SetConst).value));
+            END;
+            result := Code.makeExpression(arg.code(), Types.basic.integer, NIL, value);
+        ELSIF argType = Types.basic.bool THEN
+            code := JsString.concat(
+                Code.adjustPrecedence(arg, Precedence.conditional), 
+                JsString.make(" ? 1 : 0"));
+            result := Code.makeExpressionWithPrecedence(
+                code, 
+                Types.basic.integer, 
+                NIL, 
+                arg.constValue(), 
+                Precedence.conditional);
+        ELSIF (argType IS Types.PString) 
+            & (Types.stringAsChar(argType(Types.PString)^, ch)) THEN
+            result := Code.makeExpression(
+                JsString.fromInt(ORD(ch)), 
+                Types.basic.integer,
+                NIL,
+                Code.makeIntConst(ORD(ch)));
+        ELSE
+            Errors.raise(JsString.concat(JsString.concat(
+                JsString.make("ORD function expects CHAR or BOOLEAN or SET as an argument, got '"),
+                argType.description()),
+                JsString.make("'")));
+        END;
+        RETURN result
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasArgumentWithCustomType(call);
+    RETURN makeSymbol(makeStd(JsString.make("ORD"), call))
+END makeOrd;
+
+PROCEDURE makeChr(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        arg: Code.PExpression;
+    BEGIN
+        arg := checkSingleArgument(args, SELF.args);
+        RETURN Code.makeSimpleExpression(arg.code(), Types.basic.ch)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasArgument(call, Types.basic.integer);
+    RETURN makeSymbol(makeStd(JsString.make("CHR"), call))
+END makeChr;
+
+PROCEDURE makePack(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        x, y: Code.PExpression;
+    BEGIN
+        checkArguments(args, SELF.args);
+        x := nthArgument(args, 0);
+        y := nthArgument(args, 1);
+        RETURN Code.makeSimpleExpression(
+            Operator.mulInplace(x, Operator.pow2(y), cx),
+            NIL)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasVarArgument(call, Types.basic.real);
+    hasArgument(call, Types.basic.integer);
+    RETURN makeSymbol(makeStd(JsString.make("PACK"), call))
+END makePack;
+
+PROCEDURE makeUnpk(): Symbols.PSymbol;
+    TYPE
+        CallImpl = RECORD(StdCall)
+        END;
+    VAR
+        call: POINTER TO CallImpl;
+
+    PROCEDURE CallImpl.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    VAR
+        x, y: Code.PExpression;
+    BEGIN
+        checkArguments(args, SELF.args);
+        x := nthArgument(args, 0);
+        y := nthArgument(args, 1);
+        RETURN Code.makeSimpleExpression(
+            JsString.concat(JsString.concat(
+                Operator.assign(y, Operator.log2(x), cx),
+                JsString.make("; ")),
+                Operator.divInplace(x, Operator.pow2(y), cx)),
+            NIL)
+    END CallImpl.make;
+BEGIN
+    NEW(call);
+    initStdCall(call);
+    hasVarArgument(call, Types.basic.real);
+    hasVarArgument(call, Types.basic.integer);
+    RETURN makeSymbol(makeStd(JsString.make("UNPK"), call))
+END makeUnpk;
+
+PROCEDURE dumpProcArgs(proc: Type): JsString.Type;
+VAR
+    result: JsString.Type;
+    len: INTEGER;
+    i: INTEGER;
+    arg: Object.PType;
+BEGIN
+    len := JsArray.len(proc.mArgs);
+    IF len = 0 THEN
+        IF proc.mResult # NIL THEN
+            result := JsString.make("()");
+        ELSE
+            result := JsString.makeEmpty();
+        END;
+    ELSE
+        result := JsString.make("(");
+        FOR i := 0 TO len - 1 DO
+            IF i # 0 THEN
+                result := JsString.concat(result, JsString.make(", "));
+            END;
+            arg := JsArray.at(proc.mArgs, i);
+            result := JsString.concat(
+                result, 
+                arg(Types.PProcedureArgument).type.description());
+        END;
+        result := JsString.concat(result, JsString.make(")"));
+    END;
+    RETURN result
+END dumpProcArgs;
+
+PROCEDURE Type.description(): JsString.Type;
+VAR
+    result: JsString.Type;
+BEGIN
+    result := Types.typeName(SELF);
+    IF result = NIL THEN
+        result := JsString.concat(
+            JsString.make("PROCEDURE"), 
+            dumpProcArgs(SELF));
+        IF SELF.mResult # NIL THEN
+            result := JsString.concat(JsString.concat(
+                result, 
+                JsString.make(": ")), 
+                SELF.mResult.description());
+        END;
+    END;
+    RETURN result
+END Type.description;
+
+PROCEDURE Type.callGenerator(cx: Context.PType; id: JsString.Type): PCallGenerator;
+    RETURN makeProcCallGenerator(cx, id, SELF)
+END Type.callGenerator;
+
+PROCEDURE Type.define(args: JsArray.Type; result: Types.PType);
+BEGIN
+    SELF.mArgs := args;
+    SELF.mResult := result;
+END Type.define;
+
+PROCEDURE Type.args(): JsArray.Type;
+    RETURN SELF.mArgs
+END Type.args;
+
+PROCEDURE Type.result(): Types.PType;
+    RETURN SELF.mResult
+END Type.result;
+
+PROCEDURE make*(name: JsString.Type): PType;
+VAR
+    result: PType;
+BEGIN
+    NEW(result);
+    result.name := name;
+    RETURN result
+END make;
+
+BEGIN
+    predefined := JsArray.make();
+    JsArray.add(predefined, makeNew());
+    JsArray.add(predefined, makeLen());
+    JsArray.add(predefined, makeOdd());
+    JsArray.add(predefined, makeAssert());
+    JsArray.add(predefined, setBitImpl("INCL", inclOp));
+    JsArray.add(predefined, setBitImpl("EXCL", exclOp));
+    JsArray.add(predefined, incImpl("INC", "++", incOp));
+    JsArray.add(predefined, incImpl("DEC", "--", decOp));
+    JsArray.add(predefined, makeAbs());
+    JsArray.add(predefined, makeFloor());
+    JsArray.add(predefined, makeFlt());
+    JsArray.add(predefined, bitShiftImpl("LSL", Operator.lsl));
+    JsArray.add(predefined, bitShiftImpl("ASR", Operator.asr));
+    JsArray.add(predefined, bitShiftImpl("ROR", Operator.ror));
+    JsArray.add(predefined, makeOrd());
+    JsArray.add(predefined, makeChr());
+    JsArray.add(predefined, makePack());
+    JsArray.add(predefined, makeUnpk());
+END Procedure.

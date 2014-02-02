@@ -2,7 +2,7 @@
 
 var Class = require("rtl.js").Class;
 var Errors = require("js/Errors.js");
-var Procedure = require("procedure.js");
+var Procedure = require("js/Procedure.js");
 var Symbol = require("js/Symbols.js");
 var Type = require("js/Types.js");
 
@@ -15,7 +15,7 @@ var stdSymbols = function(){
         symbols[name] = Symbol.makeSymbol(name, Type.makeTypeId(type));
     }
     
-    var predefined = Procedure.predefined;
+    var predefined = Procedure.predefined();
     for(var i = 0; i < predefined.length; ++i){
         var s = predefined[i];
         symbols[s.id()] = s;

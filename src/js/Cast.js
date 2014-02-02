@@ -5,8 +5,9 @@ var JsArray = require("js/JsArray.js");
 var JsString = require("js/JsString.js");
 var Object = require("js/Object.js");
 var Types = require("js/Types.js");
-var CastOp = RTL$.extend({
+var CastOp = Object.Type.extend({
 	init: function CastOp(){
+		Object.Type.prototype.init.call(this);
 	}
 });
 var CastOpDoNothing = CastOp.extend({
@@ -56,7 +57,7 @@ function areTypesMatch(t1/*PType*/, t2/*PType*/){
 	return areTypesExactlyMatch(t1, t2) || Types.isInt(t1) && Types.isInt(t2) || (t1 == Types.nil() && matchesToNIL(t2) || t2 == Types.nil() && matchesToNIL(t1));
 }
 
-function areArgsMatch(oa1/*PType*/, oa2/*PType*/, p1/*PProcedure*/, p2/*PProcedure*/){
+function areArgsMatch(oa1/*PType*/, oa2/*PType*/, p1/*PDefinedProcedure*/, p2/*PDefinedProcedure*/){
 	var a1 = null;
 	var a2 = null;
 	a1 = RTL$.typeGuard(oa1, Types.ProcedureArgument);
@@ -64,7 +65,7 @@ function areArgsMatch(oa1/*PType*/, oa2/*PType*/, p1/*PProcedure*/, p2/*PProcedu
 	return a1.isVar == a2.isVar && (a1.type == p1 && a2.type == p2 || areTypesExactlyMatch(a1.type, a2.type));
 }
 
-function areProceduresMatch(p1/*PProcedure*/, p2/*PProcedure*/){
+function areProceduresMatch(p1/*PDefinedProcedure*/, p2/*PDefinedProcedure*/){
 	var result = false;
 	var args1 = null;var args2 = null;
 	var argsLen = 0;
@@ -99,8 +100,8 @@ function areTypesExactlyMatchImpl(t1/*PType*/, t2/*PType*/){
 	else if (t1 instanceof Types.Pointer && t2 instanceof Types.Pointer){
 		result = areTypesMatch(Types.pointerBase(RTL$.typeGuard(t1, Types.Pointer)), Types.pointerBase(RTL$.typeGuard(t2, Types.Pointer)));
 	}
-	else if (t1 instanceof Types.Procedure && t2 instanceof Types.Procedure){
-		result = areProceduresMatch(RTL$.typeGuard(t1, Types.Procedure), RTL$.typeGuard(t2, Types.Procedure));
+	else if (t1 instanceof Types.DefinedProcedure && t2 instanceof Types.DefinedProcedure){
+		result = areProceduresMatch(RTL$.typeGuard(t1, Types.DefinedProcedure), RTL$.typeGuard(t2, Types.DefinedProcedure));
 	}
 	return result;
 }
@@ -155,8 +156,8 @@ function implicit(from/*PType*/, to/*PType*/, ops/*Operations*/){
 	else if (from == Types.nil() && matchesToNIL(to)){
 		result = doNothing;
 	}
-	else if (from instanceof Types.Procedure && to instanceof Types.Procedure){
-		if (areProceduresMatch(RTL$.typeGuard(from, Types.Procedure), RTL$.typeGuard(to, Types.Procedure))){
+	else if (from instanceof Types.DefinedProcedure && to instanceof Types.DefinedProcedure){
+		if (areProceduresMatch(RTL$.typeGuard(from, Types.DefinedProcedure), RTL$.typeGuard(to, Types.DefinedProcedure))){
 			result = doNothing;
 		}
 	}

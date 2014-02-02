@@ -43,6 +43,12 @@ function stringsAt(a/*Strings*/, i/*INTEGER*/){
 	return result;
 }
 
+function contains(a/*Type*/, x/*PType*/){
+	var result = false;
+	result = (a.indexOf(x) != -1);
+	return result;
+}
+
 function make(){
 	var result = null;
 	result = [];
@@ -62,5 +68,6 @@ exports.add = add;
 exports.stringsAdd = stringsAdd;
 exports.at = at;
 exports.stringsAt = stringsAt;
+exports.contains = contains;
 exports.make = make;
 exports.makeStrings = makeStrings;

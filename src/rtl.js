@@ -27,6 +27,8 @@ Class.extend = function extend(methods){
 var impl = {
     extend: Class.extend,
     typeGuard: function(from, to){
+        if (!from)
+            return from;
         if (!(from instanceof to)){
             var fromStr;
             var toStr;

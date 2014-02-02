@@ -67,8 +67,9 @@ var StringConst = Const.extend({
 		this.value = null;
 	}
 });
-var Expression = RTL$.extend({
+var Expression = Object.Type.extend({
 	init: function Expression(){
+		Object.Type.prototype.init.call(this);
 		this.mCode = null;
 		this.mType = null;
 		this.mDesignator = null;
@@ -204,6 +205,7 @@ function makeStringConst(s/*Type*/){
 
 function makeExpressionWithPrecedence(code/*Type*/, type/*PType*/, designator/*PDesignator*/, constValue/*PConst*/, maxPrecedence/*INTEGER*/){
 	var result = null;
+	RTL$.assert(code != null);
 	result = new Expression();
 	result.mCode = code;
 	result.mType = type;

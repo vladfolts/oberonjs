@@ -6,7 +6,7 @@ var Errors = require("js/Errors.js");
 var Module = require("module.js");
 var op = require("js/Operator.js");
 var Parser = require("parser.js");
-var Procedure = require("procedure.js");
+var Procedure = require("js/Procedure.js");
 var Class = require("rtl.js").Class;
 var Scope = require("scope.js");
 var Symbol = require("js/Symbols.js");
@@ -474,7 +474,7 @@ exports.FormalParameters = ChainedContext.extend({
         this.__result = undefined;
 
         var parent = this.parent();
-        this.__type = new Procedure.Type(parent.typeName());
+        this.__type = new Procedure.make(parent.typeName());
         parent.setType(this.__type);
     },
     handleMessage: function(msg){
@@ -728,7 +728,7 @@ exports.ArrayDimensions = ChainedContext.extend({
         if (type !== basicTypes.integer)
             throw new Errors.Error("'INTEGER' constant expression expected, got '" + type.description() + "'");
         var value = e.constValue();
-        if (value === undefined)
+        if (!value)
             throw new Errors.Error("constant expression expected as ARRAY size");
         if (value.value <= 0)
             throw new Errors.Error("array size must be greater than 0, got " + value.value);
@@ -984,9 +984,9 @@ exports.Factor = ChainedContext.extend({
         if (s == "NIL")
             parent.handleConst(nilType, undefined, "null");
         else if (s == "TRUE")
-            parent.handleConst(basicTypes.bool, Code.makeIntConst(true), "true");
+            parent.handleConst(basicTypes.bool, Code.makeIntConst(1), "true");
         else if (s == "FALSE")
-            parent.handleConst(basicTypes.bool, Code.makeIntConst(false), "false");
+            parent.handleConst(basicTypes.bool, Code.makeIntConst(0), "false");
         else if (s == "~")
             parent.handleLogicalNot();
     },
@@ -1573,9 +1573,16 @@ exports.FieldListDeclaration = HandleSymbolAsType.extend({
     }
 });
 
-function assertProcType(type){
-    if (!(type instanceof Type.Procedure) && !(type instanceof Module.AnyType))
-        throw new Errors.Error("PROCEDURE expected, got '" + type.description() + "'");
+function assertProcType(d){
+    var type = d.type();
+    var unexpected;
+    if ( !type )
+        unexpected = d.info().idType();
+    else if (!(type instanceof Type.Procedure) && !(type instanceof Module.AnyType))
+        unexpected = type.description();
+    if (unexpected)
+        throw new Errors.Error("PROCEDURE expected, got '" + unexpected + "'");
+    return type;
 }
 
 exports.ActualParameters = ChainedContext.extend({
@@ -1593,10 +1600,8 @@ var ProcedureCall = ChainedContext.extend({
         this.__code = Code.makeSimpleGenerator();
     },
     setDesignator: function(d){
-        var type = d.type();
-        assertProcType(type);
-        this.__type = type;
-        this.__procCall = type.callGenerator(this, d.code());
+        this.__type = assertProcType(d);
+        this.__procCall = this.__type.callGenerator(this, d.code());
         this.__callExpression = undefined;
     },
     codeGenerator: function(){return this.__code;},

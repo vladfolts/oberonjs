@@ -100,6 +100,11 @@ var Procedure = NamedType.extend({
 		NamedType.prototype.init.call(this);
 	}
 });
+var DefinedProcedure = Procedure.extend({
+	init: function DefinedProcedure(){
+		Procedure.prototype.init.call(this);
+	}
+});
 var ProcedureArgument = Object.Type.extend({
 	init: function ProcedureArgument(){
 		Object.Type.prototype.init.call(this);
@@ -467,7 +472,7 @@ function makeProcedureArgument(type/*PType*/, isVar/*BOOLEAN*/){
 	return result;
 }
 Module.prototype.idType = function(){
-	return JsString.make("module");
+	return JsString.make("MODULE");
 }
 
 function makeTypeId(type/*PType*/){
@@ -582,9 +587,11 @@ exports.Variable = Variable;
 exports.VariableRef = VariableRef;
 exports.ProcedureId = ProcedureId;
 exports.String = String;
+exports.NamedType = NamedType;
 exports.Array = Array;
 exports.Pointer = Pointer;
 exports.Procedure = Procedure;
+exports.DefinedProcedure = DefinedProcedure;
 exports.ProcedureArgument = ProcedureArgument;
 exports.Record = Record;
 exports.NonExportedRecord = NonExportedRecord;
