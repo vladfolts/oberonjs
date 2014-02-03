@@ -48,10 +48,9 @@ var RTL$ = {
         forward.push(makeCharArray.bind(undefined, length));
         return makeArray.apply(undefined, forward);
     },
-    assert: function (condition, code){
+    assert: function (condition){
         if (!condition)
-            throw new Error("assertion failed"
-                          + ((code !== undefined) ? " with code " + code : ""));
+            throw new Error("assertion failed");
     }
 };
 var m = function (){

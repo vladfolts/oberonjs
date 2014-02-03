@@ -1,8 +1,7 @@
 var RTL$ = {
-    assert: function (condition, code){
+    assert: function (condition){
         if (!condition)
-            throw new Error("assertion failed"
-                          + ((code !== undefined) ? " with code " + code : ""));
+            throw new Error("assertion failed");
     }
 };
 var m = function (){

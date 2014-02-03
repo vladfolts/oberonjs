@@ -37,10 +37,9 @@ var RTL$ = {
         for(i = s.length; i < a.length; ++i)
             a[i] = 0;
     },
-    assert: function (condition, code){
+    assert: function (condition){
         if (!condition)
-            throw new Error("assertion failed"
-                          + ((code !== undefined) ? " with code " + code : ""));
+            throw new Error("assertion failed");
     },
     strCmp: function (s1, s2){
         var cmp = 0;

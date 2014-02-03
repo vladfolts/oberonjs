@@ -1,6 +1,6 @@
 "use strict";
 
-var assert = require("assert.js").ok;
+var assert = require("rtl.js").assert;
 var Class = require("rtl.js").Class;
 var Context = require("context.js");
 var Grammar = require("grammar.js");

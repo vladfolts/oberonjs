@@ -1,6 +1,6 @@
 "use strict";
 
-var assert = require("assert.js").ok;
+var assert = require("rtl.js").assert;
 var Errors = require("js/Errors.js");
 var Lexer = require("js/Lexer.js");
 var Stream = require("js/Stream.js");
