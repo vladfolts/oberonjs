@@ -13,11 +13,11 @@ IMPORT
     Types;
 TYPE
     Call* = RECORD
-        PROCEDURE make(args: JsArray.Type; cx: Context.Type): Code.PExpression
+        PROCEDURE make*(args: JsArray.Type; cx: Context.Type): Code.PExpression
     END;
     PCall = POINTER TO Call;
 
-    StdCall = RECORD(Call)
+    StdCall* = RECORD(Call)
         args: JsArray.Type
     END;
     PStdCall = POINTER TO StdCall;
@@ -30,7 +30,7 @@ TYPE
         cx: Context.PType;
         call: PCall
     END;
-    PCallGenerator = POINTER TO CallGenerator;
+    PCallGenerator* = POINTER TO CallGenerator;
 
     Impl = RECORD(Types.Procedure)
         PROCEDURE callGenerator(cx: Context.PType): PCallGenerator
@@ -161,13 +161,18 @@ BEGIN
     processArguments(actual, expected, NIL);
 END checkArguments;
 
+PROCEDURE initStd*(name: JsString.Type; call: PCall; result: Std);
+BEGIN
+    Types.initProcedure(result, name);
+    result.call := call;
+END initStd;
+
 PROCEDURE makeStd(name: JsString.Type; call: PCall): Types.PProcedure;
 VAR
     result: POINTER TO Std;
 BEGIN
     NEW(result);
-    Types.initProcedure(result^, name);
-    result.call := call;
+    initStd(name, call, result^);
     RETURN result
 END makeStd;
 
@@ -292,7 +297,7 @@ PROCEDURE Std.callGenerator(cx: Context.PType): PCallGenerator;
     RETURN makeCallGenerator(SELF.call, cx)
 END Std.callGenerator;
 
-PROCEDURE makeSymbol(p: Types.PProcedure): Symbols.PSymbol;
+PROCEDURE makeSymbol*(p: Types.PProcedure): Symbols.PSymbol;
     RETURN Symbols.makeSymbol(p.name, Types.makeProcedure(p))
 END makeSymbol;
 
@@ -304,7 +309,7 @@ BEGIN
     RETURN arg(Code.PExpression)
 END nthArgument;
 
-PROCEDURE initStdCall(call: PStdCall);
+PROCEDURE initStdCall*(call: PStdCall);
 BEGIN
     call.args := JsArray.make();
 END initStdCall;
@@ -328,7 +333,7 @@ BEGIN
     JsArray.add(call.args, a);
 END hasVarArgument;
 
-PROCEDURE hasArgumentWithCustomType(call: PStdCall);
+PROCEDURE hasArgumentWithCustomType*(call: PStdCall);
 VAR
     a: Types.PProcedureArgument;
 BEGIN
@@ -345,10 +350,10 @@ BEGIN
     JsArray.add(call.args, a);
 END hasVarArgumnetWithCustomType;
 
-PROCEDURE checkSingleArgument(actual: JsArray.Type; expected: JsArray.Type): Code.PExpression;
+PROCEDURE checkSingleArgument*(actual: JsArray.Type; call: StdCall): Code.PExpression;
 BEGIN
-    ASSERT(JsArray.len(expected) = 1);
-    checkArguments(actual, expected);
+    ASSERT(JsArray.len(call.args) = 1);
+    checkArguments(actual, call.args);
     ASSERT(JsArray.len(actual) = 1);
     RETURN nthArgument(actual, 0)
 END checkSingleArgument;
@@ -366,7 +371,7 @@ PROCEDURE makeNew(): Symbols.PSymbol;
         argType: Types.PType;
         baseType: Types.PRecord;
     BEGIN
-        arg := checkSingleArgument(args, SELF.args);
+        arg := checkSingleArgument(args, SELF);
         argType := arg.type();
         IF ~(argType IS Types.PPointer) THEN
             Errors.raise(JsString.concat(JsString.concat(
@@ -404,7 +409,7 @@ PROCEDURE makeLen(): Symbols.PSymbol;
         arg: Code.PExpression;
         argType: Types.PType;
     BEGIN
-        arg := checkSingleArgument(args, SELF.args);
+        arg := checkSingleArgument(args, SELF);
         argType := arg.type();
         IF ~(argType IS Types.PArray) & ~(argType IS Types.PString) THEN
             Errors.raise(JsString.concat(JsString.concat(
@@ -420,11 +425,6 @@ BEGIN
     NEW(call);
     initStdCall(call);
     hasArgumentWithCustomType(call);
-    (*call.args[0].type := Types.makeArray(
-        JsString.make("ARRAY OF any type"), 
-        NIL, 
-        NIL,
-        Types.openArrayLength);*)
     RETURN makeSymbol(makeStd(JsString.make("LEN"), call))
 END makeLen;
 
@@ -441,7 +441,7 @@ PROCEDURE makeOdd(): Symbols.PSymbol;
         code: JsString.Type;
         constValue: Code.PConst;
     BEGIN
-        arg := checkSingleArgument(args, SELF.args);
+        arg := checkSingleArgument(args, SELF);
         code := Code.adjustPrecedence(arg, Precedence.bitAnd);
         
         constValue := arg.constValue();
@@ -476,7 +476,7 @@ PROCEDURE makeAssert(): Symbols.PSymbol;
         arg: Code.PExpression;
         rtl: Context.PRtl;
     BEGIN
-        arg := checkSingleArgument(args, SELF.args);
+        arg := checkSingleArgument(args, SELF);
         rtl := cx.rtl();
         RETURN Code.makeSimpleExpression(
             JsString.concat(JsString.concat(JsString.concat(
@@ -667,7 +667,7 @@ PROCEDURE makeAbs(): Symbols.PSymbol;
         arg: Code.PExpression;
         argType: Types.PType;
     BEGIN
-        arg := checkSingleArgument(args, SELF.args);
+        arg := checkSingleArgument(args, SELF);
         argType := arg.type();
         IF ~JsArray.contains(Types.numeric, argType) THEN
             Errors.raise(JsString.concat(JsString.concat(
@@ -700,7 +700,7 @@ PROCEDURE makeFloor(): Symbols.PSymbol;
     VAR
         arg: Code.PExpression;
     BEGIN
-        arg := checkSingleArgument(args, SELF.args);
+        arg := checkSingleArgument(args, SELF);
         RETURN Code.makeSimpleExpression(
             JsString.concat(JsString.concat(
                 JsString.make("Math.floor("), 
@@ -727,7 +727,7 @@ PROCEDURE makeFlt(): Symbols.PSymbol;
         arg: Code.PExpression;
         value: Code.PConst;
     BEGIN
-        arg := checkSingleArgument(args, SELF.args);
+        arg := checkSingleArgument(args, SELF);
         value := arg.constValue();
         IF value # NIL THEN
             value := Code.makeRealConst(FLT(value^(Code.IntConst).value));
@@ -791,7 +791,7 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
         ch: CHAR;
         result: Code.PExpression;
     BEGIN
-        arg := checkSingleArgument(args, SELF.args);
+        arg := checkSingleArgument(args, SELF);
         argType := arg.type();
         IF (argType = Types.basic.ch) OR (argType = Types.basic.set) THEN
             value := arg.constValue();
@@ -842,7 +842,7 @@ PROCEDURE makeChr(): Symbols.PSymbol;
     VAR
         arg: Code.PExpression;
     BEGIN
-        arg := checkSingleArgument(args, SELF.args);
+        arg := checkSingleArgument(args, SELF);
         RETURN Code.makeSimpleExpression(arg.code(), Types.basic.ch)
     END CallImpl.make;
 BEGIN

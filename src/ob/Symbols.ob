@@ -24,7 +24,7 @@ TYPE
         mScope: Context.PScope
     END;
 
-    PFoundSymbol = POINTER TO FoundSymbol;
+    PFoundSymbol* = POINTER TO FoundSymbol;
 
 PROCEDURE Symbol.id(): JsString.Type;
     RETURN SELF.mId

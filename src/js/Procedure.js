@@ -123,11 +123,15 @@ function checkArguments(actual/*Type*/, expected/*Type*/){
 	processArguments(actual, expected, null);
 }
 
+function initStd(name/*Type*/, call/*PCall*/, result/*Std*/){
+	Types.initProcedure(result, name);
+	result.call = call;
+}
+
 function makeStd(name/*Type*/, call/*PCall*/){
 	var result = null;
 	result = new Std();
-	Types.initProcedure(result, name);
-	result.call = call;
+	initStd(name, call, result);
 	return result;
 }
 CallGenerator.prototype.handleArgument = function(e/*PExpression*/){
@@ -264,9 +268,9 @@ function hasVarArgumnetWithCustomType(call/*PStdCall*/){
 	JsArray.add(call.args, a);
 }
 
-function checkSingleArgument(actual/*Type*/, expected/*Type*/){
-	RTL$.assert(JsArray.len(expected) == 1);
-	checkArguments(actual, expected);
+function checkSingleArgument(actual/*Type*/, call/*StdCall*/){
+	RTL$.assert(JsArray.len(call.args) == 1);
+	checkArguments(actual, call.args);
 	RTL$.assert(JsArray.len(actual) == 1);
 	return nthArgument(actual, 0);
 }
@@ -282,7 +286,7 @@ function makeNew(){
 		var arg = null;
 		var argType = null;
 		var baseType = null;
-		arg = checkSingleArgument(args, this.args);
+		arg = checkSingleArgument(args, this);
 		argType = arg.type();
 		if (!(argType instanceof Types.Pointer)){
 			Errors.raise(JsString.concat(JsString.concat(JsString.make("POINTER variable expected, got '"), argType.description()), JsString.make("'")));
@@ -309,7 +313,7 @@ function makeLen(){
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
 		var argType = null;
-		arg = checkSingleArgument(args, this.args);
+		arg = checkSingleArgument(args, this);
 		argType = arg.type();
 		if (!(argType instanceof Types.Array) && !(argType instanceof Types.String)){
 			Errors.raise(JsString.concat(JsString.concat(JsString.make("ARRAY or string is expected as an argument of LEN, got '"), argType.description()), JsString.make("'")));
@@ -333,7 +337,7 @@ function makeOdd(){
 		var arg = null;
 		var code = null;
 		var constValue = null;
-		arg = checkSingleArgument(args, this.args);
+		arg = checkSingleArgument(args, this);
 		code = Code.adjustPrecedence(arg, Precedence.bitAnd);
 		constValue = arg.constValue();
 		if (constValue != null){
@@ -357,7 +361,7 @@ function makeAssert(){
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
 		var rtl = null;
-		arg = checkSingleArgument(args, this.args);
+		arg = checkSingleArgument(args, this);
 		rtl = cx.rtl();
 		return Code.makeSimpleExpression(JsString.concat(JsString.concat(JsString.concat(rtl.assertId(), JsString.make("(")), arg.code()), JsString.make(")")), null);
 	}
@@ -502,7 +506,7 @@ function makeAbs(){
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
 		var argType = null;
-		arg = checkSingleArgument(args, this.args);
+		arg = checkSingleArgument(args, this);
 		argType = arg.type();
 		if (!JsArray.contains(Types.numeric(), argType)){
 			Errors.raise(JsString.concat(JsString.concat(JsString.make("type mismatch: expected numeric type, got '"), argType.description()), JsString.make("'")));
@@ -524,7 +528,7 @@ function makeFloor(){
 	var call = null;
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
-		arg = checkSingleArgument(args, this.args);
+		arg = checkSingleArgument(args, this);
 		return Code.makeSimpleExpression(JsString.concat(JsString.concat(JsString.make("Math.floor("), arg.code()), JsString.make(")")), Types.basic().integer);
 	}
 	call = new CallImpl();
@@ -543,7 +547,7 @@ function makeFlt(){
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
 		var value = null;
-		arg = checkSingleArgument(args, this.args);
+		arg = checkSingleArgument(args, this);
 		value = arg.constValue();
 		if (value != null){
 			value = Code.makeRealConst(RTL$.typeGuard(value, Code.IntConst).value);
@@ -596,7 +600,7 @@ function makeOrd(){
 		var code = null;
 		var ch = 0;
 		var result = null;
-		arg = checkSingleArgument(args, this.args);
+		arg = checkSingleArgument(args, this);
 		argType = arg.type();
 		if (argType == Types.basic().ch || argType == Types.basic().set){
 			value = arg.constValue();
@@ -632,7 +636,7 @@ function makeChr(){
 	var call = null;
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
-		arg = checkSingleArgument(args, this.args);
+		arg = checkSingleArgument(args, this);
 		return Code.makeSimpleExpression(arg.code(), Types.basic().ch);
 	}
 	call = new CallImpl();
@@ -761,13 +765,19 @@ JsArray.add(predefined, makeChr());
 JsArray.add(predefined, makePack());
 JsArray.add(predefined, makeUnpk());
 exports.Call = Call;
+exports.StdCall = StdCall;
 exports.CallGenerator = CallGenerator;
 exports.Type = Type;
 exports.Std = Std;
 exports.predefined = function(){return predefined;};
 exports.checkArgumentsCount = checkArgumentsCount;
+exports.initStd = initStd;
 exports.makeCallGenerator = makeCallGenerator;
 exports.makeProcCallGeneratorWithCustomArgs = makeProcCallGeneratorWithCustomArgs;
 exports.makeArgumentsCode = makeArgumentsCode;
 exports.makeProcCallGenerator = makeProcCallGenerator;
+exports.makeSymbol = makeSymbol;
+exports.initStdCall = initStdCall;
+exports.hasArgumentWithCustomType = hasArgumentWithCustomType;
+exports.checkSingleArgument = checkSingleArgument;
 exports.make = make;

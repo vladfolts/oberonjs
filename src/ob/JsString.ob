@@ -82,4 +82,11 @@ BEGIN
     RETURN result
 END concat;
 
+PROCEDURE eq*(s1, s2: Type): BOOLEAN;
+VAR result: BOOLEAN;
+BEGIN
+    JS.do("result = s1 == s2");
+    RETURN result
+END eq;
+
 END JsString.

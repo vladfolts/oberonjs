@@ -580,6 +580,7 @@ nil = new Nil();
 exports.openArrayLength = openArrayLength;
 exports.Id = Id;
 exports.Type = Type;
+exports.StorageType = StorageType;
 exports.TypeId = TypeId;
 exports.ForwardTypeId = ForwardTypeId;
 exports.Const = Const;

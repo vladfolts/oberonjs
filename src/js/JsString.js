@@ -69,6 +69,12 @@ function concat(self/*Type*/, add/*Type*/){
 	result = self + add;
 	return result;
 }
+
+function eq(s1/*Type*/, s2/*Type*/){
+	var result = false;
+	result = s1 == s2;
+	return result;
+}
 exports.Type = Type;
 exports.make = make;
 exports.makeEmpty = makeEmpty;
@@ -80,3 +86,4 @@ exports.indexOfFrom = indexOfFrom;
 exports.substr = substr;
 exports.appendChar = appendChar;
 exports.concat = concat;
+exports.eq = eq;

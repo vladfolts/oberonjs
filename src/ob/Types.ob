@@ -16,7 +16,7 @@ TYPE
     END;
     PType* = POINTER TO Type;
 
-    StorageType = RECORD(Type)    
+    StorageType* = RECORD(Type)    
         PROCEDURE initializer*(cx: Context.Type): JsString.Type
     END;
 

@@ -3,7 +3,7 @@
 var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
 var Errors = require("js/Errors.js");
-var Module = require("module.js");
+var Module = require("js/Module.js");
 var op = require("js/Operator.js");
 var Parser = require("parser.js");
 var Procedure = require("js/Procedure.js");
@@ -1940,7 +1940,7 @@ exports.Context = Class.extend({
     rtl: function(){return this.__rtl;},
     findModule: function(name){
         if (name == "JS"){
-            return new Module.JS();
+            return Module.makeJS();
         }
         return this.__moduleResolver ? this.__moduleResolver(name) : undefined;
     }
