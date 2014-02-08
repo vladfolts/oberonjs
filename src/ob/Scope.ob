@@ -1,0 +1,267 @@
+MODULE Scope;
+IMPORT 
+    Context,
+    Errors, 
+    JsArray, 
+    JsMap, 
+    JsString, 
+    Object, 
+    Procedures := Procedure, 
+    Symbols, 
+    Types;
+TYPE
+    Type = RECORD(Context.Scope)
+        PROCEDURE addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
+        PROCEDURE findSymbol(id: JsString.Type): Symbols.PSymbol;
+        PROCEDURE close();
+
+        symbols: JsMap.Type;
+        unresolved: JsArray.Strings;
+        finalizers: JsArray.Type
+    END;
+    PType = POINTER TO Type;
+
+    Procedure* = RECORD(Type)
+    END;
+
+    CompiledModule = RECORD(Types.Module)
+        PROCEDURE findSymbol(id: JsString.Type): Symbols.PFoundSymbol;
+
+        exports: JsMap.Type
+    END;
+    PCompiledModule = POINTER TO CompiledModule;
+
+    Module* = RECORD(Type)
+        symbol: Symbols.PSymbol;
+        exports: JsMap.Type
+    END;
+    PModule = POINTER TO Module;
+
+    Finalizer = POINTER TO RECORD (Object.Type)
+        proc: Context.FinalizerProc;
+        closure: Object.PType
+    END;
+VAR
+    stdSymbols: JsMap.Type;
+
+PROCEDURE makeStdSymbols(): JsMap.Type;
+VAR 
+    result: JsMap.Type;
+    i: INTEGER;
+    proc: Object.PType;
+
+    PROCEDURE addSymbol(t: Types.PBasicType);
+    VAR
+        name: JsString.Type;
+    BEGIN
+        name := Types.typeName(t^);
+        JsMap.put(result, name, Symbols.makeSymbol(name, Types.makeTypeId(t)));
+    END addSymbol;
+BEGIN
+    result := JsMap.make();
+    addSymbol(Types.basic.bool);
+    addSymbol(Types.basic.ch);
+    addSymbol(Types.basic.integer);
+    addSymbol(Types.basic.uint8);
+    addSymbol(Types.basic.real);
+    addSymbol(Types.basic.set); 
+
+    FOR i := 0 TO JsArray.len(Procedures.predefined) - 1 DO
+        proc := JsArray.at(Procedures.predefined, i);
+        JsMap.put(result, proc(Symbols.PSymbol).id(), proc);
+    END;
+    RETURN result
+END makeStdSymbols;
+
+PROCEDURE init(scope: Type);
+BEGIN
+    scope.symbols := JsMap.make();
+    scope.unresolved := JsArray.makeStrings();
+    scope.finalizers := JsArray.make();
+END init;
+
+PROCEDURE makeCompiledModule(name: JsString.Type): PCompiledModule;
+VAR
+    result: PCompiledModule;
+BEGIN
+    NEW(result);
+    Types.initModule(result^, name);
+    result.exports := JsMap.make();
+    RETURN result
+END makeCompiledModule;
+
+PROCEDURE makeModule*(name: JsString.Type): PModule;
+VAR
+    result: PModule;
+BEGIN
+    NEW(result);
+    init(result^);
+    result.exports := JsMap.make();
+    result.symbol := Symbols.makeSymbol(name, makeCompiledModule(name));
+    result.addSymbol(result.symbol, FALSE);
+    RETURN result
+END makeModule;
+
+PROCEDURE addUnresolved*(s: Type; id: JsString.Type);
+BEGIN
+    IF ~JsArray.containsString(s.unresolved, id) THEN
+        JsArray.addString(s.unresolved, id);
+    END;
+END addUnresolved;
+
+PROCEDURE resolve*(s: Type; symbol: Symbols.PSymbol);
+VAR
+    id: JsString.Type;
+    i: INTEGER;
+    info: Types.PId;
+    type: Types.PType;
+BEGIN
+    id := symbol.id();
+    i := JsArray.stringsIndexOf(s.unresolved, id);
+    IF i # -1 THEN
+        info := symbol.info();
+        type := info(Types.PTypeId).type();
+        IF (type # NIL) & ~(type IS Types.PRecord) THEN
+            Errors.raise(JsString.concat(JsString.concat(
+                JsString.make("'"),
+                id),
+                JsString.make("' must be of RECORD type because it was used before in the declation of POINTER")));
+        END;
+        JsArray.removeString(s.unresolved, i);
+    END;
+END resolve;
+
+PROCEDURE unresolved*(s: Type): JsArray.Strings;
+    RETURN s.unresolved
+END unresolved;
+
+PROCEDURE Type.close();
+VAR
+    i: INTEGER;
+    p: Object.PType;
+    finalizer: Finalizer;
+BEGIN
+    IF SELF.finalizers # NIL THEN
+        FOR i := 0 TO JsArray.len(SELF.finalizers) - 1 DO
+            p := JsArray.at(SELF.finalizers, i);
+            finalizer := p(Finalizer);
+            finalizer.proc(finalizer.closure);
+        END;
+
+        (* make second close() call safe and free memory *)
+        SELF.finalizers := NIL; 
+    END;
+END Type.close;
+
+PROCEDURE Type.addFinalizer(proc: Context.FinalizerProc; closure: Object.PType);
+VAR
+    f: Finalizer;
+BEGIN
+    NEW(f);
+    f.proc := proc;
+    f.closure := closure;
+    JsArray.add(SELF.finalizers, f);
+END Type.addFinalizer;
+
+PROCEDURE close*(s: Type): JsArray.Strings;
+    RETURN s.unresolved
+END close;
+
+PROCEDURE Type.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
+VAR
+    id: JsString.Type;
+BEGIN
+    id := s.id();
+    IF SELF.findSymbol(id) # NIL THEN
+        Errors.raise(JsString.concat(JsString.concat(
+            JsString.make("'"),
+            id),
+            JsString.make("' already declared")));
+    END;
+    JsMap.put(SELF.symbols, id, s);
+END Type.addSymbol;
+
+PROCEDURE Type.findSymbol(id: JsString.Type): Symbols.PSymbol;
+VAR
+    result: Object.PType;
+    void: BOOLEAN;
+BEGIN
+    IF ~JsMap.find(SELF.symbols, id, result) THEN
+        void := JsMap.find(stdSymbols, id, result);
+    END;
+    RETURN result(Symbols.PSymbol)
+END Type.findSymbol;
+
+PROCEDURE Procedure.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
+VAR
+    info: Types.PId;
+BEGIN
+    IF exported THEN
+        info := s.info();
+        Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
+            JsString.make("cannot export from within procedure: "),
+            info.idType()),
+            JsString.make(" '")),
+            s.id()),
+            JsString.make("'")));
+    END;
+    SUPER(s, exported);
+END Procedure.addSymbol;
+
+PROCEDURE makeProcedure*(): PType;
+VAR
+    result: POINTER TO Procedure;
+BEGIN
+    NEW(result);
+    init(result^);
+    RETURN result
+END makeProcedure;
+
+PROCEDURE addExport(id: JsString.Type; value: Object.PType; VAR closure: Object.Type);
+VAR
+    symbol: Symbols.PSymbol;
+    info: Types.PId;
+BEGIN
+    symbol := value(Symbols.PSymbol);
+    info := symbol.info();
+    IF info IS Types.PVariable THEN
+        symbol := Symbols.makeSymbol(id, Types.makeExportedVariable(info(Types.PVariable)^));
+    END;
+    JsMap.put(closure(CompiledModule).exports, id, symbol);
+END addExport;
+
+PROCEDURE defineExports*(m: CompiledModule; exports: JsMap.Type);
+BEGIN
+    JsMap.forEach(exports, addExport, m);
+END defineExports;
+
+PROCEDURE CompiledModule.findSymbol(id: JsString.Type): Symbols.PFoundSymbol;
+VAR
+    s: Object.PType;
+    result: Symbols.PFoundSymbol;
+BEGIN
+    IF JsMap.find(SELF.exports, id, s) THEN
+        result := Symbols.makeFound(s(Symbols.PSymbol), NIL);
+    END;
+    RETURN result
+END CompiledModule.findSymbol;
+
+PROCEDURE Module.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
+BEGIN
+    SUPER(s, exported);
+    IF exported THEN
+        JsMap.put(SELF.exports, s.id(), s);
+    END;
+END Module.addSymbol;
+
+PROCEDURE moduleSymbol*(m: Module): Symbols.PSymbol;
+    RETURN m.symbol
+END moduleSymbol;
+
+PROCEDURE moduleExports*(m: Module): JsMap.Type;
+    RETURN m.exports
+END moduleExports;
+
+BEGIN
+    stdSymbols := makeStdSymbols();
+END Scope.

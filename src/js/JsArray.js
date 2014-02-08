@@ -27,8 +27,12 @@ function add(a/*Type*/, o/*PType*/){
 	a.push(o);
 }
 
-function stringsAdd(a/*Strings*/, o/*Type*/){
+function addString(a/*Strings*/, o/*Type*/){
 	a.push(o);
+}
+
+function removeString(a/*Strings*/, i/*INTEGER*/){
+	a.splice(i, 1);
 }
 
 function at(a/*Type*/, i/*INTEGER*/){
@@ -43,10 +47,20 @@ function stringsAt(a/*Strings*/, i/*INTEGER*/){
 	return result;
 }
 
+function stringsIndexOf(a/*Strings*/, x/*Type*/){
+	var result = 0;
+	result = a.indexOf(x);
+	return result;
+}
+
 function contains(a/*Type*/, x/*PType*/){
 	var result = false;
 	result = (a.indexOf(x) != -1);
 	return result;
+}
+
+function containsString(a/*Strings*/, x/*Type*/){
+	return stringsIndexOf(a, x) != -1;
 }
 
 function make(){
@@ -65,9 +79,12 @@ exports.Strings = Strings;
 exports.len = len;
 exports.stringsLen = stringsLen;
 exports.add = add;
-exports.stringsAdd = stringsAdd;
+exports.addString = addString;
+exports.removeString = removeString;
 exports.at = at;
 exports.stringsAt = stringsAt;
+exports.stringsIndexOf = stringsIndexOf;
 exports.contains = contains;
+exports.containsString = containsString;
 exports.make = make;
 exports.makeStrings = makeStrings;

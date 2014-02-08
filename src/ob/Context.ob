@@ -1,7 +1,7 @@
 MODULE Context;
 IMPORT JsString, Object;
 TYPE
-    FinalizerProc = PROCEDURE(closure: Object.PType);
+    FinalizerProc* = PROCEDURE(closure: Object.PType);
 
     Scope* = RECORD
         PROCEDURE addFinalizer*(finalizer: FinalizerProc; closure: Object.PType)

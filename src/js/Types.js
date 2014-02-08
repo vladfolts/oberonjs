@@ -354,7 +354,7 @@ Record.prototype.addField = function(f/*Field*/, type/*PType*/){
 	}
 	JsMap.put(this.fields, f.id(), type);
 	if (!f.exported()){
-		JsArray.stringsAdd(this.notExported, f.id());
+		JsArray.addString(this.notExported, f.id());
 	}
 }
 Record.prototype.findSymbol = function(id/*Type*/){
@@ -594,6 +594,7 @@ exports.Pointer = Pointer;
 exports.Procedure = Procedure;
 exports.DefinedProcedure = DefinedProcedure;
 exports.ProcedureArgument = ProcedureArgument;
+exports.BasicType = BasicType;
 exports.Record = Record;
 exports.NonExportedRecord = NonExportedRecord;
 exports.Module = Module;

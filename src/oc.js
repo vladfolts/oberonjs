@@ -6,6 +6,7 @@ var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var Lexer = require("js/Lexer.js");
 var RTL = require("rtl_code.js").RTL;
+var Scope = require("js/Scope.js");
 var Stream = require("js/Stream.js");
 
 var CompiledModule = Class.extend({
@@ -37,9 +38,9 @@ function compileModule(grammar, stream, context, handleErrors){
     }
     var scope = context.currentScope();
     return new CompiledModule(
-            scope.module(),
+            Scope.moduleSymbol(scope),
             context.codeGenerator().result(),
-            scope.exports());
+            Scope.moduleExports(scope));
 }
 
 function compileModulesFromText(

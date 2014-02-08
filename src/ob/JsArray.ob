@@ -25,10 +25,15 @@ BEGIN
     JS.do("a.push(o)");
 END add;
 
-PROCEDURE stringsAdd*(a: Strings; o: JsString.Type);
+PROCEDURE addString*(a: Strings; o: JsString.Type);
 BEGIN
     JS.do("a.push(o)");
-END stringsAdd;
+END addString;
+
+PROCEDURE removeString*(a: Strings; i: INTEGER);
+BEGIN
+    JS.do("a.splice(i, 1)");
+END removeString;
 
 PROCEDURE at*(a: Type; i: INTEGER): Object.PType;
 VAR
@@ -46,6 +51,14 @@ BEGIN
     RETURN result
 END stringsAt;
 
+PROCEDURE stringsIndexOf*(a: Strings; x: JsString.Type): INTEGER;
+VAR
+    result: INTEGER;
+BEGIN
+    JS.do("result = a.indexOf(x)");
+    RETURN result
+END stringsIndexOf;
+
 PROCEDURE contains*(a: Type; x: Object.PType): BOOLEAN;
 VAR
     result: BOOLEAN;
@@ -53,6 +66,10 @@ BEGIN
     JS.do("result = (a.indexOf(x) != -1)");
     RETURN result
 END contains;
+
+PROCEDURE containsString*(a: Strings; x: JsString.Type): BOOLEAN;
+    RETURN stringsIndexOf(a, x) # -1
+END containsString;
 
 PROCEDURE make*(): Type;
 VAR

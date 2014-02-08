@@ -8,7 +8,7 @@ var op = require("js/Operator.js");
 var Parser = require("parser.js");
 var Procedure = require("js/Procedure.js");
 var Class = require("rtl.js").Class;
-var Scope = require("scope.js");
+var Scope = require("js/Scope.js");
 var Symbol = require("js/Symbols.js");
 var Type = require("js/Types.js");
 
@@ -527,7 +527,7 @@ exports.ProcDecl = ChainedContext.extend({
     handleIdentdef: function(id){
         this.__id = id;
         this.codeGenerator().write(this._prolog());
-        this.parent().pushScope(new Scope.Procedure());
+        this.parent().pushScope(Scope.makeProcedure());
     },
     handleIdent: function(id){
         if (this.__id.id() != id)
@@ -672,7 +672,7 @@ exports.PointerDecl = ChainedContext.extend({
             return existing;
 
         var scope = this.currentScope();
-        scope.addUnresolved(id);
+        Scope.addUnresolved(scope, id);
         var resolve = function(){return getSymbol(parent, id).info().type();};
 
         return Symbol.makeFound(
@@ -1653,7 +1653,7 @@ exports.ExpressionProcedureCall = ProcedureCall.extend({
                 if (proc instanceof Procedure.Std)
                     throw new Errors.Error(proc.description() + " cannot be referenced");
                 var scope = d.scope();
-                if (scope && scope.id() == "procedure")
+                if (scope instanceof Scope.Procedure)
                     throw new Errors.Error("local procedure '" + d.code() + "' cannot be referenced");
             }
             parent.setDesignator(d);
@@ -1747,7 +1747,7 @@ exports.TypeDeclaration = ChainedContext.extend({
     },
     setType: function(type){
         Type.defineTypeId(this.__symbol.info(), type);
-        this.currentScope().resolve(this.__symbol);
+        Scope.resolve(this.currentScope(), this.__symbol);
     },
     typeName: function(){return this.__id.id();},
     genTypeName: function(){return this.__id.id();},
@@ -1763,7 +1763,7 @@ exports.TypeSection = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
     },
     endParse: function(){
-        var unresolved = this.currentScope().unresolved();
+        var unresolved = Scope.unresolved(this.currentScope());
         if (unresolved.length)
             throw new Errors.Error("no declaration found for '" + unresolved.join("', '") + "'");
     }
@@ -1800,14 +1800,14 @@ exports.ModuleDeclaration = ChainedContext.extend({
         var parent = this.parent();
         if (this.__name === undefined ) {
             this.__name = id;
-            this.__moduleScope = new Scope.Module(id);
+            this.__moduleScope = Scope.makeModule(id);
             parent.pushScope(this.__moduleScope);
         }
         else if (id === this.__name){
             var scope = parent.currentScope();
             scope.close();
-            var exports = scope.exports();
-            scope.module().info().defineExports(exports);
+            var exports = Scope.moduleExports(scope);
+            Scope.defineExports(Scope.moduleSymbol(scope).info(), exports);
             this.codeGenerator().write(this.__moduleGen.epilog(exports));
         }
         else
@@ -1835,7 +1835,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
     },
     qualifyScope: function(scope){
         if (scope != this.__moduleScope && scope instanceof Scope.Module){
-            var id = scope.module().id();
+            var id = Scope.moduleSymbol(scope).id();
             return this.__imports[id].id() + ".";
         }
         return "";

@@ -117,11 +117,11 @@ TYPE
 
     PProcedureArgument* = POINTER TO ProcedureArgument;
 
-    BasicType = RECORD(NamedType)
+    BasicType* = RECORD(NamedType)
         mInitializer: JsString.Type
     END;
 
-    PBasicType = POINTER TO BasicType;
+    PBasicType* = POINTER TO BasicType;
 
     Field = RECORD
         id: PROCEDURE(): JsString.Type;
@@ -416,7 +416,7 @@ BEGIN
     END;
     JsMap.put(SELF.fields, f.id(), type);
     IF ~f.exported() THEN
-        JsArray.stringsAdd(SELF.notExported, f.id());
+        JsArray.addString(SELF.notExported, f.id());
     END;
 END Record.addField;
 

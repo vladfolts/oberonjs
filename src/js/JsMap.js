@@ -37,11 +37,11 @@ function erase(m/*Type*/, s/*Type*/){
 	delete m[s];
 }
 
-function forEach(m/*Type*/, p/*forEachProc*/, closure/*VAR Type*/){
+function forEach(m/*Type*/, p/*ForEachProc*/, closure/*VAR Type*/){
 	for(var key in m){p(key, m[key], closure)};
 }
 
-function forEachString(m/*Strings*/, p/*forEachStringProc*/, closure/*VAR Type*/){
+function forEachString(m/*Strings*/, p/*ForEachStringProc*/, closure/*VAR Type*/){
 	for(var key in m){p(key, m[key], closure)};
 }
 exports.Type = Type;

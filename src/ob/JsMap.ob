@@ -2,10 +2,10 @@ MODULE JsMap;
 IMPORT JS, JsString, Object;
 TYPE
     Type* = POINTER TO RECORD END;
-    forEachProc = PROCEDURE(key: JsString.Type; value: Object.PType; VAR closure: Object.Type);
+    ForEachProc = PROCEDURE(key: JsString.Type; value: Object.PType; VAR closure: Object.Type);
     
     Strings* = POINTER TO RECORD END;
-    forEachStringProc = PROCEDURE(key: JsString.Type; value: JsString.Type; VAR closure: Object.Type);
+    ForEachStringProc = PROCEDURE(key: JsString.Type; value: JsString.Type; VAR closure: Object.Type);
 
 PROCEDURE make*(): Type;
 VAR
@@ -41,12 +41,12 @@ BEGIN
     JS.do("delete m[s]");
 END erase;
 
-PROCEDURE forEach*(m: Type; p: forEachProc; VAR closure: Object.Type);
+PROCEDURE forEach*(m: Type; p: ForEachProc; VAR closure: Object.Type);
 BEGIN
     JS.do("for(var key in m){p(key, m[key], closure)}");
 END forEach;
 
-PROCEDURE forEachString*(m: Strings; p: forEachStringProc; VAR closure: Object.Type);
+PROCEDURE forEachString*(m: Strings; p: ForEachStringProc; VAR closure: Object.Type);
 BEGIN
     JS.do("for(var key in m){p(key, m[key], closure)}");
 END forEachString;
