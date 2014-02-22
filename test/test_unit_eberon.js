@@ -1,26 +1,39 @@
 "use strict";
 
-var grammar = require("eberon/eberon_grammar.js").grammar;
+var language = require("eberon/eberon_grammar.js").language;
 var TestUnitCommon = require("test_unit_common.js");
 
 var pass = TestUnitCommon.pass;
 var fail = TestUnitCommon.fail;
 var context = TestUnitCommon.context;
 
+var grammar = language.grammar;
+
 function testWithContext(context, pass, fail){
-    return TestUnitCommon.testWithContext(context, grammar.declarationSequence, pass, fail);
+    return TestUnitCommon.testWithContext(context, grammar.declarationSequence, language, pass, fail);
 }
 
 function testWithModule(src, pass, fail){
-    return TestUnitCommon.testWithModule(src, grammar, pass, fail);
+    return TestUnitCommon.testWithModule(src, language, pass, fail);
+}
+
+function testWithGrammar(parser, pass, faile){
+    return TestUnitCommon.testWithGrammar(parser, language, pass, fail);
 }
 
 exports.suite = {
-"key words": TestUnitCommon.testWithGrammar(
+"arithmetic operators": testWithContext(
+    context(grammar.statement, "VAR b1: BOOLEAN;"),
+    pass(),
+    fail(["b1 := b1 + b1", "operator '+' type mismatch: numeric type or SET or STRING expected, got 'BOOLEAN'"])
+    ),
+"key words": testWithGrammar(
     grammar.variableDeclaration,
     pass(),
     fail(["SELF: INTEGER", "not parsed"],
-         ["SUPER: INTEGER", "not parsed"])
+         ["SUPER: INTEGER", "not parsed"],
+         ["STRING: INTEGER", "not parsed"]
+         )
     ),
 "abstract method declaration": testWithContext(
     context(grammar.declarationSequence, 
@@ -157,4 +170,32 @@ exports.suite = {
          "VAR a*: A;"),
     fail()
     ),
+"STRING variable": testWithGrammar(
+    grammar.variableDeclaration,
+    pass("s: STRING")
+    ),
+"STRING expression": testWithContext(
+    context(grammar.expression,
+            "VAR s1, s2: STRING; a: ARRAY 10 OF CHAR;"),
+    pass("s1 + s2",
+         "s1 = s2",
+         "s1 # s2",
+         "s1 < s2",
+         "s1 > s2",
+         "s1 <= s2",
+         "s1 >= s2"
+         ),
+    fail(["s1 = NIL", "type mismatch: expected 'STRING', got 'NIL'"],
+         ["s1 = a", "type mismatch: expected 'STRING', got 'ARRAY 10 OF CHAR'"],
+         ["a = s1", "type mismatch: expected 'ARRAY 10 OF CHAR', got 'STRING'"]
+        )
+    ),
+"STRING can be implicitely converted to open ARRAY OF CHAR": testWithContext(
+    context(grammar.expression,
+            "VAR s: STRING;"
+            + "PROCEDURE p(a: ARRAY OF CHAR): BOOLEAN; RETURN FALSE END p;"
+            + "PROCEDURE pVar(VAR a: ARRAY OF CHAR): BOOLEAN; RETURN FALSE END pVar;"),
+    pass("p(s)"),
+    fail(["pVar(s)", "type mismatch for argument 1: cannot pass 'STRING' as VAR parameter of type 'ARRAY OF CHAR'"])
+    )
 };

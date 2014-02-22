@@ -1,0 +1,7 @@
+MODULE EberonString;
+IMPORT Types;
+VAR
+    string*: POINTER TO Types.BasicType;
+BEGIN
+    string := Types.makeBasic("STRING", "''");
+END EberonString.

@@ -56,11 +56,9 @@ function checkTypeMatch(from, to){
         throwTypeMismatch(from, to);
 }
 
-function checkImplicitCast(from, to){
-    var result = Cast.implicit(from, to, castOperations);
-    if (!result)
+function checkImplicitCast(types, from, to){
+    if (types.implicitCast(from, to, false, castOperations, {set: function(){}}))
         throwTypeMismatch(from, to);
-    return result.make.bind(result);
 }
 
 function promoteTypeInExpression(e, type){
@@ -82,7 +80,7 @@ function promoteExpressionType(context, left, right){
     if (!rightType)
         return;
 
-    checkImplicitCast(rightType, leftType);
+    checkImplicitCast(context.language().types, rightType, leftType);
 }
 
 function checkTypeCast(from, to, msg){
@@ -103,6 +101,7 @@ var ChainedContext = Class.extend({
     init: function ChainedContext(parent){this.__parent = parent;},
     parent: function(){return this.__parent;},
     handleMessage: function(msg){return this.__parent.handleMessage(msg);},
+    language: function(){return this.__parent.language();},
     codeGenerator: function(){return this.__parent.codeGenerator();},
     findSymbol: function(id){return this.__parent.findSymbol(id);},
     currentScope: function(s){return this.__parent.currentScope();},
@@ -115,8 +114,7 @@ var ChainedContext = Class.extend({
     handleConst: function(type, value, code){this.__parent.handleConst(type, value, code);},
     genTypeName: function(){return this.__parent.genTypeName();},
     genVarName: function(id){return this.__parent.genVarName(id);},
-    qualifyScope: function(scope){return this.__parent.qualifyScope(scope);},
-    rtl: function(){return this.__parent.rtl();}
+    qualifyScope: function(scope){return this.__parent.qualifyScope(scope);}
 });
 
 exports.Integer = ChainedContext.extend({
@@ -377,7 +375,7 @@ exports.Designator = ChainedContext.extend({
 
         checkTypeCast(this.__currentType, type, "invalid type cast");
 
-        var code = this.rtl().typeGuard(this.__code, castCode(type, this));
+        var code = this.language().rtl.typeGuard(this.__code, castCode(type, this));
         this.__code = code;
 
         this.__currentType = type;
@@ -409,7 +407,7 @@ exports.Designator = ChainedContext.extend({
             || this.__info instanceof Type.VariableRef)
             return code;
         if (this.__derefCode)
-            return this.rtl().makeRef(this.__derefCode, this.__propCode);
+            return this.language().rtl.makeRef(this.__derefCode, this.__propCode);
         return "{set: function($v){" + code + " = $v;}, get: function(){return " + code + ";}}";
     }
 });
@@ -523,11 +521,12 @@ exports.ProcDecl = ChainedContext.extend({
         this.__type = undefined;
         this.__returnParsed = false;
         this.__outerScope = this.parent().currentScope();
+        this.__stdSymbols = this.language().stdSymbols;
     },
     handleIdentdef: function(id){
         this.__id = id;
         this.codeGenerator().write(this._prolog());
-        this.parent().pushScope(Scope.makeProcedure());
+        this.parent().pushScope(Scope.makeProcedure(this.__stdSymbols));
     },
     handleIdent: function(id){
         if (this.__id.id() != id)
@@ -586,7 +585,7 @@ exports.ProcDecl = ChainedContext.extend({
         var result = this.__type.result();
         if (!result)
             throw new Errors.Error("unexpected RETURN in PROCEDURE declared with no result type");
-        if (!Cast.implicit(type, result, castOperations))
+        if (this.language().types.implicitCast(type, result, false, castOperations, {set: function(){}}))
             throw new Errors.Error(
                 "RETURN '" + result.description() + "' expected, got '"
                 + type.description() + "'");
@@ -701,9 +700,10 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
         for(var i = this.__dimensions.length; i-- ;){
             var length = this.__dimensions[i];
             dimensions = length + (dimensions.length ? ", " + dimensions : "");
+            var rtl = this.language().rtl;
             var arrayInit = !i
-                ? isCharArray ? this.rtl().makeCharArray(dimensions)
-                              : this.rtl().makeArray(dimensions + ", " + initializer)
+                ? isCharArray ? rtl.makeCharArray(dimensions)
+                              : rtl.makeArray(dimensions + ", " + initializer)
                 : undefined;
             type = Type.makeArray("ARRAY OF " + Type.typeName(type),
                                   arrayInit,
@@ -744,52 +744,37 @@ var numericOpTypeCheck = {
     check: function(t){return Type.numeric().indexOf(t) != -1;}
 };
 
+var numericOrSetOpTypeCheck = {
+    expect: numericOpTypeCheck.expect + " or SET",
+    check: function(t){return numericOpTypeCheck.check(t) || t == basicTypes.set;}
+};
+
 var intOpTypeCheck = {
     expect: Type.intsDescription(),
     check: Type.isInt
 };
 
-var orderOpTypeCheck = {
-    expect: "numeric type or CHAR or character array",
-    check: function(t){
-        return [basicTypes.integer,
-                basicTypes.uint8,
-                basicTypes.real,
-                basicTypes.ch
-               ].indexOf(t) != -1
-            || Type.isString(t);
-    }
-};
-
-var equalOpTypeCheck = {
-    expect: "numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE",
-    check: function(t){
-        return [basicTypes.integer,
-                basicTypes.uint8,
-                basicTypes.real,
-                basicTypes.set,
-                basicTypes.bool,
-                basicTypes.ch
-               ].indexOf(t) != -1
-            || Type.isString(t)
-            || t instanceof Type.Pointer
-            || t instanceof Type.Procedure
-            || t == nilType;
-    }
-};
+function throwOperatorTypeMismatch(op, expect, type){
+    throw new Errors.Error(
+        "operator '" + op +
+        "' type mismatch: " + expect + " expected, got '" +
+        type.description() + "'");
+}
 
 function assertOpType(type, check, literal){
     if (!check.check(type))
-        throw new Errors.Error(
-            "operator '" + literal +
-            "' type mismatch: " + check.expect + " expected, got '" +
-            type.description() + "'");
+        throwOperatorTypeMismatch(literal, check.expect, type);
 }
 
 function assertNumericOp(type, literal, op, intOp){
     assertOpType(type, numericOpTypeCheck, literal);
     return (intOp && Type.isInt(type))
            ? intOp : op;
+}
+
+function assertNumericOrSetOp(type, literal, op, intOp, setOp){
+    assertOpType(type, numericOrSetOpTypeCheck, literal);
+    return Type.isInt(type) ? intOp : type == basicTypes.set ? setOp : op;
 }
 
 function assertIntOp(type, literal, op){
@@ -814,58 +799,107 @@ function useTypeInRelation(leftType, rightType){
     return leftType;
 }
 
-function relationOp(leftType, rightType, literal){
-    var o;
-    var check;
+function useIntOrderOp(t){
+    return Type.isInt(t) || t == basicTypes.ch;
+}
+
+function useIntEqOp(t){
+    return Type.isInt(t)
+        || t == basicTypes.bool
+        || t == basicTypes.ch
+        || t instanceof Type.Pointer
+        || t instanceof Type.Procedure
+        || t == nilType;
+}
+
+var RelationOps = Class.extend({
+    init: function RelationOps(){
+    },
+    eq: function(type){
+        return useIntEqOp(type)         ? op.equalInt 
+             : Type.isString(type)      ? op.equalStr
+             : type == basicTypes.real  ? op.equalReal
+             : type == basicTypes.set   ? op.equalSet
+                                        : undefined;
+    },
+    notEq: function(type){
+        return useIntEqOp(type)         ? op.notEqualInt 
+             : Type.isString(type)      ? op.notEqualStr
+             : type == basicTypes.real  ? op.notEqualReal
+             : type == basicTypes.set   ? op.notEqualSet
+                                        : undefined;
+    },
+    less: function(type){
+        return useIntOrderOp(type) ?    op.lessInt
+             : Type.isString(type)      ? op.lessStr 
+             : type == basicTypes.real  ? op.lessReal
+                                        : undefined;
+    },
+    greater: function(type){
+        return useIntOrderOp(type) ?    op.greaterInt
+             : Type.isString(type)      ? op.greaterStr 
+             : type == basicTypes.real  ? op.greaterReal
+                                        : undefined;
+    },
+    lessEq: function(type){
+        return useIntOrderOp(type) ?    op.eqLessInt
+             : Type.isString(type)      ? op.eqLessStr 
+             : type == basicTypes.real  ? op.eqLessReal
+             : type == basicTypes.set   ? op.setInclL
+                                        : undefined;
+    },
+    greaterEq: function(type){
+        return useIntOrderOp(type)      ? op.eqGreaterInt
+             : Type.isString(type)      ? op.eqGreaterStr 
+             : type == basicTypes.real  ? op.eqGreaterReal
+             : type == basicTypes.set   ? op.setInclR
+                                        : undefined;
+    },
+    eqExpect: function(){return "numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE";},
+    strongRelExpect: function(){return "numeric type or CHAR or character array";},
+    relExpect: function(){return "numeric type or SET or CHAR or character array";}
+});
+
+var relationOps = new RelationOps();
+
+function relationOp(leftType, rightType, literal, ops){
     var type = useTypeInRelation(leftType, rightType);
+    var o;
+    var mismatch;
     switch (literal){
         case "=":
-            o = Type.isString(type) ? op.equalStr 
-              : Type.isInt(type)    ? op.equalInt 
-                                    : op.equalReal;
-            check = equalOpTypeCheck;
+            o = ops.eq(type);
+            if (!o)
+                mismatch = ops.eqExpect();
             break;
         case "#":
-            o = Type.isString(type) ? op.notEqualStr 
-              : Type.isInt(type)    ? op.notEqualInt
-                                    : op.notEqualReal;
-            check = equalOpTypeCheck;
+            o = ops.notEq(type);
+            if (!o)
+                mismatch = ops.eqExpect();
             break;
         case "<":
-            o = Type.isString(type) ? op.lessStr 
-              : Type.isInt(type)    ? op.lessInt
-                                    : op.lessReal;
-            check = orderOpTypeCheck;
+            o = ops.less(type);
+            if (!o)
+                mismatch = ops.strongRelExpect();
             break;
         case ">":
-            o = Type.isString(type) ? op.greaterStr 
-              : Type.isInt(type)    ? op.greaterInt
-                                    : op.greaterReal;
-            check = orderOpTypeCheck;
+            o = ops.greater(type);
+            if (!o)
+                mismatch = ops.strongRelExpect();
             break;
         case "<=":
-            if (type == basicTypes.set)
-                o = op.setInclL;
-            else {
-                o = Type.isString(type) ? op.eqLessStr 
-                  : Type.isInt(type)    ? op.eqLessInt
-                                        : op.eqLessReal;
-                check = orderOpTypeCheck;
-            }
+            o = ops.lessEq(type);
+            if (!o)
+                mismatch = ops.relExpect();
             break;
         case ">=":
-            if (type == basicTypes.set)
-                o = op.setInclR;
-            else {
-                o = Type.isString(type) ? op.eqGreaterStr 
-                  : Type.isInt(type)    ? op.eqGreaterInt
-                                        : op.eqGreaterReal;
-                check = orderOpTypeCheck;
-            }
+            o = ops.greaterEq(type);
+            if (!o)
+                mismatch = ops.relExpect();
             break;
         }
-    if (check)
-        assertOpType(type, check, literal);
+    if (mismatch)
+        throwOperatorTypeMismatch(literal, mismatch, type);
     return o;
 }
 
@@ -876,22 +910,38 @@ exports.AddOperator = ChainedContext.extend({
     handleLiteral: function(s){
         var parent = this.parent();
         var type = parent.type();
-        var o;
-        if (s == "+")
-            o = (type == basicTypes.set) ? op.setUnion
-                                         : assertNumericOp(type, s, op.addReal, op.addInt);
-        else if (s == "-")
-            o = (type == basicTypes.set) ? op.setDiff
-                                         : assertNumericOp(type, s, op.subReal, op.subInt);
-        else if (s == "OR"){
-            if (type != basicTypes.bool)
-                throw new Errors.Error("BOOLEAN expected as operand of 'OR', got '"
-                                     + type.description() + "'");
-            o = op.or;
-        }
+        var o = this.__matchOperator(s, type);
         if (o)
             parent.handleBinaryOperator(o);
-    }
+    },
+    __matchOperator: function(s, type){
+        var result;
+        switch (s){
+            case "+":
+                result = this._matchPlusOperator(type);
+                if (!result)
+                    throwOperatorTypeMismatch(s, this._expectPlusOperator(), type);
+                break;
+            case "-":
+                return assertNumericOrSetOp(type, s, op.subReal, op.subInt, op.setDiff);
+            case "OR":
+                if (type != basicTypes.bool)
+                    throw new Errors.Error("BOOLEAN expected as operand of 'OR', got '"
+                                         + type.description() + "'");
+                return op.or;
+            }
+        return result;
+    },
+    _matchPlusOperator: function(type){
+        if (type == basicTypes.set)
+            return op.setUnion;
+        if (Type.isInt(type))
+            return op.addInt;
+        if (type == basicTypes.real)
+            return op.addReal;
+        return undefined;
+    },
+    _expectPlusOperator: function(){return "numeric type or SET";}
 });
 
 exports.MulOperator = ChainedContext.extend({
@@ -903,15 +953,11 @@ exports.MulOperator = ChainedContext.extend({
         var type = parent.type();
         var o;
         if (s == "*")
-            o = (type == basicTypes.set) ? op.setIntersection
-                                         : assertNumericOp(type, s, op.mulReal, op.mulInt);
+            o = assertNumericOrSetOp(type, s, op.mulReal, op.mulInt, op.setIntersection);
         else if (s == "/"){
-            if (type == basicTypes.set)
-                o = op.setSymmetricDiff;
-            else if (Type.isInt(type))
+            if (Type.isInt(type))
                 throw new Errors.Error("operator DIV expected for integer division");
-            else
-                o = assertNumericOp(type, s, op.divReal);
+            o = assertNumericOrSetOp(type, s, op.divReal, undefined, op.setSymmetricDiff);
         }
         else if (s == "DIV")
             o = assertIntOp(type, s, op.divInt);
@@ -1022,7 +1068,7 @@ exports.Set = ChainedContext.extend({
         if (!this.__expr.length)
             parent.handleConst(basicTypes.set, Code.makeSetConst(this.__value), this.__value.toString());
         else{
-            var code = this.rtl().makeSet(this.__expr);
+            var code = this.language().rtl.makeSet(this.__expr);
             if (this.__value)
                 code += " | " + this.__value;
             var e = Code.makeExpression(code, basicTypes.set);
@@ -1080,8 +1126,7 @@ exports.SimpleExpression = ChainedContext.extend({
         var o;
         switch(this.__unaryOperator){
             case "-":
-                o = (type == basicTypes.set) ? op.setComplement
-                                             : assertNumericOp(type, this.__unaryOperator, op.negateReal, op.negateInt);
+                o = assertNumericOrSetOp(type, this.__unaryOperator, op.negateReal, op.negateInt, op.setComplement);
                 break;
             case "+":
                 o = assertNumericOp(type, this.__unaryOperator, op.unaryPlus);
@@ -1100,7 +1145,7 @@ exports.SimpleExpression = ChainedContext.extend({
         if (type === undefined || this.__type === undefined)
             this.__type = type;
         else
-            checkImplicitCast(type, this.__type);
+            checkImplicitCast(this.language().types, type, this.__type);
     },
     handleBinaryOperator: function(o){this.__binaryOperator = o;},
     endParse: function(){
@@ -1109,8 +1154,9 @@ exports.SimpleExpression = ChainedContext.extend({
 });
 
 exports.Expression = ChainedContext.extend({
-    init: function ExpressionContext(context){
+    init: function ExpressionContext(context, relOps){
         ChainedContext.prototype.init.call(this, context);
+        this.__relOps = relOps || relationOps;
         this.__relation = undefined;
         this.__expression = undefined;
     },
@@ -1133,7 +1179,7 @@ exports.Expression = ChainedContext.extend({
             if (!Type.isInt(leftType))
                 throw new Errors.Error(
                     Type.intsDescription() + " expected as an element of SET, got '" + Type.typeName(leftType) + "'");
-            checkImplicitCast(rightType, basicTypes.set);
+            checkImplicitCast(this.language().types, rightType, basicTypes.set);
 
             code = "1 << " + leftCode + " & " + rightCode;
         }
@@ -1164,8 +1210,8 @@ exports.Expression = ChainedContext.extend({
 
         var value;
         if (!code){
-            var o = relationOp(leftExpression.type(), rightExpression.type(), this.__relation);
-            var oResult = o(leftExpression, rightExpression, this);
+            var o = relationOp(leftExpression.type(), rightExpression.type(), this.__relation, this.__relOps);
+            var oResult = o(leftExpression, rightExpression, this.language().rtl);
             code = oResult.code();
             value = oResult.constValue();
         }
@@ -1480,7 +1526,7 @@ exports.Assignment = ChainedContext.extend({
         this.__left = Code.makeExpression(d.code(), d.type(), d);
     },
     handleExpression: function(e){
-        this.parent().codeGenerator().write(op.assign(this.__left, e, this));
+        this.parent().codeGenerator().write(op.assign(this.__left, e, this.language().rtl));
     }
 });
 
@@ -1601,7 +1647,14 @@ var ProcedureCall = ChainedContext.extend({
     },
     setDesignator: function(d){
         this.__type = assertProcType(d);
-        this.__procCall = this.__type.callGenerator(this, d.code());
+        var l = this.language();
+        this.__procCall = this.__type.callGenerator(
+              { 
+                types: function(){return l.types;}
+              , rtl: function(){return l.rtl;}
+              , qualifyScope: this.qualifyScope.bind(this)
+              }
+            , d.code());
         this.__callExpression = undefined;
     },
     codeGenerator: function(){return this.__code;},
@@ -1714,7 +1767,7 @@ exports.RecordDecl = ChainedContext.extend({
         var gen = this.codeGenerator();
         var qualifiedBase = baseType ? this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType) : undefined; 
         gen.write((baseType ? qualifiedBase + ".extend" 
-                            : this.rtl().extendId())
+                            : this.language().rtl.extendId())
                 + "(");
         gen.openScope();
         gen.write("init: function " + Type.recordConstructor(this.__type) + "()");
@@ -1795,12 +1848,13 @@ exports.ModuleDeclaration = ChainedContext.extend({
         this.__imports = {};
         this.__moduleScope = undefined;
         this.__moduleGen = undefined;
+        this.__stdSymbols = this.language().stdSymbols;
     },
     handleIdent: function(id){
         var parent = this.parent();
         if (this.__name === undefined ) {
             this.__name = id;
-            this.__moduleScope = Scope.makeModule(id);
+            this.__moduleScope = Scope.makeModule(id, this.__stdSymbols);
             parent.pushScope(this.__moduleScope);
         }
         else if (id === this.__name){
@@ -1896,22 +1950,20 @@ var ModuleImport = ChainedContext.extend({
 exports.ModuleImport = ModuleImport;
 
 exports.Context = Class.extend({
-    init: function Context(code, moduleGeneratorFactory, rtl, moduleResolver){
-        this.__code = code;
-        this.__moduleGeneratorFactory = moduleGeneratorFactory;
+    init: function Context(language){
+        this.__language = language;
         this.__scopes = [];
         this.__gen = 0;
         this.__vars = [];
-        this.__rtl = rtl;
-        this.__moduleResolver = moduleResolver;
     },
+    language: function(){return this.__language;},
     genTypeName: function(){
         ++this.__gen;
         return "anonymous$" + this.__gen;
     },
     genVarName: function(id){
         if (this.__vars.indexOf(id) === -1) {
-            this.__code.write("var " + id + ";\n");
+            this.codeGenerator().write("var " + id + ";\n");
             this.__vars.push(id);
         }
     },
@@ -1933,16 +1985,15 @@ exports.Context = Class.extend({
     },
     handleExpression: function(){},
     handleLiteral: function(){},
-    codeGenerator: function(){return this.__code;},
+    codeGenerator: function(){return this.__language.codeGenerator;},
     makeModuleGenerator: function(name, imports){
-        return this.__moduleGeneratorFactory(name, imports);
+        return this.__language.moduleGenerator(name, imports);
     },
-    rtl: function(){return this.__rtl;},
     findModule: function(name){
         if (name == "JS"){
             return Module.makeJS();
         }
-        return this.__moduleResolver ? this.__moduleResolver(name) : undefined;
+        return this.__language.moduleResolver ? this.__language.moduleResolver(name) : undefined;
     }
 });
 
@@ -1952,3 +2003,4 @@ exports.endParametersMsg = endParametersMsg;
 exports.getSymbolAndScope = getSymbolAndScope;
 exports.unwrapType = unwrapType;
 exports.IdentdefInfo = IdentdefInfo;
+exports.RelationOps = RelationOps;

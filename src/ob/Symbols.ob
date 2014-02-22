@@ -1,5 +1,5 @@
 MODULE Symbols;
-IMPORT Context, JsString, Object, Types;
+IMPORT JsString, Object, ScopeBase, Types;
 TYPE
     Symbol* = RECORD(Object.Type)
         PROCEDURE id*(): JsString.Type;
@@ -18,10 +18,10 @@ TYPE
 
     FoundSymbol* = RECORD
         PROCEDURE symbol(): PSymbol;
-        PROCEDURE scope(): Context.PScope;
+        PROCEDURE scope(): ScopeBase.PType;
 
         mSymbol: PSymbol;
-        mScope: Context.PScope
+        mScope: ScopeBase.PType
     END;
 
     PFoundSymbol* = POINTER TO FoundSymbol;
@@ -54,7 +54,7 @@ PROCEDURE Symbol.isProcedure(): BOOLEAN;
     RETURN SELF.mInfo IS Types.PProcedureId
 END Symbol.isProcedure;
 
-PROCEDURE FoundSymbol.scope(): Context.PScope;
+PROCEDURE FoundSymbol.scope(): ScopeBase.PType;
     RETURN SELF.mScope
 END FoundSymbol.scope;
 
@@ -72,7 +72,7 @@ BEGIN
     RETURN result
 END makeSymbol;
 
-PROCEDURE makeFound*(s: PSymbol; scope: Context.PScope): PFoundSymbol;
+PROCEDURE makeFound*(s: PSymbol; scope: ScopeBase.PType): PFoundSymbol;
 VAR
     result: PFoundSymbol;
 BEGIN

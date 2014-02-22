@@ -1,18 +1,16 @@
 var RTL$ = require("rtl.js");
 var Code = require("js/Code.js");
-var Context = require("js/Context.js");
+var OberonRtl = require("js/OberonRtl.js");
 var JsArray = require("js/JsArray.js");
 var JsString = require("js/JsString.js");
 var Object = require("js/Object.js");
 var Types = require("js/Types.js");
+var errNo = 0;
+var err = 1;
+var errVarParameter = 2;
 var CastOp = Object.Type.extend({
 	init: function CastOp(){
 		Object.Type.prototype.init.call(this);
-	}
-});
-var CastOpDoNothing = CastOp.extend({
-	init: function CastOpDoNothing(){
-		CastOp.prototype.init.call(this);
 	}
 });
 var CastOpStrToChar = CastOp.extend({
@@ -28,9 +26,6 @@ var Operations = RTL$.extend({
 });
 var areTypesExactlyMatch = null;
 var doNothing = null;
-CastOpDoNothing.prototype.make = function(c/*Type*/, e/*PExpression*/){
-	return e;
-}
 
 function findBaseType(base/*PRecord*/, type/*PRecord*/){
 	while (true){
@@ -105,7 +100,7 @@ function areTypesExactlyMatchImpl(t1/*PType*/, t2/*PType*/){
 	}
 	return result;
 }
-CastOpStrToChar.prototype.make = function(c/*Type*/, e/*PExpression*/){
+CastOpStrToChar.prototype.make = function(rtl/*PType*/, e/*PExpression*/){
 	return Code.makeSimpleExpression(JsString.fromInt(this.c), Types.basic().ch);
 }
 
@@ -116,57 +111,75 @@ function makeCastOpStrToChar(c/*CHAR*/){
 	return result;
 }
 
-function implicit(from/*PType*/, to/*PType*/, ops/*Operations*/){
-	var result = null;
+function implicit(from/*PType*/, to/*PType*/, toVar/*BOOLEAN*/, ops/*Operations*/, op/*VAR PCastOp*/){
+	var result = 0;
 	var c = 0;
+	var ignore = false;
+	result = err;
+	op.set(null);
 	if (from == to){
-		result = doNothing;
+		result = errNo;
 	}
 	else if (from == Types.basic().uint8 && to == Types.basic().integer){
-		result = doNothing;
+		if (toVar){
+			result = errVarParameter;
+		}
+		else {
+			result = errNo;
+		}
 	}
 	else if (from == Types.basic().integer && to == Types.basic().uint8){
-		result = ops.castToUint8;
+		if (toVar){
+			result = errVarParameter;
+		}
+		else {
+			op.set(ops.castToUint8);
+			result = errNo;
+		}
 	}
 	else if (from instanceof Types.String){
 		if (to == Types.basic().ch){
 			if (Types.stringAsChar(RTL$.typeGuard(from, Types.String), {set: function($v){c = $v;}, get: function(){return c;}})){
-				result = makeCastOpStrToChar(c);
+				op.set(makeCastOpStrToChar(c));
+				result = errNo;
 			}
 		}
-		else if (to instanceof Types.Array && Types.arrayElementsType(RTL$.typeGuard(to, Types.Array)) == Types.basic().ch){
-			result = doNothing;
+		else if (Types.isString(to)){
+			result = errNo;
 		}
 	}
 	else if (from instanceof Types.Array && to instanceof Types.Array){
-		if (Types.arrayLength(RTL$.typeGuard(to, Types.Array)) == Types.openArrayLength || Types.arrayLength(RTL$.typeGuard(to, Types.Array)) == Types.arrayLength(RTL$.typeGuard(from, Types.Array))){
-			result = implicit(Types.arrayElementsType(RTL$.typeGuard(from, Types.Array)), Types.arrayElementsType(RTL$.typeGuard(to, Types.Array)), ops);
+		if ((Types.arrayLength(RTL$.typeGuard(from, Types.Array)) == Types.arrayLength(RTL$.typeGuard(to, Types.Array)) || Types.arrayLength(RTL$.typeGuard(to, Types.Array)) == Types.openArrayLength) && areTypesExactlyMatch(Types.arrayElementsType(RTL$.typeGuard(from, Types.Array)), Types.arrayElementsType(RTL$.typeGuard(to, Types.Array)))){
+			result = errNo;
 		}
 	}
 	else if (from instanceof Types.Pointer && to instanceof Types.Pointer){
 		if (findPointerBaseType(RTL$.typeGuard(to, Types.Pointer), RTL$.typeGuard(from, Types.Pointer)) != null){
-			result = doNothing;
+			result = errNo;
 		}
 	}
 	else if (from instanceof Types.Record && to instanceof Types.Record){
 		if (findBaseType(RTL$.typeGuard(to, Types.Record), RTL$.typeGuard(from, Types.Record)) != null){
-			result = doNothing;
+			result = errNo;
 		}
 	}
 	else if (from == Types.nil() && matchesToNIL(to)){
-		result = doNothing;
+		result = errNo;
 	}
 	else if (from instanceof Types.DefinedProcedure && to instanceof Types.DefinedProcedure){
 		if (areProceduresMatch(RTL$.typeGuard(from, Types.DefinedProcedure), RTL$.typeGuard(to, Types.DefinedProcedure))){
-			result = doNothing;
+			result = errNo;
 		}
 	}
 	return result;
 }
 areTypesExactlyMatch = areTypesExactlyMatchImpl;
-doNothing = new CastOpDoNothing();
+exports.errNo = errNo;
+exports.err = err;
+exports.errVarParameter = errVarParameter;
 exports.CastOp = CastOp;
 exports.Operations = Operations;
+exports.doNothing = function(){return doNothing;};
 exports.findPointerBaseType = findPointerBaseType;
 exports.areTypesMatch = areTypesMatch;
 exports.areProceduresMatch = areProceduresMatch;

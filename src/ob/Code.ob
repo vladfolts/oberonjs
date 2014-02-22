@@ -1,5 +1,5 @@
 MODULE Code;
-IMPORT JsMap, JsString, Context, Object, Stream, Symbols, Precedence := CodePrecedence, Types;
+IMPORT JsMap, JsString, Object, Stream, ScopeBase, Symbols, Precedence := CodePrecedence, Types;
 
 CONST
     kTab = 09X;
@@ -33,14 +33,14 @@ TYPE
         PROCEDURE refCode(): RefCodeProc;
         PROCEDURE type(): Types.PType;
         PROCEDURE info*(): Types.PId;
-        PROCEDURE scope(): Context.PScope;
+        PROCEDURE scope(): ScopeBase.PType;
 
         mCode: JsString.Type;
         mLval: JsString.Type;
         mRefCode: RefCodeProc;
         mType: Types.PType;
         mInfo: Types.PId;
-        mScope: Context.PScope
+        mScope: ScopeBase.PType
     END;
 
     PDesignator* = POINTER TO Designator;
@@ -59,6 +59,10 @@ TYPE
 
     SetConst* = RECORD (Const)
         value*: SET
+    END;
+
+    StrConst* = RECORD(Const)
+        value*: JsString.Type
     END;
 
     StringConst = RECORD (Const)
@@ -233,6 +237,15 @@ BEGIN
     RETURN result
 END makeSetConst;
 
+PROCEDURE makeStrConst*(s: JsString.Type): PConst;
+VAR
+    result: POINTER TO StrConst;
+BEGIN
+    NEW(result);
+    result.value := s;
+    RETURN result
+END makeStrConst;
+
 PROCEDURE makeStringConst*(s: JsString.Type): PConst;
 VAR
     result: POINTER TO StringConst;
@@ -297,11 +310,11 @@ PROCEDURE Designator.info(): Types.PId;
     RETURN SELF.mInfo
 END Designator.info;
 
-PROCEDURE Designator.scope(): Context.PScope;
+PROCEDURE Designator.scope(): ScopeBase.PType;
     RETURN SELF.mScope
 END Designator.scope;
 
-PROCEDURE makeDesignator*(code: JsString.Type; lval: JsString.Type; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: Context.PScope): PDesignator;
+PROCEDURE makeDesignator*(code: JsString.Type; lval: JsString.Type; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: ScopeBase.PType): PDesignator;
 VAR
     result: PDesignator;
 BEGIN

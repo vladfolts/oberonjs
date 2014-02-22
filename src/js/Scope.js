@@ -1,16 +1,17 @@
 var RTL$ = require("rtl.js");
-var Context = require("js/Context.js");
 var Errors = require("js/Errors.js");
 var JsArray = require("js/JsArray.js");
 var JsMap = require("js/JsMap.js");
 var JsString = require("js/JsString.js");
 var Object = require("js/Object.js");
 var Procedures = require("js/Procedure.js");
+var ScopeBase = require("js/ScopeBase.js");
 var Symbols = require("js/Symbols.js");
 var Types = require("js/Types.js");
-var Type = Context.Scope.extend({
+var Type = ScopeBase.Type.extend({
 	init: function Type(){
-		Context.Scope.prototype.init.call(this);
+		ScopeBase.Type.prototype.init.call(this);
+		this.stdSymbols = null;
 		this.symbols = null;
 		this.unresolved = null;
 		this.finalizers = null;
@@ -41,7 +42,12 @@ var Finalizer = Object.Type.extend({
 		this.closure = null;
 	}
 });
-var stdSymbols = null;
+
+function addSymbolForType(t/*PBasicType*/, result/*Type*/){
+	var name = null;
+	name = Types.typeName(t);
+	JsMap.put(result, name, Symbols.makeSymbol(name, Types.makeTypeId(t)));
+}
 
 function makeStdSymbols(){
 	var result = null;
@@ -49,9 +55,7 @@ function makeStdSymbols(){
 	var proc = null;
 	
 	function addSymbol(t/*PBasicType*/){
-		var name = null;
-		name = Types.typeName(t);
-		JsMap.put(result, name, Symbols.makeSymbol(name, Types.makeTypeId(t)));
+		addSymbolForType(t, result);
 	}
 	result = JsMap.make();
 	addSymbol(Types.basic().bool);
@@ -67,7 +71,8 @@ function makeStdSymbols(){
 	return result;
 }
 
-function init(scope/*Type*/){
+function init(scope/*Type*/, stdSymbols/*Type*/){
+	scope.stdSymbols = stdSymbols;
 	scope.symbols = JsMap.make();
 	scope.unresolved = JsArray.makeStrings();
 	scope.finalizers = JsArray.make();
@@ -81,10 +86,10 @@ function makeCompiledModule(name/*Type*/){
 	return result;
 }
 
-function makeModule(name/*Type*/){
+function makeModule(name/*Type*/, stdSymbols/*Type*/){
 	var result = null;
 	result = new Module();
-	init(result);
+	init(result, stdSymbols);
 	result.exports = JsMap.make();
 	result.symbol = Symbols.makeSymbol(name, makeCompiledModule(name));
 	result.addSymbol(result.symbol, false);
@@ -153,7 +158,7 @@ Type.prototype.findSymbol = function(id/*Type*/){
 	var result = null;
 	var void$ = false;
 	if (!JsMap.find(this.symbols, id, {set: function($v){result = $v;}, get: function(){return result;}})){
-		void$ = JsMap.find(stdSymbols, id, {set: function($v){result = $v;}, get: function(){return result;}});
+		void$ = JsMap.find(this.stdSymbols, id, {set: function($v){result = $v;}, get: function(){return result;}});
 	}
 	return RTL$.typeGuard(result, Symbols.Symbol);
 }
@@ -166,10 +171,10 @@ Procedure.prototype.addSymbol = function(s/*PSymbol*/, exported/*BOOLEAN*/){
 	Type.prototype.addSymbol.call(this, s, exported);
 }
 
-function makeProcedure(){
+function makeProcedure(stdSymbols/*Type*/){
 	var result = null;
 	result = new Procedure();
-	init(result);
+	init(result, stdSymbols);
 	return result;
 }
 
@@ -209,9 +214,10 @@ function moduleSymbol(m/*Module*/){
 function moduleExports(m/*Module*/){
 	return m.exports;
 }
-stdSymbols = makeStdSymbols();
 exports.Procedure = Procedure;
 exports.Module = Module;
+exports.addSymbolForType = addSymbolForType;
+exports.makeStdSymbols = makeStdSymbols;
 exports.makeModule = makeModule;
 exports.addUnresolved = addUnresolved;
 exports.resolve = resolve;

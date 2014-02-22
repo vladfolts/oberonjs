@@ -1,0 +1,19 @@
+MODULE m;
+VAR 
+    s, s1, s2: STRING;
+    b: BOOLEAN;
+
+PROCEDURE p1(a: ARRAY OF CHAR);
+END p1;
+
+BEGIN
+    s := s1 + s2;
+    b := s1 = s2;
+    b := s1 # s2;
+    b := s1 < s2;
+    b := s1 > s2;
+    b := s1 <= s2;
+    b := s1 >= s2;
+
+    p1(s);
+END m.

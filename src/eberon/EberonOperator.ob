@@ -1,0 +1,63 @@
+MODULE EberonOperator;
+IMPORT Code, CodePrecedence, JsString, OberonRtl, Operator;
+
+PROCEDURE opAddStr(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeStrConst(JsString.concat(left^(Code.StrConst).value, 
+                                             right^(Code.StrConst).value))
+END opAddStr;
+
+PROCEDURE opEqualStr(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.StrConst).value
+                                 = right^(Code.StrConst).value))
+END opEqualStr;
+
+PROCEDURE opNotEqualStr(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.StrConst).value
+                                 # right^(Code.StrConst).value))
+END opNotEqualStr;
+
+PROCEDURE opLessStr(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(0) (*to fix*)
+END opLessStr;
+
+PROCEDURE opGreaterStr(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(0) (*to fix*)
+END opGreaterStr;
+
+PROCEDURE opLessEqualStr(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(0) (*to fix*)
+END opLessEqualStr;
+
+PROCEDURE opGraterEqualStr(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(0) (*to fix*)
+END opGraterEqualStr;
+
+PROCEDURE addStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN Operator.binaryWithCode(left, right, rtl, opAddStr, " + ", CodePrecedence.addSub)
+END addStr;
+
+PROCEDURE equalStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN Operator.binaryWithCode(left, right, rtl, opEqualStr, " == ", CodePrecedence.equal)
+END equalStr;
+
+PROCEDURE notEqualStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN Operator.binaryWithCode(left, right, rtl, opNotEqualStr, " != ", CodePrecedence.equal)
+END notEqualStr;
+
+PROCEDURE lessStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN Operator.binaryWithCode(left, right, rtl, opLessStr, " < ", CodePrecedence.relational)
+END lessStr;
+
+PROCEDURE greaterStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN Operator.binaryWithCode(left, right, rtl, opGreaterStr, " > ", CodePrecedence.relational)
+END greaterStr;
+
+PROCEDURE lessEqualStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN Operator.binaryWithCode(left, right, rtl, opLessEqualStr, " <= ", CodePrecedence.relational)
+END lessEqualStr;
+
+PROCEDURE greaterEqualStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN Operator.binaryWithCode(left, right, rtl, opGraterEqualStr, " >= ", CodePrecedence.relational)
+END greaterEqualStr;
+
+END EberonOperator.

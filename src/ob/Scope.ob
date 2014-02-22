@@ -1,20 +1,21 @@
 MODULE Scope;
 IMPORT 
-    Context,
     Errors, 
     JsArray, 
     JsMap, 
     JsString, 
     Object, 
     Procedures := Procedure, 
+    ScopeBase,
     Symbols, 
     Types;
 TYPE
-    Type = RECORD(Context.Scope)
+    Type = RECORD(ScopeBase.Type)
         PROCEDURE addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
         PROCEDURE findSymbol(id: JsString.Type): Symbols.PSymbol;
         PROCEDURE close();
 
+        stdSymbols: JsMap.Type;
         symbols: JsMap.Type;
         unresolved: JsArray.Strings;
         finalizers: JsArray.Type
@@ -38,24 +39,27 @@ TYPE
     PModule = POINTER TO Module;
 
     Finalizer = POINTER TO RECORD (Object.Type)
-        proc: Context.FinalizerProc;
+        proc: ScopeBase.FinalizerProc;
         closure: Object.PType
     END;
-VAR
-    stdSymbols: JsMap.Type;
 
-PROCEDURE makeStdSymbols(): JsMap.Type;
+PROCEDURE addSymbolForType*(t: Types.PBasicType; result: JsMap.Type);
+VAR
+    name: JsString.Type;
+BEGIN
+    name := Types.typeName(t^);
+    JsMap.put(result, name, Symbols.makeSymbol(name, Types.makeTypeId(t)));
+END addSymbolForType;
+
+PROCEDURE makeStdSymbols*(): JsMap.Type;
 VAR 
     result: JsMap.Type;
     i: INTEGER;
     proc: Object.PType;
 
     PROCEDURE addSymbol(t: Types.PBasicType);
-    VAR
-        name: JsString.Type;
     BEGIN
-        name := Types.typeName(t^);
-        JsMap.put(result, name, Symbols.makeSymbol(name, Types.makeTypeId(t)));
+        addSymbolForType(t, result);
     END addSymbol;
 BEGIN
     result := JsMap.make();
@@ -73,8 +77,9 @@ BEGIN
     RETURN result
 END makeStdSymbols;
 
-PROCEDURE init(scope: Type);
+PROCEDURE init(scope: Type; stdSymbols: JsMap.Type);
 BEGIN
+    scope.stdSymbols := stdSymbols;
     scope.symbols := JsMap.make();
     scope.unresolved := JsArray.makeStrings();
     scope.finalizers := JsArray.make();
@@ -90,12 +95,12 @@ BEGIN
     RETURN result
 END makeCompiledModule;
 
-PROCEDURE makeModule*(name: JsString.Type): PModule;
+PROCEDURE makeModule*(name: JsString.Type; stdSymbols: JsMap.Type): PModule;
 VAR
     result: PModule;
 BEGIN
     NEW(result);
-    init(result^);
+    init(result^, stdSymbols);
     result.exports := JsMap.make();
     result.symbol := Symbols.makeSymbol(name, makeCompiledModule(name));
     result.addSymbol(result.symbol, FALSE);
@@ -153,7 +158,7 @@ BEGIN
     END;
 END Type.close;
 
-PROCEDURE Type.addFinalizer(proc: Context.FinalizerProc; closure: Object.PType);
+PROCEDURE Type.addFinalizer(proc: ScopeBase.FinalizerProc; closure: Object.PType);
 VAR
     f: Finalizer;
 BEGIN
@@ -187,7 +192,7 @@ VAR
     void: BOOLEAN;
 BEGIN
     IF ~JsMap.find(SELF.symbols, id, result) THEN
-        void := JsMap.find(stdSymbols, id, result);
+        void := JsMap.find(SELF.stdSymbols, id, result);
     END;
     RETURN result(Symbols.PSymbol)
 END Type.findSymbol;
@@ -208,12 +213,12 @@ BEGIN
     SUPER(s, exported);
 END Procedure.addSymbol;
 
-PROCEDURE makeProcedure*(): PType;
+PROCEDURE makeProcedure*(stdSymbols: JsMap.Type): PType;
 VAR
     result: POINTER TO Procedure;
 BEGIN
     NEW(result);
-    init(result^);
+    init(result^, stdSymbols);
     RETURN result
 END makeProcedure;
 
@@ -262,6 +267,4 @@ PROCEDURE moduleExports*(m: Module): JsMap.Type;
     RETURN m.exports
 END moduleExports;
 
-BEGIN
-    stdSymbols := makeStdSymbols();
 END Scope.

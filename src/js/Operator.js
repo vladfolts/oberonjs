@@ -1,9 +1,9 @@
 var RTL$ = require("rtl.js");
 var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
-var Context = require("js/Context.js");
 var Errors = require("js/Errors.js");
 var JsString = require("js/JsString.js");
+var OberonRtl = require("js/OberonRtl.js");
 var Precedence = require("js/CodePrecedence.js");
 var Types = require("js/Types.js");
 var CodeMaker = RTL$.extend({
@@ -36,7 +36,7 @@ var openArrayChar = null;
 var castOperations = new Cast.Operations();
 var castToUint8 = null;
 
-function binary(left/*PExpression*/, right/*PExpression*/, context/*Type*/, op/*BinaryOp*/, code/*PCodeMaker*/, precedence/*INTEGER*/, optResultType/*PType*/, optResultPrecedence/*INTEGER*/){
+function binary(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/, op/*BinaryOp*/, code/*PCodeMaker*/, precedence/*INTEGER*/, optResultType/*PType*/, optResultPrecedence/*INTEGER*/){
 	var result = null;
 	var leftValue = null;var rightValue = null;var resultValue = null;
 	var leftCode = null;var rightCode = null;var resultCode = null;
@@ -56,7 +56,7 @@ function binary(left/*PExpression*/, right/*PExpression*/, context/*Type*/, op/*
 	else {
 		rightCode = rightExpDeref.code();
 	}
-	resultCode = code.make(leftCode, rightCode, context);
+	resultCode = code.make(leftCode, rightCode, rtl);
 	if (optResultType != null){
 		resultType = optResultType;
 	}
@@ -71,14 +71,14 @@ function binary(left/*PExpression*/, right/*PExpression*/, context/*Type*/, op/*
 	}
 	return Code.makeExpressionWithPrecedence(resultCode, resultType, null, resultValue, resultPrecedence);
 }
-SimpleCodeMaker.prototype.make = function(left/*Type*/, right/*Type*/, c/*Type*/){
+SimpleCodeMaker.prototype.make = function(left/*Type*/, right/*Type*/, rtl/*PType*/){
 	return JsString.concat(JsString.concat(left, this.code), right);
 }
-IntCodeMaker.prototype.make = function(left/*Type*/, right/*Type*/, c/*Type*/){
-	return JsString.concat(SimpleCodeMaker.prototype.make.call(this, left, right, c), JsString.make(" | 0"));
+IntCodeMaker.prototype.make = function(left/*Type*/, right/*Type*/, rtl/*PType*/){
+	return JsString.concat(SimpleCodeMaker.prototype.make.call(this, left, right, rtl), JsString.make(" | 0"));
 }
-PredCodeMaker.prototype.make = function(left/*Type*/, right/*Type*/, c/*Type*/){
-	return this.pred(left, right, c);
+PredCodeMaker.prototype.make = function(left/*Type*/, right/*Type*/, rtl/*PType*/){
+	return this.pred(left, right, rtl);
 }
 
 function makeSimpleCodeMaker(code/*ARRAY OF CHAR*/){
@@ -102,12 +102,12 @@ function makePredCodeMaker(pred/*CodePredicate*/){
 	return result;
 }
 
-function binaryWithCodeEx(left/*PExpression*/, right/*PExpression*/, context/*Type*/, op/*BinaryOp*/, code/*ARRAY OF CHAR*/, precedence/*INTEGER*/, optResultType/*PType*/, optResultPrecedence/*INTEGER*/){
-	return binary(left, right, context, op, makeSimpleCodeMaker(code), precedence, optResultType, optResultPrecedence);
+function binaryWithCodeEx(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/, op/*BinaryOp*/, code/*ARRAY OF CHAR*/, precedence/*INTEGER*/, optResultType/*PType*/, optResultPrecedence/*INTEGER*/){
+	return binary(left, right, rtl, op, makeSimpleCodeMaker(code), precedence, optResultType, optResultPrecedence);
 }
 
-function binaryWithCode(left/*PExpression*/, right/*PExpression*/, c/*Type*/, op/*BinaryOp*/, code/*ARRAY OF CHAR*/, precedence/*INTEGER*/){
-	return binaryWithCodeEx(left, right, c, op, code, precedence, null, Precedence.none);
+function binaryWithCode(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/, op/*BinaryOp*/, code/*ARRAY OF CHAR*/, precedence/*INTEGER*/){
+	return binaryWithCodeEx(left, right, rtl, op, code, precedence, null, Precedence.none);
 }
 
 function promoteToWideIfNeeded(e/*PExpression*/){
@@ -121,12 +121,12 @@ function promoteToWideIfNeeded(e/*PExpression*/){
 	return result;
 }
 
-function binaryInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/, op/*BinaryOp*/, code/*ARRAY OF CHAR*/, precedence/*INTEGER*/){
-	return promoteToWideIfNeeded(binary(left, right, c, op, makeIntCodeMaker(code), precedence, null, Precedence.bitOr));
+function binaryInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/, op/*BinaryOp*/, code/*ARRAY OF CHAR*/, precedence/*INTEGER*/){
+	return promoteToWideIfNeeded(binary(left, right, rtl, op, makeIntCodeMaker(code), precedence, null, Precedence.bitOr));
 }
 
-function binaryPred(left/*PExpression*/, right/*PExpression*/, c/*Type*/, op/*BinaryOp*/, pred/*CodePredicate*/){
-	return binary(left, right, c, op, makePredCodeMaker(pred), Precedence.none, null, Precedence.none);
+function binaryPred(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/, op/*BinaryOp*/, pred/*CodePredicate*/){
+	return binary(left, right, rtl, op, makePredCodeMaker(pred), Precedence.none, null, Precedence.none);
 }
 
 function unary(e/*PExpression*/, op/*UnaryOp*/, code/*ARRAY OF CHAR*/){
@@ -140,11 +140,17 @@ function unary(e/*PExpression*/, op/*UnaryOp*/, code/*ARRAY OF CHAR*/){
 	return Code.makeExpression(resultCode, e.type(), null, value);
 }
 
-function castToStr(e/*PExpression*/, context/*Type*/){
+function castToStr(e/*PExpression*/, rtl/*PType*/){
 	var resultExpression = null;
 	var op = null;
-	op = Cast.implicit(e.type(), openArrayChar, castOperations);
-	resultExpression = op.make(context, e);
+	var ignored = 0;
+	ignored = Cast.implicit(e.type(), openArrayChar, false, castOperations, {set: function($v){op = $v;}, get: function(){return op;}});
+	if (op != null){
+		resultExpression = op.make(rtl, e);
+	}
+	else {
+		resultExpression = e;
+	}
 	return resultExpression.code();
 }
 
@@ -224,12 +230,20 @@ function opEqualReal(left/*PConst*/, right/*PConst*/){
 	return Code.makeIntConst(RTL$.typeGuard(left, Code.RealConst).value == RTL$.typeGuard(right, Code.RealConst).value ? 1 : 0);
 }
 
+function opEqualSet(left/*PConst*/, right/*PConst*/){
+	return Code.makeIntConst(RTL$.typeGuard(left, Code.SetConst).value == RTL$.typeGuard(right, Code.SetConst).value ? 1 : 0);
+}
+
 function opNotEqualInt(left/*PConst*/, right/*PConst*/){
 	return Code.makeIntConst(RTL$.typeGuard(left, Code.IntConst).value != RTL$.typeGuard(right, Code.IntConst).value ? 1 : 0);
 }
 
 function opNotEqualReal(left/*PConst*/, right/*PConst*/){
 	return Code.makeIntConst(RTL$.typeGuard(left, Code.RealConst).value != RTL$.typeGuard(right, Code.RealConst).value ? 1 : 0);
+}
+
+function opNotEqualSet(left/*PConst*/, right/*PConst*/){
+	return Code.makeIntConst(RTL$.typeGuard(left, Code.SetConst).value != RTL$.typeGuard(right, Code.SetConst).value ? 1 : 0);
 }
 
 function opLessInt(left/*PConst*/, right/*PConst*/){
@@ -296,44 +310,36 @@ function opRor(left/*PConst*/, right/*PConst*/){
 	return Code.makeIntConst(RTL$.typeGuard(left, Code.IntConst).value >>> RTL$.typeGuard(right, Code.IntConst).value);
 }
 
-function codeSetInclL(left/*Type*/, right/*Type*/, c/*Type*/){
-	var rtl = null;
-	rtl = c.rtl();
+function codeSetInclL(left/*Type*/, right/*Type*/, rtl/*PType*/){
 	return rtl.setInclL(left, right);
 }
 
-function codeSetInclR(left/*Type*/, right/*Type*/, c/*Type*/){
-	var rtl = null;
-	rtl = c.rtl();
+function codeSetInclR(left/*Type*/, right/*Type*/, rtl/*PType*/){
 	return rtl.setInclR(left, right);
 }
 
-function strCmp(op/*ARRAY OF CHAR*/, left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	var rtl = null;
-	rtl = c.rtl();
-	return Code.makeSimpleExpression(JsString.concat(JsString.concat(rtl.strCmp(castToStr(left, c), castToStr(right, c)), JsString.make(op)), JsString.make("0")), Types.basic().bool);
+function strCmp(op/*ARRAY OF CHAR*/, left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return Code.makeSimpleExpression(JsString.concat(JsString.concat(rtl.strCmp(castToStr(left, rtl), castToStr(right, rtl)), JsString.make(op)), JsString.make("0")), Types.basic().bool);
 }
 
-function assign(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
+function assign(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
 	var designator = null;
 	var info = null;
 	var leftCode = null;var rightCode = null;
 	var leftType = null;var rightType = null;
 	var isArray = false;
 	var castOperation = null;
-	var rtl = null;
 	var castExp = null;
+	var ignored = false;
 	var result = null;
 	
 	function assignArrayFromString(a/*Array*/, s/*String*/){
-		var rtl = null;
 		if (Types.arrayLength(a) == Types.openArrayLength){
 			Errors.raise(JsString.concat(JsString.make("string cannot be assigned to open "), a.description()));
 		}
 		else if (Types.stringLen(s) > Types.arrayLength(a)){
 			Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.fromInt(Types.arrayLength(a)), JsString.make("-character ARRAY is too small for ")), JsString.fromInt(Types.stringLen(s))), JsString.make("-character string")));
 		}
-		rtl = c.rtl();
 		return rtl.assignArrayFromString(leftCode, rightCode);
 	}
 	designator = left.designator();
@@ -350,19 +356,22 @@ function assign(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
 		result = assignArrayFromString(RTL$.typeGuard(leftType, Types.Array), RTL$.typeGuard(rightType, Types.String));
 	}
 	else {
-		castOperation = Cast.implicit(rightType, leftType, castOperations);
-		if (castOperation == null){
+		if (Cast.implicit(rightType, leftType, false, castOperations, {set: function($v){castOperation = $v;}, get: function(){return castOperation;}}) != Cast.errNo){
 			Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.make("type mismatch: '"), leftCode), JsString.make("' is '")), leftType.description()), JsString.make("' and cannot be assigned to '")), rightType.description()), JsString.make("' expression")));
 		}
 		if (isArray && rightType instanceof Types.Array && Types.arrayLength(RTL$.typeGuard(leftType, Types.Array)) == Types.openArrayLength){
 			Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.make("'"), leftCode), JsString.make("' is open '")), leftType.description()), JsString.make("' and cannot be assigned")));
 		}
 		if (isArray || rightType instanceof Types.Record){
-			rtl = c.rtl();
 			result = rtl.copy(rightCode, leftCode);
 		}
 		else {
-			castExp = castOperation.make(c, Code.derefExpression(right));
+			if (castOperation != null){
+				castExp = castOperation.make(rtl, Code.derefExpression(right));
+			}
+			else {
+				castExp = Code.derefExpression(right);
+			}
 			rightCode = castExp.code();
 			if (info instanceof Types.VariableRef){
 				rightCode = JsString.concat(JsString.concat(JsString.make(".set("), rightCode), JsString.make(")"));
@@ -376,13 +385,13 @@ function assign(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
 	return result;
 }
 
-function inplace(left/*PExpression*/, right/*PExpression*/, c/*Type*/, code/*ARRAY OF CHAR*/, altOp/*BinaryProc*/){
+function inplace(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/, code/*ARRAY OF CHAR*/, altOp/*BinaryProc*/){
 	var designator = null;
 	var rightExp = null;
 	var result = null;
 	designator = left.designator();
 	if (designator.info() instanceof Types.VariableRef){
-		result = assign(left, altOp(left, right, c), c);
+		result = assign(left, altOp(left, right, rtl), rtl);
 	}
 	else {
 		rightExp = Code.derefExpression(right);
@@ -391,188 +400,196 @@ function inplace(left/*PExpression*/, right/*PExpression*/, c/*Type*/, code/*ARR
 	return result;
 }
 
-function addReal(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opAddReal, " + ", Precedence.addSub);
+function addReal(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opAddReal, " + ", Precedence.addSub);
 }
 
-function addInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryInt(left, right, c, opAddInt, " + ", Precedence.addSub);
+function addInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryInt(left, right, rtl, opAddInt, " + ", Precedence.addSub);
 }
 
-function subReal(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opSubReal, " - ", Precedence.addSub);
+function subReal(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opSubReal, " - ", Precedence.addSub);
 }
 
-function subInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryInt(left, right, c, opSubInt, " - ", Precedence.addSub);
+function subInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryInt(left, right, rtl, opSubInt, " - ", Precedence.addSub);
 }
 
-function mulReal(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opMulReal, " * ", Precedence.mulDivMod);
+function mulReal(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opMulReal, " * ", Precedence.mulDivMod);
 }
 
-function mulInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryInt(left, right, c, opMulInt, " * ", Precedence.mulDivMod);
+function mulInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryInt(left, right, rtl, opMulInt, " * ", Precedence.mulDivMod);
 }
 
-function divReal(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opDivReal, " / ", Precedence.mulDivMod);
+function divReal(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opDivReal, " / ", Precedence.mulDivMod);
 }
 
-function divInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryInt(left, right, c, opDivInt, " / ", Precedence.mulDivMod);
+function divInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryInt(left, right, rtl, opDivInt, " / ", Precedence.mulDivMod);
 }
 
-function mod(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opMod, " % ", Precedence.mulDivMod);
+function mod(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opMod, " % ", Precedence.mulDivMod);
 }
 
-function setUnion(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opSetUnion, " | ", Precedence.bitOr);
+function setUnion(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opSetUnion, " | ", Precedence.bitOr);
 }
 
-function setDiff(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opSetDiff, " & ~", Precedence.bitAnd);
+function setDiff(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opSetDiff, " & ~", Precedence.bitAnd);
 }
 
-function setIntersection(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opSetIntersection, " & ", Precedence.bitAnd);
+function setIntersection(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opSetIntersection, " & ", Precedence.bitAnd);
 }
 
-function setSymmetricDiff(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opSetSymmetricDiff, " ^ ", Precedence.bitXor);
+function setSymmetricDiff(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opSetSymmetricDiff, " ^ ", Precedence.bitXor);
 }
 
-function setInclL(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryPred(left, right, c, opSetInclL, codeSetInclL);
+function setInclL(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryPred(left, right, rtl, opSetInclL, codeSetInclL);
 }
 
-function setInclR(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryPred(left, right, c, opSetInclR, codeSetInclR);
+function setInclR(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryPred(left, right, rtl, opSetInclR, codeSetInclR);
 }
 
-function or(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opOr, " || ", Precedence.or);
+function or(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opOr, " || ", Precedence.or);
 }
 
-function and(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opAnd, " && ", Precedence.and);
+function and(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opAnd, " && ", Precedence.and);
 }
 
-function equalInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opEqualInt, " == ", Precedence.equal);
+function equalInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opEqualInt, " == ", Precedence.equal);
 }
 
-function equalReal(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opEqualReal, " == ", Precedence.equal);
+function equalReal(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opEqualReal, " == ", Precedence.equal);
 }
 
-function equalStr(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return strCmp(" == ", left, right, c);
+function equalSet(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opEqualSet, " == ", Precedence.equal);
 }
 
-function notEqualInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opNotEqualInt, " != ", Precedence.equal);
+function equalStr(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return strCmp(" == ", left, right, rtl);
 }
 
-function notEqualReal(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opNotEqualReal, " != ", Precedence.equal);
+function notEqualInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opNotEqualInt, " != ", Precedence.equal);
 }
 
-function notEqualStr(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return strCmp(" != ", left, right, c);
+function notEqualReal(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opNotEqualReal, " != ", Precedence.equal);
 }
 
-function is(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCodeEx(left, right, c, null, " instanceof ", Precedence.relational, Types.basic().bool, Precedence.none);
+function notEqualSet(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opNotEqualSet, " != ", Precedence.equal);
 }
 
-function lessInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opLessInt, " < ", Precedence.relational);
+function notEqualStr(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return strCmp(" != ", left, right, rtl);
 }
 
-function lessReal(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opLessReal, " < ", Precedence.relational);
+function is(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCodeEx(left, right, rtl, null, " instanceof ", Precedence.relational, Types.basic().bool, Precedence.none);
 }
 
-function lessStr(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return strCmp(" < ", left, right, c);
+function lessInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opLessInt, " < ", Precedence.relational);
 }
 
-function greaterInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opGreaterInt, " > ", Precedence.relational);
+function lessReal(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opLessReal, " < ", Precedence.relational);
 }
 
-function greaterReal(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opGreaterReal, " > ", Precedence.relational);
+function lessStr(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return strCmp(" < ", left, right, rtl);
 }
 
-function greaterStr(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return strCmp(" > ", left, right, c);
+function greaterInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opGreaterInt, " > ", Precedence.relational);
 }
 
-function eqLessInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opEqLessInt, " <= ", Precedence.relational);
+function greaterReal(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opGreaterReal, " > ", Precedence.relational);
 }
 
-function eqLessReal(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opEqLessReal, " <= ", Precedence.relational);
+function greaterStr(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return strCmp(" > ", left, right, rtl);
 }
 
-function eqLessStr(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return strCmp(" <= ", left, right, c);
+function eqLessInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opEqLessInt, " <= ", Precedence.relational);
 }
 
-function eqGreaterInt(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opEqGreaterInt, " >= ", Precedence.relational);
+function eqLessReal(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opEqLessReal, " <= ", Precedence.relational);
 }
 
-function eqGreaterReal(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opEqGreaterReal, " >= ", Precedence.relational);
+function eqLessStr(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return strCmp(" <= ", left, right, rtl);
 }
 
-function eqGreaterStr(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return strCmp(" >= ", left, right, c);
+function eqGreaterInt(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opEqGreaterInt, " >= ", Precedence.relational);
 }
 
-function not(x/*PExpression*/, c/*Type*/){
+function eqGreaterReal(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opEqGreaterReal, " >= ", Precedence.relational);
+}
+
+function eqGreaterStr(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return strCmp(" >= ", left, right, rtl);
+}
+
+function not(x/*PExpression*/, rtl/*PType*/){
 	return unary(x, opNot, "!");
 }
 
-function negateInt(x/*PExpression*/, c/*Type*/){
+function negateInt(x/*PExpression*/, rtl/*PType*/){
 	return promoteToWideIfNeeded(unary(x, opNegateInt, "-"));
 }
 
-function negateReal(x/*PExpression*/, c/*Type*/){
+function negateReal(x/*PExpression*/, rtl/*PType*/){
 	return promoteToWideIfNeeded(unary(x, opNegateReal, "-"));
 }
 
-function unaryPlus(x/*PExpression*/, c/*Type*/){
+function unaryPlus(x/*PExpression*/, rtl/*PType*/){
 	return unary(x, opUnaryPlus, "");
 }
 
-function setComplement(x/*PExpression*/, c/*Type*/){
+function setComplement(x/*PExpression*/, rtl/*PType*/){
 	return unary(x, opSetComplement, "~");
 }
 
-function lsl(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opLsl, " << ", Precedence.shift);
+function lsl(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opLsl, " << ", Precedence.shift);
 }
 
-function asr(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opAsr, " >> ", Precedence.shift);
+function asr(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opAsr, " >> ", Precedence.shift);
 }
 
-function ror(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return binaryWithCode(left, right, c, opRor, " >>> ", Precedence.shift);
+function ror(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return binaryWithCode(left, right, rtl, opRor, " >>> ", Precedence.shift);
 }
 
-function mulInplace(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return inplace(left, right, c, " *= ", mulReal);
+function mulInplace(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return inplace(left, right, rtl, " *= ", mulReal);
 }
 
-function divInplace(left/*PExpression*/, right/*PExpression*/, c/*Type*/){
-	return inplace(left, right, c, " /= ", divReal);
+function divInplace(left/*PExpression*/, right/*PExpression*/, rtl/*PType*/){
+	return inplace(left, right, rtl, " /= ", divReal);
 }
 
 function pow2(e/*PExpression*/){
@@ -590,13 +607,14 @@ function log2(e/*PExpression*/){
 function opCastToUint8(left/*PConst*/, right/*PConst*/){
 	return Code.makeIntConst(RTL$.typeGuard(left, Code.IntConst).value * RTL$.typeGuard(right, Code.IntConst).value | 0);
 }
-CastToUint8.prototype.make = function(context/*Type*/, e/*PExpression*/){
-	return binaryWithCode(e, Code.makeExpression(JsString.make("0xFF"), Types.basic().integer, null, Code.makeIntConst(255)), context, opCastToUint8, " & ", Precedence.bitAnd);
+CastToUint8.prototype.make = function(rtl/*PType*/, e/*PExpression*/){
+	return binaryWithCode(e, Code.makeExpression(JsString.make("0xFF"), Types.basic().integer, null, Code.makeIntConst(255)), rtl, opCastToUint8, " & ", Precedence.bitAnd);
 }
 openArrayChar = Types.makeArray(null, null, Types.basic().ch, Types.openArrayLength);
 castToUint8 = new CastToUint8();
 castOperations.castToUint8 = castToUint8;
 exports.castOperations = function(){return castOperations;};
+exports.binaryWithCode = binaryWithCode;
 exports.assign = assign;
 exports.addReal = addReal;
 exports.addInt = addInt;
@@ -617,9 +635,11 @@ exports.or = or;
 exports.and = and;
 exports.equalInt = equalInt;
 exports.equalReal = equalReal;
+exports.equalSet = equalSet;
 exports.equalStr = equalStr;
 exports.notEqualInt = notEqualInt;
 exports.notEqualReal = notEqualReal;
+exports.notEqualSet = notEqualSet;
 exports.notEqualStr = notEqualStr;
 exports.is = is;
 exports.lessInt = lessInt;

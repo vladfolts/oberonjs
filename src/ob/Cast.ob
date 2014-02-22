@@ -1,16 +1,19 @@
 MODULE Cast;
-IMPORT Code, Context, JsArray, JsString, Object, Types;
-
+IMPORT Code, OberonRtl, JsArray, JsString, Object, Types;
+CONST
+    errNo* = 0;
+    err* = 1;
+    errVarParameter* = 2;
 TYPE
     CastOp* = RECORD(Object.Type)
-        PROCEDURE make*(c: Context.Type; e: Code.PExpression): Code.PExpression
+        PROCEDURE make*(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression
     END;
 
     PCastOp* = POINTER TO CastOp;
-
+(*
     CastOpDoNothing = RECORD (CastOp)
     END;
-
+*)
     CastOpStrToChar = RECORD (CastOp)
         c: CHAR
     END;
@@ -22,12 +25,12 @@ TYPE
 VAR
     (*workaround recursive usage*)
     areTypesExactlyMatch: PROCEDURE (t1: Types.PType; t2: Types.PType): BOOLEAN;
-    doNothing: POINTER TO CastOpDoNothing;
-
-PROCEDURE CastOpDoNothing.make(c: Context.Type; e: Code.PExpression): Code.PExpression;
+    doNothing*: POINTER TO CastOpDoNothing;
+(*
+PROCEDURE CastOpDoNothing.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
     RETURN e
 END CastOpDoNothing.make;
-
+*)
 PROCEDURE findBaseType(base: Types.PRecord; type: Types.PRecord): Types.PRecord;
 BEGIN
     WHILE (type # NIL) & (type # base) DO
@@ -114,7 +117,7 @@ BEGIN
     RETURN result
 END areTypesExactlyMatchImpl;
 
-PROCEDURE CastOpStrToChar.make(c: Context.Type; e: Code.PExpression): Code.PExpression;
+PROCEDURE CastOpStrToChar.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
     RETURN Code.makeSimpleExpression(JsString.fromInt(ORD(SELF.c)), Types.basic.ch)
 END CastOpStrToChar.make;
 
@@ -127,45 +130,58 @@ BEGIN
     RETURN result
 END makeCastOpStrToChar;
 
-PROCEDURE implicit*(from, to: Types.PType; ops: Operations): PCastOp;
+PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Operations; VAR op: PCastOp): INTEGER;
 VAR
-    result: PCastOp;
+    result: INTEGER;
     c: CHAR;
+    ignore: BOOLEAN;
 BEGIN
+    result := err;
+    op := NIL;
     IF from = to THEN
-        result := doNothing;
+        result := errNo;
     ELSIF (from = Types.basic.uint8) & (to = Types.basic.integer) THEN
-        result := doNothing;
+        IF toVar THEN
+            result := errVarParameter;
+        ELSE
+            result := errNo;
+        END;
     ELSIF (from = Types.basic.integer) & (to = Types.basic.uint8) THEN
-        result := ops.castToUint8;
+        IF toVar THEN
+            result := errVarParameter;
+        ELSE
+            op := ops.castToUint8;
+            result := errNo;
+        END;
     ELSIF from IS Types.PString THEN
         IF to = Types.basic.ch THEN
             IF Types.stringAsChar(from(Types.PString)^, c) THEN
-                result := makeCastOpStrToChar(c);
+                op := makeCastOpStrToChar(c);
+                result := errNo;
             END;
-        ELSIF (to IS Types.PArray) & (Types.arrayElementsType(to(Types.PArray)^) = Types.basic.ch) THEN
-            result := doNothing;
+        ELSIF Types.isString(to) THEN
+            result := errNo;
         END;
     ELSIF (from IS Types.PArray) & (to IS Types.PArray) THEN
-        IF     (Types.arrayLength(to(Types.PArray)^) = Types.openArrayLength)
-            OR (Types.arrayLength(to(Types.PArray)^) = Types.arrayLength(from(Types.PArray)^)) THEN
-            result := implicit(Types.arrayElementsType(from(Types.PArray)^), 
-                               Types.arrayElementsType(to(Types.PArray)^),
-                               ops);
+        IF ((Types.arrayLength(from(Types.PArray)^) = Types.arrayLength(to(Types.PArray)^))
+                OR (Types.arrayLength(to(Types.PArray)^) = Types.openArrayLength))
+            & areTypesExactlyMatch(Types.arrayElementsType(from(Types.PArray)^), 
+                                   Types.arrayElementsType(to(Types.PArray)^)) THEN
+            result := errNo;
         END;
     ELSIF (from IS Types.PPointer) & (to IS Types.PPointer) THEN
         IF findPointerBaseType(to(Types.PPointer), from(Types.PPointer)^) # NIL THEN
-            result := doNothing;
+            result := errNo;
         END;
     ELSIF (from IS Types.PRecord) & (to IS Types.PRecord) THEN
         IF findBaseType(to(Types.PRecord), from(Types.PRecord)) # NIL THEN
-            result := doNothing;
+            result := errNo;
         END;
     ELSIF (from = Types.nil) & matchesToNIL(to^) THEN
-        result := doNothing;
+        result := errNo;
     ELSIF (from IS Types.PDefinedProcedure) & (to IS Types.PDefinedProcedure) THEN
         IF areProceduresMatch(from(Types.PDefinedProcedure), to(Types.PDefinedProcedure)) THEN
-            result := doNothing;
+            result := errNo;
         END
     END;
     RETURN result
@@ -173,5 +189,5 @@ END implicit;
 
 BEGIN
     areTypesExactlyMatch := areTypesExactlyMatchImpl;
-    NEW(doNothing);
+(*)    NEW(doNothing);*)
 END Cast.

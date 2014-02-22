@@ -27,18 +27,21 @@ var TestModuleGenerator = Class.extend({
 });
 
 var TestContext = Context.Context.extend({
-    init: function TestContext(){
+    init: function TestContext(language){
         Context.Context.prototype.init.call(
                 this,
-                Code.nullGenerator(),
-                function(){return new TestModuleGenerator();},
-                new RTL());
-        this.pushScope(Scope.makeModule("test"));
+                { codeGenerator: Code.nullGenerator(),
+                  moduleGenerator: function(){return new TestModuleGenerator();},
+                  rtl: new RTL(),
+                  types: language.types,
+                  stdSymbols: language.stdSymbols
+                });
+        this.pushScope(Scope.makeModule("test", language.stdSymbols));
     },
     qualifyScope: function(){return "";}
 });
 
-function makeContext(){return new TestContext();}
+function makeContext(language){return new TestContext(language);}
 
 function testWithSetup(setup, pass, fail){
     return function(){
@@ -101,23 +104,23 @@ function setup(run){
     };
 }
 
-function parseUsingGrammar(grammar, s, cxFactory){
-    var baseContext = makeContext();
+function parseUsingGrammar(parser, language, s, cxFactory){
+    var baseContext = makeContext(language);
     var context = cxFactory ? cxFactory(baseContext) : baseContext;
-    parseInContext(grammar, s, context);
+    parseInContext(parser, s, context);
     context.currentScope().close();
 }
 
-function setupParser(parser, contextFactory){
+function setupParser(parser, language, contextFactory){
     function parseImpl(s){
-        return parseUsingGrammar(parser, s, contextFactory);
+        return parseUsingGrammar(parser, language, s, contextFactory);
     }
     return setup(parseImpl);
 }
 
-function setupWithContext(grammar, contextGrammar, source){
+function setupWithContext(grammar, contextGrammar, language, source){
     function innerMakeContext(){
-        var context = makeContext();
+        var context = makeContext(language);
         try {
             parseInContext(contextGrammar, source, context);
         }
@@ -129,40 +132,41 @@ function setupWithContext(grammar, contextGrammar, source){
         return context;
     }
 
-    return setupParser(grammar, innerMakeContext);
+    return setupParser(grammar, language, innerMakeContext);
 }
 
-function testWithContext(context, contextGrammar, pass, fail){
+function testWithContext(context, contextGrammar, language, pass, fail){
     return testWithSetup(
-        function(){return setupWithContext(context.grammar, contextGrammar, context.source);},
+        function(){return setupWithContext(context.grammar, contextGrammar, language, context.source);},
         pass,
         fail);
 }
 
-function testWithGrammar(grammar, pass, fail){
+function testWithGrammar(parser, language, pass, fail){
     return testWithSetup(
-        function(){return setupParser(grammar);},
+        function(){return setupParser(parser, language);},
         pass,
         fail);
 }
 
 var TestContextWithModule = TestContext.extend({
-    init: function(module){
-        TestContext.prototype.init.call(this);
+    init: function(module, language){
+        TestContext.prototype.init.call(this, language);
         this.__module = module;
     },
     findModule: function(){return this.__module;}
 });
 
-function testWithModule(src, grammar, pass, fail){
+function testWithModule(src, language, pass, fail){
+    var grammar = language.grammar;
     return testWithSetup(
         function(){
-            var imported = oc.compileModule(grammar, Stream.make(src), makeContext());
+            var imported = oc.compileModule(grammar, Stream.make(src), makeContext(language));
             var module = imported.symbol().info();
             return setup(function(s){
                 oc.compileModule(grammar,
                                  Stream.make(s),
-                                 new TestContextWithModule(module));
+                                 new TestContextWithModule(module, language));
             });},
         pass,
         fail);
@@ -171,7 +175,6 @@ function testWithModule(src, grammar, pass, fail){
 exports.context = context;
 exports.pass = pass;
 exports.fail = fail;
-exports.makeContext = makeContext;
 exports.setupParser = setupParser;
 exports.testWithContext = testWithContext;
 exports.testWithGrammar = testWithGrammar;

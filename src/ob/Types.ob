@@ -1,6 +1,6 @@
 MODULE Types;
 IMPORT
-    Context, Errors, JS, JsArray, JsMap, JsString, Object;
+    Context, Errors, JS, JsArray, JsMap, JsString, Object, ScopeBase;
 CONST
     openArrayLength* = 0;
 
@@ -136,7 +136,7 @@ TYPE
         fields: JsMap.Type;
         base:   PRecord;
         cons:   JsString.Type;
-        scope:  Context.PScope;
+        scope:  ScopeBase.PType;
         notExported: JsArray.Strings
     END;
     
@@ -188,7 +188,7 @@ BEGIN
     SELF.notExported := NIL;
 END Record.finalize;
 
-PROCEDURE initRecord*(r: PRecord; name: JsString.Type; cons: JsString.Type; scope: Context.PScope);
+PROCEDURE initRecord*(r: PRecord; name: JsString.Type; cons: JsString.Type; scope: ScopeBase.PType);
 BEGIN
     r.name := name;
     r.cons := cons;
@@ -198,7 +198,7 @@ BEGIN
     scope.addFinalizer(finalizeRecord, r);
 END initRecord;
 
-PROCEDURE makeNonExportedRecord(cons: JsString.Type; scope: Context.PScope; base: PRecord): PNonExportedRecord;
+PROCEDURE makeNonExportedRecord(cons: JsString.Type; scope: ScopeBase.PType; base: PRecord): PNonExportedRecord;
 VAR
     result: PNonExportedRecord;
 BEGIN
@@ -366,7 +366,7 @@ PROCEDURE moduleName*(m: Module): JsString.Type;
     RETURN m.name
 END moduleName;
 
-PROCEDURE makeBasic(name: ARRAY OF CHAR; initializer: ARRAY OF CHAR): PBasicType;
+PROCEDURE makeBasic*(name: ARRAY OF CHAR; initializer: ARRAY OF CHAR): PBasicType;
 VAR
     result: PBasicType;
 BEGIN
@@ -439,7 +439,7 @@ BEGIN
     r.base := type;
 END setRecordBase;
 
-PROCEDURE recordScope*(r: Record): Context.PScope;
+PROCEDURE recordScope*(r: Record): ScopeBase.PType;
     RETURN r.scope
 END recordScope;
 
@@ -627,7 +627,7 @@ BEGIN
     RETURN result
 END makePointer;
 
-PROCEDURE makeRecord*(name: JsString.Type; cons: JsString.Type; scope: Context.PScope): PRecord;
+PROCEDURE makeRecord*(name: JsString.Type; cons: JsString.Type; scope: ScopeBase.PType): PRecord;
 VAR
     result: PRecord;
 BEGIN

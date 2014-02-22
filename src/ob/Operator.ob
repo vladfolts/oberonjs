@@ -1,15 +1,15 @@
 MODULE Operator;
-IMPORT Cast, Code, Context, Errors, JsString, Precedence := CodePrecedence, Types;
+IMPORT Cast, Code, Errors, JsString, OberonRtl, Precedence := CodePrecedence, Types;
 TYPE
-    BinaryProc = PROCEDURE(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+    BinaryProc = PROCEDURE(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
 
     BinaryOp = PROCEDURE(left, right: Code.PConst): Code.PConst;
-    CodePredicate = PROCEDURE(left, right: JsString.Type; c: Context.Type): JsString.Type;
+    CodePredicate = PROCEDURE(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
 
     UnaryOp = PROCEDURE(value: Code.PConst): Code.PConst;
 
     CodeMaker = RECORD
-        PROCEDURE make(left, right: JsString.Type; c: Context.Type): JsString.Type
+        PROCEDURE make(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type
     END;
     PCodeMaker = POINTER TO CodeMaker;
 
@@ -34,7 +34,7 @@ VAR
 
 PROCEDURE binary(
     left, right: Code.PExpression; 
-    context: Context.Type;
+    rtl: OberonRtl.PType;
     op: BinaryOp;
     code: PCodeMaker;
     precedence: INTEGER;
@@ -65,7 +65,7 @@ BEGIN
         rightCode := rightExpDeref.code();
     END;
 
-    resultCode := code.make(leftCode, rightCode, context);
+    resultCode := code.make(leftCode, rightCode, rtl);
 
     IF optResultType # NIL THEN
         resultType := optResultType;
@@ -81,21 +81,21 @@ BEGIN
     RETURN Code.makeExpressionWithPrecedence(resultCode, resultType, NIL, resultValue, resultPrecedence)
 END binary;
 
-PROCEDURE SimpleCodeMaker.make(left, right: JsString.Type; c: Context.Type): JsString.Type;
+PROCEDURE SimpleCodeMaker.make(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
     RETURN JsString.concat(JsString.concat(
         left, 
         SELF.code), 
         right)
 END SimpleCodeMaker.make;
 
-PROCEDURE IntCodeMaker.make(left, right: JsString.Type; c: Context.Type): JsString.Type;
+PROCEDURE IntCodeMaker.make(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
 BEGIN
-    RETURN JsString.concat(SUPER(left, right, c), JsString.make(" | 0"))
+    RETURN JsString.concat(SUPER(left, right, rtl), JsString.make(" | 0"))
 END IntCodeMaker.make;
 
-PROCEDURE PredCodeMaker.make(left, right: JsString.Type; c: Context.Type): JsString.Type;
+PROCEDURE PredCodeMaker.make(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
 BEGIN
-    RETURN SELF.pred(left, right, c)
+    RETURN SELF.pred(left, right, rtl)
 END PredCodeMaker.make;
 
 PROCEDURE makeSimpleCodeMaker(code: ARRAY OF CHAR): PCodeMaker;
@@ -127,7 +127,7 @@ END makePredCodeMaker;
 
 PROCEDURE binaryWithCodeEx(
     left, right: Code.PExpression; 
-    context: Context.Type;
+    rtl: OberonRtl.PType;
     op: BinaryOp;
     code: ARRAY OF CHAR;
     precedence: INTEGER;
@@ -137,7 +137,7 @@ PROCEDURE binaryWithCodeEx(
     RETURN binary(
         left, 
         right, 
-        context, 
+        rtl, 
         op, 
         makeSimpleCodeMaker(code), 
         precedence, 
@@ -145,14 +145,14 @@ PROCEDURE binaryWithCodeEx(
         optResultPrecedence)
 END binaryWithCodeEx;
 
-PROCEDURE binaryWithCode(
+PROCEDURE binaryWithCode*(
     left, right: Code.PExpression; 
-    c: Context.Type;
+    rtl: OberonRtl.PType;
     op: BinaryOp;
     code: ARRAY OF CHAR;
     precedence: INTEGER
     ): Code.PExpression;
-    RETURN binaryWithCodeEx(left, right, c, op, code, precedence, NIL, Precedence.none)
+    RETURN binaryWithCodeEx(left, right, rtl, op, code, precedence, NIL, Precedence.none)
 END binaryWithCode;
 
 PROCEDURE promoteToWideIfNeeded(e: Code.PExpression): Code.PExpression;
@@ -174,7 +174,7 @@ END promoteToWideIfNeeded;
 
 PROCEDURE binaryInt(
     left, right: Code.PExpression; 
-    c: Context.Type;
+    rtl: OberonRtl.PType;
     op: BinaryOp;
     code: ARRAY OF CHAR;
     precedence: INTEGER
@@ -182,7 +182,7 @@ PROCEDURE binaryInt(
     RETURN promoteToWideIfNeeded(binary(
         left, 
         right, 
-        c, 
+        rtl, 
         op, 
         makeIntCodeMaker(code), 
         precedence, 
@@ -193,14 +193,14 @@ END binaryInt;
 
 PROCEDURE binaryPred(
     left, right: Code.PExpression; 
-    c: Context.Type;
+    rtl: OberonRtl.PType;
     op: BinaryOp;
     pred: CodePredicate
     ): Code.PExpression;
     RETURN binary(
         left, 
         right, 
-        c, 
+        rtl, 
         op, 
         makePredCodeMaker(pred), 
         Precedence.none, 
@@ -224,13 +224,18 @@ BEGIN
     RETURN Code.makeExpression(resultCode, e.type(), NIL, value)
 END unary;
 
-PROCEDURE castToStr(e: Code.PExpression; context: Context.Type): JsString.Type;
+PROCEDURE castToStr(e: Code.PExpression; rtl: OberonRtl.PType): JsString.Type;
 VAR
     resultExpression: Code.PExpression;
     op: Cast.PCastOp;
+    ignored: INTEGER;
 BEGIN
-    op := Cast.implicit(e.type(), openArrayChar, castOperations);
-    resultExpression := op.make(context, e)
+    ignored := Cast.implicit(e.type(), openArrayChar, FALSE, castOperations, op);
+    IF op # NIL THEN
+        resultExpression := op.make(rtl, e)
+    ELSE
+        resultExpression := e;
+    END;
     RETURN resultExpression.code()
 END castToStr;
 
@@ -329,6 +334,11 @@ PROCEDURE opEqualReal(left, right: Code.PConst): Code.PConst;
                                = right^(Code.RealConst).value))
 END opEqualReal;
 
+PROCEDURE opEqualSet(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.SetConst).value
+                               = right^(Code.SetConst).value))
+END opEqualSet;
+
 PROCEDURE opNotEqualInt(left, right: Code.PConst): Code.PConst;
     RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
                                # right^(Code.IntConst).value))
@@ -338,6 +348,11 @@ PROCEDURE opNotEqualReal(left, right: Code.PConst): Code.PConst;
     RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
                                # right^(Code.RealConst).value))
 END opNotEqualReal;
+
+PROCEDURE opNotEqualSet(left, right: Code.PConst): Code.PConst;
+    RETURN Code.makeIntConst(ORD(left^(Code.SetConst).value
+                               # right^(Code.SetConst).value))
+END opNotEqualSet;
 
 PROCEDURE opLessInt(left, right: Code.PConst): Code.PConst;
     RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
@@ -414,36 +429,26 @@ PROCEDURE opRor(left, right: Code.PConst): Code.PConst;
                                  right^(Code.IntConst).value))
 END opRor;
 
-PROCEDURE codeSetInclL(left, right: JsString.Type; c: Context.Type): JsString.Type;
-VAR
-    rtl: Context.PRtl;
+PROCEDURE codeSetInclL(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
 BEGIN
-    rtl := c.rtl();
     RETURN rtl.setInclL(left, right)
 END codeSetInclL;
 
-PROCEDURE codeSetInclR(left, right: JsString.Type; c: Context.Type): JsString.Type;
-VAR
-    rtl: Context.PRtl;
-BEGIN
-    rtl := c.rtl();
+PROCEDURE codeSetInclR(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
     RETURN rtl.setInclR(left, right)
 END codeSetInclR;
 
-PROCEDURE strCmp(op: ARRAY OF CHAR; left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-VAR
-    rtl: Context.PRtl;
+PROCEDURE strCmp(op: ARRAY OF CHAR; left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
 BEGIN   
-    rtl := c.rtl();
     RETURN Code.makeSimpleExpression(
             JsString.concat(JsString.concat(
-                rtl.strCmp(castToStr(left, c), castToStr(right, c)),
+                rtl.strCmp(castToStr(left, rtl), castToStr(right, rtl)),
                 JsString.make(op)), 
                 JsString.make("0")),
             Types.basic.bool)
 END strCmp;
 
-PROCEDURE assign*(left, right: Code.PExpression; c: Context.Type): JsString.Type;
+PROCEDURE assign*(left, right: Code.PExpression; rtl: OberonRtl.PType): JsString.Type;
 VAR
     designator: Code.PDesignator;
     info: Types.PId;
@@ -451,13 +456,11 @@ VAR
     leftType, rightType: Types.PType;
     isArray: BOOLEAN;
     castOperation: Cast.PCastOp;
-    rtl: Context.PRtl;
     castExp: Code.PExpression;
+    ignored: BOOLEAN;
     result: JsString.Type;
 
     PROCEDURE assignArrayFromString(a: Types.Array; s: Types.String): JsString.Type;
-    VAR
-        rtl: Context.PRtl;
     BEGIN
         IF Types.arrayLength(a) = Types.openArrayLength THEN
             Errors.raise(JsString.concat(JsString.make("string cannot be assigned to open "),
@@ -469,7 +472,6 @@ VAR
                 JsString.fromInt(Types.stringLen(s))), 
                 JsString.make("-character string")));
         END;
-        rtl := c.rtl();
         RETURN rtl.assignArrayFromString(leftCode, rightCode)
     END assignArrayFromString;
 BEGIN
@@ -491,8 +493,8 @@ BEGIN
         & (rightType IS Types.PString) THEN
         result := assignArrayFromString(leftType(Types.PArray)^, rightType(Types.PString)^);
     ELSE
-        castOperation := Cast.implicit(rightType, leftType, castOperations);
-        IF castOperation = NIL THEN
+        IF Cast.implicit(rightType, leftType, FALSE, castOperations, castOperation)
+            # Cast.errNo THEN;
             Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
                 JsString.make("type mismatch: '"), 
                 leftCode),
@@ -512,10 +514,13 @@ BEGIN
                 JsString.make("' and cannot be assigned")));
         END;
         IF isArray OR (rightType IS Types.PRecord) THEN
-            rtl := c.rtl();
             result := rtl.copy(rightCode, leftCode);
         ELSE
-            castExp := castOperation.make(c, Code.derefExpression(right));
+            IF castOperation # NIL THEN
+                castExp := castOperation.make(rtl, Code.derefExpression(right));
+            ELSE
+                castExp := Code.derefExpression(right);
+            END;
             rightCode := castExp.code();
             IF info IS Types.PVariableRef THEN
                 rightCode := JsString.concat(JsString.concat(
@@ -531,7 +536,7 @@ BEGIN
     RETURN result
 END assign;
     
-PROCEDURE inplace(left, right: Code.PExpression; c: Context.Type; code: ARRAY OF CHAR; altOp: BinaryProc): JsString.Type;
+PROCEDURE inplace(left, right: Code.PExpression; rtl: OberonRtl.PType; code: ARRAY OF CHAR; altOp: BinaryProc): JsString.Type;
 VAR
     designator: Code.PDesignator;
     rightExp: Code.PExpression;
@@ -539,7 +544,7 @@ VAR
 BEGIN
     designator := left.designator();
     IF designator.info() IS Types.PVariableRef THEN
-        result := assign(left, altOp(left, right, c), c);
+        result := assign(left, altOp(left, right, rtl), rtl);
     ELSE
         rightExp := Code.derefExpression(right);
         result := JsString.concat(JsString.concat(
@@ -550,103 +555,111 @@ BEGIN
     RETURN result
 END inplace;
 
-PROCEDURE addReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opAddReal, " + ", Precedence.addSub)
+PROCEDURE addReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opAddReal, " + ", Precedence.addSub)
 END addReal;
 
-PROCEDURE addInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryInt(left, right, c, opAddInt, " + ", Precedence.addSub)
+PROCEDURE addInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryInt(left, right, rtl, opAddInt, " + ", Precedence.addSub)
 END addInt;
 
-PROCEDURE subReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opSubReal, " - ", Precedence.addSub)
+PROCEDURE subReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opSubReal, " - ", Precedence.addSub)
 END subReal;
 
-PROCEDURE subInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryInt(left, right, c, opSubInt, " - ", Precedence.addSub)
+PROCEDURE subInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryInt(left, right, rtl, opSubInt, " - ", Precedence.addSub)
 END subInt;
 
-PROCEDURE mulReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opMulReal, " * ", Precedence.mulDivMod)
+PROCEDURE mulReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opMulReal, " * ", Precedence.mulDivMod)
 END mulReal;
 
-PROCEDURE mulInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryInt(left, right, c, opMulInt, " * ", Precedence.mulDivMod)
+PROCEDURE mulInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryInt(left, right, rtl, opMulInt, " * ", Precedence.mulDivMod)
 END mulInt;
 
-PROCEDURE divReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opDivReal, " / ", Precedence.mulDivMod)
+PROCEDURE divReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opDivReal, " / ", Precedence.mulDivMod)
 END divReal;
 
-PROCEDURE divInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryInt(left, right, c, opDivInt, " / ", Precedence.mulDivMod)
+PROCEDURE divInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryInt(left, right, rtl, opDivInt, " / ", Precedence.mulDivMod)
 END divInt;
 
-PROCEDURE mod*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opMod, " % ", Precedence.mulDivMod)
+PROCEDURE mod*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opMod, " % ", Precedence.mulDivMod)
 END mod;
 
-PROCEDURE setUnion*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opSetUnion, " | ", Precedence.bitOr)
+PROCEDURE setUnion*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opSetUnion, " | ", Precedence.bitOr)
 END setUnion;
 
-PROCEDURE setDiff*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opSetDiff, " & ~", Precedence.bitAnd)
+PROCEDURE setDiff*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opSetDiff, " & ~", Precedence.bitAnd)
 END setDiff;
 
-PROCEDURE setIntersection*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opSetIntersection, " & ", Precedence.bitAnd)
+PROCEDURE setIntersection*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opSetIntersection, " & ", Precedence.bitAnd)
 END setIntersection;
 
-PROCEDURE setSymmetricDiff*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opSetSymmetricDiff, " ^ ", Precedence.bitXor)
+PROCEDURE setSymmetricDiff*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opSetSymmetricDiff, " ^ ", Precedence.bitXor)
 END setSymmetricDiff;
 
-PROCEDURE setInclL*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryPred(left, right, c, opSetInclL, codeSetInclL)
+PROCEDURE setInclL*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryPred(left, right, rtl, opSetInclL, codeSetInclL)
 END setInclL;
 
-PROCEDURE setInclR*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryPred(left, right, c, opSetInclR, codeSetInclR)
+PROCEDURE setInclR*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryPred(left, right, rtl, opSetInclR, codeSetInclR)
 END setInclR;
 
-PROCEDURE or*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opOr, " || ", Precedence.or)
+PROCEDURE or*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opOr, " || ", Precedence.or)
 END or;
 
-PROCEDURE and*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opAnd, " && ", Precedence.and)
+PROCEDURE and*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opAnd, " && ", Precedence.and)
 END and;
 
-PROCEDURE equalInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opEqualInt, " == ", Precedence.equal)
+PROCEDURE equalInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opEqualInt, " == ", Precedence.equal)
 END equalInt;
 
-PROCEDURE equalReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opEqualReal, " == ", Precedence.equal)
+PROCEDURE equalReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opEqualReal, " == ", Precedence.equal)
 END equalReal;
 
-PROCEDURE equalStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN strCmp(" == ", left, right, c)
+PROCEDURE equalSet*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opEqualSet, " == ", Precedence.equal)
+END equalSet;
+
+PROCEDURE equalStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN strCmp(" == ", left, right, rtl)
 END equalStr;
 
-PROCEDURE notEqualInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opNotEqualInt, " != ", Precedence.equal)
+PROCEDURE notEqualInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opNotEqualInt, " != ", Precedence.equal)
 END notEqualInt;
 
-PROCEDURE notEqualReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opNotEqualReal, " != ", Precedence.equal)
+PROCEDURE notEqualReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opNotEqualReal, " != ", Precedence.equal)
 END notEqualReal;
 
-PROCEDURE notEqualStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN strCmp(" != ", left, right, c)
+PROCEDURE notEqualSet*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opNotEqualSet, " != ", Precedence.equal)
+END notEqualSet;
+
+PROCEDURE notEqualStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN strCmp(" != ", left, right, rtl)
 END notEqualStr;
 
-PROCEDURE is*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
+PROCEDURE is*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
     RETURN binaryWithCodeEx(
         left, 
         right, 
-        c, 
+        rtl, 
         NIL, 
         " instanceof ", 
         Precedence.relational, 
@@ -655,92 +668,92 @@ PROCEDURE is*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
         )
 END is;
 
-PROCEDURE lessInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opLessInt, " < ", Precedence.relational)
+PROCEDURE lessInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opLessInt, " < ", Precedence.relational)
 END lessInt;
 
-PROCEDURE lessReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opLessReal, " < ", Precedence.relational)
+PROCEDURE lessReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opLessReal, " < ", Precedence.relational)
 END lessReal;
 
-PROCEDURE lessStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN strCmp(" < ", left, right, c)
+PROCEDURE lessStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN strCmp(" < ", left, right, rtl)
 END lessStr;
 
-PROCEDURE greaterInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opGreaterInt, " > ", Precedence.relational)
+PROCEDURE greaterInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opGreaterInt, " > ", Precedence.relational)
 END greaterInt;
 
-PROCEDURE greaterReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opGreaterReal, " > ", Precedence.relational)
+PROCEDURE greaterReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opGreaterReal, " > ", Precedence.relational)
 END greaterReal;
 
-PROCEDURE greaterStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN strCmp(" > ", left, right, c)
+PROCEDURE greaterStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN strCmp(" > ", left, right, rtl)
 END greaterStr;
 
-PROCEDURE eqLessInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opEqLessInt, " <= ", Precedence.relational)
+PROCEDURE eqLessInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opEqLessInt, " <= ", Precedence.relational)
 END eqLessInt;
 
-PROCEDURE eqLessReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opEqLessReal, " <= ", Precedence.relational)
+PROCEDURE eqLessReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opEqLessReal, " <= ", Precedence.relational)
 END eqLessReal;
 
-PROCEDURE eqLessStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN strCmp(" <= ", left, right, c)
+PROCEDURE eqLessStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN strCmp(" <= ", left, right, rtl)
 END eqLessStr;
 
-PROCEDURE eqGreaterInt*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opEqGreaterInt, " >= ", Precedence.relational)
+PROCEDURE eqGreaterInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opEqGreaterInt, " >= ", Precedence.relational)
 END eqGreaterInt;
 
-PROCEDURE eqGreaterReal*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opEqGreaterReal, " >= ", Precedence.relational)
+PROCEDURE eqGreaterReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opEqGreaterReal, " >= ", Precedence.relational)
 END eqGreaterReal;
 
-PROCEDURE eqGreaterStr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN strCmp(" >= ", left, right, c)
+PROCEDURE eqGreaterStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN strCmp(" >= ", left, right, rtl)
 END eqGreaterStr;
 
-PROCEDURE not*(x: Code.PExpression; c: Context.Type): Code.PExpression;
+PROCEDURE not*(x: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
     RETURN unary(x, opNot, "!")
 END not;
 
-PROCEDURE negateInt*(x: Code.PExpression; c: Context.Type): Code.PExpression;
+PROCEDURE negateInt*(x: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
     RETURN promoteToWideIfNeeded(unary(x, opNegateInt, "-"))
 END negateInt;
 
-PROCEDURE negateReal*(x: Code.PExpression; c: Context.Type): Code.PExpression;
+PROCEDURE negateReal*(x: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
     RETURN promoteToWideIfNeeded(unary(x, opNegateReal, "-"))
 END negateReal;
 
-PROCEDURE unaryPlus*(x: Code.PExpression; c: Context.Type): Code.PExpression;
+PROCEDURE unaryPlus*(x: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
     RETURN unary(x, opUnaryPlus, "")
 END unaryPlus;
 
-PROCEDURE setComplement*(x: Code.PExpression; c: Context.Type): Code.PExpression;
+PROCEDURE setComplement*(x: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
     RETURN unary(x, opSetComplement, "~")
 END setComplement;
 
-PROCEDURE lsl*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opLsl, " << ", Precedence.shift)
+PROCEDURE lsl*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opLsl, " << ", Precedence.shift)
 END lsl;
 
-PROCEDURE asr*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opAsr, " >> ", Precedence.shift)
+PROCEDURE asr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opAsr, " >> ", Precedence.shift)
 END asr;
 
-PROCEDURE ror*(left, right: Code.PExpression; c: Context.Type): Code.PExpression;
-    RETURN binaryWithCode(left, right, c, opRor, " >>> ", Precedence.shift)
+PROCEDURE ror*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN binaryWithCode(left, right, rtl, opRor, " >>> ", Precedence.shift)
 END ror;
 
-PROCEDURE mulInplace*(left, right: Code.PExpression; c: Context.Type): JsString.Type;
-    RETURN inplace(left, right, c, " *= ", mulReal)
+PROCEDURE mulInplace*(left, right: Code.PExpression; rtl: OberonRtl.PType): JsString.Type;
+    RETURN inplace(left, right, rtl, " *= ", mulReal)
 END mulInplace;
 
-PROCEDURE divInplace*(left, right: Code.PExpression; c: Context.Type): JsString.Type;
-    RETURN inplace(left, right, c, " /= ", divReal)
+PROCEDURE divInplace*(left, right: Code.PExpression; rtl: OberonRtl.PType): JsString.Type;
+    RETURN inplace(left, right, rtl, " /= ", divReal)
 END divInplace;
 
 PROCEDURE pow2*(e: Code.PExpression): Code.PExpression;
@@ -777,14 +790,14 @@ PROCEDURE opCastToUint8(left, right: Code.PConst): Code.PConst;
                            * right^(Code.IntConst).value)
 END opCastToUint8;
 
-PROCEDURE CastToUint8.make(context: Context.Type; e: Code.PExpression): Code.PExpression;
+PROCEDURE CastToUint8.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
     RETURN binaryWithCode(
         e, 
         Code.makeExpression(JsString.make("0xFF"), 
                             Types.basic.integer, 
                             NIL, 
                             Code.makeIntConst(0FFH)), 
-        context, 
+        rtl, 
         opCastToUint8, 
         " & ", 
         Precedence.bitAnd)

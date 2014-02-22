@@ -3,7 +3,10 @@
 var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
 var Context = require("context.js");
+var EberonString = require("eberon/js/EberonString.js");
 var Errors = require("js/Errors.js");
+var op = require("js/Operator.js");
+var eOp = require("eberon/js/EberonOperator.js");
 var Symbol = require("js/Symbols.js");
 var Procedure = require("js/Procedure.js");
 var Type = require("js/Types.js");
@@ -276,8 +279,8 @@ var RecordDecl = Context.RecordDecl.extend({
 });
 
 var ProcOrMethodDecl = Context.ProcDecl.extend({
-    init: function EberonContext$ProcOrMethodDecl(parent){
-        Context.ProcDecl.prototype.init.call(this, parent);
+    init: function EberonContext$ProcOrMethodDecl(parent, stdSymbols){
+        Context.ProcDecl.prototype.init.call(this, parent, stdSymbols);
         this.__selfSymbol = undefined;
         this.__methodId = undefined;
         this.__methodType = undefined;
@@ -374,7 +377,65 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     }
 });
 
+var AddOperator = Context.AddOperator.extend({
+    init: function EberonContext$AddOperator(context){
+        Context.AddOperator.prototype.init.call(this, context);
+    },
+    _matchPlusOperator: function(type){
+        if (type == EberonString.string())
+            return eOp.addStr;
+        return Context.AddOperator.prototype._matchPlusOperator.call(this, type);
+    },
+    _expectPlusOperator: function(){return "numeric type or SET or STRING";}
+});
+
+var RelationOps = Context.RelationOps.extend({
+    init: function EberonContext$RelationOps(){
+        Context.RelationOps.prototype.init.call(this);
+    },
+    eq: function(type){
+        return type == EberonString.string() 
+            ? eOp.equalStr
+            : Context.RelationOps.prototype.eq.call(this, type);
+    },
+    notEq: function(type){
+        return type == EberonString.string() 
+            ? eOp.notEqualStr
+            : Context.RelationOps.prototype.notEq.call(this, type);
+    },
+    less: function(type){
+        return type == EberonString.string() 
+            ? eOp.lessStr
+            : Context.RelationOps.prototype.less.call(this, type);
+    },
+    greater: function(type){
+        return type == EberonString.string() 
+            ? eOp.greaterStr
+            : Context.RelationOps.prototype.greater.call(this, type);
+    },
+    lessEq: function(type){
+        return type == EberonString.string() 
+            ? eOp.lessEqualStr
+            : Context.RelationOps.prototype.lessEq.call(this, type);
+    },
+    greaterEq: function(type){
+        return type == EberonString.string() 
+            ? eOp.greaterEqualStr
+            : Context.RelationOps.prototype.greaterEq.call(this, type);
+    }
+});
+
+var relationOps = new RelationOps();
+
+var Expression = Context.Expression.extend({
+    init: function EberonContext$Expression(context){
+        Context.Expression.prototype.init.call(this, context, relationOps);
+    }
+});
+
+exports.AddOperator = AddOperator;
 exports.Designator = Designator;
+exports.Expression = Expression;
 exports.MethodHeading = MethodHeading;
 exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;

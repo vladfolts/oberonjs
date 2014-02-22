@@ -81,11 +81,11 @@ END test.
         var errors = "";
         var start = new Date();
         try {
-            var grammar = require(
+            var language = require(
                 document.getElementById("eberon").checked
                     ? "eberon/eberon_grammar.js"
-                    : "oberon/oberon_grammar.js").grammar;
-            result = require("oc.js").compile(src, grammar, function(e){
+                    : "oberon/oberon_grammar.js").language;
+            result = require("oc.js").compile(src, language, function(e){
                 errors += e;
             });
             }

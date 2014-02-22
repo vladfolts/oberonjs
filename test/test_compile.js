@@ -1,9 +1,9 @@
 "use strict";
 
-var nodejs = require("nodejs");
+var nodejs = require("nodejs.js");
 var oc = require("oc");
-var oberonGrammar = require("oberon/oberon_grammar.js").grammar;
-var eberonGrammar = require("eberon/eberon_grammar.js").grammar;
+var oberon = require("oberon/oberon_grammar.js").language;
+var eberon = require("eberon/eberon_grammar.js").language;
 var fs = require("fs");
 var path = require("path");
 var Test = require("test.js");
@@ -20,16 +20,16 @@ function compareResults(result, name, dirs){
         throw new Test.TestError("Failed");
 }
 
-function compile(src, grammar){
+function compile(src, language){
     var text = fs.readFileSync(src, "utf8");
     var errors = "";
-    var result = oc.compile(text, grammar, function(e){errors += e;});
+    var result = oc.compile(text, language, function(e){errors += e;});
     if (errors)
         throw new Test.TestError(errors);
     return result;
 }
 
-function compileNodejs(src, dirs, grammar){
+function compileNodejs(src, dirs, language){
     var subdir = path.basename(src);
     subdir = subdir.substr(0, subdir.length - path.extname(subdir).length);
 
@@ -37,7 +37,7 @@ function compileNodejs(src, dirs, grammar){
     fs.mkdirSync(outDir);
 
     var errors = "";
-    nodejs.compile([src], grammar, function(e){errors += e;}, outDir);
+    nodejs.compile([src], language, function(e){errors += e;}, [], outDir);
     if (errors)
         throw new Test.TestError(errors);
 
@@ -50,11 +50,11 @@ function expectOk(src, dirs, grammar){
     compareResults(result, resultName, dirs);
 }
 
-function expectError(src, dirs, grammar){
+function expectError(src, dirs, language){
     var text = fs.readFileSync(src, "utf8");
     var errors = "";
     try {
-        oc.compile(text, grammar, function(e){errors += e + "\n";});
+        oc.compile(text, language, function(e){errors += e + "\n";});
     }
     catch (e){
         errors += e;
@@ -65,8 +65,8 @@ function expectError(src, dirs, grammar){
     compareResults(errors, resultName, dirs);
 }
 
-function run(src, dirs, grammar){
-    var result = compile(src, grammar);
+function run(src, dirs, language){
+    var result = compile(src, language);
     var resultName = path.basename(src).replace(".ob", ".js");
     var resultPath = path.join(dirs.output, resultName);
     fs.writeFileSync(resultPath, result);
@@ -146,20 +146,20 @@ function main(){
     var eberonDirs = makeTestDirs("eberon");
     var eberonRunDirs = makeTestDirs("eberon/run");
 
-    function makeCommonTests(grammar, subdir){
+    function makeCommonTests(language, subdir){
         return {
-            "expect OK": makeTests(expectOk, outputSubdir(okDirs, subdir), grammar),
-            "expect compile error": makeTests(expectError, outputSubdir(errDirs, subdir), grammar),
-            "run": makeTests(run, outputSubdir(runDirs, subdir), grammar),
-            "nodejs": makeTests(compileNodejs, outputSubdir(nodejsDirs, subdir), grammar)
+            "expect OK": makeTests(expectOk, outputSubdir(okDirs, subdir), language),
+            "expect compile error": makeTests(expectError, outputSubdir(errDirs, subdir), language),
+            "run": makeTests(run, outputSubdir(runDirs, subdir), language),
+            "nodejs": makeTests(compileNodejs, outputSubdir(nodejsDirs, subdir), language)
         };
     }
 
-    Test.run({"common": {"oberon": makeCommonTests(oberonGrammar, "oberon"),
-                         "eberon": makeCommonTests(eberonGrammar, "eberon")
+    Test.run({"common": {"oberon": makeCommonTests(oberon, "oberon"),
+                         "eberon": makeCommonTests(eberon, "eberon")
                         },
-              "eberon": {"expect OK": makeTests(expectOk, eberonDirs, eberonGrammar),
-                         "run": makeTests(run, eberonRunDirs, eberonGrammar)
+              "eberon": {"expect OK": makeTests(expectOk, eberonDirs, eberon),
+                         "run": makeTests(run, eberonRunDirs, eberon)
                         }
              });
 }

@@ -1,9 +1,12 @@
 "use strict";
 
+var Cast = require("eberon/js/EberonCast.js");
 var Context = require("context.js");
 var EbContext = require("eberon/eberon_context.js");
+var EberonString = require("eberon/js/EberonString.js");
 var Grammar = require("grammar.js");
 var Parser = require("parser.js");
+var Scope = require("js/Scope.js");
 
 var and = Parser.and;
 var context = Parser.context;
@@ -45,12 +48,23 @@ function makeFieldList(identdef, identList, type, formalParameters){
         Context.FieldListDeclaration);
 }
 
-exports.grammar = Grammar.make(
-    makeDesignator,
-    makeProcedureHeading,
-    makeProcedureDeclaration,
-    makeFieldList,
-    EbContext.RecordDecl,
-    Context.VariableDeclaration,
-    Grammar.reservedWords + " SELF SUPER"
-    );
+var stdSymbols = Scope.makeStdSymbols();
+Scope.addSymbolForType(EberonString.string(), stdSymbols);
+
+exports.language = {
+  grammar: Grammar.make(
+      makeDesignator,
+      makeProcedureHeading,
+      makeProcedureDeclaration,
+      makeFieldList,
+      EbContext.RecordDecl,
+      Context.VariableDeclaration,
+      EbContext.AddOperator,
+      EbContext.Expression,
+      Grammar.reservedWords + " SELF SUPER"
+      ),
+    stdSymbols: stdSymbols,
+    types: {
+        implicitCast: Cast.implicit
+    }
+};

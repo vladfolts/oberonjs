@@ -4,6 +4,7 @@ var grammar = require("eberon/eberon_grammar.js").grammar;
 var nodejs = require("nodejs.js");
 
 var options = {
+    "--include": "includeDirs",
     "--out-dir": "outDir",
     "--import-dir": "importDir"
 };
@@ -31,13 +32,14 @@ function main(){
     var sources = args.notParsed;
     if (!sources.length){
         console.info("Usage: <oc_nodejs> [options] <input oberon module file(s)>");
-        console.info("options:\n--out-dir=<out dir>\n--import-dir=<import dir>");
+        console.info("options:\n--include=<search directories separated by ';'>\n--out-dir=<out dir>\n--import-dir=<import dir>");
         return -1;
     }
+    var includeDirs = (args.includeDirs && args.includeDirs.split(";")) || [];
     var outDir = args.outDir || ".";
 
     var errors = "";
-    nodejs.compile(sources, grammar, function(e){errors += e;}, outDir, args.importDir);
+    nodejs.compile(sources, grammar, function(e){errors += e + "\n";}, includeDirs, outDir, args.importDir);
     if (errors.length){
         console.error(errors);
         return -2;
@@ -47,4 +49,8 @@ function main(){
     return 0;
 }
 
-process.exit(main());
+// process.exit(main());
+// hack to avoid problem with not flushed stdout on exit: https://github.com/joyent/node/issues/1669
+var rc = main();
+process.stdout.once("drain", function(){process.exit(rc);});
+process.stdout.write("");

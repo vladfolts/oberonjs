@@ -9,24 +9,27 @@ var TestUnitCommon = require("test_unit_common.js");
 var TestUnitEberon = require("test_unit_eberon.js");
 var TestUnitOberon = require("test_unit_oberon.js");
 
-var eberonGrammar = require("eberon/eberon_grammar.js").grammar;
-var oberonGrammar = require("oberon/oberon_grammar.js").grammar;
+var eberon = require("eberon/eberon_grammar.js").language;
+var oberon = require("oberon/oberon_grammar.js").language;
 
 var context = TestUnitCommon.context;
 var pass = TestUnitCommon.pass;
 var fail = TestUnitCommon.fail;
 var setupParser = TestUnitCommon.setupParser;
-var testWithGrammar = TestUnitCommon.testWithGrammar;
 var testWithSetup = TestUnitCommon.testWithSetup;
 
-function makeSuiteForGrammar(grammar){
-
+function makeSuiteForGrammar(language){
+    var grammar = language.grammar;
     function testWithContext(context, pass, fail){
-        return TestUnitCommon.testWithContext(context, grammar.declarationSequence, pass, fail);
+        return TestUnitCommon.testWithContext(context, grammar.declarationSequence, language, pass, fail);
     }
 
     function testWithModule(src, pass, fail){
-        return TestUnitCommon.testWithModule(src, grammar, pass, fail);
+        return TestUnitCommon.testWithModule(src, language, pass, fail);
+    }
+
+    function testWithGrammar(parser, pass, faile){
+        return TestUnitCommon.testWithGrammar(parser, language, pass, fail);
     }
 
 return {
@@ -102,7 +105,7 @@ return {
         });
         function makeContext() {return new IdentDeclarationContext();}
 
-        return setupParser(grammar.ident, makeContext);},
+        return setupParser(grammar.ident, language, makeContext);},
     pass("i", "abc1"),
     fail(["", "not parsed"],
          [";", "not parsed"],
@@ -261,9 +264,9 @@ return {
          "pd # pb"
          ),
     fail(["p1 < p2", "operator '<' type mismatch: numeric type or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
-         ["p1 <= p2", "operator '<=' type mismatch: numeric type or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
+         ["p1 <= p2", "operator '<=' type mismatch: numeric type or SET or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
          ["p1 > p2", "operator '>' type mismatch: numeric type or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
-         ["p1 >= p2", "operator '>=' type mismatch: numeric type or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
+         ["p1 >= p2", "operator '>=' type mismatch: numeric type or SET or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
          ["p1 = pb", "type mismatch: expected 'POINTER TO anonymous RECORD', got 'POINTER TO B'"]
          )
     ),
@@ -296,9 +299,11 @@ return {
     ),
 "BYTE": testWithContext(
     context(grammar.statement,
-              "VAR b1, b2: BYTE; i: INTEGER; set: SET; a: ARRAY 3 OF BYTE;"
+              "VAR b1, b2: BYTE; i: INTEGER; set: SET; a: ARRAY 3 OF BYTE; ai: ARRAY 3 OF INTEGER;"
             + "PROCEDURE varIntParam(VAR i: INTEGER); END varIntParam;"
             + "PROCEDURE varByteParam(VAR b: BYTE); END varByteParam;"
+            + "PROCEDURE arrayParam(b: ARRAY OF BYTE); END arrayParam;"
+            + "PROCEDURE arrayIntParam(i: ARRAY OF INTEGER); END arrayIntParam;"
             ),
     pass("b1 := b2",
          "i := b1",
@@ -317,11 +322,15 @@ return {
          "b1 := i - b1",
          "i := b1 * i",
          "i := -b1",
-         "i := +b1"
+         "i := +b1",
+         "arrayParam(a)",
+         "arrayIntParam(ai)"
         ),
     fail(["i := b1 / i", "operator DIV expected for integer division"],
          ["varIntParam(b1)", "type mismatch for argument 1: cannot pass 'BYTE' as VAR parameter of type 'INTEGER'"],
-         ["varByteParam(i)", "type mismatch for argument 1: cannot pass 'INTEGER' as VAR parameter of type 'BYTE'"]
+         ["varByteParam(i)", "type mismatch for argument 1: cannot pass 'INTEGER' as VAR parameter of type 'BYTE'"],
+         ["arrayParam(ai)", "type mismatch for argument 1: 'ARRAY 3 OF INTEGER' cannot be converted to 'ARRAY OF BYTE'"],
+         ["arrayIntParam(a)", "type mismatch for argument 1: 'ARRAY 3 OF BYTE' cannot be converted to 'ARRAY OF INTEGER'"]
         )
     ),
 "NEW": testWithContext(
@@ -674,12 +683,11 @@ return {
          "r1 := r1 / r2"),
     fail(["i1 := i1 / i2", "operator DIV expected for integer division"],
          ["r1 := r1 DIV r1", "operator 'DIV' type mismatch: 'INTEGER' or 'BYTE' expected, got 'REAL'"],
-         ["b1 := b1 + b1", "operator '+' type mismatch: numeric type expected, got 'BOOLEAN'"],
-         ["c1 := c1 - c1", "operator '-' type mismatch: numeric type expected, got 'CHAR'"],
-         ["p1 := p1 * p1", "operator '*' type mismatch: numeric type expected, got 'PROCEDURE'"],
-         ["ptr1 := ptr1 / ptr1", "operator '/' type mismatch: numeric type expected, got 'POINTER TO anonymous RECORD'"],
+         ["c1 := c1 - c1", "operator '-' type mismatch: numeric type or SET expected, got 'CHAR'"],
+         ["p1 := p1 * p1", "operator '*' type mismatch: numeric type or SET expected, got 'PROCEDURE'"],
+         ["ptr1 := ptr1 / ptr1", "operator '/' type mismatch: numeric type or SET expected, got 'POINTER TO anonymous RECORD'"],
          ["s1 := +s1", "operator '+' type mismatch: numeric type expected, got 'SET'"],
-         ["b1 := -b1", "operator '-' type mismatch: numeric type expected, got 'BOOLEAN'"],
+         ["b1 := -b1", "operator '-' type mismatch: numeric type or SET expected, got 'BOOLEAN'"],
          ["s1 := +b1", "operator '+' type mismatch: numeric type expected, got 'BOOLEAN'"])
     ),
 "relations are BOOLEAN": testWithContext(
@@ -701,15 +709,21 @@ return {
     ),
 "SET relations": testWithContext(
     context(grammar.expression,
-            "VAR set1, set2: SET; b: BOOLEAN; i: INTEGER;"),
+            "CONST constSet1 = {}; constSet2 = {};"
+            + "VAR set1, set2: SET; b: BOOLEAN; i: INTEGER;"),
     pass("set1 <= set2",
          "set1 >= set2",
          "set1 = set2",
          "set1 # set2",
+         "constSet1 = constSet2",
+         "constSet1 # constSet2",
          "i IN set1"),
     fail(["set1 <= i", "type mismatch: expected 'SET', got 'INTEGER'"],
          ["b IN set1", "'INTEGER' or 'BYTE' expected as an element of SET, got 'BOOLEAN'"],
-         ["i IN b", "type mismatch: expected 'SET', got 'BOOLEAN'"])
+         ["i IN b", "type mismatch: expected 'SET', got 'BOOLEAN'"],
+         ["set1 < set2", "operator '<' type mismatch: numeric type or CHAR or character array expected, got 'SET'"],
+         ["set1 > set2", "operator '>' type mismatch: numeric type or CHAR or character array expected, got 'SET'"]
+         )
     ),
 "SET operators": testWithContext(
     context(grammar.expression,
@@ -1365,8 +1379,8 @@ return {
 
 Test.run({
     "common": {
-        "oberon": makeSuiteForGrammar(oberonGrammar),
-        "eberon": makeSuiteForGrammar(eberonGrammar)
+        "oberon": makeSuiteForGrammar(oberon),
+        "eberon": makeSuiteForGrammar(eberon)
     },
     "eberon": TestUnitEberon.suite,
     "oberon": TestUnitOberon.suite

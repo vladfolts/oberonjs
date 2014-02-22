@@ -53,7 +53,7 @@ function writeCompiledModule(name, code, outDir){
     fs.writeFileSync(filePath, code);
     }
 
-function compile(sources, grammar, handleErrors, outDir, importDir){
+function compile(sources, language, handleErrors, includeDirs, outDir, importDir){
     var rtlCodeWatcher = new RtlCodeUsingWatcher();
     var rtl = new RTL(rtlCodeWatcher.using.bind(rtlCodeWatcher));
     var moduleCode = function(name, imports){
@@ -67,14 +67,26 @@ function compile(sources, grammar, handleErrors, outDir, importDir){
                 if (!path.extname(fileName).length)
                     fileName += ".ob";
                 compiledFilesStack.push(fileName);
-                return fs.readFileSync(fileName, "utf8");
+
+                var readPath = fileName;
+                var i = 0;
+                while (!fs.existsSync(readPath) && i < includeDirs.length){
+                    readPath = path.join(includeDirs[i], fileName);
+                    ++i;
+                }
+                if (!fs.existsSync(readPath))
+                    throw new Error("cannot find file: '" + fileName + "' in " + includeDirs);
+                return fs.readFileSync(readPath, "utf8");
             },
-            grammar,
+            language.grammar,
             function(moduleResolver){return new Context.Context(
-                Code.makeGenerator(),
-                moduleCode,
-                rtl,
-                moduleResolver);},
+                { codeGenerator: Code.makeGenerator(),
+                  moduleGenerator: moduleCode,
+                  rtl: rtl,
+                  types: language.types,
+                  stdSymbols: language.stdSymbols,
+                  moduleResolver: moduleResolver
+                });},
             function(e){handleErrors("File \"" + compiledFilesStack[compiledFilesStack.length - 1] + "\", " + e);},
             function(name, code){
                 if (rtlCodeWatcher.used()){

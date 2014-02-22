@@ -6,6 +6,7 @@ var JsArray = require("js/JsArray.js");
 var JsMap = require("js/JsMap.js");
 var JsString = require("js/JsString.js");
 var Object = require("js/Object.js");
+var ScopeBase = require("js/ScopeBase.js");
 var openArrayLength = 0;
 var Id = Object.Type.extend({
 	init: function Id(){
@@ -183,7 +184,7 @@ Record.prototype.finalize = function(){
 	this.notExported = null;
 }
 
-function initRecord(r/*PRecord*/, name/*Type*/, cons/*Type*/, scope/*PScope*/){
+function initRecord(r/*PRecord*/, name/*Type*/, cons/*Type*/, scope/*PType*/){
 	r.name = name;
 	r.cons = cons;
 	r.scope = scope;
@@ -192,7 +193,7 @@ function initRecord(r/*PRecord*/, name/*Type*/, cons/*Type*/, scope/*PScope*/){
 	scope.addFinalizer(finalizeRecord, r);
 }
 
-function makeNonExportedRecord(cons/*Type*/, scope/*PScope*/, base/*PRecord*/){
+function makeNonExportedRecord(cons/*Type*/, scope/*PType*/, base/*PRecord*/){
 	var result = null;
 	result = new NonExportedRecord();
 	initRecord(result, null, cons, scope);
@@ -513,7 +514,7 @@ function makePointer(name/*Type*/, base/*PTypeId*/){
 	return result;
 }
 
-function makeRecord(name/*Type*/, cons/*Type*/, scope/*PScope*/){
+function makeRecord(name/*Type*/, cons/*Type*/, scope/*PType*/){
 	var result = null;
 	result = new Record();
 	initRecord(result, name, cons, scope);
@@ -617,6 +618,7 @@ exports.isInt = isInt;
 exports.intsDescription = intsDescription;
 exports.isString = isString;
 exports.moduleName = moduleName;
+exports.makeBasic = makeBasic;
 exports.recordBase = recordBase;
 exports.setRecordBase = setRecordBase;
 exports.recordScope = recordScope;

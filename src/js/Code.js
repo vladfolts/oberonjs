@@ -1,9 +1,9 @@
 var RTL$ = require("rtl.js");
 var JsMap = require("js/JsMap.js");
 var JsString = require("js/JsString.js");
-var Context = require("js/Context.js");
 var Object = require("js/Object.js");
 var Stream = require("js/Stream.js");
+var ScopeBase = require("js/ScopeBase.js");
 var Symbols = require("js/Symbols.js");
 var Precedence = require("js/CodePrecedence.js");
 var Types = require("js/Types.js");
@@ -59,6 +59,12 @@ var SetConst = Const.extend({
 	init: function SetConst(){
 		Const.prototype.init.call(this);
 		this.value = 0;
+	}
+});
+var StrConst = Const.extend({
+	init: function StrConst(){
+		Const.prototype.init.call(this);
+		this.value = null;
 	}
 });
 var StringConst = Const.extend({
@@ -196,6 +202,13 @@ function makeSetConst(s/*SET*/){
 	return result;
 }
 
+function makeStrConst(s/*Type*/){
+	var result = null;
+	result = new StrConst();
+	result.value = s;
+	return result;
+}
+
 function makeStringConst(s/*Type*/){
 	var result = null;
 	result = new StringConst();
@@ -241,7 +254,7 @@ Designator.prototype.scope = function(){
 	return this.mScope;
 }
 
-function makeDesignator(code/*Type*/, lval/*Type*/, refCode/*RefCodeProc*/, type/*PType*/, info/*PId*/, scope/*PScope*/){
+function makeDesignator(code/*Type*/, lval/*Type*/, refCode/*RefCodeProc*/, type/*PType*/, info/*PId*/, scope/*PType*/){
 	var result = null;
 	result = new Designator();
 	result.mCode = code;
@@ -388,11 +401,13 @@ exports.Const = Const;
 exports.IntConst = IntConst;
 exports.RealConst = RealConst;
 exports.SetConst = SetConst;
+exports.StrConst = StrConst;
 exports.Expression = Expression;
 exports.nullGenerator = function(){return nullGenerator;};
 exports.makeIntConst = makeIntConst;
 exports.makeRealConst = makeRealConst;
 exports.makeSetConst = makeSetConst;
+exports.makeStrConst = makeStrConst;
 exports.makeStringConst = makeStringConst;
 exports.makeExpressionWithPrecedence = makeExpressionWithPrecedence;
 exports.makeExpression = makeExpression;

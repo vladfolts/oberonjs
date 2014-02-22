@@ -5,6 +5,9 @@ var Context = require("js/Context.js");
 var Errors = require("js/Errors.js");
 var JsArray = require("js/JsArray.js");
 var JsString = require("js/JsString.js");
+var Language = require("js/Language.js");
+var LanguageContext = require("js/LanguageContext.js");
+var OberonRtl = require("js/OberonRtl.js");
 var Object = require("js/Object.js");
 var Operator = require("js/Operator.js");
 var Precedence = require("js/CodePrecedence.js");
@@ -58,20 +61,21 @@ var GenArgCode = ArgumentsCode.extend({
 });
 var predefined = null;
 
-function checkArgument(actual/*PExpression*/, expected/*PProcedureArgument*/, pos/*INTEGER*/, code/*PArgumentsCode*/){
+function checkArgument(actual/*PExpression*/, expected/*PProcedureArgument*/, pos/*INTEGER*/, code/*PArgumentsCode*/, types/*PTypes*/){
 	var actualType = null;var expectType = null;
 	var designator = null;
 	var info = null;
 	var result = null;
+	var castErr = 0;
 	expectType = expected.type;
 	if (expectType != null){
 		actualType = actual.type();
-		result = Cast.implicit(actualType, expectType, Operator.castOperations());
-		if (result == null){
-			Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.make("type mismatch for argument "), JsString.fromInt(pos + 1 | 0)), JsString.make(": '")), actualType.description()), JsString.make("' cannot be converted to '")), expectType.description()), JsString.make("'")));
-		}
-		if (expected.isVar && expectType != actualType && Types.isInt(actualType)){
+		castErr = types.implicitCast(actualType, expectType, expected.isVar, Operator.castOperations(), {set: function($v){result = $v;}, get: function(){return result;}});
+		if (castErr == Cast.errVarParameter){
 			Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.make("type mismatch for argument "), JsString.fromInt(pos + 1 | 0)), JsString.make(": cannot pass '")), actualType.description()), JsString.make("' as VAR parameter of type '")), expectType.description()), JsString.make("'")));
+		}
+		else if (castErr != Cast.errNo){
+			Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.make("type mismatch for argument "), JsString.fromInt(pos + 1 | 0)), JsString.make(": '")), actualType.description()), JsString.make("' cannot be converted to '")), expectType.description()), JsString.make("'")));
 		}
 	}
 	if (expected.isVar){
@@ -92,7 +96,7 @@ function checkArgument(actual/*PExpression*/, expected/*PProcedureArgument*/, po
 	}
 }
 
-function checkArgumentsType(actual/*Type*/, expected/*Type*/, code/*PArgumentsCode*/){
+function checkArgumentsType(actual/*Type*/, expected/*Type*/, code/*PArgumentsCode*/, types/*PTypes*/){
 	var actualLen = 0;
 	var i = 0;
 	var actualExp = null;
@@ -102,7 +106,7 @@ function checkArgumentsType(actual/*Type*/, expected/*Type*/, code/*PArgumentsCo
 		if (i < actualLen){
 			actualExp = JsArray.at(actual, i);
 			expectedArg = JsArray.at(expected, i);
-			checkArgument(RTL$.typeGuard(actualExp, Code.Expression), RTL$.typeGuard(expectedArg, Types.ProcedureArgument), i, code);
+			checkArgument(RTL$.typeGuard(actualExp, Code.Expression), RTL$.typeGuard(expectedArg, Types.ProcedureArgument), i, code, types);
 			++i;
 		} else break;
 	}
@@ -114,13 +118,13 @@ function checkArgumentsCount(actual/*INTEGER*/, expected/*INTEGER*/){
 	}
 }
 
-function processArguments(actual/*Type*/, expected/*Type*/, code/*PArgumentsCode*/){
+function processArguments(actual/*Type*/, expected/*Type*/, code/*PArgumentsCode*/, types/*PTypes*/){
 	checkArgumentsCount(JsArray.len(actual), JsArray.len(expected));
-	checkArgumentsType(actual, expected, code);
+	checkArgumentsType(actual, expected, code, types);
 }
 
-function checkArguments(actual/*Type*/, expected/*Type*/){
-	processArguments(actual, expected, null);
+function checkArguments(actual/*Type*/, expected/*Type*/, types/*PTypes*/){
+	processArguments(actual, expected, null, types);
 }
 
 function initStd(name/*Type*/, call/*PCall*/, result/*Std*/){
@@ -162,7 +166,7 @@ GenArgCode.prototype.write = function(actual/*PExpression*/, expected/*PProcedur
 		this.code = JsString.concat(this.code, JsString.make(", "));
 	}
 	if (cast != null){
-		e = cast.make(this.cx, actual);
+		e = cast.make(this.cx.rtl(), actual);
 	}
 	else {
 		e = actual;
@@ -190,7 +194,7 @@ function makeProcCallGeneratorWithCustomArgs(cx/*PType*/, id/*Type*/, type/*Defi
 		var i = 0;
 		expectedArgs = this.args;
 		if (expectedArgs != null){
-			processArguments(args, expectedArgs, this.argumentsCode);
+			processArguments(args, expectedArgs, this.argumentsCode, cx.types());
 		}
 		else {
 			for (i = 0; i <= JsArray.len(args) - 1 | 0; ++i){
@@ -268,9 +272,9 @@ function hasVarArgumnetWithCustomType(call/*PStdCall*/){
 	JsArray.add(call.args, a);
 }
 
-function checkSingleArgument(actual/*Type*/, call/*StdCall*/){
+function checkSingleArgument(actual/*Type*/, call/*StdCall*/, types/*PTypes*/){
 	RTL$.assert(JsArray.len(call.args) == 1);
-	checkArguments(actual, call.args);
+	checkArguments(actual, call.args, types);
 	RTL$.assert(JsArray.len(actual) == 1);
 	return nthArgument(actual, 0);
 }
@@ -286,7 +290,7 @@ function makeNew(){
 		var arg = null;
 		var argType = null;
 		var baseType = null;
-		arg = checkSingleArgument(args, this);
+		arg = checkSingleArgument(args, this, cx.types());
 		argType = arg.type();
 		if (!(argType instanceof Types.Pointer)){
 			Errors.raise(JsString.concat(JsString.concat(JsString.make("POINTER variable expected, got '"), argType.description()), JsString.make("'")));
@@ -313,7 +317,7 @@ function makeLen(){
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
 		var argType = null;
-		arg = checkSingleArgument(args, this);
+		arg = checkSingleArgument(args, this, cx.types());
 		argType = arg.type();
 		if (!(argType instanceof Types.Array) && !(argType instanceof Types.String)){
 			Errors.raise(JsString.concat(JsString.concat(JsString.make("ARRAY or string is expected as an argument of LEN, got '"), argType.description()), JsString.make("'")));
@@ -337,7 +341,7 @@ function makeOdd(){
 		var arg = null;
 		var code = null;
 		var constValue = null;
-		arg = checkSingleArgument(args, this);
+		arg = checkSingleArgument(args, this, cx.types());
 		code = Code.adjustPrecedence(arg, Precedence.bitAnd);
 		constValue = arg.constValue();
 		if (constValue != null){
@@ -361,7 +365,7 @@ function makeAssert(){
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
 		var rtl = null;
-		arg = checkSingleArgument(args, this);
+		arg = checkSingleArgument(args, this, cx.types());
 		rtl = cx.rtl();
 		return Code.makeSimpleExpression(JsString.concat(JsString.concat(JsString.concat(rtl.assertId(), JsString.make("(")), arg.code()), JsString.make(")")), null);
 	}
@@ -387,13 +391,13 @@ function setBitImpl(name/*ARRAY OF CHAR*/, bitOp/*BinaryOpStr*/){
 		var valueCodeExp = null;
 		var valueCode = null;
 		var comment = null;
-		checkArguments(args, this.args);
+		checkArguments(args, this.args, cx.types());
 		RTL$.assert(JsArray.len(args) == 2);
 		x = nthArgument(args, 0);
 		y = nthArgument(args, 1);
 		value = y.constValue();
 		if (value == null){
-			valueCodeExp = Operator.lsl(Code.makeExpression(JsString.make("1"), Types.basic().integer, null, Code.makeIntConst(1)), y, cx);
+			valueCodeExp = Operator.lsl(Code.makeExpression(JsString.make("1"), Types.basic().integer, null, Code.makeIntConst(1)), y, cx.rtl());
 			valueCode = valueCodeExp.code();
 		}
 		else {
@@ -449,7 +453,7 @@ function incImpl(name/*ARRAY OF CHAR*/, unary/*ARRAY OF CHAR*/, incOp/*BinaryOpS
 		var value = null;
 		var valueCode = null;
 		checkVariableArgumentsCount(1, 2, args);
-		checkArgumentsType(args, this.args, null);
+		checkArgumentsType(args, this.args, null, cx.types());
 		x = nthArgument(args, 0);
 		if (JsArray.len(args) == 1){
 			code = JsString.concat(this.unary, x.code());
@@ -506,7 +510,7 @@ function makeAbs(){
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
 		var argType = null;
-		arg = checkSingleArgument(args, this);
+		arg = checkSingleArgument(args, this, cx.types());
 		argType = arg.type();
 		if (!JsArray.contains(Types.numeric(), argType)){
 			Errors.raise(JsString.concat(JsString.concat(JsString.make("type mismatch: expected numeric type, got '"), argType.description()), JsString.make("'")));
@@ -528,7 +532,7 @@ function makeFloor(){
 	var call = null;
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
-		arg = checkSingleArgument(args, this);
+		arg = checkSingleArgument(args, this, cx.types());
 		return Code.makeSimpleExpression(JsString.concat(JsString.concat(JsString.make("Math.floor("), arg.code()), JsString.make(")")), Types.basic().integer);
 	}
 	call = new CallImpl();
@@ -547,7 +551,7 @@ function makeFlt(){
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
 		var value = null;
-		arg = checkSingleArgument(args, this);
+		arg = checkSingleArgument(args, this, cx.types());
 		value = arg.constValue();
 		if (value != null){
 			value = Code.makeRealConst(RTL$.typeGuard(value, Code.IntConst).value);
@@ -571,11 +575,11 @@ function bitShiftImpl(name/*ARRAY OF CHAR*/, op/*BinaryOp*/){
 	var call = null;
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var x = null;var y = null;
-		checkArguments(args, this.args);
+		checkArguments(args, this.args, cx.types());
 		RTL$.assert(JsArray.len(args) == 2);
 		x = nthArgument(args, 0);
 		y = nthArgument(args, 1);
-		return this.op(x, y, cx);
+		return this.op(x, y, cx.rtl());
 	}
 	call = new CallImpl();
 	initStdCall(call);
@@ -600,7 +604,7 @@ function makeOrd(){
 		var code = null;
 		var ch = 0;
 		var result = null;
-		arg = checkSingleArgument(args, this);
+		arg = checkSingleArgument(args, this, cx.types());
 		argType = arg.type();
 		if (argType == Types.basic().ch || argType == Types.basic().set){
 			value = arg.constValue();
@@ -636,7 +640,7 @@ function makeChr(){
 	var call = null;
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var arg = null;
-		arg = checkSingleArgument(args, this);
+		arg = checkSingleArgument(args, this, cx.types());
 		return Code.makeSimpleExpression(arg.code(), Types.basic().ch);
 	}
 	call = new CallImpl();
@@ -654,10 +658,10 @@ function makePack(){
 	var call = null;
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var x = null;var y = null;
-		checkArguments(args, this.args);
+		checkArguments(args, this.args, cx.types());
 		x = nthArgument(args, 0);
 		y = nthArgument(args, 1);
-		return Code.makeSimpleExpression(Operator.mulInplace(x, Operator.pow2(y), cx), null);
+		return Code.makeSimpleExpression(Operator.mulInplace(x, Operator.pow2(y), cx.rtl()), null);
 	}
 	call = new CallImpl();
 	initStdCall(call);
@@ -675,10 +679,10 @@ function makeUnpk(){
 	var call = null;
 	CallImpl.prototype.make = function(args/*Type*/, cx/*Type*/){
 		var x = null;var y = null;
-		checkArguments(args, this.args);
+		checkArguments(args, this.args, cx.types());
 		x = nthArgument(args, 0);
 		y = nthArgument(args, 1);
-		return Code.makeSimpleExpression(JsString.concat(JsString.concat(Operator.assign(y, Operator.log2(x), cx), JsString.make("; ")), Operator.divInplace(x, Operator.pow2(y), cx)), null);
+		return Code.makeSimpleExpression(JsString.concat(JsString.concat(Operator.assign(y, Operator.log2(x), cx.rtl()), JsString.make("; ")), Operator.divInplace(x, Operator.pow2(y), cx.rtl())), null);
 	}
 	call = new CallImpl();
 	initStdCall(call);

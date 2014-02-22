@@ -1,0 +1,11 @@
+MODULE ScopeBase;
+IMPORT Object;
+TYPE
+    FinalizerProc* = PROCEDURE(closure: Object.PType);
+
+    Type* = RECORD
+        PROCEDURE addFinalizer*(finalizer: FinalizerProc; closure: Object.PType)
+    END;
+    PType* = POINTER TO Type;
+END ScopeBase.
+

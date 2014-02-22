@@ -1,7 +1,7 @@
 var RTL$ = require("rtl.js");
-var Context = require("js/Context.js");
 var JsString = require("js/JsString.js");
 var Object = require("js/Object.js");
+var ScopeBase = require("js/ScopeBase.js");
 var Types = require("js/Types.js");
 var Symbol = Object.Type.extend({
 	init: function Symbol(){
@@ -52,7 +52,7 @@ function makeSymbol(id/*Type*/, info/*PId*/){
 	return result;
 }
 
-function makeFound(s/*PSymbol*/, scope/*PScope*/){
+function makeFound(s/*PSymbol*/, scope/*PType*/){
 	var result = null;
 	result = new FoundSymbol();
 	result.mSymbol = s;

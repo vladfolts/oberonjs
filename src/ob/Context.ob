@@ -1,31 +1,15 @@
 MODULE Context;
-IMPORT JsString, Object;
+IMPORT JsString, OberonRtl, Object, ScopeBase;
 TYPE
-    FinalizerProc* = PROCEDURE(closure: Object.PType);
-
-    Scope* = RECORD
-        PROCEDURE addFinalizer*(finalizer: FinalizerProc; closure: Object.PType)
-    END;
-    PScope* = POINTER TO Scope;
-
-    Rtl* = RECORD
-        copy*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
-        strCmp*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
-        assignArrayFromString*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
-        setInclL*: PROCEDURE(l, r: JsString.Type): JsString.Type;
-        setInclR*: PROCEDURE(l, r: JsString.Type): JsString.Type;
-        assertId*: PROCEDURE(): JsString.Type
-    END;
-    PRtl* = POINTER TO Rtl;
-
     Type* = RECORD
         handleChar*:    PROCEDURE(c: CHAR);
         handleLiteral*: PROCEDURE(s: JsString.Type): BOOLEAN;
         handleString*:  PROCEDURE(s: JsString.Type);
         handleIdent*:   PROCEDURE(s: JsString.Type);
         isLexem*:       PROCEDURE(): BOOLEAN;
-        qualifyScope*:  PROCEDURE(scope: PScope): JsString.Type;
-        rtl*:           PROCEDURE(): PRtl
+        qualifyScope*:  PROCEDURE(scope: ScopeBase.PType): JsString.Type;
+        
+        PROCEDURE rtl*(): OberonRtl.PType
     END;
     PType* = POINTER TO Type;
 

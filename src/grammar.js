@@ -28,6 +28,8 @@ function make(makeDesignator,
               makeFieldList,
               recordDeclContext,
               varDeclContext,
+              addOperatorContext,
+              expressionContext,
               reservedWords
               ){
 var result = {};
@@ -35,6 +37,12 @@ var result = {};
 var ident = function(stream, context){
     return Lexer.ident(stream, context, reservedWords);
 };
+
+var ModuleDeclContext = Context.ModuleDeclaration.extend({
+    init: function Grammar$ModuleDeclContext(context){
+        Context.ModuleDeclaration.prototype.init.call(this, context);
+    }
+});
 
 var qualident = context(and(optional(and(ident, ".")), ident),
                         Context.QualifiedIdentificator);
@@ -81,7 +89,7 @@ var factor = context(
      )
     , Context.Factor);
 
-var addOperator = context(or("+", "-", "OR"), Context.AddOperator);
+var addOperator = context(or("+", "-", "OR"), addOperatorContext);
 var mulOperator = context(or("*", "/", "DIV", "MOD", "&"), Context.MulOperator);
 var term = context(and(factor, repeat(and(mulOperator, factor))), Context.Term);
 var simpleExpression = context(
@@ -91,7 +99,7 @@ var simpleExpression = context(
       , Context.SimpleExpression);
 var relation = or("=", "#", "<=", "<", ">=", ">", "IN", "IS");
 var expression = context(and(simpleExpression, optional(and(relation, simpleExpression)))
-                       , Context.Expression);
+                       , expressionContext);
 var constExpression = expression;
 
 var element = context(and(expression, optional(and("..", expression))), Context.SetElement);
@@ -213,7 +221,7 @@ result.module
                   result.declarationSequence,
                   optional(and("BEGIN", statementSequence)),
                   required("END", "END expected (MODULE)"), ident, point),
-              Context.ModuleDeclaration);
+              ModuleDeclContext);
 return result;
 }
 
