@@ -1,6 +1,6 @@
 "use strict";
 
-var grammar = require("eberon/eberon_grammar.js").grammar;
+var language = require("eberon/eberon_grammar.js").language;
 var nodejs = require("nodejs.js");
 
 var options = {
@@ -39,7 +39,7 @@ function main(){
     var outDir = args.outDir || ".";
 
     var errors = "";
-    nodejs.compile(sources, grammar, function(e){errors += e + "\n";}, includeDirs, outDir, args.importDir);
+    nodejs.compile(sources, language, function(e){errors += e + "\n";}, includeDirs, outDir, args.importDir);
     if (errors.length){
         console.error(errors);
         return -2;
