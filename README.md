@@ -1,6 +1,6 @@
 # Oberon 07 compiler
 
-Written in JavaScript (and partially on oberon itself) and transaltes Oberon to JavaScript code so it can be run in web browser.
+Written in JavaScript (and partially in oberon itself) and translates Oberon to JavaScript code so it can be run in web browser.
 Supports both "pure" and "plus extensions" mode. Pure mode is a strict implementation of original Oberon language report. Language [extensions](https://github.com/vladfolts/oberonjs/wiki/Eberon) implemented in my own way and available as a separate compiler mode.
 
 ## Quick start
