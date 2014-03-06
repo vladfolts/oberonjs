@@ -93,10 +93,10 @@ def build(options):
         return
 
     if options.pack:
-        print 'packaing compiled js to %s...' % package.root
+        print('packaging compiled js to %s...' % package.root)
         package.pack()
     else:
-        print 'unpackaing compiled js to %s...' % package.root
+        print('unpacking compiled js to %s...' % package.root)
         package.unpack()
 
     if not os.path.exists(out):
