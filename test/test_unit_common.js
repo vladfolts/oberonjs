@@ -7,7 +7,7 @@ var Errors = require("js/Errors.js");
 var oc = require("oc.js");
 var RTL = require("rtl_code.js").RTL;
 var Scope = require("js/Scope.js");
-var Stream = require("Stream.js");
+var Stream = require("js/Stream.js");
 var Test = require("test.js");
 
 var TestError = Test.TestError;

@@ -1,11 +1,29 @@
 
 #!/usr/bin/python
 from browser.linkjs import link
+import argparse
 import os
 import shutil
 import stat
 import subprocess
 import sys
+import zipfile
+
+class package( object ):
+    root = 'bin/js'
+    archive = 'bin/compiled.zip'
+
+    @staticmethod
+    def pack():
+        file = zipfile.ZipFile(package.archive, 'w')
+        for f in os.listdir(package.root):
+            file.write(os.path.join('bin/js', f), f)
+
+    @staticmethod
+    def unpack():
+        cleanup(package.root)
+        file = zipfile.ZipFile(package.archive, 'r')
+        file.extractall(package.root)
 
 # http://stackoverflow.com/questions/1889597/deleting-directory-in-python
 def remove_readonly(fn, path, excinfo):
@@ -31,6 +49,9 @@ def is_parent_for(parent, child):
         child = next
 
 def cleanup(dir):
+    if not os.path.exists(dir):
+        return
+
     this_dir = os.path.dirname(__file__)
     if is_parent_for(dir, this_dir):
         raise Exception("cannot delete itself: %s" % this_dir)
@@ -44,8 +65,7 @@ def copy(src, dst_dir):
     shutil.copy(src, dst)
 
 def copytree(src, dst):
-    if os.path.exists(dst):
-        cleanup(dst)
+    cleanup(dst)
     print('%s -> %s' % (src, dst))
     shutil.copytree(src, dst)
 
@@ -53,12 +73,13 @@ def run(cmd):
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, shell = True)
     return p.stdout.read().decode()
 
-def build(out, use_git):
+def build(options):
     version = None
-    if use_git:
+    if not options.no_git:
         print(run('git pull'))
         version = run('git log -1 --format="%ci%n%H"')
 
+    out = options.output
     build_version = None
     build_version_path = os.path.join(out, 'version.txt')
     try:
@@ -71,12 +92,19 @@ def build(out, use_git):
         print("current html is up to date, do nothing")
         return
 
+    if options.pack:
+        print 'packaing compiled js to %s...' % package.root
+        package.pack()
+    else:
+        print 'unpackaing compiled js to %s...' % package.root
+        package.unpack()
+
     if not os.path.exists(out):
         os.mkdir(out)
 
     link(['oc.js', 'oberon/oberon_grammar.js', 'eberon/eberon_grammar.js'],
          os.path.join(out, 'oc.js'),
-         ['src', 'src/eberon'],
+         ['src', 'bin'],
          version)
     copy('browser/oberonjs.html', out)
     for d in ['codemirror', 'jslibs']:
@@ -90,8 +118,9 @@ def build(out, use_git):
             f.write(version)
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print('Pull repo and build html page\nUsage: build.py <output directory> [--no-git]')
-        exit(-1)
-    use_git = len(sys.argv) < 3 or sys.argv[2] != '--no-git'
-    build(sys.argv[1], use_git)
+    parser = argparse.ArgumentParser(description='Pull repo and build html page')
+    parser.add_argument('output', help='output directory')
+    parser.add_argument('--no-git', help='do not pull from git', action="store_true")
+    parser.add_argument('--pack', help='pack compiled source', action="store_true")
+    args = parser.parse_args()
+    build(args)

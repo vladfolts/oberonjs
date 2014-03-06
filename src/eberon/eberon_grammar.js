@@ -1,9 +1,9 @@
 "use strict";
 
-var Cast = require("eberon/js/EberonCast.js");
+var Cast = require("js/EberonCast.js");
 var Context = require("context.js");
 var EbContext = require("eberon/eberon_context.js");
-var EberonString = require("eberon/js/EberonString.js");
+var EberonString = require("js/EberonString.js");
 var Grammar = require("grammar.js");
 var Parser = require("parser.js");
 var Scope = require("js/Scope.js");
