@@ -5,7 +5,7 @@ var Context = require("context.js");
 var Grammar = require("grammar.js");
 var ObContext = require("oberon/oberon_context.js");
 var Parser = require("parser.js");
-var Scope = require("js/Scope.js");
+var Symbols = require("js/OberonSymbols.js");
 
 var and = Parser.and;
 var context = Parser.context;
@@ -45,7 +45,7 @@ exports.language = {
             Context.Expression,
             Grammar.reservedWords
             ),
-    stdSymbols: Scope.makeStdSymbols(),
+    stdSymbols: Symbols.makeStd(),
     types: {
         implicitCast: Cast.implicit
     }

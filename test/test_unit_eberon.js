@@ -197,5 +197,11 @@ exports.suite = {
             + "PROCEDURE pVar(VAR a: ARRAY OF CHAR): BOOLEAN; RETURN FALSE END pVar;"),
     pass("p(s)"),
     fail(["pVar(s)", "type mismatch for argument 1: cannot pass 'STRING' as VAR parameter of type 'ARRAY OF CHAR'"])
+    ),
+"STRING LEN": testWithContext(
+    context(grammar.expression,
+            "VAR s: STRING;"),
+    pass("LEN(s)"),
+    fail()
     )
 };

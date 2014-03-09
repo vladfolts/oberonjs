@@ -25,6 +25,11 @@ TYPE
     END;
     PStdCall = POINTER TO StdCall;
 
+    LenArgumentCheck = PROCEDURE(argType: Types.PType): BOOLEAN;
+    CallLen* = RECORD(StdCall)
+        check: LenArgumentCheck
+    END;
+
     CallGenerator* = RECORD
         PROCEDURE handleArgument(e: Code.PExpression);
         PROCEDURE end(): Code.PExpression;
@@ -411,33 +416,35 @@ BEGIN
     RETURN makeSymbol(makeStd(JsString.make("NEW"), call))
 END makeNew;
 
-PROCEDURE makeLen(): Symbols.PSymbol;
-    TYPE
-        CallImpl = RECORD(StdCall)
-        END;
-    VAR
-        call: POINTER TO CallImpl;
+PROCEDURE lenArgumentCheck*(argType: Types.PType): BOOLEAN;
+    RETURN (argType IS Types.PArray) OR (argType IS Types.PString)
+END lenArgumentCheck;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.Type): Code.PExpression;
-    VAR
-        arg: Code.PExpression;
-        argType: Types.PType;
-    BEGIN
-        arg := checkSingleArgument(args, SELF, cx.types());
-        argType := arg.type();
-        IF ~(argType IS Types.PArray) & ~(argType IS Types.PString) THEN
-            Errors.raise(JsString.concat(JsString.concat(
-                JsString.make("ARRAY or string is expected as an argument of LEN, got '"),
-                argType.description()),
-                JsString.make("'")));
-        END;
-        RETURN Code.makeSimpleExpression(
-            JsString.concat(arg.code(), JsString.make(".length")),
-            Types.basic.integer)
-    END CallImpl.make;
+PROCEDURE CallLen.make(args: JsArray.Type; cx: LanguageContext.Type): Code.PExpression;
+VAR
+    arg: Code.PExpression;
+    argType: Types.PType;
+BEGIN
+    arg := checkSingleArgument(args, SELF, cx.types());
+    argType := arg.type();
+    IF ~SELF.check(argType) THEN
+        Errors.raise(JsString.concat(JsString.concat(
+            JsString.make("ARRAY or string is expected as an argument of LEN, got '"),
+            argType.description()),
+            JsString.make("'")));
+    END;
+    RETURN Code.makeSimpleExpression(
+        JsString.concat(arg.code(), JsString.make(".length")),
+        Types.basic.integer)
+END CallLen.make;
+
+PROCEDURE makeLen*(check: LenArgumentCheck): Symbols.PSymbol;
+VAR
+    call: POINTER TO CallLen;
 BEGIN
     NEW(call);
     initStdCall(call);
+    call.check := check;
     hasArgumentWithCustomType(call);
     RETURN makeSymbol(makeStd(JsString.make("LEN"), call))
 END makeLen;
@@ -1000,7 +1007,6 @@ END make;
 BEGIN
     predefined := JsArray.make();
     JsArray.add(predefined, makeNew());
-    JsArray.add(predefined, makeLen());
     JsArray.add(predefined, makeOdd());
     JsArray.add(predefined, makeAssert());
     JsArray.add(predefined, setBitImpl("INCL", inclOp));

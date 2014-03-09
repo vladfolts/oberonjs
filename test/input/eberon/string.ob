@@ -16,4 +16,5 @@ BEGIN
     b := s1 >= s2;
 
     p1(s);
+    ASSERT(LEN(s) = 0);
 END m.

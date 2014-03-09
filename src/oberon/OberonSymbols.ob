@@ -1,0 +1,15 @@
+MODULE OberonSymbols;
+IMPORT JsMap, Procedure, Scope, Symbols;
+
+PROCEDURE makeStd*(): JsMap.Type;
+VAR 
+    proc: Symbols.PSymbol;
+    result: JsMap.Type;
+BEGIN
+    result := Scope.makeStdSymbols();
+    proc := Procedure.makeLen(Procedure.lenArgumentCheck);
+    JsMap.put(result, proc.id(), proc);
+    RETURN result
+END makeStd;
+
+END OberonSymbols.

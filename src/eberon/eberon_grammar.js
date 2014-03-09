@@ -3,10 +3,9 @@
 var Cast = require("js/EberonCast.js");
 var Context = require("context.js");
 var EbContext = require("eberon/eberon_context.js");
-var EberonString = require("js/EberonString.js");
 var Grammar = require("grammar.js");
 var Parser = require("parser.js");
-var Scope = require("js/Scope.js");
+var Symbols = require("js/EberonSymbols.js");
 
 var and = Parser.and;
 var context = Parser.context;
@@ -48,9 +47,6 @@ function makeFieldList(identdef, identList, type, formalParameters){
         Context.FieldListDeclaration);
 }
 
-var stdSymbols = Scope.makeStdSymbols();
-Scope.addSymbolForType(EberonString.string(), stdSymbols);
-
 exports.language = {
   grammar: Grammar.make(
       makeDesignator,
@@ -63,7 +59,7 @@ exports.language = {
       EbContext.Expression,
       Grammar.reservedWords + " SELF SUPER"
       ),
-    stdSymbols: stdSymbols,
+    stdSymbols: Symbols.makeStd(),
     types: {
         implicitCast: Cast.implicit
     }
