@@ -28,7 +28,7 @@ function makeSuiteForGrammar(language){
         return TestUnitCommon.testWithModule(src, language, pass, fail);
     }
 
-    function testWithGrammar(parser, pass, faile){
+    function testWithGrammar(parser, pass, fail){
         return TestUnitCommon.testWithGrammar(parser, language, pass, fail);
     }
 
@@ -1088,7 +1088,8 @@ return {
          "VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := 1; a[1] := a[0] END",
          "VAR a1, a2: ARRAY 3 OF CHAR; BEGIN ASSERT(a1 = a2); END",
          "VAR a1: ARRAY 2 OF CHAR; a2: ARRAY 3 OF CHAR; BEGIN ASSERT(a1 = a2); END",
-         "CONST cs = \"a\"; VAR a: ARRAY 3 OF CHAR; BEGIN ASSERT(a = cs); ASSERT(cs # a); ASSERT(a < cs); ASSERT(cs > a); END"
+         "CONST cs = \"a\"; VAR a: ARRAY 3 OF CHAR; BEGIN ASSERT(a = cs); ASSERT(cs # a); ASSERT(a < cs); ASSERT(cs > a); END",
+         "CONST cs = \"a\"; BEGIN ASSERT(cs[0] = \"a\"); END"
          ),
     fail(["VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := TRUE END",
           "type mismatch: 'a[0]' is 'INTEGER' and cannot be assigned to 'BOOLEAN' expression"],
@@ -1097,13 +1098,13 @@ return {
          ["VAR a: ARRAY 10 OF INTEGER; p: POINTER TO RECORD END; BEGIN a[p] := 1 END",
           "'INTEGER' or 'BYTE' expression expected, got 'POINTER TO anonymous RECORD'"],
          ["VAR i: INTEGER; BEGIN i[0] := 1 END",
-          "ARRAY expected, got 'INTEGER'"],
+          "ARRAY or string expected, got 'INTEGER'"],
          ["VAR p: POINTER TO RECORD END; BEGIN p[0] := 1 END",
-          "ARRAY expected, got 'POINTER TO anonymous RECORD'"],
+          "ARRAY or string expected, got 'POINTER TO anonymous RECORD'"],
          ["VAR a: ARRAY 10 OF INTEGER; BEGIN a[0][0] := 1 END",
-          "ARRAY expected, got 'INTEGER'"],
+          "ARRAY or string expected, got 'INTEGER'"],
          ["VAR a: ARRAY 10 OF BOOLEAN; BEGIN a[0,0] := TRUE END",
-          "ARRAY expected, got 'BOOLEAN'"],
+          "ARRAY or string expected, got 'BOOLEAN'"],
          ["VAR a: ARRAY 10, 20 OF BOOLEAN; BEGIN a[0] := TRUE END",
           "type mismatch: 'a[0]' is 'ARRAY 20 OF BOOLEAN' and cannot be assigned to 'BOOLEAN' expression"],
          ["VAR a: ARRAY 10 OF INTEGER; BEGIN a[10] := 0 END",
@@ -1111,7 +1112,14 @@ return {
          ["CONST c1 = 5; VAR a: ARRAY 10 OF INTEGER; BEGIN a[10 + c1] := 0 END",
           "index out of bounds: maximum possible index is 9, got 15"],
          ["VAR a1, a2: ARRAY 3 OF INTEGER; BEGIN ASSERT(a1 = a2); END",
-          "operator '=' type mismatch: numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE expected, got 'ARRAY 3 OF INTEGER'"])
+          "operator '=' type mismatch: numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE expected, got 'ARRAY 3 OF INTEGER'"],
+         ["CONST cs = \"\"; BEGIN ASSERT(cs[0] = \"a\"); END",
+          "cannot index empty string"],
+         ["CONST cs = \"\"; VAR i: INTEGER; BEGIN ASSERT(cs[i] = \"a\"); END",
+          "cannot index empty string"],
+         ["CONST cs = \"a\"; BEGIN ASSERT(cs[1] = \"a\"); END",
+          "index out of bounds: maximum possible index is 0, got 1"]
+        )
     ),
 "multi-dimensional array expression": testWithGrammar(
     grammar.procedureBody,

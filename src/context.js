@@ -316,16 +316,20 @@ exports.Designator = ChainedContext.extend({
                 Type.intsDescription() + " expression expected, got '" + expType.description() + "'");
 
         var type = this.__currentType;
-        if (!(type instanceof Type.Array))
-            throw new Errors.Error("ARRAY expected, got '" + type.description() + "'");
+        var isArray = type instanceof Type.Array;
+        if (!isArray && !(type instanceof Type.String))
+            throw new Errors.Error("ARRAY or string expected, got '" + type.description() + "'");
+        var arrayLen = isArray ? Type.arrayLength(type) : Type.stringLen(type);
+        if (!isArray && !arrayLen)
+            throw new Errors.Error("cannot index empty string" );
+
         var value = e.constValue();
-        var arrayLen = Type.arrayLength(type);
-        if (value && arrayLen != Type.openArrayLength && value.value >= arrayLen)
+        if (value && (!isArray || arrayLen != Type.openArrayLength) && value.value >= arrayLen)
             throw new Errors.Error("index out of bounds: maximum possible index is "
-                                 + (Type.arrayLength(type) - 1)
+                                 + (arrayLen - 1)
                                  + ", got " + value.value );
 
-        this.__currentType = Type.arrayElementsType(type);
+        this.__currentType = isArray ? Type.arrayElementsType(type) : basicTypes.ch;
         this.__info = Type.makeVariable(this.__currentType, Type.isVariableReadOnly(this.__info));
     },
     handleLiteral: function(s){

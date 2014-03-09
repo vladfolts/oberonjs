@@ -64,6 +64,7 @@ var s9 = "\\";
 var ch1 = 0;
 var a1 = RTL$.makeCharArray(15);
 var a2 = RTL$.makeCharArray(3);
+var i = 0;
 
 function p1(s/*ARRAY OF CHAR*/){
 }
@@ -92,4 +93,8 @@ RTL$.assert(RTL$.strCmp(s1, a1) <= 0);
 RTL$.assert(RTL$.strCmp(s1, a1) != 0);
 a1[0] = 97;
 a1[1] = a1.charCodeAt(0);
+RTL$.assert(s1.charCodeAt(0) == 34);
+RTL$.assert(s2.charCodeAt(0) == 65);
+p2(s2.charCodeAt(0));
+p2(s2.charCodeAt(i));
 }();

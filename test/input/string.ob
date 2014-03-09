@@ -14,6 +14,7 @@ VAR
     ch1: CHAR;
 	a1: ARRAY 15 OF CHAR;
 	a2: ARRAY 3 OF CHAR;
+	i: INTEGER;
 
 PROCEDURE p1(s: ARRAY OF CHAR);
 END p1;
@@ -50,4 +51,9 @@ BEGIN
 
 	a1[0] := "a";
 	a1[1] := a1[0];
+
+	ASSERT(s1[0] = 22X);
+	ASSERT(s2[0] = "A");
+	p2(s2[0]);
+	p2(s2[i]);
 END m.
