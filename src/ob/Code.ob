@@ -371,22 +371,30 @@ BEGIN
     RETURN result
 END adjustPrecedence;
 
-PROCEDURE isPointerShouldBeExported(type: Types.Pointer): BOOLEAN;
+PROCEDURE isPointerShouldBeExported(type: Types.Pointer): JsString.Type;
 VAR
     r: Types.PRecord;
+    result: JsString.Type;
 BEGIN
     r := Types.pointerBase(type);
-    RETURN Types.typeName(r^) = NIL
+    IF Types.typeName(r^) = NIL THEN
+        result := Types.recordConstructor(r^);
+    END;
+    RETURN result
 END isPointerShouldBeExported;
 
-PROCEDURE typeShouldBeExported(typeId: Types.PId): BOOLEAN;
+PROCEDURE typeShouldBeExported(typeId: Types.PId; defaultId: JsString.Type): JsString.Type;
 VAR
+    result: JsString.Type;
     type: Types.PType;
 BEGIN
     type := typeId(Types.PTypeId).type();
-    RETURN (type IS Types.PRecord)
-        OR ((type IS Types.PPointer) 
-            & isPointerShouldBeExported(type^(Types.Pointer)))
+    IF type IS Types.PRecord THEN
+        result := defaultId;
+    ELSIF type IS Types.PPointer THEN
+        result := isPointerShouldBeExported(type^(Types.Pointer));
+    END;
+    RETURN result
 END typeShouldBeExported;
 
 PROCEDURE genExport*(s: Symbols.Symbol): JsString.Type;
@@ -398,8 +406,10 @@ BEGIN
             JsString.make("function(){return "),
             s.id()),
             JsString.make(";}"));
-    ELSIF ~s.isType() OR typeShouldBeExported(s.info()) THEN
+    ELSIF ~s.isType() THEN
         result := s.id();
+    ELSE
+        result := typeShouldBeExported(s.info(), s.id())
     END;
     RETURN result
 END genExport;

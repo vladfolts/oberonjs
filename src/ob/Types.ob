@@ -56,10 +56,10 @@ TYPE
 
     PVariable* = POINTER TO Variable;
 
-    VariableImpl* = RECORD(Variable) (*TO FIX*)
+    VariableImpl = RECORD(Variable)
         mType: PType
     END;
-    PVariableImpl* = POINTER TO VariableImpl;
+    PVariableImpl = POINTER TO VariableImpl;
 
     ReadOnlyVariable = RECORD(VariableImpl)
     END;

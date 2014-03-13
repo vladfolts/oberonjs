@@ -5,6 +5,9 @@ TYPE
     T1* = RECORD END;
     T2* = PROCEDURE;
     T3* = ARRAY 5 OF INTEGER;
+
+    NotExportedRecord = RECORD END;
+    PNotExportedRecord* = POINTER TO NotExportedRecord;
 VAR
     pr1*: POINTER TO T1;
     p2*: T2;
