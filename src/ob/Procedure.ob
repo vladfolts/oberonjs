@@ -124,7 +124,7 @@ BEGIN
             Errors.raise(JsString.make("constant cannot be used as VAR parameter"));
         END;
         IF (info IS Types.PVariable) 
-         & Types.isVariableReadOnly(info(Types.PVariable)^) THEN
+         & info(Types.PVariable).isReadOnly() THEN
             Errors.raise(JsString.concat(info.idType(), JsString.make(" cannot be used as VAR parameter")));
         END;
     END;

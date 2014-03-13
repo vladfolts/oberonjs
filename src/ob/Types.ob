@@ -50,18 +50,26 @@ TYPE
     PConst* = POINTER TO Const;
 
     Variable* = RECORD(Id)
-        type: PType;
-        readOnly: BOOLEAN
+        PROCEDURE type*(): PType;
+        PROCEDURE isReadOnly*(): BOOLEAN
     END;
 
     PVariable* = POINTER TO Variable;
 
-    VariableRef* = RECORD(Variable)
+    VariableImpl* = RECORD(Variable) (*TO FIX*)
+        mType: PType
+    END;
+    PVariableImpl* = POINTER TO VariableImpl;
+
+    ReadOnlyVariable = RECORD(VariableImpl)
+    END;
+
+    VariableRef* = RECORD(VariableImpl)
     END;
 
     PVariableRef* = POINTER TO VariableRef;
 
-    ExportedVariable = RECORD(Variable)
+    ExportedVariable = RECORD(ReadOnlyVariable)
     END;
 
     PExportedVariable = POINTER TO ExportedVariable;
@@ -249,11 +257,7 @@ END typeName;
 PROCEDURE ProcedureId.idType(): JsString.Type;
     RETURN JsString.make("procedure")
 END ProcedureId.idType;
-(*
-PROCEDURE String.idType(): JsString.Type;
-    RETURN JsString.make("string")
-END String.idType;
-*)
+
 PROCEDURE String.description(): JsString.Type;
 VAR
     prefix: JsString.Type;
@@ -298,37 +302,33 @@ PROCEDURE constValue*(c: Const): JS.var;
 END constValue;
 
 PROCEDURE Variable.idType(): JsString.Type;
-VAR
-    result: JsString.Type;
-BEGIN
-    IF SELF.readOnly THEN
-        result := JsString.make("read-only variable");
-    ELSE
-        result := JsString.make("variable");
-    END;
-    RETURN result
+    RETURN JsString.make("variable")
 END Variable.idType;
 
-PROCEDURE variableType*(v: Variable): PType;
-    RETURN v.type
-END variableType;
+PROCEDURE ReadOnlyVariable.idType(): JsString.Type;
+    RETURN JsString.make("read-only variable")
+END ReadOnlyVariable.idType;
+
+PROCEDURE VariableImpl.type(): PType;
+    RETURN SELF.mType
+END VariableImpl.type;
 
 PROCEDURE procedureType*(p: ProcedureId): PType;
     RETURN p.type
 END procedureType;
 
-PROCEDURE isVariableReadOnly*(v: Variable): BOOLEAN;
-    RETURN v.readOnly
-END isVariableReadOnly;
+PROCEDURE Variable.isReadOnly(): BOOLEAN;
+    RETURN FALSE
+END Variable.isReadOnly;
+
+PROCEDURE ReadOnlyVariable.isReadOnly(): BOOLEAN;
+    RETURN TRUE
+END ReadOnlyVariable.isReadOnly;
 
 PROCEDURE ExportedVariable.idType(): JsString.Type;
     RETURN JsString.make("imported variable")
 END ExportedVariable.idType;
-(*
-PROCEDURE BasicType.idType(): JsString.Type;
-    RETURN JsString.make("type")
-END BasicType.idType;
-*)
+
 PROCEDURE TypeId.idType(): JsString.Type;
     RETURN JsString.make("type")
 END TypeId.idType;
@@ -648,11 +648,30 @@ END makeConst;
 
 PROCEDURE makeVariable*(type: PType; readOnly: BOOLEAN): PVariable;
 VAR
-    result: PVariable;
+    result: PVariableImpl;
+
+    PROCEDURE make(): PVariableImpl;
+    VAR
+        result: PVariableImpl;
+    BEGIN
+        NEW(result);
+        RETURN result
+    END make;
+
+    PROCEDURE makeRO(): PVariableImpl;
+    VAR
+        result: POINTER TO ReadOnlyVariable;
+    BEGIN
+        NEW(result);
+        RETURN result
+    END makeRO;
 BEGIN
-    NEW(result);
-    result.type := type;
-    result.readOnly := readOnly;
+    IF readOnly THEN
+        result := makeRO();
+    ELSE
+        result := make();
+    END;
+    result.mType := type;
     RETURN result
 END makeVariable;
 
@@ -661,8 +680,7 @@ VAR
     result: PVariableRef;
 BEGIN
     NEW(result);
-    result.type := type;
-    result.readOnly := FALSE;
+    result.mType := type;
     RETURN result
 END makeVariableRef;
 
@@ -671,8 +689,7 @@ VAR
     result: PExportedVariable;
 BEGIN
     NEW(result);
-    result.type := v.type;
-    result.readOnly := TRUE;
+    result.mType := v.type();
     RETURN result
 END makeExportedVariable;
 

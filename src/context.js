@@ -282,7 +282,7 @@ exports.Designator = ChainedContext.extend({
         else if (s.isConst())
             this.__currentType = Type.constType(info);
         else if (s.isVariable())
-            this.__currentType = Type.variableType(info);
+            this.__currentType = info.type();
         else if (s.isProcedure())
             this.__currentType = Type.procedureType(info);
         this.__info = info;
@@ -292,7 +292,7 @@ exports.Designator = ChainedContext.extend({
         var t = this.__currentType;
         var pointerType;
         var isReadOnly = this.__info instanceof Type.Variable 
-                      && Type.isVariableReadOnly(this.__info);
+                      && this.__info.isReadOnly();
         if (t instanceof Type.Pointer){
             pointerType = t;
             this.__handleDeref();
@@ -304,8 +304,11 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error("cannot designate '" + t.description() + "'");
 
         this.__denote(id, pointerType);
-        this.__info = Type.makeVariable(this.__currentType, isReadOnly);
+        this.__info = this._makeDenoteVar(this.__currentType, isReadOnly);
         this.__scope = undefined;
+    },
+    _makeDenoteVar: function(type, isReadOnly){
+        return Type.makeVariable(type, isReadOnly);
     },
     handleExpression: function(e){this.__indexExpression = e;},
     __handleIndexExpression: function(){
@@ -315,22 +318,34 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error(
                 Type.intsDescription() + " expression expected, got '" + expType.description() + "'");
 
-        var type = this.__currentType;
+        var index = this._indexSequence(this.__currentType, this.__info);
+        var length = index.length;
+        var pValue = e.constValue();
+        if (pValue){
+            var value = pValue.value;
+            if (value < 0)
+                throw new Errors.Error("index is negative: " + value);
+            if (length != Type.openArrayLength && value >= length)
+                throw new Errors.Error("index out of bounds: maximum possible index is "
+                                     + (length - 1)
+                                     + ", got " + value );
+        }
+        this.__currentType = index.type;
+        this.__info = index.info;
+    },
+    _indexSequence: function(type, info){
         var isArray = type instanceof Type.Array;
         if (!isArray && !(type instanceof Type.String))
             throw new Errors.Error("ARRAY or string expected, got '" + type.description() + "'");
-        var arrayLen = isArray ? Type.arrayLength(type) : Type.stringLen(type);
-        if (!isArray && !arrayLen)
+
+        var length = isArray ? Type.arrayLength(type) : Type.stringLen(type);
+        if (!isArray && !length)
             throw new Errors.Error("cannot index empty string" );
-
-        var value = e.constValue();
-        if (value && (!isArray || arrayLen != Type.openArrayLength) && value.value >= arrayLen)
-            throw new Errors.Error("index out of bounds: maximum possible index is "
-                                 + (arrayLen - 1)
-                                 + ", got " + value.value );
-
-        this.__currentType = isArray ? Type.arrayElementsType(type) : basicTypes.ch;
-        this.__info = Type.makeVariable(this.__currentType, Type.isVariableReadOnly(this.__info));
+        var indexType = isArray ? Type.arrayElementsType(type) : basicTypes.ch;
+        return { length: length,
+                 type: indexType,
+                 info: Type.makeVariable(indexType, info instanceof Type.Const || info.isReadOnly())
+               };
     },
     handleLiteral: function(s){
         if (s == "]" || s == ","){
@@ -575,16 +590,6 @@ exports.ProcDecl = ChainedContext.extend({
             return this.__addArgument(msg.name, msg.arg);
         return ChainedContext.prototype.handleMessage.call(this, msg);
     },
-    /*
-    checkResultType: function(s){
-        if (this.__id.exported()){
-            if (!s.scope().exports()[s.symbol().id()])
-                throw new Errors.Error(
-                    "exported PROCEDURE '" + this.__id.id()
-                    + "' uses non-exported type '" + s.symbol().id() + "'");
-        }
-    },
-    */
     handleReturn: function(type){
         var result = this.__type.result();
         if (!result)
@@ -1454,7 +1459,7 @@ exports.For = ChainedContext.extend({
         var s = getSymbol(this.parent(), id);
         if (!s.isVariable())
             throw new Errors.Error("'" + s.id() + "' is not a variable");
-        var type = Type.variableType(s.info());
+        var type = s.info().type();
         if (type !== basicTypes.integer)
             throw new Errors.Error(
                   "'" + s.id() + "' is a '" 
@@ -1594,7 +1599,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
             if (id.exported())
                 this.checkExport(varName);
             this.currentScope().addSymbol(Symbol.makeSymbol(varName, v), id.exported());
-            var t = Type.variableType(v);
+            var t = v.type();
             gen.write("var " + varName + " = " + t.initializer(this) + ";");
         }
 

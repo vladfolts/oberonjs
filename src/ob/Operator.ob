@@ -478,7 +478,7 @@ BEGIN
     designator := left.designator();
     info := designator.info();
     IF ~(info IS Types.PVariable) 
-        OR Types.isVariableReadOnly(info(Types.PVariable)^) THEN
+        OR info(Types.PVariable).isReadOnly() THEN
         Errors.raise(JsString.concat(JsString.make("cannot assign to "), info.idType()));
     END; 
 

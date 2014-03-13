@@ -22,15 +22,17 @@ function superMethodCallGenerator(context, id, type){
 }
 
 var MethodType = Type.Procedure.extend({
-    init: function EberonContext$MethodType(type, callGenerator){
+    init: function EberonContext$MethodType(id, type, callGenerator){
         Type.Procedure.prototype.init.call(this);
+        this.__id = id;
         this.__type = type;
         this.__callGenerator = callGenerator;
     },
     procType: function(){return this.__type;},
     args: function(){return this.__type.args();},
     result: function(){return this.__type.result();},
-    description: function(){return this.__type.description();},
+    description: function(){return "method " + this.__id;},
+    procDescription: function(){return this.__type.description();},
     callGenerator: function(context, id){return this.__callGenerator(context, id, this);}
 });
 
@@ -84,9 +86,33 @@ var MethodHeading = Context.Chained.extend({
 function getMethodSelf(){}
 function getMethodSuper(){}
 
+var MethodVariable = Type.Variable.extend({
+    init: function(type){
+        this.__type = type;
+    },
+    type: function(){return this.__type;},
+    isReadOnly: function(){return true;},
+    idType: function(){return "method";}
+});
+
 var Designator = Context.Designator.extend({
     init: function EberonContext$Designator(parent){
         Context.Designator.prototype.init.call(this, parent);
+    },
+    _indexSequence: function(type, info){
+        if (type == EberonString.string()){
+            var indexType = Type.basic().ch;
+            return { length: undefined, 
+                     type: indexType,
+                     info: EberonString.makeElementVariable(indexType)
+                   };
+        }
+        return Context.Designator.prototype._indexSequence.call(this, type, info);
+    },
+    _makeDenoteVar: function(type, isReadOnly){
+        return (type instanceof MethodType)
+            ? new MethodVariable(type)
+            : Context.Designator.prototype._makeDenoteVar(type, isReadOnly);
     },
     handleLiteral: function(s){
         if (s == "SELF")
@@ -161,8 +187,8 @@ var RecordType = Type.Record.extend({
         if (!Cast.areProceduresMatch(existing, type))
             throw new Errors.Error(
                   "overridden method '" + id + "' signature mismatch: should be '"
-                + existing.description() + "', got '" 
-                + type.description() + "'");
+                + existing.procDescription() + "', got '" 
+                + type.procDescription() + "'");
         
         this.__definedMethods.push(id);
     },
@@ -269,7 +295,7 @@ var RecordDecl = Context.RecordDecl.extend({
         if (msg instanceof MethodOrProcMsg)
             return this.type().addMethod(
                 msg.id,
-                new MethodType(msg.type, methodCallGenerator));
+                new MethodType(msg.id.id(), msg.type, methodCallGenerator));
         if (msg == Context.endParametersMsg) // not used
             return undefined;
         if (msg instanceof Context.AddArgumentMsg) // not used
@@ -285,7 +311,6 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         this.__methodId = undefined;
         this.__methodType = undefined;
         this.__boundType = undefined;
-        this.__isNew = undefined;
         this.__endingId = undefined;
     },
     handleMessage: function(msg){
@@ -322,14 +347,8 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     },
     setType: function(type){
         Context.ProcDecl.prototype.setType.call(this, type);
-        this.__methodType = new MethodType(type, methodCallGenerator);
-    },
-    handleLiteral: function(s){
-        if (s == "NEW"){
-            var boundType = this.__selfSymbol.info();
-            boundType.addMethod(this.__methodId, this.__methodType);
-            this.__isNew = true;
-        }
+        if (this.__methodId)
+            this.__methodType = new MethodType(this.__methodId.id(), type, methodCallGenerator);
     },
     handleIdent: function(id){
         if (this.__selfSymbol){
@@ -349,10 +368,8 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 // should throw
                 Context.ProcDecl.prototype.handleIdent.call(this, this.__endingId);
 
-            if (!this.__isNew){
-                var boundType = this.__selfSymbol.info();
-                boundType.defineMethod(this.__methodId, this.__methodType);
-            }
+            var boundType = this.__selfSymbol.info();
+            boundType.defineMethod(this.__methodId, this.__methodType);
         }
         Context.ProcDecl.prototype.endParse.call(this);
     },
@@ -371,7 +388,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         return {
             symbol: Symbol.makeSymbol(
                 "method",  
-                Type.makeProcedure(new MethodType(this.__methodType.procType(), superMethodCallGenerator))),
+                Type.makeProcedure(new MethodType(id, this.__methodType.procType(), superMethodCallGenerator))),
             code: Type.typeName(baseType) + ".prototype." + id + ".call"
         };
     }

@@ -1,7 +1,31 @@
 MODULE EberonString;
-IMPORT Types;
+IMPORT JsString, Types;
+TYPE
+    ElementVariable = RECORD(Types.Variable)
+    END;
 VAR
     string*: POINTER TO Types.BasicType;
+
+PROCEDURE ElementVariable.idType(): JsString.Type;
+    RETURN JsString.make("string element")
+END ElementVariable.idType;
+
+PROCEDURE ElementVariable.isReadOnly(): BOOLEAN;
+    RETURN TRUE
+END ElementVariable.isReadOnly;
+
+PROCEDURE ElementVariable.type(): Types.PType;
+    RETURN Types.basic.ch
+END ElementVariable.type;
+
+PROCEDURE makeElementVariable*(): Types.PVariable;
+VAR
+    result: POINTER TO ElementVariable;
+BEGIN
+    NEW(result);
+    RETURN result
+END makeElementVariable;
+
 BEGIN
     string := Types.makeBasic("STRING", "''");
 END EberonString.

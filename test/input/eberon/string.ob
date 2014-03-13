@@ -2,9 +2,13 @@ MODULE m;
 VAR 
     s, s1, s2: STRING;
     b: BOOLEAN;
+    i: INTEGER;
 
 PROCEDURE p1(a: ARRAY OF CHAR);
 END p1;
+
+PROCEDURE pChar(c: CHAR);
+END pChar;
 
 BEGIN
     s := s1 + s2;
@@ -17,4 +21,6 @@ BEGIN
 
     p1(s);
     ASSERT(LEN(s) = 0);
+
+    pChar(s1[i]);
 END m.

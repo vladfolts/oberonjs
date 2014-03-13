@@ -72,8 +72,11 @@ return {
          ["noResult()", "procedure returning no result cannot be used in an expression"]
          )
     ),
-"string expression": testWithGrammar(
-    grammar.expression,
+"string expression": testWithContext(
+    context(grammar.expression,
+            "CONST cs = \"abc\";"
+            + "PROCEDURE charByRef(VAR c: CHAR): CHAR; RETURN c END charByRef;"
+           ),
     pass("\"\"",
          "\"a\"",
          "\"abc\"",
@@ -83,7 +86,8 @@ return {
          "0X"),
     fail(["\"", "unexpected end of string"],
          ["\"abc", "unexpected end of string"],
-         ["FFX", "undeclared identifier: 'FFX'"]
+         ["FFX", "undeclared identifier: 'FFX'"],
+         ["charByRef(cs[1])", "read-only variable cannot be used as VAR parameter"]
         )
     ),
 "parentheses": testWithGrammar(
@@ -1118,7 +1122,11 @@ return {
          ["CONST cs = \"\"; VAR i: INTEGER; BEGIN ASSERT(cs[i] = \"a\"); END",
           "cannot index empty string"],
          ["CONST cs = \"a\"; BEGIN ASSERT(cs[1] = \"a\"); END",
-          "index out of bounds: maximum possible index is 0, got 1"]
+          "index out of bounds: maximum possible index is 0, got 1"],
+         ["CONST ci = -1; VAR a: ARRAY 10 OF INTEGER; BEGIN ASSERT(a[ci] = 0); END",
+          "index is negative: -1"],
+         ["CONST ci = -1; PROCEDURE p(a: ARRAY OF INTEGER); BEGIN ASSERT(a[ci] = 0); END p; END",
+          "index is negative: -1"]
         )
     ),
 "multi-dimensional array expression": testWithGrammar(

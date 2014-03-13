@@ -122,6 +122,27 @@ exports.suite = {
     pass("o.f()"),
     fail(["o.p()", "procedure returning no result cannot be used in an expression"])
     ),
+"cannot assign to method": testWithContext(
+    context(grammar.statement,
+              "TYPE T = RECORD PROCEDURE p() END;"
+            + "VAR o: T;"
+            + "PROCEDURE T.p(); END T.p;"
+            ),
+    pass(),
+    fail(["o.p := o.p", "cannot assign to method"],
+         ["o.p := NIL", "cannot assign to method"])
+    ),
+"method cannot be referenced": testWithContext(
+    context(grammar.statement,
+              "TYPE T = RECORD PROCEDURE p() END;"
+            + "Proc = PROCEDURE();"
+            + "VAR o: T;"
+            + "PROCEDURE T.p(); END T.p;"
+            + "PROCEDURE proc(p: Proc); END proc;"
+            ),
+    pass(),
+    fail(["proc(o.p)", "type mismatch for argument 1: 'method p' cannot be converted to 'Proc'"])
+    ),
 "method super call": testWithContext(
     context(grammar.declarationSequence,
               "TYPE T = RECORD PROCEDURE p(); PROCEDURE pAbstract(); PROCEDURE pAbstract2() END;"
@@ -203,5 +224,14 @@ exports.suite = {
             "VAR s: STRING;"),
     pass("LEN(s)"),
     fail()
+    ),
+"STRING indexing": testWithContext(
+    context(grammar.expression,
+            "VAR s: STRING;"
+            + "PROCEDURE pCharByVar(VAR c: CHAR): CHAR; RETURN c END pCharByVar;"),
+    pass("s[0]"),
+    fail(["s[-1]", "index is negative: -1"],
+         ["pCharByVar(s[0])", "string element cannot be used as VAR parameter"]
+         )
     )
 };
