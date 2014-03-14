@@ -55,7 +55,7 @@ BEGIN
     RETURN result
 END getChar;
 
-PROCEDURE peekStr*(self: Type; s: ARRAY OF CHAR): BOOLEAN;
+PROCEDURE peekStr*(self: Type; s: STRING): BOOLEAN;
 VAR
     result: BOOLEAN;
     i: INTEGER;

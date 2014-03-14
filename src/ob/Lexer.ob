@@ -195,7 +195,7 @@ PROCEDURE separator*(stream: Stream.Type; context: Context.Type): BOOLEAN;
     RETURN Stream.eof(stream) OR ~isLetter(Stream.peekChar(stream))
 END separator;
 
-PROCEDURE makeLiteral*(s: ARRAY OF CHAR): Literal;
+PROCEDURE makeLiteral*(s: STRING): Literal;
 VAR
     result: Literal;
 BEGIN

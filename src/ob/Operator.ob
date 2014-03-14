@@ -135,7 +135,7 @@ PROCEDURE binaryWithCodeEx(
     left, right: Code.PExpression; 
     rtl: OberonRtl.PType;
     op: BinaryOp;
-    code: ARRAY OF CHAR;
+    code: STRING;
     precedence: INTEGER;
     optResultType: Types.PType;
     optResultPrecedence: INTEGER
@@ -155,7 +155,7 @@ PROCEDURE binaryWithCode*(
     left, right: Code.PExpression; 
     rtl: OberonRtl.PType;
     op: BinaryOp;
-    code: ARRAY OF CHAR;
+    code: STRING;
     precedence: INTEGER
     ): Code.PExpression;
     RETURN binaryWithCodeEx(left, right, rtl, op, code, precedence, NIL, Precedence.none)
@@ -182,7 +182,7 @@ PROCEDURE binaryInt(
     left, right: Code.PExpression; 
     rtl: OberonRtl.PType;
     op: BinaryOp;
-    code: ARRAY OF CHAR;
+    code: STRING;
     precedence: INTEGER
     ): Code.PExpression;
     RETURN promoteToWideIfNeeded(binary(
@@ -443,7 +443,7 @@ PROCEDURE codeSetInclR(left, right: STRING; rtl: OberonRtl.PType): STRING;
     RETURN rtl.setInclR(left, right)
 END codeSetInclR;
 
-PROCEDURE strCmp(op: ARRAY OF CHAR; left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+PROCEDURE strCmp(op: STRING; left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
 BEGIN   
     RETURN Code.makeSimpleExpression(
             rtl.strCmp(castToStr(left, rtl), castToStr(right, rtl)) + op + "0",
