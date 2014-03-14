@@ -1,11 +1,11 @@
 MODULE JsMap;
-IMPORT JS, JsString, Object;
+IMPORT JS, Object;
 TYPE
     Type* = POINTER TO RECORD END;
-    ForEachProc = PROCEDURE(key: JsString.Type; value: Object.PType; VAR closure: Object.Type);
+    ForEachProc = PROCEDURE(key: STRING; value: Object.PType; VAR closure: Object.Type);
     
     Strings* = POINTER TO RECORD END;
-    ForEachStringProc = PROCEDURE(key: JsString.Type; value: JsString.Type; VAR closure: Object.Type);
+    ForEachStringProc = PROCEDURE(key: STRING; value: STRING; VAR closure: Object.Type);
 
 PROCEDURE make*(): Type;
 VAR
@@ -15,7 +15,7 @@ BEGIN
     RETURN result    
 END make;
 
-PROCEDURE has*(m: Type; s: JsString.Type): BOOLEAN;
+PROCEDURE has*(m: Type; s: STRING): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN
@@ -23,7 +23,7 @@ BEGIN
     RETURN result
 END has;
 
-PROCEDURE find*(m: Type; s: JsString.Type; VAR r: Object.PType): BOOLEAN;
+PROCEDURE find*(m: Type; s: STRING; VAR r: Object.PType): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN
@@ -31,12 +31,12 @@ BEGIN
     RETURN result
 END find;
 
-PROCEDURE put*(m: Type; s: JsString.Type; o: Object.PType);
+PROCEDURE put*(m: Type; s: STRING; o: Object.PType);
 BEGIN
     JS.do("m[s] = o");
 END put;
 
-PROCEDURE erase*(m: Type; s: JsString.Type);
+PROCEDURE erase*(m: Type; s: STRING);
 BEGIN
     JS.do("delete m[s]");
 END erase;

@@ -5,7 +5,8 @@ PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Cast.Operations;
 VAR
     result: INTEGER;
 BEGIN
-    IF ((from = EberonString.string) & (to IS Types.PArray) & (Types.arrayLength(to(Types.PArray)^) = Types.openArrayLength))
+    IF ((from = EberonString.string) 
+            & ((to IS Types.PString) OR (to IS Types.PArray) & (Types.arrayLength(to(Types.PArray)^) = Types.openArrayLength)))
         OR (Types.isString(from) & (to = EberonString.string)) THEN
         IF toVar THEN 
             result := Cast.errVarParameter;

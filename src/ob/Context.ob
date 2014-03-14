@@ -1,13 +1,13 @@
 MODULE Context;
-IMPORT JsString, OberonRtl, Object, ScopeBase;
+IMPORT OberonRtl, Object, ScopeBase;
 TYPE
     Type* = RECORD
         handleChar*:    PROCEDURE(c: CHAR);
-        handleLiteral*: PROCEDURE(s: JsString.Type): BOOLEAN;
-        handleString*:  PROCEDURE(s: JsString.Type);
-        handleIdent*:   PROCEDURE(s: JsString.Type);
+        handleLiteral*: PROCEDURE(s: STRING): BOOLEAN;
+        handleString*:  PROCEDURE(s: STRING);
+        handleIdent*:   PROCEDURE(s: STRING);
         isLexem*:       PROCEDURE(): BOOLEAN;
-        qualifyScope*:  PROCEDURE(scope: ScopeBase.PType): JsString.Type;
+        qualifyScope*:  PROCEDURE(scope: ScopeBase.PType): STRING;
         
         rtl*: OberonRtl.PType
     END;

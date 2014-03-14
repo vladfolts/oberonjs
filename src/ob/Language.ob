@@ -1,5 +1,5 @@
 MODULE Language;
-IMPORT Cast, JsString, T := Types;
+IMPORT Cast, T := Types;
 TYPE
     Types* = RECORD         
         PROCEDURE implicitCast*(from, to: T.PType; toVar: BOOLEAN; ops: Cast.Operations; VAR op: Cast.PCastOp): INTEGER

@@ -1,14 +1,14 @@
 MODULE Module;
-IMPORT Code, Context, Errors, JsArray, JsString, Procedure, Symbols, Types;
+IMPORT Code, Context, Errors, JsArray, LanguageContext, Procedure, Symbols, Types;
 TYPE
     Type* = RECORD(Types.Module)
-        PROCEDURE findSymbol(id: JsString.Type): Symbols.PFoundSymbol
+        PROCEDURE findSymbol(id: STRING): Symbols.PFoundSymbol
     END;
     PType* = POINTER TO Type;
 
     AnyType* = RECORD(Types.StorageType)
-        PROCEDURE callGenerator(cx: Context.PType; id: JsString.Type): Procedure.PCallGenerator;
-        PROCEDURE findSymbol(id: JsString.Type): Types.PType
+        PROCEDURE callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
+        PROCEDURE findSymbol(id: STRING): Types.PType
     END;
 
     AnyTypeProc* = RECORD(Types.DefinedProcedure)
@@ -17,24 +17,24 @@ TYPE
     JS = RECORD(Type)
     END;
 VAR
-    doProcId, varTypeId: JsString.Type;
+    doProcId, varTypeId: STRING;
     any: POINTER TO AnyType;
     anyProc: AnyTypeProc;
     doProcSymbol, varTypeSymbol: Symbols.PSymbol;
 
-PROCEDURE AnyType.description(): JsString.Type;
-    RETURN JsString.make("JS.var")
+PROCEDURE AnyType.description(): STRING;
+    RETURN "JS.var"
 END AnyType.description;
 
-PROCEDURE AnyType.initializer(cx: Context.Type): JsString.Type;
-    RETURN JsString.make("undefined")
+PROCEDURE AnyType.initializer(cx: Context.Type): STRING;
+    RETURN "undefined"
 END AnyType.initializer;
 
-PROCEDURE AnyType.callGenerator(cx: Context.PType; id: JsString.Type): Procedure.PCallGenerator;
+PROCEDURE AnyType.callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
     RETURN Procedure.makeProcCallGenerator(cx, id, anyProc)
 END AnyType.callGenerator;
 
-PROCEDURE AnyType.findSymbol(id: JsString.Type): Types.PType;
+PROCEDURE AnyType.findSymbol(id: STRING): Types.PType;
     RETURN any
 END AnyType.findSymbol;
 
@@ -46,13 +46,13 @@ PROCEDURE AnyTypeProc.result(): Types.PType;
     RETURN any
 END AnyTypeProc.result;
 
-PROCEDURE JS.findSymbol(id: JsString.Type): Symbols.PFoundSymbol;
+PROCEDURE JS.findSymbol(id: STRING): Symbols.PFoundSymbol;
 VAR
     result: Symbols.PSymbol;
 BEGIN
-    IF JsString.eq(id, doProcId) THEN
+    IF id = doProcId THEN
         result := doProcSymbol;
-    ELSIF JsString.eq(id, varTypeId) THEN
+    ELSIF id = varTypeId THEN
         result := varTypeSymbol;
     ELSE
         result := Symbols.makeSymbol(id, Types.makeProcedure(any));
@@ -71,38 +71,35 @@ TYPE
     Proc = RECORD(Procedure.Std)
     END;
 VAR
-    description: JsString.Type;
+    description: STRING;
     call: POINTER TO Call;
     proc: POINTER TO Proc;
 
-    PROCEDURE Call.make(args: JsArray.Type; cx: Context.Type): Code.PExpression;
+    PROCEDURE Call.make(args: JsArray.Type; cx: LanguageContext.Type): Code.PExpression;
     VAR
         arg: Code.PExpression;
         type: Types.PType;
     BEGIN
-        arg := Procedure.checkSingleArgument(args, SELF);
+        arg := Procedure.checkSingleArgument(args, SELF, cx.types);
         type := arg.type();
         IF ~(type IS Types.PString) THEN
-            Errors.raise(JsString.concat(JsString.concat(JsString.concat(
-                JsString.make("string is expected as an argument of "),
-                description),
-                JsString.make(", got ")),
-                type.description()));
+            Errors.raise("string is expected as an argument of "
+                       + description + ", got " + type.description());
         END;
         RETURN Code.makeSimpleExpression(Types.stringValue(type(Types.PString)^), NIL)
     END Call.make;
 
-    PROCEDURE Proc.description(): JsString.Type;
+    PROCEDURE Proc.description(): STRING;
         RETURN description
     END Proc.description;
 BEGIN
-    description := JsString.make("JS predefined procedure 'do'");
+    description := "JS predefined procedure 'do'";
     NEW(call);
     Procedure.initStdCall(call);
     Procedure.hasArgumentWithCustomType(call);
 
     NEW(proc);
-    Procedure.initStd(JsString.makeEmpty(), call, proc^);
+    Procedure.initStd("", call, proc^);
     RETURN Procedure.makeSymbol(proc)
 END makeDoProcSymbol;
 
@@ -111,13 +108,13 @@ VAR
     result: POINTER TO JS;
 BEGIN
     NEW(result);
-    Types.initModule(result^, JsString.make("this"));
+    Types.initModule(result^, "this");
     RETURN result
 END makeJS;
 
 BEGIN
-    doProcId := JsString.make("do$");
-    varTypeId := JsString.make("var$");
+    doProcId := "do$";
+    varTypeId := "var$";
     NEW(any);
     doProcSymbol := makeDoProcSymbol();
     varTypeSymbol := makeVarTypeSymbol();

@@ -491,7 +491,10 @@ exports.FormalParameters = ChainedContext.extend({
         this.__result = undefined;
 
         var parent = this.parent();
-        this.__type = new Procedure.make(parent.typeName());
+        var name = parent.typeName();
+        if (name === undefined)
+            name = "";
+        this.__type = new Procedure.make(name);
         parent.setType(this.__type);
     },
     handleMessage: function(msg){
@@ -551,7 +554,7 @@ exports.ProcDecl = ChainedContext.extend({
         if (this.__id.id() != id)
             throw new Errors.Error("mismatched procedure names: '" + this.__id.id()
                                  + "' at the begining and '" + id + "' at the end");
-        this.codeGenerator().closeScope();
+        this.codeGenerator().closeScope("");
         this.parent().popScope();
     },
     _prolog: function(){return "\nfunction " + this.__id.id() + "(";},
@@ -663,7 +666,7 @@ exports.PointerDecl = ChainedContext.extend({
 
         var parent = this.parent();
         var name = parent.isAnonymousDeclaration() 
-            ? undefined
+            ? ""
             : parent.genTypeName();
         var pointerType = Type.makePointer(name, typeId);
         parent.setType(pointerType);
@@ -1269,7 +1272,7 @@ exports.ElseIf = IfContextBase.extend({
     init: function ElseIfContext(context){
         ChainedContext.prototype.init.call(this, context);
         var gen = this.codeGenerator();
-        gen.closeScope();
+        gen.closeScope("");
         gen.write("else if (");
     }
 });
@@ -1278,7 +1281,7 @@ exports.Else = ChainedContext.extend({
     init: function ElseContext(context){
         ChainedContext.prototype.init.call(this, context);
         var gen = this.codeGenerator();
-        gen.closeScope();
+        gen.closeScope("");
         gen.write("else ");
         gen.openScope();
     }
@@ -1289,7 +1292,7 @@ exports.emitEndStatement = function(context){
 };
 
 exports.emitIfEnd = function(context){
-    context.codeGenerator().closeScope();
+    context.codeGenerator().closeScope("");
 };
 
 exports.Case = ChainedContext.extend({
@@ -1364,7 +1367,7 @@ exports.CaseLabel = ChainedContext.extend({
     },
     handleLabelType: function(type){this.parent().handleLabelType(type);},
     handleRange: function(from, to){this.parent().handleRange(from, to);},
-    endParse: function(){this.codeGenerator().closeScope();}
+    endParse: function(){this.codeGenerator().closeScope("");}
 });
 
 exports.CaseRange = ChainedContext.extend({
@@ -1423,7 +1426,7 @@ exports.While = ChainedContext.extend({
 exports.emitWhileEnd = function(context){
     var gen = context.codeGenerator();
     gen.closeScope(" else break;\n");
-    gen.closeScope();
+    gen.closeScope("");
 };
 
 exports.Repeat = ChainedContext.extend({
@@ -1510,7 +1513,7 @@ exports.For = ChainedContext.extend({
         gen.write(s);
         gen.openScope();
     },
-    endParse: function(){this.codeGenerator().closeScope();}
+    endParse: function(){this.codeGenerator().closeScope("");}
 });
 
 exports.emitForBegin = function(context){context.handleBegin();};
@@ -1745,7 +1748,7 @@ exports.RecordDecl = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         var parent = this.parent();
         var cons = parent.genTypeName();
-        var name = parent.isAnonymousDeclaration() ? undefined : cons;
+        var name = parent.isAnonymousDeclaration() ? "" : cons;
         this.__type = makeRecord(name, cons, context.currentScope());
         parent.setType(this.__type);
         parent.codeGenerator().write("var " + cons + " = ");
@@ -1787,7 +1790,7 @@ exports.RecordDecl = ChainedContext.extend({
         for(var f in ownFields)
             gen.write("this." + f + " = " + ownFields[f].initializer(this) + ";\n");
 
-        gen.closeScope();
+        gen.closeScope("");
         gen.closeScope(");\n");
     }
 });

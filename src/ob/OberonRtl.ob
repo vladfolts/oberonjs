@@ -1,13 +1,12 @@
 MODULE OberonRtl;
-IMPORT JsString;
 TYPE
     Type* = RECORD
-        copy*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
-        strCmp*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
-        assignArrayFromString*: PROCEDURE(s1, s2: JsString.Type): JsString.Type;
-        setInclL*: PROCEDURE(l, r: JsString.Type): JsString.Type;
-        setInclR*: PROCEDURE(l, r: JsString.Type): JsString.Type;
-        assertId*: PROCEDURE(): JsString.Type
+        copy*: PROCEDURE(s1, s2: STRING): STRING;
+        strCmp*: PROCEDURE(s1, s2: STRING): STRING;
+        assignArrayFromString*: PROCEDURE(s1, s2: STRING): STRING;
+        setInclL*: PROCEDURE(l, r: STRING): STRING;
+        setInclR*: PROCEDURE(l, r: STRING): STRING;
+        assertId*: PROCEDURE(): STRING
     END;
     PType* = POINTER TO Type;
 END OberonRtl.

@@ -1,5 +1,5 @@
 MODULE Cast;
-IMPORT Code, OberonRtl, JsArray, JsString, Object, Types;
+IMPORT Code, OberonRtl, JsArray, Object, String, Types;
 CONST
     errNo* = 0;
     err* = 1;
@@ -118,7 +118,7 @@ BEGIN
 END areTypesExactlyMatchImpl;
 
 PROCEDURE CastOpStrToChar.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
-    RETURN Code.makeSimpleExpression(JsString.fromInt(ORD(SELF.c)), Types.basic.ch)
+    RETURN Code.makeSimpleExpression(String.fromInt(ORD(SELF.c)), Types.basic.ch)
 END CastOpStrToChar.make;
 
 PROCEDURE makeCastOpStrToChar(c: CHAR): PCastOp;

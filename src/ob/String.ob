@@ -1,0 +1,44 @@
+MODULE String;
+IMPORT JS;
+
+PROCEDURE fromChar*(c: CHAR): STRING;
+VAR
+    result: STRING;
+BEGIN
+    JS.do("result = JS.String.fromCharCode(c)")
+    RETURN result
+END fromChar;
+
+PROCEDURE fromInt*(i: INTEGER): STRING;
+VAR 
+    result: STRING;
+BEGIN
+    JS.do("result = '' + i");
+    RETURN result
+END fromInt;
+
+PROCEDURE indexOf*(self: STRING; c: CHAR): INTEGER;
+VAR 
+    result: INTEGER;
+BEGIN
+    JS.do("result = self.indexOf(JS.String.fromCharCode(c))")
+    RETURN result
+END indexOf;
+
+PROCEDURE indexOfFrom*(self: STRING; c: CHAR; pos: INTEGER): INTEGER;
+VAR 
+    result: INTEGER;
+BEGIN
+    JS.do("result = self.indexOf(JS.String.fromCharCode(c), pos)")
+    RETURN result
+END indexOfFrom;
+
+PROCEDURE substr*(self: STRING; pos: INTEGER; len: INTEGER): STRING;
+VAR 
+    result: STRING;
+BEGIN
+    JS.do("result = self.substr(pos, len)")
+    RETURN result
+END substr;
+
+END String.

@@ -1,9 +1,9 @@
 MODULE Errors;
-IMPORT JS, JsString;
+IMPORT JS;
 
 TYPE Error* = RECORD END;
 
-PROCEDURE raise*(msg: JsString.Type);
+PROCEDURE raise*(msg: STRING);
 BEGIN
     JS.do("throw new Error(msg)")
 END raise;

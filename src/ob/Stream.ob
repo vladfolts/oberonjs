@@ -1,18 +1,18 @@
 MODULE Stream;
-IMPORT JsString;
-
+IMPORT
+    String;
 CONST
     kCR* = 0AX;
 
 TYPE
     Type* = POINTER TO RECORD
-        s: JsString.Type;
+        s: STRING;
         pos: INTEGER
     END;
 
     ReaderProc = PROCEDURE(c: CHAR): BOOLEAN;
 
-PROCEDURE make*(text: JsString.Type): Type;
+PROCEDURE make*(text: STRING): Type;
 VAR result: Type;
 BEGIN
     NEW(result);
@@ -21,7 +21,7 @@ BEGIN
 END make;
 
 PROCEDURE eof*(self: Type): BOOLEAN;
-    RETURN self.pos = JsString.len(self.s)
+    RETURN self.pos = LEN(self.s)
 END eof;
 
 PROCEDURE pos*(self: Type): INTEGER;
@@ -30,27 +30,27 @@ END pos;
 
 PROCEDURE setPos*(self: Type; pos: INTEGER);
 BEGIN
-    ASSERT(pos <= JsString.len(self.s));
+    ASSERT(pos <= LEN(self.s));
     self.pos := pos
 END setPos;
 
 PROCEDURE next*(self: Type; n: INTEGER);
 BEGIN
-    ASSERT(self.pos + n <= JsString.len(self.s));
+    ASSERT(self.pos + n <= LEN(self.s));
     self.pos := self.pos + n;
 END next;
 
 PROCEDURE peekChar*(self: Type): CHAR;
 BEGIN
     ASSERT(~eof(self));
-    RETURN JsString.at(self.s, self.pos)
+    RETURN self.s[self.pos]
 END peekChar;
 
 PROCEDURE getChar*(self: Type): CHAR;
 VAR result: CHAR;
 BEGIN
     ASSERT(~eof(self));
-    result := JsString.at(self.s, self.pos);
+    result := self.s[self.pos];
     INC(self.pos);
     RETURN result
 END getChar;
@@ -60,8 +60,8 @@ VAR
     result: BOOLEAN;
     i: INTEGER;
 BEGIN
-    IF LEN(s) <= JsString.len(self.s) - self.pos THEN
-        WHILE (i < LEN(s)) & (s[i] = JsString.at(self.s, self.pos + i)) DO
+    IF LEN(s) <= LEN(self.s) - self.pos THEN
+        WHILE (i < LEN(s)) & (s[i] = self.s[self.pos + i]) DO
             INC(i)
         END;
         result := i = LEN(s);
@@ -82,10 +82,10 @@ VAR
     line: INTEGER;
     lastPos: INTEGER;
 BEGIN
-    lastPos := JsString.indexOf(self.s, kCR);
+    lastPos := String.indexOf(self.s, kCR);
     WHILE (lastPos # -1) & (lastPos < self.pos) DO
         INC(line);
-        lastPos := JsString.indexOfFrom(self.s, kCR, lastPos + 1);
+        lastPos := String.indexOfFrom(self.s, kCR, lastPos + 1);
     END;
     RETURN line + 1
 END lineNumber;

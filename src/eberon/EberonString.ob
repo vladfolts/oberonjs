@@ -1,13 +1,13 @@
 MODULE EberonString;
-IMPORT JsString, Types;
+IMPORT Types;
 TYPE
     ElementVariable = RECORD(Types.Variable)
     END;
 VAR
     string*: POINTER TO Types.BasicType;
 
-PROCEDURE ElementVariable.idType(): JsString.Type;
-    RETURN JsString.make("string element")
+PROCEDURE ElementVariable.idType(): STRING;
+    RETURN "string element"
 END ElementVariable.idType;
 
 PROCEDURE ElementVariable.isReadOnly(): BOOLEAN;

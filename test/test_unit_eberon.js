@@ -199,6 +199,8 @@ exports.suite = {
     context(grammar.expression,
             "VAR s1, s2: STRING; a: ARRAY 10 OF CHAR;"),
     pass("s1 + s2",
+         "s1 + \"abc\"",
+         "\"abc\" + s1",
          "s1 = s2",
          "s1 # s2",
          "s1 < s2",

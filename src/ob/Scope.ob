@@ -3,7 +3,6 @@ IMPORT
     Errors, 
     JsArray, 
     JsMap, 
-    JsString, 
     Object, 
     Procedures := Procedure, 
     ScopeBase,
@@ -12,7 +11,7 @@ IMPORT
 TYPE
     Type = RECORD(ScopeBase.Type)
         PROCEDURE addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
-        PROCEDURE findSymbol(id: JsString.Type): Symbols.PSymbol;
+        PROCEDURE findSymbol(id: STRING): Symbols.PSymbol;
         PROCEDURE close();
 
         stdSymbols: JsMap.Type;
@@ -26,7 +25,7 @@ TYPE
     END;
 
     CompiledModule = RECORD(Types.Module)
-        PROCEDURE findSymbol(id: JsString.Type): Symbols.PFoundSymbol;
+        PROCEDURE findSymbol(id: STRING): Symbols.PFoundSymbol;
 
         exports: JsMap.Type
     END;
@@ -45,7 +44,7 @@ TYPE
 
 PROCEDURE addSymbolForType*(t: Types.PBasicType; result: JsMap.Type);
 VAR
-    name: JsString.Type;
+    name: STRING;
 BEGIN
     name := Types.typeName(t^);
     JsMap.put(result, name, Symbols.makeSymbol(name, Types.makeTypeId(t)));
@@ -85,7 +84,7 @@ BEGIN
     scope.finalizers := JsArray.make();
 END init;
 
-PROCEDURE makeCompiledModule(name: JsString.Type): PCompiledModule;
+PROCEDURE makeCompiledModule(name: STRING): PCompiledModule;
 VAR
     result: PCompiledModule;
 BEGIN
@@ -95,7 +94,7 @@ BEGIN
     RETURN result
 END makeCompiledModule;
 
-PROCEDURE makeModule*(name: JsString.Type; stdSymbols: JsMap.Type): PModule;
+PROCEDURE makeModule*(name: STRING; stdSymbols: JsMap.Type): PModule;
 VAR
     result: PModule;
 BEGIN
@@ -107,7 +106,7 @@ BEGIN
     RETURN result
 END makeModule;
 
-PROCEDURE addUnresolved*(s: Type; id: JsString.Type);
+PROCEDURE addUnresolved*(s: Type; id: STRING);
 BEGIN
     IF ~JsArray.containsString(s.unresolved, id) THEN
         JsArray.addString(s.unresolved, id);
@@ -116,7 +115,7 @@ END addUnresolved;
 
 PROCEDURE resolve*(s: Type; symbol: Symbols.PSymbol);
 VAR
-    id: JsString.Type;
+    id: STRING;
     i: INTEGER;
     info: Types.PId;
     type: Types.PType;
@@ -127,10 +126,10 @@ BEGIN
         info := symbol.info();
         type := info(Types.PTypeId).type();
         IF (type # NIL) & ~(type IS Types.PRecord) THEN
-            Errors.raise(JsString.concat(JsString.concat(
-                JsString.make("'"),
-                id),
-                JsString.make("' must be of RECORD type because it was used before in the declation of POINTER")));
+            Errors.raise(
+                "'" 
+                + id
+                + "' must be of RECORD type because it was used before in the declation of POINTER");
         END;
         JsArray.removeString(s.unresolved, i);
     END;
@@ -174,19 +173,16 @@ END close;
 
 PROCEDURE Type.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
 VAR
-    id: JsString.Type;
+    id: STRING;
 BEGIN
     id := s.id();
     IF SELF.findSymbol(id) # NIL THEN
-        Errors.raise(JsString.concat(JsString.concat(
-            JsString.make("'"),
-            id),
-            JsString.make("' already declared")));
+        Errors.raise("'" + id + "' already declared");
     END;
     JsMap.put(SELF.symbols, id, s);
 END Type.addSymbol;
 
-PROCEDURE Type.findSymbol(id: JsString.Type): Symbols.PSymbol;
+PROCEDURE Type.findSymbol(id: STRING): Symbols.PSymbol;
 VAR
     result: Object.PType;
     void: BOOLEAN;
@@ -203,12 +199,8 @@ VAR
 BEGIN
     IF exported THEN
         info := s.info();
-        Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
-            JsString.make("cannot export from within procedure: "),
-            info.idType()),
-            JsString.make(" '")),
-            s.id()),
-            JsString.make("'")));
+        Errors.raise("cannot export from within procedure: "
+                     + info.idType() + " '" + s.id() + "'");
     END;
     SUPER(s, exported);
 END Procedure.addSymbol;
@@ -222,7 +214,7 @@ BEGIN
     RETURN result
 END makeProcedure;
 
-PROCEDURE addExport(id: JsString.Type; value: Object.PType; VAR closure: Object.Type);
+PROCEDURE addExport(id: STRING; value: Object.PType; VAR closure: Object.Type);
 VAR
     symbol: Symbols.PSymbol;
     info: Types.PId;
@@ -240,7 +232,7 @@ BEGIN
     JsMap.forEach(exports, addExport, m);
 END defineExports;
 
-PROCEDURE CompiledModule.findSymbol(id: JsString.Type): Symbols.PFoundSymbol;
+PROCEDURE CompiledModule.findSymbol(id: STRING): Symbols.PFoundSymbol;
 VAR
     s: Object.PType;
     result: Symbols.PFoundSymbol;

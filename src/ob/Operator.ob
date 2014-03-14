@@ -3,27 +3,27 @@ IMPORT
     Cast, 
     Code, 
     Errors, 
-    JsString, 
     Language, 
     LanguageContext, 
     OberonRtl, 
-    Precedence := CodePrecedence, 
+    Precedence := CodePrecedence,
+    String,
     Types;
 TYPE
     BinaryProc = PROCEDURE(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
 
     BinaryOp = PROCEDURE(left, right: Code.PConst): Code.PConst;
-    CodePredicate = PROCEDURE(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
+    CodePredicate = PROCEDURE(left, right: STRING; rtl: OberonRtl.PType): STRING;
 
     UnaryOp = PROCEDURE(value: Code.PConst): Code.PConst;
 
     CodeMaker = RECORD
-        PROCEDURE make(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type
+        PROCEDURE make(left, right: STRING; rtl: OberonRtl.PType): STRING
     END;
     PCodeMaker = POINTER TO CodeMaker;
 
     SimpleCodeMaker = RECORD (CodeMaker)
-        code: JsString.Type
+        code: STRING
     END;
 
     IntCodeMaker = RECORD (SimpleCodeMaker)
@@ -53,7 +53,7 @@ PROCEDURE binary(
 VAR
     result: Code.PExpression;
     leftValue, rightValue, resultValue: Code.PConst;
-    leftCode, rightCode, resultCode: JsString.Type;
+    leftCode, rightCode, resultCode: STRING;
     resultType: Types.PType;
     resultPrecedence: INTEGER;
     rightExpDeref: Code.PExpression;
@@ -90,38 +90,35 @@ BEGIN
     RETURN Code.makeExpressionWithPrecedence(resultCode, resultType, NIL, resultValue, resultPrecedence)
 END binary;
 
-PROCEDURE SimpleCodeMaker.make(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
-    RETURN JsString.concat(JsString.concat(
-        left, 
-        SELF.code), 
-        right)
+PROCEDURE SimpleCodeMaker.make(left, right: STRING; rtl: OberonRtl.PType): STRING;
+    RETURN left + SELF.code + right
 END SimpleCodeMaker.make;
 
-PROCEDURE IntCodeMaker.make(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
+PROCEDURE IntCodeMaker.make(left, right: STRING; rtl: OberonRtl.PType): STRING;
 BEGIN
-    RETURN JsString.concat(SUPER(left, right, rtl), JsString.make(" | 0"))
+    RETURN SUPER(left, right, rtl) + " | 0"
 END IntCodeMaker.make;
 
-PROCEDURE PredCodeMaker.make(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
+PROCEDURE PredCodeMaker.make(left, right: STRING; rtl: OberonRtl.PType): STRING;
 BEGIN
     RETURN SELF.pred(left, right, rtl)
 END PredCodeMaker.make;
 
-PROCEDURE makeSimpleCodeMaker(code: ARRAY OF CHAR): PCodeMaker;
+PROCEDURE makeSimpleCodeMaker(code: STRING): PCodeMaker;
 VAR
     result: POINTER TO SimpleCodeMaker;
 BEGIN
     NEW(result);
-    result.code := JsString.make(code);
+    result.code := code;
     RETURN result
 END makeSimpleCodeMaker;
 
-PROCEDURE makeIntCodeMaker(code: ARRAY OF CHAR): PCodeMaker;
+PROCEDURE makeIntCodeMaker(code: STRING): PCodeMaker;
 VAR
     result: POINTER TO IntCodeMaker;
 BEGIN
     NEW(result);
-    result.code := JsString.make(code);
+    result.code := code;
     RETURN result
 END makeIntCodeMaker;
 
@@ -218,22 +215,21 @@ PROCEDURE binaryPred(
         )
 END binaryPred;
 
-PROCEDURE unary(e: Code.PExpression; op: UnaryOp; code: ARRAY OF CHAR): Code.PExpression;
+PROCEDURE unary(e: Code.PExpression; op: UnaryOp; code: STRING): Code.PExpression;
 VAR
     value: Code.PConst;
-    resultCode: JsString.Type;
+    resultCode: STRING;
 BEGIN
     value := e.constValue();
     IF value # NIL THEN
         value := op(value);
     END;
-    resultCode := JsString.concat(
-        JsString.make(code), 
-        Code.adjustPrecedence(Code.derefExpression(e), Precedence.unary));
+    resultCode := code 
+                + Code.adjustPrecedence(Code.derefExpression(e), Precedence.unary);
     RETURN Code.makeExpression(resultCode, e.type(), NIL, value)
 END unary;
 
-PROCEDURE castToStr(e: Code.PExpression; rtl: OberonRtl.PType): JsString.Type;
+PROCEDURE castToStr(e: Code.PExpression; rtl: OberonRtl.PType): STRING;
 VAR
     resultExpression: Code.PExpression;
     op: Cast.PCastOp;
@@ -438,48 +434,43 @@ PROCEDURE opRor(left, right: Code.PConst): Code.PConst;
                                  right^(Code.IntConst).value))
 END opRor;
 
-PROCEDURE codeSetInclL(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
+PROCEDURE codeSetInclL(left, right: STRING; rtl: OberonRtl.PType): STRING;
 BEGIN
     RETURN rtl.setInclL(left, right)
 END codeSetInclL;
 
-PROCEDURE codeSetInclR(left, right: JsString.Type; rtl: OberonRtl.PType): JsString.Type;
+PROCEDURE codeSetInclR(left, right: STRING; rtl: OberonRtl.PType): STRING;
     RETURN rtl.setInclR(left, right)
 END codeSetInclR;
 
 PROCEDURE strCmp(op: ARRAY OF CHAR; left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
 BEGIN   
     RETURN Code.makeSimpleExpression(
-            JsString.concat(JsString.concat(
-                rtl.strCmp(castToStr(left, rtl), castToStr(right, rtl)),
-                JsString.make(op)), 
-                JsString.make("0")),
+            rtl.strCmp(castToStr(left, rtl), castToStr(right, rtl)) + op + "0",
             Types.basic.bool)
 END strCmp;
 
-PROCEDURE assign*(left, right: Code.PExpression; cx: LanguageContext.Type): JsString.Type;
+PROCEDURE assign*(left, right: Code.PExpression; cx: LanguageContext.Type): STRING;
 VAR
     designator: Code.PDesignator;
     info: Types.PId;
-    leftCode, rightCode: JsString.Type;
+    leftCode, rightCode: STRING;
     leftType, rightType: Types.PType;
     isArray: BOOLEAN;
     castOperation: Cast.PCastOp;
     castExp: Code.PExpression;
     ignored: BOOLEAN;
-    result: JsString.Type;
+    result: STRING;
 
-    PROCEDURE assignArrayFromString(a: Types.Array; s: Types.String): JsString.Type;
+    PROCEDURE assignArrayFromString(a: Types.Array; s: Types.String): STRING;
     BEGIN
         IF Types.arrayLength(a) = Types.openArrayLength THEN
-            Errors.raise(JsString.concat(JsString.make("string cannot be assigned to open "),
-                                         a.description()));
+            Errors.raise("string cannot be assigned to open " + a.description());
         ELSIF Types.stringLen(s) > Types.arrayLength(a) THEN
-            Errors.raise(JsString.concat(JsString.concat(JsString.concat(
-                JsString.fromInt(Types.arrayLength(a)), 
-                JsString.make("-character ARRAY is too small for ")),
-                JsString.fromInt(Types.stringLen(s))), 
-                JsString.make("-character string")));
+            Errors.raise(String.fromInt(Types.arrayLength(a)) 
+                         + "-character ARRAY is too small for "
+                         + String.fromInt(Types.stringLen(s))
+                         + "-character string");
         END;
         RETURN cx.rtl.assignArrayFromString(leftCode, rightCode)
     END assignArrayFromString;
@@ -488,7 +479,7 @@ BEGIN
     info := designator.info();
     IF ~(info IS Types.PVariable) 
         OR info(Types.PVariable).isReadOnly() THEN
-        Errors.raise(JsString.concat(JsString.make("cannot assign to "), info.idType()));
+        Errors.raise("cannot assign to " + info.idType());
     END; 
 
     leftCode := left.lval();
@@ -504,23 +495,12 @@ BEGIN
     ELSE
         IF cx.types.implicitCast(rightType, leftType, FALSE, castOperations, castOperation)
             # Cast.errNo THEN;
-            Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
-                JsString.make("type mismatch: '"), 
-                leftCode),
-                JsString.make("' is '")),
-                leftType.description()),
-                JsString.make("' and cannot be assigned to '")),
-                rightType.description()),
-                JsString.make("' expression")));
+            Errors.raise("type mismatch: '" + leftCode + "' is '" + leftType.description()
+                         + "' and cannot be assigned to '" + rightType.description() + "' expression");
         END;
         IF isArray & (rightType IS Types.PArray) 
             & (Types.arrayLength(leftType(Types.PArray)^) = Types.openArrayLength) THEN
-            Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
-                JsString.make("'"),
-                leftCode),
-                JsString.make("' is open '")),
-                leftType.description()),
-                JsString.make("' and cannot be assigned")));
+            Errors.raise("'" + leftCode + "' is open '" + leftType.description() + "' and cannot be assigned");
         END;
         IF isArray OR (rightType IS Types.PRecord) THEN
             result := cx.rtl.copy(rightCode, leftCode);
@@ -532,34 +512,28 @@ BEGIN
             END;
             rightCode := castExp.code();
             IF info IS Types.PVariableRef THEN
-                rightCode := JsString.concat(JsString.concat(
-                    JsString.make(".set("), 
-                    rightCode), 
-                    JsString.make(")"));
+                rightCode := ".set(" + rightCode + ")";
             ELSE
-                rightCode := JsString.concat(JsString.make(" = "), rightCode);
+                rightCode := " = " + rightCode;
             END;
-            result := JsString.concat(leftCode, rightCode);
+            result := leftCode + rightCode;
         END;
     END;
     RETURN result
 END assign;
     
-PROCEDURE inplace(left, right: Code.PExpression; cx: LanguageContext.Type; code: ARRAY OF CHAR; altOp: BinaryProc): JsString.Type;
+PROCEDURE inplace(left, right: Code.PExpression; cx: LanguageContext.Type; code: STRING; altOp: BinaryProc): STRING;
 VAR
     designator: Code.PDesignator;
     rightExp: Code.PExpression;
-    result: JsString.Type;
+    result: STRING;
 BEGIN
     designator := left.designator();
     IF designator.info() IS Types.PVariableRef THEN
         result := assign(left, altOp(left, right, cx.rtl), cx);
     ELSE
         rightExp := Code.derefExpression(right);
-        result := JsString.concat(JsString.concat(
-            left.code(), 
-            JsString.make(code)), 
-            rightExp.code());
+        result := left.code() + code + rightExp.code();
     END;
     RETURN result
 END inplace;
@@ -757,11 +731,11 @@ PROCEDURE ror*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpre
     RETURN binaryWithCode(left, right, rtl, opRor, " >>> ", Precedence.shift)
 END ror;
 
-PROCEDURE mulInplace*(left, right: Code.PExpression; cx: LanguageContext.Type): JsString.Type;
+PROCEDURE mulInplace*(left, right: Code.PExpression; cx: LanguageContext.Type): STRING;
     RETURN inplace(left, right, cx, " *= ", mulReal)
 END mulInplace;
 
-PROCEDURE divInplace*(left, right: Code.PExpression; cx: LanguageContext.Type): JsString.Type;
+PROCEDURE divInplace*(left, right: Code.PExpression; cx: LanguageContext.Type): STRING;
     RETURN inplace(left, right, cx, " /= ", divReal)
 END divInplace;
 
@@ -770,12 +744,8 @@ VAR
     derefExp: Code.PExpression;
 BEGIN
     derefExp := Code.derefExpression(e);
-    RETURN Code.makeSimpleExpression(
-            JsString.concat(JsString.concat(
-                JsString.make("Math.pow(2, "),
-                derefExp.code()),
-                JsString.make(")")),
-            Types.basic.real)
+    RETURN Code.makeSimpleExpression("Math.pow(2, " + derefExp.code() + ")",
+                                     Types.basic.real)
 END pow2;
 
 PROCEDURE log2*(e: Code.PExpression): Code.PExpression;
@@ -784,10 +754,7 @@ VAR
 BEGIN
     derefExp := Code.derefExpression(e);
     RETURN Code.makeExpressionWithPrecedence(
-            JsString.concat(JsString.concat(
-                JsString.make("(Math.log("),
-                derefExp.code()),
-                JsString.make(") / Math.LN2) | 0")),
+            "(Math.log(" + derefExp.code() + ") / Math.LN2) | 0",
             Types.basic.integer,
             NIL,
             NIL,
@@ -802,7 +769,7 @@ END opCastToUint8;
 PROCEDURE CastToUint8.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
     RETURN binaryWithCode(
         e, 
-        Code.makeExpression(JsString.make("0xFF"), 
+        Code.makeExpression("0xFF", 
                             Types.basic.integer, 
                             NIL, 
                             Code.makeIntConst(0FFH)), 
@@ -813,7 +780,7 @@ PROCEDURE CastToUint8.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExp
 END CastToUint8.make;
 
 BEGIN
-    openArrayChar := Types.makeArray(NIL, NIL, Types.basic.ch, Types.openArrayLength);
+    openArrayChar := Types.makeArray("", "", Types.basic.ch, Types.openArrayLength);
 
     NEW(castToUint8);
     castOperations.castToUint8 := castToUint8;

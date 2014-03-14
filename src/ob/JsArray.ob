@@ -1,5 +1,5 @@
 MODULE JsArray;
-IMPORT JS, Object, JsString;
+IMPORT JS, Object;
 TYPE
     Type* = POINTER TO RECORD END;
     Strings* = POINTER TO RECORD END;
@@ -25,7 +25,7 @@ BEGIN
     JS.do("a.push(o)");
 END add;
 
-PROCEDURE addString*(a: Strings; o: JsString.Type);
+PROCEDURE addString*(a: Strings; o: STRING);
 BEGIN
     JS.do("a.push(o)");
 END addString;
@@ -43,15 +43,15 @@ BEGIN
     RETURN result
 END at;
 
-PROCEDURE stringsAt*(a: Strings; i: INTEGER): JsString.Type;
+PROCEDURE stringsAt*(a: Strings; i: INTEGER): STRING;
 VAR
-    result: JsString.Type;
+    result: STRING;
 BEGIN
     JS.do("result = a[i]");
     RETURN result
 END stringsAt;
 
-PROCEDURE stringsIndexOf*(a: Strings; x: JsString.Type): INTEGER;
+PROCEDURE stringsIndexOf*(a: Strings; x: STRING): INTEGER;
 VAR
     result: INTEGER;
 BEGIN
@@ -67,7 +67,7 @@ BEGIN
     RETURN result
 END contains;
 
-PROCEDURE containsString*(a: Strings; x: JsString.Type): BOOLEAN;
+PROCEDURE containsString*(a: Strings; x: STRING): BOOLEAN;
     RETURN stringsIndexOf(a, x) # -1
 END containsString;
 

@@ -1,9 +1,9 @@
 MODULE EberonOperator;
-IMPORT Code, CodePrecedence, JsString, OberonRtl, Operator;
+IMPORT Code, CodePrecedence, OberonRtl, Operator;
 
 PROCEDURE opAddStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeStringConst(JsString.concat(left^(Code.StringConst).value, 
-                                                right^(Code.StringConst).value))
+    RETURN Code.makeStringConst(left^(Code.StringConst).value
+                              + right^(Code.StringConst).value)
 END opAddStr;
 
 PROCEDURE opEqualStr(left, right: Code.PConst): Code.PConst;
@@ -17,19 +17,23 @@ PROCEDURE opNotEqualStr(left, right: Code.PConst): Code.PConst;
 END opNotEqualStr;
 
 PROCEDURE opLessStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(0) (*to fix*)
+    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
+                               < right^(Code.StringConst).value))
 END opLessStr;
 
 PROCEDURE opGreaterStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(0) (*to fix*)
+    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
+                               > right^(Code.StringConst).value))
 END opGreaterStr;
 
 PROCEDURE opLessEqualStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(0) (*to fix*)
+    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
+                              <= right^(Code.StringConst).value))
 END opLessEqualStr;
 
 PROCEDURE opGraterEqualStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(0) (*to fix*)
+    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
+                              >= right^(Code.StringConst).value))
 END opGraterEqualStr;
 
 PROCEDURE addStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;

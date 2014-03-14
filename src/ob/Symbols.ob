@@ -1,8 +1,8 @@
 MODULE Symbols;
-IMPORT JsString, Object, ScopeBase, Types;
+IMPORT Object, ScopeBase, Types;
 TYPE
     Symbol* = RECORD(Object.Type)
-        PROCEDURE id*(): JsString.Type;
+        PROCEDURE id*(): STRING;
         PROCEDURE info*(): Types.PId;
         PROCEDURE isModule*(): BOOLEAN;
         PROCEDURE isVariable*(): BOOLEAN;
@@ -10,7 +10,7 @@ TYPE
         PROCEDURE isType*(): BOOLEAN;
         PROCEDURE isProcedure*(): BOOLEAN;
 
-        mId: JsString.Type;
+        mId: STRING;
         mInfo: Types.PId
     END;
 
@@ -26,7 +26,7 @@ TYPE
 
     PFoundSymbol* = POINTER TO FoundSymbol;
 
-PROCEDURE Symbol.id(): JsString.Type;
+PROCEDURE Symbol.id(): STRING;
     RETURN SELF.mId
 END Symbol.id;
 
@@ -62,7 +62,7 @@ PROCEDURE FoundSymbol.symbol(): PSymbol;
     RETURN SELF.mSymbol
 END FoundSymbol.symbol;
 
-PROCEDURE makeSymbol*(id: JsString.Type; info: Types.PId): PSymbol;
+PROCEDURE makeSymbol*(id: STRING; info: Types.PId): PSymbol;
 VAR
     result: PSymbol;
 BEGIN
