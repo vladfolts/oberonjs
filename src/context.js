@@ -1535,7 +1535,7 @@ exports.Assignment = ChainedContext.extend({
         this.__left = Code.makeExpression(d.code(), d.type(), d);
     },
     handleExpression: function(e){
-        this.parent().codeGenerator().write(op.assign(this.__left, e, this.language().rtl));
+        this.parent().codeGenerator().write(op.assign(this.__left, e, this.language()));
     }
 });
 
@@ -1659,8 +1659,8 @@ var ProcedureCall = ChainedContext.extend({
         var l = this.language();
         this.__procCall = this.__type.callGenerator(
               { 
-                types: function(){return l.types;}
-              , rtl: function(){return l.rtl;}
+                types: l.types
+              , rtl: l.rtl
               , qualifyScope: this.qualifyScope.bind(this)
               }
             , d.code());

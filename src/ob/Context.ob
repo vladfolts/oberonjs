@@ -9,7 +9,7 @@ TYPE
         isLexem*:       PROCEDURE(): BOOLEAN;
         qualifyScope*:  PROCEDURE(scope: ScopeBase.PType): JsString.Type;
         
-        PROCEDURE rtl*(): OberonRtl.PType
+        rtl*: OberonRtl.PType
     END;
     PType* = POINTER TO Type;
 

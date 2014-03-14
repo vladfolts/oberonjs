@@ -399,7 +399,7 @@ var AddOperator = Context.AddOperator.extend({
         Context.AddOperator.prototype.init.call(this, context);
     },
     _matchPlusOperator: function(type){
-        if (type == EberonString.string())
+        if (type == EberonString.string() || type instanceof Type.String)
             return eOp.addStr;
         return Context.AddOperator.prototype._matchPlusOperator.call(this, type);
     },

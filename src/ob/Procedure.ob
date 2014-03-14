@@ -229,7 +229,7 @@ BEGIN
         SELF.code := JsString.concat(SELF.code, JsString.make(", "));
     END;
     IF cast # NIL THEN
-        e := cast.make(SELF.cx.rtl(), actual);
+        e := cast.make(SELF.cx.rtl, actual);
     ELSE
         e := actual;
     END;
@@ -265,7 +265,7 @@ VAR
     BEGIN
         expectedArgs := SELF.args;
         IF expectedArgs # NIL THEN
-            processArguments(args, expectedArgs, SELF.argumentsCode, cx.types());
+            processArguments(args, expectedArgs, SELF.argumentsCode, cx.types);
         ELSE
             FOR i := 0 TO JsArray.len(args) - 1 DO
                 a := JsArray.at(args, i);
@@ -390,7 +390,7 @@ PROCEDURE makeNew(): Symbols.PSymbol;
         argType: Types.PType;
         baseType: Types.PRecord;
     BEGIN
-        arg := checkSingleArgument(args, SELF, cx.types());
+        arg := checkSingleArgument(args, SELF, cx.types);
         argType := arg.type();
         IF ~(argType IS Types.PPointer) THEN
             Errors.raise(JsString.concat(JsString.concat(
@@ -425,7 +425,7 @@ VAR
     arg: Code.PExpression;
     argType: Types.PType;
 BEGIN
-    arg := checkSingleArgument(args, SELF, cx.types());
+    arg := checkSingleArgument(args, SELF, cx.types);
     argType := arg.type();
     IF ~SELF.check(argType) THEN
         Errors.raise(JsString.concat(JsString.concat(
@@ -462,7 +462,7 @@ PROCEDURE makeOdd(): Symbols.PSymbol;
         code: JsString.Type;
         constValue: Code.PConst;
     BEGIN
-        arg := checkSingleArgument(args, SELF, cx.types());
+        arg := checkSingleArgument(args, SELF, cx.types);
         code := Code.adjustPrecedence(arg, Precedence.bitAnd);
         
         constValue := arg.constValue();
@@ -495,13 +495,11 @@ PROCEDURE makeAssert(): Symbols.PSymbol;
     PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.Type): Code.PExpression;
     VAR
         arg: Code.PExpression;
-        rtl: OberonRtl.PType;
     BEGIN
-        arg := checkSingleArgument(args, SELF, cx.types());
-        rtl := cx.rtl();
+        arg := checkSingleArgument(args, SELF, cx.types);
         RETURN Code.makeSimpleExpression(
             JsString.concat(JsString.concat(JsString.concat(
-                rtl.assertId(), 
+                cx.rtl.assertId(), 
                 JsString.make("(")), 
                 arg.code()), 
                 JsString.make(")")),
@@ -532,7 +530,7 @@ PROCEDURE setBitImpl(name: ARRAY OF CHAR; bitOp: BinaryOpStr): Symbols.PSymbol;
         valueCode: JsString.Type;
         comment: JsString.Type;
     BEGIN
-        checkArguments(args, SELF.args, cx.types());
+        checkArguments(args, SELF.args, cx.types);
         ASSERT(JsArray.len(args) = 2);
         x := nthArgument(args, 0);
         y := nthArgument(args, 1);
@@ -545,7 +543,7 @@ PROCEDURE setBitImpl(name: ARRAY OF CHAR; bitOp: BinaryOpStr): Symbols.PSymbol;
                     NIL,
                     Code.makeIntConst(1)), 
                 y,
-                cx.rtl());
+                cx.rtl);
             valueCode := valueCodeExp.code();
         ELSE
             yValue := value^(Code.IntConst).value;
@@ -622,7 +620,7 @@ PROCEDURE incImpl(name: ARRAY OF CHAR; unary: ARRAY OF CHAR; incOp: BinaryOpStr)
         valueCode: JsString.Type;
     BEGIN
         checkVariableArgumentsCount(1, 2, args);
-        checkArgumentsType(args, SELF.args, NIL, cx.types());
+        checkArgumentsType(args, SELF.args, NIL, cx.types);
         x := nthArgument(args, 0);
         IF JsArray.len(args) = 1 THEN
             code := JsString.concat(SELF.unary, x.code());
@@ -688,7 +686,7 @@ PROCEDURE makeAbs(): Symbols.PSymbol;
         arg: Code.PExpression;
         argType: Types.PType;
     BEGIN
-        arg := checkSingleArgument(args, SELF, cx.types());
+        arg := checkSingleArgument(args, SELF, cx.types);
         argType := arg.type();
         IF ~JsArray.contains(Types.numeric, argType) THEN
             Errors.raise(JsString.concat(JsString.concat(
@@ -721,7 +719,7 @@ PROCEDURE makeFloor(): Symbols.PSymbol;
     VAR
         arg: Code.PExpression;
     BEGIN
-        arg := checkSingleArgument(args, SELF, cx.types());
+        arg := checkSingleArgument(args, SELF, cx.types);
         RETURN Code.makeSimpleExpression(
             JsString.concat(JsString.concat(
                 JsString.make("Math.floor("), 
@@ -748,7 +746,7 @@ PROCEDURE makeFlt(): Symbols.PSymbol;
         arg: Code.PExpression;
         value: Code.PConst;
     BEGIN
-        arg := checkSingleArgument(args, SELF, cx.types());
+        arg := checkSingleArgument(args, SELF, cx.types);
         value := arg.constValue();
         IF value # NIL THEN
             value := Code.makeRealConst(FLT(value^(Code.IntConst).value));
@@ -780,11 +778,11 @@ PROCEDURE bitShiftImpl(name: ARRAY OF CHAR; op: BinaryOp): Symbols.PSymbol;
     VAR
         x, y: Code.PExpression;
     BEGIN
-        checkArguments(args, SELF.args, cx.types());
+        checkArguments(args, SELF.args, cx.types);
         ASSERT(JsArray.len(args) = 2);
         x := nthArgument(args, 0);
         y := nthArgument(args, 1);
-        RETURN SELF.op(x, y, cx.rtl())
+        RETURN SELF.op(x, y, cx.rtl)
     END CallImpl.make;
 BEGIN
     NEW(call);
@@ -812,7 +810,7 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
         ch: CHAR;
         result: Code.PExpression;
     BEGIN
-        arg := checkSingleArgument(args, SELF, cx.types());
+        arg := checkSingleArgument(args, SELF, cx.types);
         argType := arg.type();
         IF (argType = Types.basic.ch) OR (argType = Types.basic.set) THEN
             value := arg.constValue();
@@ -863,7 +861,7 @@ PROCEDURE makeChr(): Symbols.PSymbol;
     VAR
         arg: Code.PExpression;
     BEGIN
-        arg := checkSingleArgument(args, SELF, cx.types());
+        arg := checkSingleArgument(args, SELF, cx.types);
         RETURN Code.makeSimpleExpression(arg.code(), Types.basic.ch)
     END CallImpl.make;
 BEGIN
@@ -884,11 +882,11 @@ PROCEDURE makePack(): Symbols.PSymbol;
     VAR
         x, y: Code.PExpression;
     BEGIN
-        checkArguments(args, SELF.args, cx.types());
+        checkArguments(args, SELF.args, cx.types);
         x := nthArgument(args, 0);
         y := nthArgument(args, 1);
         RETURN Code.makeSimpleExpression(
-            Operator.mulInplace(x, Operator.pow2(y), cx.rtl()),
+            Operator.mulInplace(x, Operator.pow2(y), cx),
             NIL)
     END CallImpl.make;
 BEGIN
@@ -910,14 +908,14 @@ PROCEDURE makeUnpk(): Symbols.PSymbol;
     VAR
         x, y: Code.PExpression;
     BEGIN
-        checkArguments(args, SELF.args, cx.types());
+        checkArguments(args, SELF.args, cx.types);
         x := nthArgument(args, 0);
         y := nthArgument(args, 1);
         RETURN Code.makeSimpleExpression(
             JsString.concat(JsString.concat(
-                Operator.assign(y, Operator.log2(x), cx.rtl()),
+                Operator.assign(y, Operator.log2(x), cx),
                 JsString.make("; ")),
-                Operator.divInplace(x, Operator.pow2(y), cx.rtl())),
+                Operator.divInplace(x, Operator.pow2(y), cx)),
             NIL)
     END CallImpl.make;
 BEGIN

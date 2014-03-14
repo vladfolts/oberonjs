@@ -2,18 +2,18 @@ MODULE EberonOperator;
 IMPORT Code, CodePrecedence, JsString, OberonRtl, Operator;
 
 PROCEDURE opAddStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeStrConst(JsString.concat(left^(Code.StrConst).value, 
-                                             right^(Code.StrConst).value))
+    RETURN Code.makeStringConst(JsString.concat(left^(Code.StringConst).value, 
+                                                right^(Code.StringConst).value))
 END opAddStr;
 
 PROCEDURE opEqualStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.StrConst).value
-                                 = right^(Code.StrConst).value))
+    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
+                                 = right^(Code.StringConst).value))
 END opEqualStr;
 
 PROCEDURE opNotEqualStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.StrConst).value
-                                 # right^(Code.StrConst).value))
+    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
+                                 # right^(Code.StringConst).value))
 END opNotEqualStr;
 
 PROCEDURE opLessStr(left, right: Code.PConst): Code.PConst;

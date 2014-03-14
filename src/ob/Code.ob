@@ -61,12 +61,8 @@ TYPE
         value*: SET
     END;
 
-    StrConst* = RECORD(Const)
+    StringConst* = RECORD (Const)
         value*: JsString.Type
-    END;
-
-    StringConst = RECORD (Const)
-        value: JsString.Type
     END;
 
     Expression* = RECORD(Object.Type)
@@ -236,15 +232,6 @@ BEGIN
     result.value := s;
     RETURN result
 END makeSetConst;
-
-PROCEDURE makeStrConst*(s: JsString.Type): PConst;
-VAR
-    result: POINTER TO StrConst;
-BEGIN
-    NEW(result);
-    result.value := s;
-    RETURN result
-END makeStrConst;
 
 PROCEDURE makeStringConst*(s: JsString.Type): PConst;
 VAR

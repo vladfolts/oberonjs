@@ -3,7 +3,7 @@ IMPORT Context, Language;
 
 TYPE
     Type* = RECORD(Context.Type)
-        PROCEDURE types*(): Language.PTypes
+        types*: Language.PTypes
     END;
     PType* = POINTER TO Type;
 

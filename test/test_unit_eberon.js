@@ -211,6 +211,39 @@ exports.suite = {
          ["a = s1", "type mismatch: expected 'ARRAY 10 OF CHAR', got 'STRING'"]
         )
     ),
+"STRING literal expression": testWithContext(
+    context(grammar.expression,
+            "CONST cs = \"abc\";"
+            + "PROCEDURE pString(s: STRING): STRING; RETURN s END pString;"
+            + "PROCEDURE pStringByRef(VAR s: STRING): STRING; RETURN s END pStringByRef;"
+            ),
+    pass("\"abc\" + \"cde\"",
+         "cs + cs",
+         "cs + \"abc\"",
+         "cs = \"abc\"",
+         "cs # \"abc\"",
+         "cs < \"abc\"",
+         "cs > \"abc\"",
+         "cs <= \"abc\"",
+         "cs >= \"abc\"",
+         "pString(cs)",
+         "pString(\"abc\")"
+         ),
+    fail(["pStringByRef(cs)", "type mismatch for argument 1: cannot pass 'multi-character string' as VAR parameter of type 'STRING'"],
+         ["pStringByRef(\"abc\")", "type mismatch for argument 1: cannot pass 'multi-character string' as VAR parameter of type 'STRING'"]
+         )
+    ),
+"STRING assignment": testWithContext(
+    context(grammar.statement,
+            "VAR s1, s2: STRING; a: ARRAY 10 OF CHAR;"),
+    pass("s1 := s2",
+         "s1 := \"abc\"",
+         "s1 := 22X",
+         "s1 := a"
+         ),
+    fail(["a := s1", "type mismatch: 'a' is 'ARRAY 10 OF CHAR' and cannot be assigned to 'STRING' expression"]
+        )
+    ),
 "STRING can be implicitely converted to open ARRAY OF CHAR": testWithContext(
     context(grammar.expression,
             "VAR s: STRING;"

@@ -1,4 +1,7 @@
 MODULE m;
+CONST
+    cs1 = "abc" + "cde";
+    cs2 = 22X + 22X;
 VAR 
     s, s1, s2: STRING;
     b: BOOLEAN;
@@ -9,6 +12,14 @@ END p1;
 
 PROCEDURE pChar(c: CHAR);
 END pChar;
+
+PROCEDURE pString(s: STRING);
+BEGIN
+    s := 22X;
+END pString;
+
+PROCEDURE pStringByRef(VAR s: STRING);
+END pStringByRef;
 
 BEGIN
     s := s1 + s2;
@@ -23,4 +34,7 @@ BEGIN
     ASSERT(LEN(s) = 0);
 
     pChar(s1[i]);
+    pString(s1);
+    pString("abc");
+    pStringByRef(s1);
 END m.

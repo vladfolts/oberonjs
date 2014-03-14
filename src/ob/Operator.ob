@@ -1,5 +1,14 @@
 MODULE Operator;
-IMPORT Cast, Code, Errors, JsString, OberonRtl, Precedence := CodePrecedence, Types;
+IMPORT 
+    Cast, 
+    Code, 
+    Errors, 
+    JsString, 
+    Language, 
+    LanguageContext, 
+    OberonRtl, 
+    Precedence := CodePrecedence, 
+    Types;
 TYPE
     BinaryProc = PROCEDURE(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
 
@@ -448,7 +457,7 @@ BEGIN
             Types.basic.bool)
 END strCmp;
 
-PROCEDURE assign*(left, right: Code.PExpression; rtl: OberonRtl.PType): JsString.Type;
+PROCEDURE assign*(left, right: Code.PExpression; cx: LanguageContext.Type): JsString.Type;
 VAR
     designator: Code.PDesignator;
     info: Types.PId;
@@ -472,7 +481,7 @@ VAR
                 JsString.fromInt(Types.stringLen(s))), 
                 JsString.make("-character string")));
         END;
-        RETURN rtl.assignArrayFromString(leftCode, rightCode)
+        RETURN cx.rtl.assignArrayFromString(leftCode, rightCode)
     END assignArrayFromString;
 BEGIN
     designator := left.designator();
@@ -493,7 +502,7 @@ BEGIN
         & (rightType IS Types.PString) THEN
         result := assignArrayFromString(leftType(Types.PArray)^, rightType(Types.PString)^);
     ELSE
-        IF Cast.implicit(rightType, leftType, FALSE, castOperations, castOperation)
+        IF cx.types.implicitCast(rightType, leftType, FALSE, castOperations, castOperation)
             # Cast.errNo THEN;
             Errors.raise(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(JsString.concat(
                 JsString.make("type mismatch: '"), 
@@ -514,10 +523,10 @@ BEGIN
                 JsString.make("' and cannot be assigned")));
         END;
         IF isArray OR (rightType IS Types.PRecord) THEN
-            result := rtl.copy(rightCode, leftCode);
+            result := cx.rtl.copy(rightCode, leftCode);
         ELSE
             IF castOperation # NIL THEN
-                castExp := castOperation.make(rtl, Code.derefExpression(right));
+                castExp := castOperation.make(cx.rtl, Code.derefExpression(right));
             ELSE
                 castExp := Code.derefExpression(right);
             END;
@@ -536,7 +545,7 @@ BEGIN
     RETURN result
 END assign;
     
-PROCEDURE inplace(left, right: Code.PExpression; rtl: OberonRtl.PType; code: ARRAY OF CHAR; altOp: BinaryProc): JsString.Type;
+PROCEDURE inplace(left, right: Code.PExpression; cx: LanguageContext.Type; code: ARRAY OF CHAR; altOp: BinaryProc): JsString.Type;
 VAR
     designator: Code.PDesignator;
     rightExp: Code.PExpression;
@@ -544,7 +553,7 @@ VAR
 BEGIN
     designator := left.designator();
     IF designator.info() IS Types.PVariableRef THEN
-        result := assign(left, altOp(left, right, rtl), rtl);
+        result := assign(left, altOp(left, right, cx.rtl), cx);
     ELSE
         rightExp := Code.derefExpression(right);
         result := JsString.concat(JsString.concat(
@@ -748,12 +757,12 @@ PROCEDURE ror*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpre
     RETURN binaryWithCode(left, right, rtl, opRor, " >>> ", Precedence.shift)
 END ror;
 
-PROCEDURE mulInplace*(left, right: Code.PExpression; rtl: OberonRtl.PType): JsString.Type;
-    RETURN inplace(left, right, rtl, " *= ", mulReal)
+PROCEDURE mulInplace*(left, right: Code.PExpression; cx: LanguageContext.Type): JsString.Type;
+    RETURN inplace(left, right, cx, " *= ", mulReal)
 END mulInplace;
 
-PROCEDURE divInplace*(left, right: Code.PExpression; rtl: OberonRtl.PType): JsString.Type;
-    RETURN inplace(left, right, rtl, " /= ", divReal)
+PROCEDURE divInplace*(left, right: Code.PExpression; cx: LanguageContext.Type): JsString.Type;
+    RETURN inplace(left, right, cx, " /= ", divReal)
 END divInplace;
 
 PROCEDURE pow2*(e: Code.PExpression): Code.PExpression;
