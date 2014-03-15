@@ -61,7 +61,7 @@ Full example:
 
 2. Variables default values
 ---------------------------
-All variables have zero as a default value (before first assignment). For pointer/procedure types it is NIL. For sets - empty set.
+All variables have zero as a default value (before first assignment). For pointer/procedure types it is NIL. For sets - empty set. For STRING - empty string.
 
     MODULE m;
     VAR r: RECORD field: INTEGER END;

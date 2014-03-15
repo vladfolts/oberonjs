@@ -4,4 +4,5 @@ Eberon extends original Oberon so any valid oberon program is also a valid ebero
 
 ### Extensions
 * [Methods](/vladfolts/oberonjs/wiki/eberon-methods)
+* [Strings](/vladfolts/oberonjs/wiki/eberon-strings)
 * Non-scalar variables (arrays and records) can be exported (forbidden in oberon for some unknown reason).
