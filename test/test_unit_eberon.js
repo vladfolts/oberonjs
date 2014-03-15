@@ -240,19 +240,23 @@ exports.suite = {
             "VAR s1, s2: STRING; a: ARRAY 10 OF CHAR;"),
     pass("s1 := s2",
          "s1 := \"abc\"",
-         "s1 := 22X",
-         "s1 := a"
+         "s1 := 22X"
          ),
-    fail(["a := s1", "type mismatch: 'a' is 'ARRAY 10 OF CHAR' and cannot be assigned to 'STRING' expression"]
+    fail(["a := s1", "type mismatch: 'a' is 'ARRAY 10 OF CHAR' and cannot be assigned to 'STRING' expression"],
+         ["s1 := a", "type mismatch: 's1' is 'STRING' and cannot be assigned to 'ARRAY 10 OF CHAR' expression"]
         )
     ),
-"STRING can be implicitely converted to open ARRAY OF CHAR": testWithContext(
+"STRING and ARRAY OF CHAR": testWithContext(
     context(grammar.expression,
-            "VAR s: STRING;"
-            + "PROCEDURE p(a: ARRAY OF CHAR): BOOLEAN; RETURN FALSE END p;"
-            + "PROCEDURE pVar(VAR a: ARRAY OF CHAR): BOOLEAN; RETURN FALSE END pVar;"),
-    pass("p(s)"),
-    fail(["pVar(s)", "type mismatch for argument 1: cannot pass 'STRING' as VAR parameter of type 'ARRAY OF CHAR'"])
+            "VAR s: STRING; a: ARRAY 10 OF CHAR;"
+            + "PROCEDURE pArray(a: ARRAY OF CHAR): BOOLEAN; RETURN FALSE END pArray;"
+            + "PROCEDURE pString(s: STRING): BOOLEAN; RETURN FALSE END pString;"
+            + "PROCEDURE pVar(VAR a: ARRAY OF CHAR): BOOLEAN; RETURN FALSE END pVar;"
+            ),
+    pass("pArray(s)"),
+    fail(["pVar(s)", "type mismatch for argument 1: cannot pass 'STRING' as VAR parameter of type 'ARRAY OF CHAR'"],
+         ["pString(a)", "type mismatch for argument 1: 'ARRAY 10 OF CHAR' cannot be converted to 'STRING'"]
+        )
     ),
 "STRING LEN": testWithContext(
     context(grammar.expression,
