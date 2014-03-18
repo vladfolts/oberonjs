@@ -1,7 +1,7 @@
 
 #!/usr/bin/python
 from browser.linkjs import link
-import argparse
+import optparse
 import os
 import shutil
 import stat
@@ -118,9 +118,12 @@ def build(options):
             f.write(version)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Pull repo and build html page')
-    parser.add_argument('output', help='output directory')
-    parser.add_argument('--no-git', help='do not pull from git', action="store_true")
-    parser.add_argument('--pack', help='pack compiled source', action="store_true")
-    args = parser.parse_args()
-    build(args)
+    parser = optparse.OptionParser(
+        description='Pull repo and build html page',
+        usage='%prog [options] <output directory>'
+        )
+    parser.add_option('--no-git', help='do not pull from git', action="store_true")
+    parser.add_option('--pack', help='pack compiled source', action="store_true")
+    (options, args) = parser.parse_args()
+    options.output = args[0]
+    build(options)
