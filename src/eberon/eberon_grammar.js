@@ -20,9 +20,20 @@ function makeProcedureHeading(ident, identdef, formalParameters){
                );
 }
 
-function makeDesignator(qualident, selector){
-    return context(
-        and(or("SELF", "SUPER", qualident), repeat(selector)), EbContext.Designator);
+function makeAssignmentOrProcedureCall(designator, assignment){
+    return context(and(designator, optional(assignment)),
+                   EbContext.AssignmentOrProcedureCall);
+}
+
+function makeDesignator(qualident, selector, actualParameters){
+    var designator = context(
+        and(or("SELF", "SUPER", qualident), repeat(or(selector, actualParameters))), EbContext.Designator);
+    return { 
+        factor: context(designator, EbContext.ExpressionProcedureCall),
+        assignmentOrProcedureCall: function(assignment){
+            return makeAssignmentOrProcedureCall(designator, assignment);
+        }
+    };
 }
 
 function makeProcedureDeclaration(ident, procedureHeading, procedureBody){

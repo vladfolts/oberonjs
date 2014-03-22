@@ -95,9 +95,20 @@ var MethodVariable = Type.Variable.extend({
     idType: function(){return "method";}
 });
 
+var ResultVariable = Type.Variable.extend({
+    init: function(e){
+        this.__e = e;
+    },
+    expression: function(){return this.__e;},
+    type: function(){return this.__e.type();},
+    isReadOnly: function(){return true;},
+    idType: function(){return "procedure call " + (this.type() ? "result" : "statement");}
+});
+
 var Designator = Context.Designator.extend({
     init: function EberonContext$Designator(parent){
         Context.Designator.prototype.init.call(this, parent);
+        this.__procCall = undefined;
     },
     _indexSequence: function(type, info){
         if (type == EberonString.string()){
@@ -114,6 +125,19 @@ var Designator = Context.Designator.extend({
             ? new MethodVariable(type)
             : Context.Designator.prototype._makeDenoteVar(type, isReadOnly);
     },
+    handleMessage: function(msg){
+        if (msg == Context.beginCallMsg)
+            return this.__beginCall();
+        if (msg == Context.endCallMsg)
+            return this.__endCall();
+        return Context.Designator.prototype.handleMessage.call(this, msg);
+    },
+    handleExpression: function(e){
+        if (this.__procCall)
+            this.__procCall.handleArgument(e);
+        else
+            Context.Designator.prototype.handleExpression.call(this, e);
+    },
     handleLiteral: function(s){
         if (s == "SELF")
             this.handleSymbol(Symbol.makeFound(this.handleMessage(getMethodSelf)), "this");
@@ -121,8 +145,65 @@ var Designator = Context.Designator.extend({
             var ms = this.handleMessage(getMethodSuper);
             this.handleSymbol(Symbol.makeFound(ms.symbol), ms.code);
         }
-        else
+        else 
             Context.Designator.prototype.handleLiteral.call(this, s);
+    },
+    __beginCall: function(){
+        this.__procCall = Context.makeProcCall(this, this.__currentType, this.__info, this.__code);
+    },
+    __endCall: function(){
+        var e = this.__procCall.end();
+        this._advance(e.type(), new ResultVariable(e), e.code());
+        this.__procCall = undefined;
+    }
+});
+
+var ExpressionProcedureCall = Context.Chained.extend({
+    init: function EberonContext$init(context){
+        Context.Chained.prototype.init.call(this, context);
+    },
+    setDesignator: function(d){
+        var info = d.info();
+        var parent = this.parent();
+        if (info instanceof ResultVariable)
+            parent.handleExpression(info.expression());
+        else
+            parent.setDesignator(d);
+    }
+});
+
+var AssignmentOrProcedureCall = Context.Chained.extend({
+    init: function EberonContext$init(context){
+        Context.Chained.prototype.init.call(this, context);
+        this.__left = undefined;
+        this.__right = undefined;
+    },
+    setDesignator: function(d){
+        this.__left = d;
+    },
+    handleExpression: function(e){
+        this.__right = e;
+    },
+    codeGenerator: function(){return Code.nullGenerator();},
+    endParse: function(){
+        var d = this.__left;
+        var code;
+        if (this.__right){
+            var left = Code.makeExpression(d.code(), d.type(), d);
+            code = op.assign(left, this.__right, this.language());
+        }
+        else if (!(d.info() instanceof ResultVariable)){
+            var procCall = Context.makeProcCall(this, d.type(), d.info(), d.code());
+            var result = procCall.end();
+            Context.assertProcStatementResult(result.type());
+            code = result.code();
+        }
+        else{
+            Context.assertProcStatementResult(d.type());
+            code = d.code();
+        }
+    
+    this.parent().codeGenerator().write(code);
     }
 });
 
@@ -453,7 +534,9 @@ var Expression = Context.Expression.extend({
 exports.AddOperator = AddOperator;
 exports.Designator = Designator;
 exports.Expression = Expression;
+exports.ExpressionProcedureCall = ExpressionProcedureCall;
 exports.MethodHeading = MethodHeading;
+exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;

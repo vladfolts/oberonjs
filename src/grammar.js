@@ -55,7 +55,12 @@ var selector = or(and(point, ident)
                 , "^"
                 , context(and("(", qualident, ")"), Context.TypeCast)
                 );
-var designator = makeDesignator(qualident, selector);
+var designator = makeDesignator(
+        qualident, 
+        selector,
+        // break recursive declaration of actualParameters
+        function(stream, context){return actualParameters(stream, context);}
+        );
 var type = or(context(qualident, Context.Type),
               function(stream, context){return strucType(stream, context);} // break recursive declaration of strucType
              );
@@ -77,11 +82,7 @@ var string = or(context(Lexer.string, Context.String)
 var factor = context(
     or(string, number, "NIL", "TRUE", "FALSE"
      , function(stream, context){return set(stream, context);} // break recursive declaration of set
-     , context(and(designator
-                 // break recursive declaration of actualParameters
-                 , optional(function(stream, context){return actualParameters(stream, context);})
-                  )
-             , Context.ExpressionProcedureCall)
+     , designator.factor
      , and("(", function(stream, context){return expression(stream, context);}
          , required(")", "no matched ')'"))
      , and("~", function(stream, context){
@@ -108,16 +109,12 @@ var set = and("{", context(optional(and(element, repeat(and(",", element)))), Co
 
 var expList = and(expression, repeat(and(",", expression)));
 var actualParameters = and("(", context(optional(expList), Context.ActualParameters), ")");
-var procedureCall = context(and(designator, optional(actualParameters))
-                          , Context.StatementProcedureCall);
 
-var assignment = context(and(designator, context(or(":=", "="), Context.CheckAssignment)
-                       , required(expression, "expression expected"))
-                       , Context.Assignment);
+var assignment = and(context(or(":=", "="), Context.CheckAssignment),
+                     required(expression, "expression expected"));
 
 var statement = optional(or(
-                   emit(assignment, Context.emitEndStatement)
-                 , emit(procedureCall, Context.emitEndStatement)
+                   emit(designator.assignmentOrProcedureCall(assignment), Context.emitEndStatement)
                    // break recursive declaration of ifStatement/caseStatement/whileStatement/repeatStatement
                  , function(stream, context){return ifStatement(stream, context);}
                  , function(stream, context){return caseStatement(stream, context);}

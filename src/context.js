@@ -330,8 +330,12 @@ exports.Designator = ChainedContext.extend({
                                      + (length - 1)
                                      + ", got " + value );
         }
-        this.__currentType = index.type;
-        this.__info = index.info;
+        return index;
+    },
+    _advance: function(type, info, code){
+        this.__currentType = type;
+        this.__info = info;
+        this.__code = code;
     },
     _indexSequence: function(type, info){
         var isArray = type instanceof Type.Array;
@@ -349,16 +353,16 @@ exports.Designator = ChainedContext.extend({
     },
     handleLiteral: function(s){
         if (s == "]" || s == ","){
-            this.__handleIndexExpression();
+            var index = this.__handleIndexExpression();
             var indexCode = Code.derefExpression(this.__indexExpression).code();
             this.__propCode = indexCode;
             var code = this.__derefCode + "[" + indexCode + "]";
-            if (this.__currentType == basicTypes.ch){
+            if (index.type == basicTypes.ch){
                 this.__lval = code;
                 code = this.__derefCode + ".charCodeAt(" + indexCode + ")";
             }
-            this.__code += code;
-            }
+            this._advance(index.type, index.info, this.__code + code);
+        }
         if (s == "[" || s == ","){
             this.__derefCode = this.__code;
             this.__code = "";
@@ -996,8 +1000,17 @@ exports.Term = ChainedContext.extend({
     },
     type: function(){return this.__expression.type();},
     setDesignator: function(d){
-        var value;
         var info = d.info();
+        if (info instanceof Type.ProcedureId){
+            var proc = Type.procedureType(info);
+            if (proc instanceof Procedure.Std)
+                throw new Errors.Error(proc.description() + " cannot be referenced");
+            var scope = d.scope();
+            if (scope instanceof Scope.Procedure)
+                throw new Errors.Error("local procedure '" + d.code() + "' cannot be referenced");
+        }
+
+        var value;
         if (info instanceof Type.Const)
             value = Type.constValue(info);
         this.handleExpression(
@@ -1013,9 +1026,6 @@ exports.Term = ChainedContext.extend({
             code, type, undefined, value));
     },
     handleFactor: function(e){
-        var type = e.type();
-        if (!type)
-            throw new Errors.Error("procedure returning no result cannot be used in an expression");
         this.handleExpression(e);
     },
     endParse: function(){this.parent().handleTerm(this.__expression);},
@@ -1237,6 +1247,10 @@ exports.Expression = ChainedContext.extend({
     },
     codeGenerator: function(){return nullCodeGenerator;},
     endParse: function(){
+        var type = this.__expression.type();
+        if (!type)
+            throw new Errors.Error("procedure returning no result cannot be used in an expression");
+
         var parent = this.parent();
         parent.codeGenerator().write(this.__expression.code());
         parent.handleExpression(this.__expression);
@@ -1528,20 +1542,6 @@ exports.CheckAssignment = ChainedContext.extend({
     }
 });
 
-exports.Assignment = ChainedContext.extend({
-    init: function AssignmentContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__left = undefined;
-    },
-    codeGenerator: function(){return nullCodeGenerator;},
-    setDesignator: function(d){
-        this.__left = Code.makeExpression(d.code(), d.type(), d);
-    },
-    handleExpression: function(e){
-        this.parent().codeGenerator().write(op.assign(this.__left, e, this.language()));
-    }
-});
-
 exports.ConstDecl = ChainedContext.extend({
     init: function ConstDeclContext(context){
         ChainedContext.prototype.init.call(this, context);
@@ -1631,11 +1631,10 @@ exports.FieldListDeclaration = HandleSymbolAsType.extend({
     }
 });
 
-function assertProcType(d){
-    var type = d.type();
+function assertProcType(type, info){
     var unexpected;
     if ( !type )
-        unexpected = d.info().idType();
+        unexpected = info.idType();
     else if (!(type instanceof Type.Procedure) && !(type instanceof Module.AnyType))
         unexpected = type.description();
     if (unexpected)
@@ -1643,86 +1642,22 @@ function assertProcType(d){
     return type;
 }
 
+function assertProcStatementResult(type){
+    if (type && !(type instanceof Module.AnyType))
+        throw new Errors.Error("procedure returning a result cannot be used as a statement");
+}
+
+function beginCallMsg(){}
+function endCallMsg(){}
+
 exports.ActualParameters = ChainedContext.extend({
     init: function ActualParametersContext(context){
         ChainedContext.prototype.init.call(this, context);
-        this.parent().hasActualParameters();
-    }
-});
-
-var ProcedureCall = ChainedContext.extend({
-    init: function ProcedureCallContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__type = undefined;
-        this.__procCall = undefined;
-        this.__code = Code.makeSimpleGenerator();
+        this.handleMessage(beginCallMsg);
     },
-    setDesignator: function(d){
-        this.__type = assertProcType(d);
-        var l = this.language();
-        this.__procCall = this.__type.callGenerator(
-              { 
-                types: l.types
-              , rtl: l.rtl
-              , qualifyScope: this.qualifyScope.bind(this)
-              }
-            , d.code());
-        this.__callExpression = undefined;
-    },
-    codeGenerator: function(){return this.__code;},
-    type: function(){return this.__type;},
-    hasActualParameters: function(){},
-    handleExpression: function(e){this.__procCall.handleArgument(e);},
-    callExpression: function(){return this.__callExpression;},
-    endParse: function(){this.__callExpression = this.__procCall.end();}
-});
-
-exports.StatementProcedureCall = ProcedureCall.extend({
-    init: function StatementProcedureCallContext(context){
-        ProcedureCall.prototype.init.call(this, context);
-    },
+    handleLiteral: function(){}, // do not propagate ","
     endParse: function(){
-        ProcedureCall.prototype.endParse.call(this);
-        var e = this.callExpression();
-        var type = e.type();
-        if  (type && !(type instanceof Module.AnyType ))
-            throw new Errors.Error("procedure returning a result cannot be used as a statement");
-        this.parent().codeGenerator().write(e.code());
-    }
-});
-
-exports.ExpressionProcedureCall = ProcedureCall.extend({
-    init: function ExpressionProcedureCall(context){
-        ProcedureCall.prototype.init.call(this, context);
-        this.__designator = undefined;
-        this.__hasActualParameters = false;
-    },
-    setDesignator: function(d){
-        this.__designator = d;
-    },
-    hasActualParameters: function(){
-        ProcedureCall.prototype.setDesignator.call(this, this.__designator);
-        this.__hasActualParameters = true;
-    },
-    endParse: function(){
-        var parent = this.parent();
-        if (this.__hasActualParameters){
-            ProcedureCall.prototype.endParse.call(this);
-            parent.handleFactor(this.callExpression());
-        }
-        else{
-            var d = this.__designator;
-            var info = d.info();
-            if (info instanceof Type.ProcedureId){
-                var proc = Type.procedureType(info);
-                if (proc instanceof Procedure.Std)
-                    throw new Errors.Error(proc.description() + " cannot be referenced");
-                var scope = d.scope();
-                if (scope instanceof Scope.Procedure)
-                    throw new Errors.Error("local procedure '" + d.code() + "' cannot be referenced");
-            }
-            parent.setDesignator(d);
-        }
+        this.handleMessage(endCallMsg);
     }
 });
 
@@ -2009,10 +1944,25 @@ exports.Context = Class.extend({
     }
 });
 
+function makeProcCall(context, type, info, code){
+    assertProcType(type, info);
+    var l = context.language();
+    return type.callGenerator(
+        { types: l.types, 
+          rtl: l.rtl, 
+          qualifyScope: context.qualifyScope.bind(context)
+        }, 
+        code);
+}
+
 exports.AddArgumentMsg = AddArgumentMsg;
+exports.assertProcStatementResult = assertProcStatementResult;
+exports.beginCallMsg = beginCallMsg;
+exports.endCallMsg = endCallMsg;
 exports.Chained = ChainedContext;
 exports.endParametersMsg = endParametersMsg;
 exports.getSymbolAndScope = getSymbolAndScope;
+exports.makeProcCall = makeProcCall;
 exports.unwrapType = unwrapType;
 exports.IdentdefInfo = IdentdefInfo;
 exports.RelationOps = RelationOps;

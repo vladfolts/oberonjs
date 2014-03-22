@@ -252,10 +252,12 @@ exports.suite = {
             + "PROCEDURE pArray(a: ARRAY OF CHAR): BOOLEAN; RETURN FALSE END pArray;"
             + "PROCEDURE pString(s: STRING): BOOLEAN; RETURN FALSE END pString;"
             + "PROCEDURE pVar(VAR a: ARRAY OF CHAR): BOOLEAN; RETURN FALSE END pVar;"
+            + "PROCEDURE pIntArray(a: ARRAY OF INTEGER): BOOLEAN; RETURN FALSE END pIntArray;"
             ),
     pass("pArray(s)"),
     fail(["pVar(s)", "type mismatch for argument 1: cannot pass 'STRING' as VAR parameter of type 'ARRAY OF CHAR'"],
-         ["pString(a)", "type mismatch for argument 1: 'ARRAY 10 OF CHAR' cannot be converted to 'STRING'"]
+         ["pString(a)", "type mismatch for argument 1: 'ARRAY 10 OF CHAR' cannot be converted to 'STRING'"],
+         ["pIntArray(s)", "type mismatch for argument 1: 'STRING' cannot be converted to 'ARRAY OF INTEGER'"]
         )
     ),
 "STRING LEN": testWithContext(
@@ -272,5 +274,38 @@ exports.suite = {
     fail(["s[-1]", "index is negative: -1"],
          ["pCharByVar(s[0])", "string element cannot be used as VAR parameter"]
          )
+    ),
+"designate call result in expression": testWithContext(
+    context(grammar.expression,
+            "TYPE PT = POINTER TO RECORD field: INTEGER END;"
+            + "VAR p: PT;"
+            + "PROCEDURE proc(): PT; RETURN p END proc;"
+            + "PROCEDURE int(): INTEGER; RETURN 0 END int;"
+            + "PROCEDURE intVar(VAR i: INTEGER): INTEGER; RETURN i END intVar;"),
+    pass("proc().field",
+         "intVar(proc().field)"),
+    fail(["intVar(int())", "expression cannot be used as VAR parameter"])
+    ),
+"designate call result in statement": testWithContext(
+    context(grammar.statement,
+            "TYPE PT = POINTER TO RECORD field: INTEGER; proc: PROCEDURE END;"
+            + "ProcType = PROCEDURE;"
+            + "VAR p: PT;"
+            + "PROCEDURE procVoid(); END procVoid;"
+            + "PROCEDURE proc(): PT; RETURN p END proc;"
+            + "PROCEDURE int(): INTEGER; RETURN 0 END int;"
+            + "PROCEDURE intVar(VAR i: INTEGER); END intVar;"
+            + "PROCEDURE returnProc(): ProcType; RETURN procVoid END returnProc;"
+           ),
+    pass("proc().field := 0",
+         "proc().proc()",
+         "proc().proc"
+        ),
+    fail(["int() := 0", "cannot assign to procedure call result"],
+         ["intVar(int())", "expression cannot be used as VAR parameter"],
+         ["procVoid()()", "PROCEDURE expected, got 'procedure call statement'"],
+         ["int()()", "PROCEDURE expected, got 'INTEGER'"],
+         ["returnProc()", "procedure returning a result cannot be used as a statement"] // call is not applied implicitly to result
+        )
     )
 };

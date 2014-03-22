@@ -42,5 +42,23 @@ exports.suite = {
     grammar.variableDeclaration,
     pass(),
     fail(["s: STRING", "undeclared identifier: 'STRING'"])
+    ),
+"cannot designate call result in expression": testWithContext(
+    context(grammar.expression,
+            "TYPE PT = POINTER TO RECORD field: INTEGER END;"
+            + "ProcType = PROCEDURE(): INTEGER;"
+            + "VAR p: PT;"
+            + "PROCEDURE proc(): PT; RETURN p END proc;"
+            + "PROCEDURE p1(): INTEGER; RETURN 1 END p1;"
+            + "PROCEDURE p2(): ProcType; RETURN p1 END p2;"),
+    pass(),
+    fail(["proc().field", "not parsed"],
+         ["p2()()", "not parsed"])
+    ),
+"cannot designate call result in statement": testWithContext(
+    context(grammar.statement,
+            "PROCEDURE p; END p;"),
+    pass(),
+    fail(["p()()", "not parsed"])
     )
 };

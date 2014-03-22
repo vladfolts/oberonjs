@@ -1,0 +1,44 @@
+MODULE m;
+TYPE
+    Proc = PROCEDURE;
+    TP = POINTER TO RECORD
+		i: INTEGER;
+        proc: Proc;
+        procT: PROCEDURE(): TP
+	END;
+
+PROCEDURE proc();
+END proc;
+
+PROCEDURE makeT(): TP;
+VAR
+    result: TP;
+BEGIN
+    NEW(result);
+    result.proc := proc;
+    result.procT := makeT;
+    RETURN result
+END makeT;
+
+PROCEDURE makeProc(): Proc;
+    RETURN proc
+END makeProc;
+
+PROCEDURE int(i: INTEGER);
+END int;
+
+PROCEDURE intVar(VAR i: INTEGER);
+END intVar;
+
+BEGIN
+    int(makeT().i);
+    intVar(makeT().i);
+    intVar(makeT().procT().i);
+
+    makeT().proc();
+    makeT().proc;
+    makeT().procT().proc();
+    makeT().procT().proc;
+
+    makeProc()();
+END m.

@@ -10,6 +10,7 @@ var Symbols = require("js/OberonSymbols.js");
 var and = Parser.and;
 var context = Parser.context;
 var optional = Parser.optional;
+var or = Parser.or;
 var repeat = Parser.repeat;
 
 function makeProcedureHeading(ident, identdef, formalParameters){
@@ -18,8 +19,22 @@ function makeProcedureHeading(ident, identdef, formalParameters){
              , context(optional(formalParameters), Context.FormalParametersProcDecl));
 }
 
-function makeDesignator(qualident, selector){
-    return context(and(qualident, repeat(selector)), Context.Designator);
+function makeAssignmentOrProcedureCall(designator, actualParameters, assignment){
+    return or(context(and(designator, assignment), 
+                      ObContext.Assignment),
+              context(and(designator, optional(actualParameters)), 
+                      ObContext.StatementProcedureCall)
+              );
+}
+
+function makeDesignator(qualident, selector, actualParameters){
+    var designator = context(and(qualident, repeat(selector)), Context.Designator);
+    return { 
+        factor: context(and(designator, optional(actualParameters)), ObContext.ExpressionProcedureCall),
+        assignmentOrProcedureCall: function(assignment){
+            return makeAssignmentOrProcedureCall(designator, actualParameters, assignment);
+        }
+    };
 }
 
 function makeProcedureDeclaration(ident, procedureHeading, procedureBody){
