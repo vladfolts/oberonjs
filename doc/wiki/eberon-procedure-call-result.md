@@ -28,6 +28,6 @@ Example:
     END getRecord;
 
     BEGIN
-        getProc()(); (* OK in **Eberon**, error in original oberon *)
-        getRecord().i := 123; (* OK in **Eberon**, error in original oberon *)
+        getProc()(); (* OK in Eberon, error in original oberon *)
+        getRecord().i := 123; (* OK in Eberon, error in original oberon *)
     END Test.
