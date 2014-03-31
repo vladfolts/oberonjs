@@ -201,7 +201,10 @@ exports.suite = {
          ["CONST c- = 123;", 
           "constant cannot be exported as read-only using '-' mark (did you mean '*'?)"],
          ["VAR i-: INTEGER;", 
-          "variable cannot be exported as read-only using '-' mark (did you mean '*'?)"])
+          "variable cannot be exported as read-only using '-' mark (did you mean '*'?)"],
+         ["TYPE T* = RECORD PROCEDURE p-() END;", 
+          "method cannot be exported as read-only using '-' mark (did you mean '*'?)"]
+         )
     ),
 "field exported as read-only is writable in current module": testWithContext(
     context(grammar.statement,

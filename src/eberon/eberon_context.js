@@ -76,7 +76,10 @@ var MethodHeading = Context.Chained.extend({
         this.__id = undefined;
         this.__type = undefined;
     },
-    handleIdentdef: function(id){this.__id = id;},
+    handleIdentdef: function(id){
+        checkOrdinaryExport(id, "method");
+        this.__id = id;
+    },
     typeName: function(){return undefined;},
     setType: function(type){this.__type = type;},
     endParse: function(){
