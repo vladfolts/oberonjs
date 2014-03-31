@@ -246,13 +246,16 @@ var IdentdefInfo = Class.extend({
 exports.Identdef = ChainedContext.extend({
     init: function IdentdefContext(context){
         ChainedContext.prototype.init.call(this, context);
-        this.__id = undefined;
-        this.__export = false;
+        this._id = undefined;
+        this._export = false;
     },
-    handleIdent: function(id){this.__id = id;},
-    handleLiteral: function(){this.__export = true;},
+    handleIdent: function(id){this._id = id;},
+    handleLiteral: function(){this._export = true;},
     endParse: function(){
-        this.parent().handleIdentdef(new IdentdefInfo(this.__id, this.__export));
+        this.parent().handleIdentdef(this._makeIdendef());
+    },
+    _makeIdendef: function(){
+        return new IdentdefInfo(this._id, this._export);
     }
 });
 
@@ -299,16 +302,16 @@ exports.Designator = ChainedContext.extend({
             isReadOnly = false;
         }
         else if (!(t instanceof Type.Record
-                || t instanceof Type.Module
                 || t instanceof Module.AnyType))
             throw new Errors.Error("cannot designate '" + t.description() + "'");
 
-        this.__denote(id, pointerType);
-        this.__info = this._makeDenoteVar(this.__currentType, isReadOnly);
+        var field = this.__denote(id, pointerType);
+        this.__info = this._makeDenoteVar(field, isReadOnly);
+        this.__currentType = field.type();
         this.__scope = undefined;
     },
-    _makeDenoteVar: function(type, isReadOnly){
-        return Type.makeVariable(type, isReadOnly);
+    _makeDenoteVar: function(field, isReadOnly){
+        return Type.makeVariable(field.type(), isReadOnly);
     },
     handleExpression: function(e){this.__indexExpression = e;},
     __handleIndexExpression: function(){
@@ -405,8 +408,8 @@ exports.Designator = ChainedContext.extend({
     },
     __denote: function(id, pointerType){
         var t = this.__currentType;
-        var fieldType = t.findSymbol(id);
-        if (!fieldType){
+        var field = t.findSymbol(id);
+        if (!field){
             var typeDesc = !Type.typeName(t) && pointerType && Type.typeName(pointerType)
                 ? Type.typeName(pointerType)
                 : t.description();
@@ -415,7 +418,7 @@ exports.Designator = ChainedContext.extend({
         this.__derefCode = this.__code;
         this.__propCode = "\"" + id + "\"";
         this.__code += "." + id;
-        this.__currentType = fieldType;
+        return field;
     },
     endParse: function(){
         var code = this.__code;
@@ -1669,7 +1672,7 @@ function isTypeRecursive(type, base){
             return true;
         var fields = Type.recordOwnFields(type);
         for(var fieldName in fields){
-            if (isTypeRecursive(fields[fieldName], base))
+            if (isTypeRecursive(fields[fieldName].type(), base))
                 return true;
         }
     }
@@ -1677,6 +1680,19 @@ function isTypeRecursive(type, base){
         return isTypeRecursive(Type.arrayElementsType(type), base);
     return false;
 }
+
+var RecordField = Class.extend({
+    init: function Context$RecordField(identdef, type, recordType){
+        this.__identdef = identdef;
+        this.__type = type;
+        this.__refcordType = recordType;
+    },
+    id: function(){return this.__identdef.id();},
+    exported: function(){return this.__identdef.exported();},
+    identdef: function(){return this.__identdef;},
+    type: function(){return this.__type;},
+    recordType: function(){return this.__refcordType;}
+});
 
 exports.RecordDecl = ChainedContext.extend({
     init: function RecordDeclContext(context, makeRecord){
@@ -1693,7 +1709,7 @@ exports.RecordDecl = ChainedContext.extend({
         if (isTypeRecursive(type, this.__type))
             throw new Errors.Error("recursive field definition: '"
                 + field.id() + "'");
-        this.__type.addField(field, type);
+        this.__type.addField(new RecordField(field, type, this.__type));
         if (field.exported())
             this.parent().exportField(field.id());
     },
@@ -1723,7 +1739,7 @@ exports.RecordDecl = ChainedContext.extend({
             gen.write(qualifiedBase + ".prototype.init.call(this);\n");
         var ownFields = Type.recordOwnFields(type);
         for(var f in ownFields)
-            gen.write("this." + f + " = " + ownFields[f].initializer(this) + ";\n");
+            gen.write("this." + f + " = " + ownFields[f].type().initializer(this) + ";\n");
 
         gen.closeScope("");
         gen.closeScope(");\n");
@@ -1962,7 +1978,9 @@ exports.endCallMsg = endCallMsg;
 exports.Chained = ChainedContext;
 exports.endParametersMsg = endParametersMsg;
 exports.getSymbolAndScope = getSymbolAndScope;
+exports.IdentdefInfo = IdentdefInfo;
 exports.makeProcCall = makeProcCall;
 exports.unwrapType = unwrapType;
 exports.IdentdefInfo = IdentdefInfo;
+exports.RecordField = RecordField;
 exports.RelationOps = RelationOps;

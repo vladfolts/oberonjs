@@ -27,6 +27,10 @@ function makeAssignmentOrProcedureCall(designator, actualParameters, assignment)
               );
 }
 
+function makeIdentdef(ident){
+    return context(and(ident, optional("*")), Context.Identdef);
+}
+
 function makeDesignator(qualident, selector, actualParameters){
     var designator = context(and(qualident, repeat(selector)), Context.Designator);
     return { 
@@ -50,16 +54,21 @@ function makeFieldList(identdef, identList, type){
 
 exports.language = {
     grammar: Grammar.make(
-            makeDesignator,
-            makeProcedureHeading,
-            makeProcedureDeclaration,
-            makeFieldList,
-            ObContext.RecordDecl,
-            ObContext.VariableDeclaration,
-            Context.AddOperator,
-            Context.Expression,
-            Grammar.reservedWords
-            ),
+        makeIdentdef,
+        makeDesignator,
+        makeProcedureHeading,
+        makeProcedureDeclaration,
+        makeFieldList,
+        {
+            constDeclaration:   Context.ConstDecl, 
+            typeDeclaration:    Context.TypeDeclaration,
+            recordDecl:         ObContext.RecordDecl,
+            variableDeclaration: ObContext.VariableDeclaration,
+            addOperator:        Context.AddOperator,
+            expression:         Context.Expression
+        },
+        Grammar.reservedWords
+        ),
     stdSymbols: Symbols.makeStd(),
     types: {
         implicitCast: Cast.implicit

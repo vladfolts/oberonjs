@@ -22,14 +22,12 @@ var required = Parser.required;
 
 var reservedWords = "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN";
 
-function make(makeDesignator,
+function make(makeIdentdef,
+              makeDesignator,
               makeProcedureHeading, 
               makeProcedureDeclaration,
               makeFieldList,
-              recordDeclContext,
-              varDeclContext,
-              addOperatorContext,
-              expressionContext,
+              contexts,
               reservedWords
               ){
 var result = {};
@@ -46,8 +44,7 @@ var ModuleDeclContext = Context.ModuleDeclaration.extend({
 
 var qualident = context(and(optional(and(ident, ".")), ident),
                         Context.QualifiedIdentificator);
-var identdef = context(and(ident, optional("*")),
-                       Context.Identdef);
+var identdef = makeIdentdef(ident);
 
 var selector = or(and(point, ident)
                 // break recursive declaration of expList
@@ -65,7 +62,7 @@ var type = or(context(qualident, Context.Type),
               function(stream, context){return strucType(stream, context);} // break recursive declaration of strucType
              );
 var identList = and(identdef, repeat(and(",", identdef)));
-var variableDeclaration = context(and(identList, ":", type), varDeclContext);
+var variableDeclaration = context(and(identList, ":", type), contexts.variableDeclaration);
 
 var integer = or(context(and(digit, repeat(hexDigit), "H", separator), Context.HexInteger)
                , context(and(digit, repeat(digit), separator), Context.Integer));
@@ -90,7 +87,7 @@ var factor = context(
      )
     , Context.Factor);
 
-var addOperator = context(or("+", "-", "OR"), addOperatorContext);
+var addOperator = context(or("+", "-", "OR"), contexts.addOperator);
 var mulOperator = context(or("*", "/", "DIV", "MOD", "&"), Context.MulOperator);
 var term = context(and(factor, repeat(and(mulOperator, factor))), Context.Term);
 var simpleExpression = context(
@@ -100,7 +97,7 @@ var simpleExpression = context(
       , Context.SimpleExpression);
 var relation = or("=", "#", "<=", "<", ">=", ">", "IN", "IS");
 var expression = context(and(simpleExpression, optional(and(relation, simpleExpression)))
-                       , expressionContext);
+                       , contexts.expression);
 var constExpression = expression;
 
 var element = context(and(expression, optional(and("..", expression))), Context.SetElement);
@@ -165,7 +162,7 @@ var arrayType = and("ARRAY", context(and(
 
 var baseType = context(qualident, Context.BaseType);
 var recordType = and("RECORD", context(and(optional(and("(", baseType, ")")), optional(fieldListSequence)
-                                     , "END"), recordDeclContext));
+                                     , "END"), contexts.recordDecl));
 
 var pointerType = and("POINTER", "TO", context(type, Context.PointerDecl));
 
@@ -181,9 +178,9 @@ var procedureType = and("PROCEDURE"
                       , context(optional(formalParameters), Context.FormalParameters)
                         );
 var strucType = or(arrayType, recordType, pointerType, procedureType);
-var typeDeclaration = context(and(identdef, "=", strucType), Context.TypeDeclaration);
+var typeDeclaration = context(and(identdef, "=", strucType), contexts.typeDeclaration);
 
-var constantDeclaration = context(and(identdef, "=", constExpression), Context.ConstDecl);
+var constantDeclaration = context(and(identdef, "=", constExpression), contexts.constDeclaration);
 
 var imprt = and(ident, optional(and(":=", ident)));
 var importList = and("IMPORT", imprt, repeat(and(",", imprt)));

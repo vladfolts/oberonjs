@@ -25,6 +25,10 @@ function makeAssignmentOrProcedureCall(designator, assignment){
                    EbContext.AssignmentOrProcedureCall);
 }
 
+function makeIdentdef(ident){
+    return context(and(ident, optional(or("*", "-"))), EbContext.Identdef);
+}
+
 function makeDesignator(qualident, selector, actualParameters){
     var designator = context(
         and(or("SELF", "SUPER", qualident), repeat(or(selector, actualParameters))), EbContext.Designator);
@@ -59,17 +63,22 @@ function makeFieldList(identdef, identList, type, formalParameters){
 }
 
 exports.language = {
-  grammar: Grammar.make(
-      makeDesignator,
-      makeProcedureHeading,
-      makeProcedureDeclaration,
-      makeFieldList,
-      EbContext.RecordDecl,
-      Context.VariableDeclaration,
-      EbContext.AddOperator,
-      EbContext.Expression,
-      Grammar.reservedWords + " SELF SUPER"
-      ),
+    grammar: Grammar.make(
+        makeIdentdef,
+        makeDesignator,
+        makeProcedureHeading,
+        makeProcedureDeclaration,
+        makeFieldList, 
+        { 
+            constDeclaration:   EbContext.ConstDecl, 
+            typeDeclaration:    EbContext.TypeDeclaration,
+            recordDecl:         EbContext.RecordDecl,
+            variableDeclaration: EbContext.VariableDeclaration,
+            addOperator:        EbContext.AddOperator,
+            expression:         EbContext.Expression
+        },
+        Grammar.reservedWords + " SELF SUPER"
+        ),
     stdSymbols: Symbols.makeStd(),
     types: {
         implicitCast: Cast.implicit

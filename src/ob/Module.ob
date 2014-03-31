@@ -8,7 +8,11 @@ TYPE
 
     AnyType* = RECORD(Types.StorageType)
         PROCEDURE callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
-        PROCEDURE findSymbol(id: STRING): Types.PType
+        PROCEDURE findSymbol(id: STRING): Types.PField;
+        asField: POINTER TO AnyField
+    END;
+
+    AnyField = RECORD(Types.Field)
     END;
 
     AnyTypeProc* = RECORD(Types.DefinedProcedure)
@@ -34,9 +38,25 @@ PROCEDURE AnyType.callGenerator(cx: LanguageContext.PType; id: STRING): Procedur
     RETURN Procedure.makeProcCallGenerator(cx, id, anyProc)
 END AnyType.callGenerator;
 
-PROCEDURE AnyType.findSymbol(id: STRING): Types.PType;
-    RETURN any
+PROCEDURE AnyType.findSymbol(id: STRING): Types.PField;
+    RETURN any.asField
 END AnyType.findSymbol;
+
+PROCEDURE AnyField.id(): STRING;
+    RETURN "any field"
+END AnyField.id;
+
+PROCEDURE AnyField.exported(): BOOLEAN;
+    RETURN FALSE
+END AnyField.exported;
+
+PROCEDURE AnyField.type(): Types.PType;
+    RETURN any
+END AnyField.type;
+
+PROCEDURE AnyField.recordType(): Types.PType;
+    RETURN any
+END AnyField.recordType;
 
 PROCEDURE AnyTypeProc.args(): JsArray.Type;
     RETURN NIL
@@ -115,7 +135,10 @@ END makeJS;
 BEGIN
     doProcId := "do$";
     varTypeId := "var$";
+    
     NEW(any);
+    NEW(any.asField); 
+
     doProcSymbol := makeDoProcSymbol();
     varTypeSymbol := makeVarTypeSymbol();
 END Module.

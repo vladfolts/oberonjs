@@ -191,6 +191,34 @@ exports.suite = {
          "VAR a*: A;"),
     fail()
     ),
+"export as read-only": testWithContext(
+    context(grammar.declarationSequence, ""),
+    pass("TYPE T* = RECORD i-: INTEGER END;"),
+    fail(["TYPE T- = RECORD END;", 
+          "type cannot be exported as read-only using '-' mark (did you mean '*'?)"],
+         ["PROCEDURE p-(); END p;", 
+          "procedure cannot be exported as read-only using '-' mark (did you mean '*'?)"],
+         ["CONST c- = 123;", 
+          "constant cannot be exported as read-only using '-' mark (did you mean '*'?)"],
+         ["VAR i-: INTEGER;", 
+          "variable cannot be exported as read-only using '-' mark (did you mean '*'?)"])
+    ),
+"field exported as read-only is writable in current module": testWithContext(
+    context(grammar.statement,
+              "TYPE T* = RECORD i-: INTEGER END;"
+            + "VAR r: T;"
+            ),
+    pass("r.i := 123"),
+    fail()
+    ),
+"import as read-only": testWithModule(
+    "MODULE test; TYPE T* = RECORD f-: INTEGER END; END test.",
+    pass(),
+    fail(["MODULE m; IMPORT test; VAR r: test.T; BEGIN r.f := 123; END m.",
+          "cannot assign to read-only variable"],
+         ["MODULE m; IMPORT test; TYPE D = RECORD(test.T) END; VAR r: D; BEGIN r.f := 123; END m.",
+          "cannot assign to read-only variable"]
+        )),
 "STRING variable": testWithGrammar(
     grammar.variableDeclaration,
     pass("s: STRING")

@@ -65,6 +65,7 @@ var ProcOrMethodId = Context.Chained.extend({
     handleIdentdef: function(id){
         if (this.__type && id.exported())
             throw new Errors.Error("method implementation cannot be exported: " + id.id());
+        checkOrdinaryExport(id, "procedure");
         this.handleMessage(new MethodOrProcMsg(id, this.__type));
     }
 });
@@ -105,6 +106,29 @@ var ResultVariable = Type.Variable.extend({
     idType: function(){return "procedure call " + (this.type() ? "result" : "statement");}
 });
 
+var IdentdefInfo = Context.IdentdefInfo.extend({
+    init: function(id, exported, ro){
+        Context.IdentdefInfo.prototype.init.call(this, id, exported);
+        this.__ro = ro;
+    },
+    isReadOnly: function(){return this.__ro;}
+});
+
+var Identdef = Context.Identdef.extend({
+    init: function(parent){
+        Context.Identdef.prototype.init.call(this, parent);
+        this.__ro = false;
+    },
+    handleLiteral: function(l){
+        if (l == "-")
+            this.__ro = true;  
+        Context.Identdef.prototype.handleLiteral.call(this, l);
+    },
+    _makeIdendef: function(){
+        return new IdentdefInfo(this._id, this._export, this.__ro);
+    }
+});
+
 var Designator = Context.Designator.extend({
     init: function EberonContext$Designator(parent){
         Context.Designator.prototype.init.call(this, parent);
@@ -120,10 +144,13 @@ var Designator = Context.Designator.extend({
         }
         return Context.Designator.prototype._indexSequence.call(this, type, info);
     },
-    _makeDenoteVar: function(type, isReadOnly){
-        return (type instanceof MethodType)
-            ? new MethodVariable(type)
-            : Context.Designator.prototype._makeDenoteVar(type, isReadOnly);
+    _makeDenoteVar: function(field, isReadOnly){
+        var type = field.type();
+        if (type instanceof MethodType)
+            return new MethodVariable(type);
+        if (!isReadOnly && this.qualifyScope(Type.recordScope(field.recordType())))
+            isReadOnly = field.identdef().isReadOnly();
+        return Context.Designator.prototype._makeDenoteVar(field, isReadOnly);
     },
     handleMessage: function(msg){
         if (msg == Context.beginCallMsg)
@@ -244,12 +271,12 @@ var RecordType = Type.Record.extend({
         var existingField = this.findSymbol(id);
         if (existingField)
             throw new Errors.Error(
-                  existingField instanceof MethodType
+                  existingField.type() instanceof MethodType
                 ?   "cannot declare a new method '" + id 
                   + "': method already was declared"
                 : "cannot declare method, record already has field '" + id + "'");
 
-        this.__declaredMethods[id] = type;
+        this.__declaredMethods[id] = new Context.RecordField(methodId, type);
 
         if (!methodId.exported())
             this.__nonExportedMethods.push(id);
@@ -257,14 +284,13 @@ var RecordType = Type.Record.extend({
     defineMethod: function(methodId, type){
         var base = Type.recordBase(this);
         var id = methodId.id();
-        var existing = this.findSymbol(id);
-        if (!(existing instanceof MethodType)){
+        var existingField = this.findSymbol(id);
+        if (!existingField || !(existingField.type() instanceof MethodType)){
             throw new Errors.Error(
                   "'" + Type.typeName(this) + "' has no declaration for method '" + id 
                 + "'");
         }
-        //if (this.__definedMethods.indexOf(id) != -1)
-        //    throw new Error.Error("method definition duplicate");
+        var existing = existingField.type();
         if (!Cast.areProceduresMatch(existing, type))
             throw new Errors.Error(
                   "overridden method '" + id + "' signature mismatch: should be '"
@@ -364,6 +390,41 @@ var RecordType = Type.Record.extend({
         while (type && type.__definedMethods.indexOf(id) == -1)
             type = Type.recordBase(type);
         return type;
+    }
+});
+
+function checkOrdinaryExport(id, hint){
+    if (id.isReadOnly())
+        throw new Errors.Error(hint + " cannot be exported as read-only using '-' mark (did you mean '*'?)");
+}
+
+var ConstDecl = Context.ConstDecl.extend({
+    init: function EberonContext$ConstDecl(context){
+        Context.ConstDecl.prototype.init.call(this, context);
+    },
+    handleIdentdef: function(id){
+        checkOrdinaryExport(id, "constant");
+        Context.ConstDecl.prototype.handleIdentdef.call(this, id);
+    }
+});
+
+var VariableDeclaration = Context.VariableDeclaration.extend({
+    init: function EberonContext$VariableDeclaration(context){
+        Context.VariableDeclaration.prototype.init.call(this, context);
+    },
+    handleIdentdef: function(id){
+        checkOrdinaryExport(id, "variable");
+        Context.VariableDeclaration.prototype.handleIdentdef.call(this, id);
+    }
+});
+
+var TypeDeclaration = Context.TypeDeclaration.extend({
+    init: function EberonContext$TypeDeclaration(context){
+        Context.TypeDeclaration.prototype.init.call(this, context);
+    },
+    handleIdentdef: function(id){
+        checkOrdinaryExport(id, "type");
+        Context.TypeDeclaration.prototype.handleIdentdef.call(this, id);
     }
 });
 
@@ -532,11 +593,15 @@ var Expression = Context.Expression.extend({
 });
 
 exports.AddOperator = AddOperator;
+exports.ConstDecl = ConstDecl;
 exports.Designator = Designator;
 exports.Expression = Expression;
 exports.ExpressionProcedureCall = ExpressionProcedureCall;
+exports.Identdef = Identdef;
 exports.MethodHeading = MethodHeading;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;
+exports.TypeDeclaration = TypeDeclaration;
+exports.VariableDeclaration = VariableDeclaration;

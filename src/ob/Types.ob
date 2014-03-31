@@ -131,14 +131,17 @@ TYPE
 
     PBasicType* = POINTER TO BasicType;
 
-    Field = RECORD
-        id: PROCEDURE(): STRING;
-        exported: PROCEDURE(): BOOLEAN
+    Field* = RECORD(Object.Type)
+        PROCEDURE id*(): STRING;
+        PROCEDURE exported*(): BOOLEAN;
+        PROCEDURE type*(): PType;
+        PROCEDURE recordType*(): PType 
     END;
+    PField* = POINTER TO Field;
 
     Record* = RECORD(NamedType)
-        PROCEDURE addField(f: Field; type: PType);
-        PROCEDURE findSymbol(id: STRING): PType;
+        PROCEDURE addField(f: PField);
+        PROCEDURE findSymbol(id: STRING): PField;
         PROCEDURE finalize();
 
         fields: JsMap.Type;
@@ -388,7 +391,7 @@ PROCEDURE Record.initializer(cx: Context.Type): STRING;
     RETURN "new " + cx.qualifyScope(SELF.scope) + SELF.cons + "()"
 END Record.initializer;
 
-PROCEDURE Record.addField(f: Field; type: PType);
+PROCEDURE Record.addField(f: PField);
 BEGIN
     IF JsMap.has(SELF.fields, f.id()) THEN
         Errors.raise("duplicated field: '" + f.id() + "'");
@@ -396,15 +399,15 @@ BEGIN
     IF (SELF.base # NIL) & (SELF.base.findSymbol(f.id()) # NIL) THEN
         Errors.raise("base record already has field: '" + f.id() + "'");
     END;
-    JsMap.put(SELF.fields, f.id(), type);
+    JsMap.put(SELF.fields, f.id(), f);
     IF ~f.exported() THEN
         JsArray.addString(SELF.notExported, f.id());
     END;
 END Record.addField;
 
-PROCEDURE Record.findSymbol(id: STRING): PType;
+PROCEDURE Record.findSymbol(id: STRING): PField;
 VAR
-    result: PType;
+    result: PField;
 BEGIN
     IF ~JsMap.find(SELF.fields, id, result) & (SELF.base # NIL) THEN
         result := SELF.base.findSymbol(id);
