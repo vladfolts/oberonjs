@@ -83,18 +83,41 @@ function promoteExpressionType(context, left, right){
     checkImplicitCast(context.language().types, rightType, leftType);
 }
 
-function checkTypeCast(from, to, msg){
-    if (from instanceof Type.Pointer)
-        from = Type.pointerBase(from);
-    if (to instanceof Type.Pointer)
-        to = Type.pointerBase(to);
+function checkTypeCast(fromInfo, fromType, toType, msg){
+    var prefix = "invalid " + msg;
 
-    var t = Type.recordBase(to);
-    while (t && t != from)
+    var pointerExpected = fromType instanceof Type.Pointer;
+    if (!pointerExpected && !(fromType instanceof Type.Record))
+        throw new Errors.Error(
+            prefix + ": POINTER to type or RECORD expected, got '"
+            + fromType.description() + "'");
+
+    if (fromType instanceof Type.Record){
+        if (!(fromInfo instanceof Type.VariableRef))
+            throw new Errors.Error(
+                prefix + ": a value variable cannot be used");
+        if (!(toType instanceof Type.Record))
+            throw new Errors.Error(
+                prefix + ": RECORD type expected as an argument of RECORD " + msg + ", got '"
+              + toType.description() + "'");
+    }
+    else if (fromType instanceof Type.Pointer)
+        if (!(toType instanceof Type.Pointer))
+            throw new Errors.Error(
+                prefix + ": POINTER type expected as an argument of POINTER " + msg + ", got '"
+              + toType.description() + "'");
+
+    if (fromType instanceof Type.Pointer)
+        fromType = Type.pointerBase(fromType);
+    if (toType instanceof Type.Pointer)
+        toType = Type.pointerBase(toType);
+
+    var t = Type.recordBase(toType);
+    while (t && t != fromType)
         t = Type.recordBase(t);
     if (!t)
-        throw new Errors.Error(msg + ": '" + to.description()
-                             + "' is not an extension of '" + from.description() + "'");
+        throw new Errors.Error(prefix + ": '" + toType.description()
+                             + "' is not an extension of '" + fromType.description() + "'");
 }
 
 var ChainedContext = Class.extend({
@@ -384,22 +407,7 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error("POINTER TO non-exported RECORD type cannot be dereferenced");
     },
     handleTypeCast: function(type){
-        if (this.__currentType instanceof Type.Record){
-            if (!(this.__info instanceof Type.VariableRef))
-                throw new Errors.Error(
-                    "invalid type cast: a value variable cannot be used in typeguard");
-            if (!(type instanceof Type.Record))
-                throw new Errors.Error(
-                    "invalid type cast: RECORD type expected as an argument of RECORD type guard, got '"
-                  + type.description() + "'");
-        }
-        else if (this.__currentType instanceof Type.Pointer)
-            if (!(type instanceof Type.Pointer))
-                throw new Errors.Error(
-                    "invalid type cast: POINTER type expected as an argument of POINTER type guard, got '"
-                  + type.description() + "'");
-
-        checkTypeCast(this.__currentType, type, "invalid type cast");
+        checkTypeCast(this.__info, this.__currentType, type, "type cast");
 
         var code = this.language().rtl.typeGuard(this.__code, castCode(type, this));
         this.__code = code;
@@ -1209,17 +1217,9 @@ exports.Expression = ChainedContext.extend({
             code = "1 << " + leftCode + " & " + rightCode;
         }
         else if (this.__relation == "IS"){
-            var pointerExpected = leftType instanceof Type.Pointer;
-            if (!pointerExpected && !(leftType instanceof Type.Record))
-                throw new Errors.Error("POINTER to type or RECORD expected before 'IS'");
-
             rightType = unwrapType(rightType);
-            if (!pointerExpected && !(rightType instanceof Type.Record))
-                throw new Errors.Error("RECORD type expected after 'IS'");
-            if (pointerExpected && !(rightType instanceof Type.Pointer))
-                throw new Errors.Error("POINTER to type expected after 'IS'");
-
-            checkTypeCast(leftType, rightType, "invalid type test");
+            var d = leftExpression.designator();
+            checkTypeCast(d ? d.info() : undefined, leftType, rightType, "type test");
             //rightExpression = , rightType);
             resultExpression = op.is(leftExpression, Code.makeExpression(castCode(rightType, this)));
             code = resultExpression.code();

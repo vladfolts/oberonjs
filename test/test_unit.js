@@ -243,13 +243,13 @@ return {
          ["p1(PBase)", 
           "invalid type cast: 'Base' is not an extension of 'anonymous RECORD'"],
          ["p1(INTEGER)", 
-          "invalid type cast: POINTER type expected as an argument of POINTER type guard, got 'INTEGER'"],
+          "invalid type cast: POINTER type expected as an argument of POINTER type cast, got 'INTEGER'"],
          ["i(Derived)",
-          "invalid type cast: 'Derived' is not an extension of 'INTEGER'"],
+          "invalid type cast: POINTER to type or RECORD expected, got 'INTEGER'"],
          ["vb(Derived)",
-          "invalid type cast: a value variable cannot be used in typeguard"],
+          "invalid type cast: a value variable cannot be used"],
          ["vb(PDerived)",
-          "invalid type cast: a value variable cannot be used in typeguard"])
+          "invalid type cast: a value variable cannot be used"])
     ),
 "NIL": testWithContext(
     context(grammar.expression,
@@ -283,8 +283,10 @@ return {
     fail(["pBase IS pDerived", "type name expected"],
          ["pBase IS TRUE", "type name expected"],
          ["pBase IS vDerived", "type name expected"],
-         ["Derived IS Derived", "POINTER to type or RECORD expected before 'IS'"],
-         ["i IS Derived", "POINTER to type or RECORD expected before 'IS'"],
+         ["Derived IS Derived", 
+          "invalid type test: POINTER to type or RECORD expected, got 'type Derived'"],
+         ["i IS Derived", 
+          "invalid type test: POINTER to type or RECORD expected, got 'INTEGER'"],
          ["p^ IS Derived", 
           "invalid type test: 'Derived' is not an extension of 'anonymous RECORD'"],
          ["p IS PDerived", 
@@ -295,10 +297,25 @@ return {
          "invalid type test: 'Derived' is not an extension of 'Derived'"],
          ["pDerived^ IS Base", 
           "invalid type test: 'Base' is not an extension of 'Derived'"],
-         ["pDerived IS INTEGER", "POINTER to type expected after 'IS'"],
-         ["pBase IS Derived", "POINTER to type expected after 'IS'"],
-         ["pBase^ IS PDerived", "RECORD type expected after 'IS'"]
+         ["pDerived IS INTEGER", 
+          "invalid type test: POINTER type expected as an argument of POINTER type test, got 'INTEGER'"],
+         ["pBase IS Derived", 
+          "invalid type test: POINTER type expected as an argument of POINTER type test, got 'Derived'"],
+         ["pBase^ IS PDerived", 
+          "invalid type test: RECORD type expected as an argument of RECORD type test, got 'PDerived'"]
          )
+    ),
+"IS for VAR argument": testWithContext(
+    context(grammar.procedureDeclaration,
+            "TYPE Base = RECORD END; Derived = RECORD (Base) i: INTEGER END;"
+            + "T = RECORD END; TD = RECORD(T) b: Base END;"),
+    pass("PROCEDURE proc(VAR p: Base): BOOLEAN; RETURN p IS Derived END proc"),
+    fail(["PROCEDURE proc(p: Base): BOOLEAN; RETURN p IS Derived END proc",
+          "invalid type test: a value variable cannot be used"],
+         ["PROCEDURE proc(p: TD): BOOLEAN; RETURN p.b IS Derived END proc",
+          "invalid type test: a value variable cannot be used"],
+         ["PROCEDURE proc(VAR p: T):BOOLEAN; RETURN p(TD).b IS Derived END proc",
+          "invalid type test: a value variable cannot be used"])
     ),
 "BYTE": testWithContext(
     context(grammar.statement,
@@ -1063,11 +1080,11 @@ return {
             + "T = RECORD END; TD = RECORD(T) b: Base END;"),
     pass("PROCEDURE proc(VAR p: Base); BEGIN p(Derived).i := 1; END proc"),
     fail(["PROCEDURE proc(p: Base); BEGIN p(Derived).i := 1; END proc",
-          "invalid type cast: a value variable cannot be used in typeguard"],
+          "invalid type cast: a value variable cannot be used"],
          ["PROCEDURE proc(p: TD); BEGIN p.b(Derived).i := 1; END proc",
-          "invalid type cast: a value variable cannot be used in typeguard"],
+          "invalid type cast: a value variable cannot be used"],
          ["PROCEDURE proc(VAR p: T); BEGIN p(TD).b(Derived).i := 1; END proc",
-          "invalid type cast: a value variable cannot be used in typeguard"])
+          "invalid type cast: a value variable cannot be used"])
     ),
 "NEW for read only array element fails": testWithContext(
     context(grammar.procedureDeclaration,
