@@ -18,7 +18,7 @@ CONST
 
 TYPE
     Literal = POINTER TO RECORD
-        s: ARRAY 1 OF CHAR
+        s: STRING
     END;
 
 PROCEDURE isDigit(c: CHAR): BOOLEAN;

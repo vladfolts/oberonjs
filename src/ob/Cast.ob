@@ -49,7 +49,7 @@ BEGIN
     RETURN result
 END findPointerBaseType;
 
-PROCEDURE matchesToNIL(t: Types.Type): BOOLEAN;
+PROCEDURE matchesToNIL(VAR t: Types.Type): BOOLEAN;
     RETURN (t IS Types.Pointer) OR (t IS Types.Procedure)
 END matchesToNIL;
 

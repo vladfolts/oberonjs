@@ -76,7 +76,7 @@ BEGIN
     RETURN result
 END makeStdSymbols;
 
-PROCEDURE init(scope: Type; stdSymbols: JsMap.Type);
+PROCEDURE init(VAR scope: Type; stdSymbols: JsMap.Type);
 BEGIN
     scope.stdSymbols := stdSymbols;
     scope.symbols := JsMap.make();
@@ -227,7 +227,7 @@ BEGIN
     JsMap.put(closure(CompiledModule).exports, id, symbol);
 END addExport;
 
-PROCEDURE defineExports*(m: CompiledModule; exports: JsMap.Type);
+PROCEDURE defineExports*(VAR m: CompiledModule; exports: JsMap.Type);
 BEGIN
     JsMap.forEach(exports, addExport, m);
 END defineExports;

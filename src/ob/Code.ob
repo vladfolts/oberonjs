@@ -397,7 +397,7 @@ BEGIN
     RETURN result
 END genExport;
 
-PROCEDURE genCommaList(name: STRING; closure: Closure);
+PROCEDURE genCommaList(name: STRING; VAR closure: Closure);
 BEGIN
     IF LEN(closure.result) # 0 THEN
         closure.result := closure.result + ", ";
@@ -418,7 +418,7 @@ BEGIN
     RETURN "var " + SELF.name + " = function (" + closure.result + "){" + Stream.kCR
 END ModuleGenerator.prolog;
 
-PROCEDURE genExports(s: Symbols.Symbol; closure: Closure);
+PROCEDURE genExports(s: Symbols.Symbol; VAR closure: Closure);
 VAR
     code: STRING;
 BEGIN

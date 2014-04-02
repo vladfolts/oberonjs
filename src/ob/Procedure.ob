@@ -169,7 +169,7 @@ BEGIN
     processArguments(actual, expected, NIL, types);
 END checkArguments;
 
-PROCEDURE initStd*(name: STRING; call: PCall; result: Std);
+PROCEDURE initStd*(name: STRING; call: PCall; VAR result: Std);
 BEGIN
     Types.initProcedure(result, name);
     result.call := call;

@@ -419,7 +419,7 @@ PROCEDURE recordBase*(r: Record): PRecord;
     RETURN r.base
 END recordBase;
 
-PROCEDURE setRecordBase*(r: Record; type: PRecord);
+PROCEDURE setRecordBase*(VAR r: Record; type: PRecord);
 BEGIN
     r.base := type;
 END setRecordBase;
@@ -664,12 +664,12 @@ BEGIN
     RETURN result
 END makeProcedure;
 
-PROCEDURE initProcedure*(p: Procedure; name: STRING);
+PROCEDURE initProcedure*(VAR p: Procedure; name: STRING);
 BEGIN
     p.name := name;
 END initProcedure;
 
-PROCEDURE initModule*(m: Module; name: STRING);
+PROCEDURE initModule*(VAR m: Module; name: STRING);
 BEGIN
     m.name := name;
 END initModule;
