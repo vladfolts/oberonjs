@@ -1249,6 +1249,26 @@ return {
          ["PROCEDURE p(a: ARRAY OF T); BEGIN varInteger(a[0].i) END p",
           "read-only variable cannot be used as VAR parameter"])
     ),
+"RECORD parameter": testWithContext(
+    context(grammar.procedureDeclaration,
+            "TYPE T = RECORD i: INTEGER; p: POINTER TO T END;"
+            + "PROCEDURE intValue(i: INTEGER); END intValue;"
+            + "PROCEDURE intVar(VAR i: INTEGER); END intVar;"
+            + "PROCEDURE recordValue(r: T); END recordValue;"
+            + "PROCEDURE recordVar(VAR r: T); END recordVar;"
+            ),
+    pass("PROCEDURE p(VAR r: T); BEGIN r.i := 0; intVar(r.i); END p",
+         "PROCEDURE p(VAR r: T); BEGIN recordValue(r); recordVar(r); END p",
+         "PROCEDURE p(r: T); BEGIN intValue(r.i); recordValue(r); END p"
+        ),
+    fail(["PROCEDURE p(r: T); BEGIN r.i := 0 END p",
+          "cannot assign to read-only variable"],
+         ["PROCEDURE p(r: T); BEGIN intVar(r.i); END p",
+          "read-only variable cannot be used as VAR parameter"],
+         ["PROCEDURE p(r: T); BEGIN recordVar(r); END p",
+          "read-only variable cannot be used as VAR parameter"]
+        )
+    ),
 "local procedure": testWithContext(
     context(grammar.procedureDeclaration,
             "TYPE ProcType = PROCEDURE;" +

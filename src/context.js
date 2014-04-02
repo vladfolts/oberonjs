@@ -584,7 +584,8 @@ exports.ProcDecl = ChainedContext.extend({
     __addArgument: function(name, arg){
         if (name == this.__id.id())
             throw new Errors.Error("argument '" + name + "' has the same name as procedure");
-        var readOnly = !arg.isVar && (arg.type instanceof Type.Array);
+        var readOnly = !arg.isVar 
+                    && (arg.type instanceof Type.Array || arg.type instanceof Type.Record);
         var v = arg.isVar ? Type.makeVariableRef(arg.type)
                           : Type.makeVariable(arg.type, readOnly);
         var s = Symbol.makeSymbol(name, v);
