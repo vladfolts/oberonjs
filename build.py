@@ -192,7 +192,7 @@ if __name__ == '__main__':
         usage='%prog [options] <output directory>'
         )
     parser.add_option('--no-git', help='do not pull from git', action="store_true")
-    parser.add_option('--pre-commit', help='run tests, build html and pack compiled source', action="store_true")
+    parser.add_option('--pre-commit', help='run tests, recompile oberon sources, run tests against just recompiled sources, pack compiled sources and build html', action="store_true")
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.print_help();
