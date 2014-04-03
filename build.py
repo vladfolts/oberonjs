@@ -87,7 +87,7 @@ def run(cmd, env=None, cwd=None, print_output=False):
         exit(rc)
     return result
 
-root = os.path.dirname(__file__)
+root = os.path.dirname(os.path.abspath(__file__))
 
 def make_js_search_dirs(bin):
     return [os.path.join(root, 'test'), 
@@ -96,7 +96,7 @@ def make_js_search_dirs(bin):
 
 def run_node(args, js_search_dirs, cwd=None):
     node_exe = 'node.exe' if os.name == 'nt' else 'node'
-    node_env = dict(os.environ.items() 
+    node_env = dict(list(os.environ.items())
                   + [('NODE_PATH', ';'.join(js_search_dirs))])
 
     run([node_exe] + args, node_env, cwd, print_output=True)
@@ -113,7 +113,7 @@ def run_tests(bin):
     print('<-tests')
 
 def recompile(bin):
-    print 'recompile oberon sources using "%s"...' % bin
+    print('recompile oberon sources using "%s"...' % bin)
     compiler = os.path.join(root, 'src', 'oc_nodejs.js')
     sources = ['EberonSymbols.ob', 'EberonCast.ob', 'EberonOperator.ob', 
                'OberonSymbols.ob', 'Lexer.ob', 'Module.ob']
