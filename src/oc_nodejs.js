@@ -6,7 +6,8 @@ var nodejs = require("nodejs.js");
 var options = {
     "--include": "includeDirs",
     "--out-dir": "outDir",
-    "--import-dir": "importDir"
+    "--import-dir": "importDir",
+    "--timing": "timing"
 };
 
 function parseOption(a, result){
@@ -39,12 +40,18 @@ function main(){
     var outDir = args.outDir || ".";
 
     var errors = "";
+    var start = args.timing == "true" ? (new Date()).getTime() : undefined;
     nodejs.compile(sources, language, function(e){errors += e + "\n";}, includeDirs, outDir, args.importDir);
     if (errors.length){
         console.error(errors);
         return -2;
     }
 
+    if (start){
+        var stop = (new Date()).getTime();
+        console.log("elapsed: " + (stop - start) / 1000 + " s" );
+    }
+    
     console.info("OK!");
     return 0;
 }

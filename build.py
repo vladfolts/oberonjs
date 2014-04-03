@@ -10,14 +10,14 @@ import sys
 import zipfile
 
 class package( object ):
-    root = 'bin/js'
-    archive = 'bin/compiled.zip'
+    root = os.path.join('bin', 'js')
+    archive = os.path.join('bin', 'compiled.zip')
 
     @staticmethod
     def pack():
         file = zipfile.ZipFile(package.archive, 'w')
         for f in os.listdir(package.root):
-            file.write(os.path.join('bin/js', f), f)
+            file.write(os.path.join(package.root, f), f)
 
     @staticmethod
     def unpack():
@@ -69,13 +69,73 @@ def copytree(src, dst):
     print('%s -> %s' % (src, dst))
     shutil.copytree(src, dst)
 
-def run(cmd):
-    p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, shell = True)
-    return p.stdout.read().decode()
+def run(cmd, env=None, cwd=None, print_output=False):
+    p = subprocess.Popen(
+        cmd, 
+        stdout=None if print_output else subprocess.PIPE, 
+        stderr=subprocess.STDOUT, 
+        shell = True, 
+        env=env,
+        cwd=cwd)
+
+    result = None if print_output else p.stdout.read().decode()
+    rc = p.wait()
+    if rc:
+        if result:
+            print(result)
+        print('"%s" failed with exit code %d' % (' '.join(cmd), rc))
+        exit(rc)
+    return result
+
+root = os.path.dirname(__file__)
+
+def make_js_search_dirs(bin):
+    return [os.path.join(root, 'test'), 
+            os.path.join(root, 'src'), 
+            bin];
+
+def run_node(args, js_search_dirs, cwd=None):
+    node_exe = 'node.exe' if os.name == 'nt' else 'node'
+    node_env = dict(os.environ.items() 
+                  + [('NODE_PATH', ';'.join(js_search_dirs))])
+
+    run([node_exe] + args, node_env, cwd, print_output=True)
+
+def run_tests(bin):
+    print('run tests using "%s" ->' % bin)
+    js_search_dirs = make_js_search_dirs(bin)
+
+    unit_tests = os.path.join(root, 'test', 'test_unit.js')
+    run_node([unit_tests], js_search_dirs)
+
+    compile_tests = os.path.join(root, 'test', 'test_compile.js')
+    run_node([compile_tests], js_search_dirs, cwd=os.path.join(root, 'test'))
+    print('<-tests')
+
+def recompile(bin):
+    print 'recompile oberon sources using "%s"...' % bin
+    compiler = os.path.join(root, 'src', 'oc_nodejs.js')
+    sources = ['EberonSymbols.ob', 'EberonCast.ob', 'EberonOperator.ob', 
+               'OberonSymbols.ob', 'Lexer.ob', 'Module.ob']
+    
+    result = os.path.join(root, 'bin.recompile')
+    cleanup(result)
+    os.mkdir(result)
+    out = os.path.join(result, 'js')
+    os.mkdir(out)
+
+    run_node([compiler, 
+              '--include=src/ob;src/eberon;src/oberon', 
+              '--out-dir=%s' % out, 
+              '--import-dir=js',
+              '--timing=true'] 
+              + sources,
+             make_js_search_dirs(bin))
+    return result
 
 def build(options):
     version = None
-    if not options.no_git:
+    if not (options.no_git or options.pre_commit):
         print(run('git pull'))
         version = run('git log -1 --format="%ci%n%H"')
 
@@ -92,7 +152,16 @@ def build(options):
         print("current html is up to date, do nothing")
         return
 
-    if options.pack:
+    if options.pre_commit:
+        bin = os.path.join(root, 'bin')
+        run_tests(bin)
+        recompiled = recompile(bin)
+        run_tests(recompiled)
+        
+        print('%s -> %s' % (recompiled, bin))
+        cleanup(bin)
+        os.rename(recompiled, bin)
+        
         print('packaging compiled js to %s...' % package.root)
         package.pack()
     else:
@@ -123,7 +192,7 @@ if __name__ == '__main__':
         usage='%prog [options] <output directory>'
         )
     parser.add_option('--no-git', help='do not pull from git', action="store_true")
-    parser.add_option('--pack', help='pack compiled source', action="store_true")
+    parser.add_option('--pre-commit', help='run tests, build html and pack compiled source', action="store_true")
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.print_help();
