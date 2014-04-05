@@ -31,7 +31,7 @@ function makeIdentdef(ident){
     return context(and(ident, optional("*")), Context.Identdef);
 }
 
-function makeDesignator(qualident, selector, actualParameters){
+function makeDesignator(ident, qualident, selector, actualParameters){
     var designator = context(and(qualident, repeat(selector)), Context.Designator);
     return { 
         factor: context(and(designator, optional(actualParameters)), ObContext.ExpressionProcedureCall),

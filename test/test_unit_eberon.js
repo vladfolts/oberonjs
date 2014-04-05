@@ -338,5 +338,44 @@ exports.suite = {
          ["int()()", "PROCEDURE expected, got 'INTEGER'"],
          ["returnProc()", "procedure returning a result cannot be used as a statement"] // call is not applied implicitly to result
         )
-    )
+    ),
+"temporary values": {
+    "initialization": testWithContext(
+        context(grammar.statement,
+                "VAR i: INTEGER;"
+                + "PROCEDURE p(): BOOLEAN; RETURN FALSE END p;"
+                + "PROCEDURE void(); END void;"
+               ),
+        pass("v <- 0",
+             "v <- 1.23",
+             "v <- \"abc\"",
+             "v <- TRUE",
+             "v <- i",
+             "v <- i + i",
+             "v <- p()",
+             "v <- void" // procedure type
+            ),
+        fail(["v <-", "initialization expression expected"],
+             ["v <- void()", "procedure returning no result cannot be used in an expression"])
+        ),
+    "scope": testWithContext(
+        context(grammar.declarationSequence,
+                "VAR i: INTEGER;"),
+        pass("PROCEDURE p(); BEGIN v1 <- 0; v2 <-0; END p;",
+             "PROCEDURE p(); BEGIN i <- 0; END p;",
+             "PROCEDURE p(); BEGIN WHILE FALSE DO v <- 0; END; WHILE FALSE DO v <- 0; END; END p;"
+             ),
+        fail(["PROCEDURE p(); BEGIN v <- 0; v <-0; END p;", "'v' already declared"],
+             ["PROCEDURE p(); VAR v: INTEGER; BEGIN v <- 0; END p;", "'v' already declared"],
+             ["PROCEDURE p(); BEGIN v <- 0; WHILE FALSE DO v <- 0; END; END p;", "'v' already declared"]
+            )
+        ),
+    "read-only": testWithContext(
+        context(grammar.declarationSequence,
+                ""),
+        pass(),
+        fail(["PROCEDURE p(); BEGIN v <- 0; v := 0; END p;", "cannot assign to read-only variable"]
+            )
+        )
+    }
 };

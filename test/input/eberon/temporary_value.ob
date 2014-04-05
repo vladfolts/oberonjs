@@ -1,0 +1,42 @@
+MODULE m;
+
+TYPE
+    T = RECORD
+    END;
+
+VAR 
+    r: T;
+    i: INTEGER;
+
+PROCEDURE p(): BOOLEAN; 
+    RETURN FALSE
+END p;
+
+PROCEDURE void();
+END void;
+
+PROCEDURE valueArgs(r: T; i: INTEGER);
+BEGIN
+    v1 <- r;
+    v2 <- i;
+END valueArgs;
+
+PROCEDURE varArgs(VAR r: T; VAR i: INTEGER);
+BEGIN
+    v1 <- r;
+    v2 <- i;
+END varArgs;
+
+BEGIN
+    v1 <- 0;
+    v2 <- 1.23;
+    v3 <- "abc";
+    v4 <- TRUE;
+    v5 <- i;
+    v6 <- i + i;
+    v7 <- p();
+    v8 <- void;
+    do <- {};
+
+    tempRecord <- r;
+END m.

@@ -1428,7 +1428,7 @@ return {
     };
 }
 
-Test.run({
+var result = Test.run({
     "common": {
         "oberon": makeSuiteForGrammar(oberon),
         "eberon": makeSuiteForGrammar(eberon)
@@ -1436,3 +1436,5 @@ Test.run({
     "eberon": TestUnitEberon.suite,
     "oberon": TestUnitOberon.suite
 });
+if (typeof process != "undefined")
+    process.exit(result ? 0 : -1);

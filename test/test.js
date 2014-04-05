@@ -73,6 +73,7 @@ function run(tests){
         console.log("All OK!");
     else
         console.log(stat.failCount + " test(s) failed");
+    return !stat.failCount;
 }
 
 exports.run = run;

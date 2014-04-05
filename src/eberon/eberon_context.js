@@ -188,6 +188,32 @@ var Designator = Context.Designator.extend({
     }
 });
 
+var TemplValueInit = Context.Chained.extend({
+    init: function EberonContext$TemplValueInit(context){
+        Context.Chained.prototype.init.call(this, context);
+        this.__id = undefined;
+        this.__symbol = undefined;
+    },
+    handleIdent: function(id){
+        this.__id = id;
+    },
+    handleLiteral: function(){
+        var gen = this.codeGenerator();
+        gen.write("var " + this.__id + " = ");
+    },
+    handleExpression: function(e){
+        var v = Type.makeVariable(e.type(), true);
+        this.__symbol = Symbol.makeSymbol(this.__id, v);
+    },
+    endParse: function(){
+        if (!this.__symbol)
+            return false;
+
+        this.currentScope().addSymbol(this.__symbol);
+        return true;
+    }
+});
+
 var ExpressionProcedureCall = Context.Chained.extend({
     init: function EberonContext$init(context){
         Context.Chained.prototype.init.call(this, context);
@@ -606,5 +632,6 @@ exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;
+exports.TemplValueInit = TemplValueInit;
 exports.TypeDeclaration = TypeDeclaration;
 exports.VariableDeclaration = VariableDeclaration;

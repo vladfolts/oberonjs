@@ -12,6 +12,7 @@ var context = Parser.context;
 var optional = Parser.optional;
 var or = Parser.or;
 var repeat = Parser.repeat;
+var required = Parser.required;
 
 function makeProcedureHeading(ident, identdef, formalParameters){
     return and("PROCEDURE",
@@ -20,22 +21,24 @@ function makeProcedureHeading(ident, identdef, formalParameters){
                );
 }
 
-function makeAssignmentOrProcedureCall(designator, assignment){
-    return context(and(designator, optional(assignment)),
-                   EbContext.AssignmentOrProcedureCall);
+function makeAssignmentOrProcedureCall(ident, designator, assignment, expression){
+    return or(
+        context(and(ident, "<-", required(expression, "initialization expression expected")), EbContext.TemplValueInit),
+        context(and(designator, optional(assignment)), EbContext.AssignmentOrProcedureCall)
+        );
 }
 
 function makeIdentdef(ident){
     return context(and(ident, optional(or("*", "-"))), EbContext.Identdef);
 }
 
-function makeDesignator(qualident, selector, actualParameters){
+function makeDesignator(ident, qualident, selector, actualParameters){
     var designator = context(
         and(or("SELF", "SUPER", qualident), repeat(or(selector, actualParameters))), EbContext.Designator);
     return { 
         factor: context(designator, EbContext.ExpressionProcedureCall),
-        assignmentOrProcedureCall: function(assignment){
-            return makeAssignmentOrProcedureCall(designator, assignment);
+        assignmentOrProcedureCall: function(assignment, expression){
+            return makeAssignmentOrProcedureCall(ident, designator, assignment, expression);
         }
     };
 }

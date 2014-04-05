@@ -53,6 +53,7 @@ var selector = or(and(point, ident)
                 , context(and("(", qualident, ")"), Context.TypeCast)
                 );
 var designator = makeDesignator(
+        ident,
         qualident, 
         selector,
         // break recursive declaration of actualParameters
@@ -111,7 +112,7 @@ var assignment = and(context(or(":=", "="), Context.CheckAssignment),
                      required(expression, "expression expected"));
 
 var statement = optional(or(
-                   emit(designator.assignmentOrProcedureCall(assignment), Context.emitEndStatement)
+                   emit(designator.assignmentOrProcedureCall(assignment, expression), Context.emitEndStatement)
                    // break recursive declaration of ifStatement/caseStatement/whileStatement/repeatStatement
                  , function(stream, context){return ifStatement(stream, context);}
                  , function(stream, context){return caseStatement(stream, context);}

@@ -155,13 +155,15 @@ function main(){
         };
     }
 
-    Test.run({"common": {"oberon": makeCommonTests(oberon, "oberon"),
-                         "eberon": makeCommonTests(eberon, "eberon")
-                        },
-              "eberon": {"expect OK": makeTests(expectOk, eberonDirs, eberon),
-                         "run": makeTests(run, eberonRunDirs, eberon)
-                        }
-             });
+    var result =
+        Test.run({"common": {"oberon": makeCommonTests(oberon, "oberon"),
+                             "eberon": makeCommonTests(eberon, "eberon")
+                            },
+                  "eberon": {"expect OK": makeTests(expectOk, eberonDirs, eberon),
+                             "run": makeTests(run, eberonRunDirs, eberon)
+                            }
+                 });
+    return result ? 0 : -1;
 }
 
-main();
+process.exit(main());
