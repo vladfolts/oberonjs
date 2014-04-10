@@ -1,4 +1,3 @@
-
 #!/usr/bin/python
 from browser.linkjs import link
 import optparse
@@ -74,7 +73,7 @@ def run(cmd, env=None, cwd=None, print_output=False):
         cmd, 
         stdout=None if print_output else subprocess.PIPE, 
         stderr=subprocess.STDOUT, 
-        shell = True, 
+        #shell = True, 
         env=env,
         cwd=cwd)
 
@@ -95,9 +94,9 @@ def make_js_search_dirs(bin):
             bin];
 
 def run_node(args, js_search_dirs, cwd=None):
-    node_exe = 'node.exe' if os.name == 'nt' else 'node'
+    node_exe, path_separator = ('node.exe', ';') if os.name == 'nt' else ('node', ':')
     node_env = dict(list(os.environ.items())
-                  + [('NODE_PATH', ';'.join(js_search_dirs))])
+                  + [('NODE_PATH', path_separator.join(js_search_dirs))])
 
     run([node_exe] + args, node_env, cwd, print_output=True)
 
