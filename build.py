@@ -132,13 +132,25 @@ def recompile(bin):
              make_js_search_dirs(bin))
     return result
 
-def build(options):
-    version = None
-    if not (options.no_git or options.pre_commit):
-        print(run('git pull'))
-        version = run('git log -1 --format="%ci%n%H"')
+def compile_using_snapshot(src):
+    snapshot_root = os.path.join(root, 'snapshot')
+    out = os.path.join(root, 'bin', 'js')
+    compiler = os.path.join(snapshot_root, 'oc_nodejs.js')
+    js_search_dirs = [snapshot_root]
+    run_node([  compiler, 
+                '--include=src/ob;src/eberon;src/oberon', 
+                '--out-dir=%s' % out, 
+                '--import-dir=js', 
+                src],
+             js_search_dirs)
 
-    out = options.output
+def build_html(options):
+    version = None
+    if options.set_version:
+        print(run(['git', 'pull']))
+        version = run(['git', 'log', '-1', '--format="%ci%n%H"'])
+
+    out = options.out
     build_version = None
     build_version_path = os.path.join(out, 'version.txt')
     try:
@@ -151,21 +163,8 @@ def build(options):
         print("current html is up to date, do nothing")
         return
 
-    if options.pre_commit:
-        bin = os.path.join(root, 'bin')
-        run_tests(bin)
-        recompiled = recompile(bin)
-        run_tests(recompiled)
-        
-        print('%s -> %s' % (recompiled, bin))
-        cleanup(bin)
-        os.rename(recompiled, bin)
-        
-        print('packaging compiled js to %s...' % package.root)
-        package.pack()
-    else:
-        print('unpacking compiled js to %s...' % package.root)
-        package.unpack()
+    print('unpacking compiled js to %s...' % package.root)
+    package.unpack()
 
     if not os.path.exists(out):
         os.mkdir(out)
@@ -185,17 +184,83 @@ def build(options):
         with open(build_version_path, 'w') as f:
             f.write(version)
 
+def pre_commit_check(options):
+    bin = os.path.join(root, 'bin')
+    run_tests(bin)
+    recompiled = recompile(bin)
+    run_tests(recompiled)
+    
+    print('%s -> %s' % (recompiled, bin))
+    cleanup(bin)
+    os.rename(recompiled, bin)
+    
+    print('packaging compiled js to %s...' % package.root)
+    package.pack()
+
+class compile_target(object):
+    name = 'compile'
+    description = 'compile oberon source file using the snapshot'
+
+    @staticmethod
+    def setup_options(parser):
+        parser.add_option('--file', help='file to compile')
+
+    def __init__(self, options):
+        compile_using_snapshot(options.file)
+
+class html_target(object):
+    name = 'html'
+    description = 'build html page'
+
+    @staticmethod
+    def setup_options(parser):
+        parser.add_option('--out', help='output directory, default: "_out"', default='_out')
+        parser.add_option('--set-version', action="store_true", help='include version in built html')
+
+    def __init__(self, options):
+        build_html(options)
+
+class pre_commit_target(object):
+    name = 'pre-commit'
+    description = 'run tests, recompile oberon sources, run tests against just recompiled sources, pack compiled sources and build html'
+
+    @staticmethod
+    def setup_options(parser):
+        pass
+
+    def __init__(self, options):
+        pre_commit_check(options)
+
+targets = [compile_target, html_target, pre_commit_target]
+
+def build(target, options):
+    targets[target](options)
+
 if __name__ == '__main__':
+    description = 'Targets: %s' % '|'.join([t.name for t in targets])
     parser = optparse.OptionParser(
-        description='Pull repo and build html page',
-        usage='%prog [options] <output directory>'
+        description=description,
+        usage='%prog [options] <target>'
         )
-    parser.add_option('--no-git', help='do not pull from git', action="store_true")
-    parser.add_option('--pre-commit', help='run tests, recompile oberon sources, run tests against just recompiled sources, pack compiled sources and build html', action="store_true")
+    for t in targets:
+        group = optparse.OptionGroup(parser, 'target "%s"' % t.name, t.description)
+        t.setup_options(group)
+        parser.add_option_group(group)
+
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.print_help();
         exit(-1)
-        
-    options.output = args[0]
-    build(options)
+    
+    target_name = args[0]
+    target = None
+    for t in targets:
+        if t.name == target_name:
+            target = t
+            break
+
+    if target is None:
+        print('uknown target: "%s"' % target_name)
+        exit(-1)
+    
+    target(options)
