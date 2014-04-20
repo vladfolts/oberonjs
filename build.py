@@ -87,6 +87,7 @@ def run(cmd, env=None, cwd=None, print_output=False):
     return result
 
 root = os.path.dirname(os.path.abspath(__file__))
+snapshot_root = os.path.join(root, 'snapshot')
 
 def make_js_search_dirs(bin):
     return [os.path.join(root, 'test'), 
@@ -141,7 +142,6 @@ def recompile(bin):
     return result
 
 def compile_using_snapshot(src):
-    snapshot_root = os.path.join(root, 'snapshot')
     out = os.path.join(root, 'bin', 'js')
     compiler = os.path.join(snapshot_root, 'oc_nodejs.js')
     js_search_dirs = [snapshot_root]
@@ -253,7 +253,26 @@ class pre_commit_target(object):
     def __init__(self, options):
         pre_commit_check(options)
 
-targets = [compile_target, html_target, tests_target, pre_commit_target]
+class snapshot_target(object):
+    name = 'snapshot'
+    description = 'make snapshot - current compiled compiler (set of *.js) to use for compiling oberon sources'
+
+    @staticmethod
+    def setup_options(parser):
+        pass
+        
+    def __init__(self, options):
+        new_dir = snapshot_root + '.new'
+        cleanup(new_dir)
+        shutil.copytree(os.path.join(root, 'src'), new_dir)
+        shutil.copytree(os.path.join(root, 'bin', 'js'), os.path.join(new_dir, 'js'))
+        if os.path.exists(snapshot_root):
+            old_dir = snapshot_root + '.bak'
+            cleanup(old_dir)
+            os.rename(snapshot_root, old_dir)
+        os.rename(new_dir, snapshot_root)
+
+targets = [compile_target, html_target, tests_target, pre_commit_target, snapshot_target]
 
 def build(target, options):
     targets[target](options)
