@@ -135,10 +135,11 @@ var caseStatement = and("CASE", context(and(expression
                       , "OF", caseParser, repeat(and("|", caseParser)), "END")
                       , Context.Case));
 
-var whileStatement = and("WHILE", context(expression, Context.While), "DO", statementSequence
-                       , repeat(and("ELSIF", context(expression, Context.ElseIf), "DO", statementSequence))
-                       , emit("END", Context.emitWhileEnd)
-                       );
+var whileStatement = and("WHILE", 
+                         context(and(expression, "DO", statementSequence, 
+                                     repeat(and("ELSIF", context(expression, Context.ElseIf), "DO", statementSequence)),
+                                     "END"),
+                                 contexts.whileContext));
 var repeatStatement = and("REPEAT", context(statementSequence, Context.Repeat)
                         , "UNTIL", context(expression, Context.Until));
 

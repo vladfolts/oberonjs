@@ -1,0 +1,24 @@
+MODULE m1;
+TYPE
+	Base* = RECORD 
+        PROCEDURE p*()
+    END;
+
+PROCEDURE Base.p();
+END Base.p;
+
+END m1.
+
+MODULE m2;
+IMPORT m1;
+
+TYPE
+	T = RECORD(m1.Base)
+    END;
+
+PROCEDURE T.p();
+BEGIN
+    SUPER();
+END T.p;
+
+END m2.

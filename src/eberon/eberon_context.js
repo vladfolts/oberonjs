@@ -3,6 +3,7 @@
 var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
 var Context = require("context.js");
+var EberonScope = require("js/EberonScope.js");
 var EberonString = require("js/EberonString.js");
 var Errors = require("js/Errors.js");
 var op = require("js/Operator.js");
@@ -560,7 +561,8 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             symbol: Symbol.makeSymbol(
                 "method",  
                 Type.makeProcedure(new MethodType(id, this.__methodType.procType(), superMethodCallGenerator))),
-            code: Type.typeName(baseType) + ".prototype." + id + ".call"
+            code: this.qualifyScope(Type.recordScope(baseType))
+                + Type.typeName(baseType) + ".prototype." + id + ".call"
         };
     }
 });
@@ -621,6 +623,18 @@ var Expression = Context.Expression.extend({
     }
 });
 
+var While = Context.While.extend({
+    init: function EberonContext$While(context){
+        Context.While.prototype.init.call(this, context);
+        this.__scope = EberonScope.makeOperator(
+            this.parent().currentScope(),
+            this.language().stdSymbols);
+    },
+    currentScope: function EberonContext$While(){
+        return this.__scope;
+    }
+});
+
 exports.AddOperator = AddOperator;
 exports.ConstDecl = ConstDecl;
 exports.Designator = Designator;
@@ -635,3 +649,4 @@ exports.RecordDecl = RecordDecl;
 exports.TemplValueInit = TemplValueInit;
 exports.TypeDeclaration = TypeDeclaration;
 exports.VariableDeclaration = VariableDeclaration;
+exports.While = While;

@@ -78,7 +78,8 @@ exports.language = {
             recordDecl:         EbContext.RecordDecl,
             variableDeclaration: EbContext.VariableDeclaration,
             addOperator:        EbContext.AddOperator,
-            expression:         EbContext.Expression
+            expression:         EbContext.Expression,
+            whileContext:       EbContext.While
         },
         Grammar.reservedWords + " SELF SUPER"
         ),

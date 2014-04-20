@@ -1433,19 +1433,18 @@ exports.While = ChainedContext.extend({
         gen.openScope();
         gen.write("if (");
     },
-    handleExpression: handleIfExpression,
-    endParse: function(){
+    handleExpression: function WhileContext$handleExpression(e){
+        handleIfExpression(e);
         var gen = this.codeGenerator();
         gen.write(")");
         gen.openScope();
+    },
+    endParse: function(){
+        var gen = this.codeGenerator();
+        gen.closeScope(" else break;\n");
+        gen.closeScope("");
     }
 });
-
-exports.emitWhileEnd = function(context){
-    var gen = context.codeGenerator();
-    gen.closeScope(" else break;\n");
-    gen.closeScope("");
-};
 
 exports.Repeat = ChainedContext.extend({
     init: function RepeatContext(context){

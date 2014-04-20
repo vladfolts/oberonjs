@@ -9,9 +9,9 @@ IMPORT
     Symbols, 
     Types;
 TYPE
-    Type = RECORD(ScopeBase.Type)
-        PROCEDURE addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
-        PROCEDURE findSymbol(id: STRING): Symbols.PSymbol;
+    Type* = RECORD(ScopeBase.Type)
+        PROCEDURE addSymbol*(s: Symbols.PSymbol; exported: BOOLEAN);
+        PROCEDURE findSymbol*(id: STRING): Symbols.PSymbol;
         PROCEDURE close();
 
         stdSymbols: JsMap.Type;
@@ -19,7 +19,7 @@ TYPE
         unresolved: JsArray.Strings;
         finalizers: JsArray.Type
     END;
-    PType = POINTER TO Type;
+    PType* = POINTER TO Type;
 
     Procedure* = RECORD(Type)
     END;
@@ -76,7 +76,7 @@ BEGIN
     RETURN result
 END makeStdSymbols;
 
-PROCEDURE init(VAR scope: Type; stdSymbols: JsMap.Type);
+PROCEDURE init*(VAR scope: Type; stdSymbols: JsMap.Type);
 BEGIN
     scope.stdSymbols := stdSymbols;
     scope.symbols := JsMap.make();

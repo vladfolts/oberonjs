@@ -1,0 +1,29 @@
+MODULE EberonScope;
+IMPORT Errors, JsMap, Scope, Symbols;
+TYPE
+    Operator = RECORD(Scope.Type)
+        parent: Scope.PType
+    END;
+
+PROCEDURE Operator.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
+VAR
+    id: STRING;
+BEGIN
+    id := s.id();
+    IF SELF.parent.findSymbol(id) # NIL THEN
+        Errors.raise("'" + id + "' already declared in procedure scope");
+    END;
+    SUPER(s, exported);
+END Operator.addSymbol;
+
+PROCEDURE makeOperator*(parent: Scope.PType; stdSymbols: JsMap.Type): Scope.PType;
+VAR
+    result: POINTER TO Operator;
+BEGIN
+    NEW(result);
+    Scope.init(result^, stdSymbols);
+    result.parent := parent;
+    RETURN result
+END makeOperator;
+
+END EberonScope.

@@ -367,7 +367,8 @@ exports.suite = {
              ),
         fail(["PROCEDURE p(); BEGIN v <- 0; v <-0; END p;", "'v' already declared"],
              ["PROCEDURE p(); VAR v: INTEGER; BEGIN v <- 0; END p;", "'v' already declared"],
-             ["PROCEDURE p(); BEGIN v <- 0; WHILE FALSE DO v <- 0; END; END p;", "'v' already declared"]
+             ["PROCEDURE p(); BEGIN v <- 0; WHILE FALSE DO v <- 0; END; END p;", 
+              "'v' already declared in procedure scope"]
             )
         ),
     "read-only": testWithContext(
