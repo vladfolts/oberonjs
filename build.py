@@ -150,7 +150,8 @@ def compile_using_snapshot(src):
                 '--out-dir=%s' % out, 
                 '--import-dir=js', 
                 src],
-             js_search_dirs)
+             js_search_dirs,
+             cwd=root)
 
 def build_html(options):
     version = None
