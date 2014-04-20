@@ -100,15 +100,23 @@ def run_node(args, js_search_dirs, cwd=None):
 
     run([node_exe] + args, node_env, cwd, print_output=True)
 
-def run_tests(bin):
+def run_tests(bin, unit_test=None, code_test=None):
     print('run tests using "%s" ->' % bin)
     js_search_dirs = make_js_search_dirs(bin)
 
-    unit_tests = os.path.join(root, 'test', 'test_unit.js')
-    run_node([unit_tests], js_search_dirs)
+    if not code_test:
+        unit_tests = os.path.join(root, 'test', 'test_unit.js')
+        args = [unit_tests]
+        if unit_test:
+            args += [unit_test]
+        run_node(args, js_search_dirs)
 
-    compile_tests = os.path.join(root, 'test', 'test_compile.js')
-    run_node([compile_tests], js_search_dirs, cwd=os.path.join(root, 'test'))
+    if not unit_test:
+        compile_tests = os.path.join(root, 'test', 'test_compile.js')
+        args = [compile_tests]
+        if code_test:
+            args += [code_test]
+        run_node(args, js_search_dirs, cwd=os.path.join(root, 'test'))
     print('<-tests')
 
 def recompile(bin):
@@ -220,6 +228,19 @@ class html_target(object):
     def __init__(self, options):
         build_html(options)
 
+class tests_target(object):
+    name = 'tests'
+    description = 'run tests'
+
+    @staticmethod
+    def setup_options(parser):
+        parser.add_option('--unit', help='run specific unit test')
+        parser.add_option('--code', help='run specific code generator test')
+
+    def __init__(self, options):
+        bin = os.path.join(root, 'bin')
+        run_tests(bin, options.unit, options.code)
+
 class pre_commit_target(object):
     name = 'pre-commit'
     description = 'run tests, recompile oberon sources, run tests against just recompiled sources, pack compiled sources and build html'
@@ -231,7 +252,7 @@ class pre_commit_target(object):
     def __init__(self, options):
         pre_commit_check(options)
 
-targets = [compile_target, html_target, pre_commit_target]
+targets = [compile_target, html_target, tests_target, pre_commit_target]
 
 def build(target, options):
     targets[target](options)
