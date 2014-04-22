@@ -1266,7 +1266,7 @@ function handleIfExpression(e){
     if (type !== basicTypes.bool)
         throw new Errors.Error("'BOOLEAN' expression expected, got '" + type.description() + "'");
 }
-
+/*
 var IfContextBase = ChainedContext.extend({
     init: function(context){
         ChainedContext.prototype.init.call(this, context);
@@ -1278,39 +1278,37 @@ var IfContextBase = ChainedContext.extend({
     },
     handleExpression: handleIfExpression
 });
-
-exports.If = IfContextBase.extend({
+*/
+exports.If = ChainedContext.extend({
     init: function IfContext(context){
         ChainedContext.prototype.init.call(this, context);
         this.codeGenerator().write("if (");
-    }
-});
-
-exports.ElseIf = IfContextBase.extend({
-    init: function ElseIfContext(context){
-        ChainedContext.prototype.init.call(this, context);
+    },
+    handleExpression: function(e){
+        handleIfExpression(e);
         var gen = this.codeGenerator();
-        gen.closeScope("");
-        gen.write("else if (");
-    }
-});
-
-exports.Else = ChainedContext.extend({
-    init: function ElseContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        var gen = this.codeGenerator();
-        gen.closeScope("");
-        gen.write("else ");
+        gen.write(")");
         gen.openScope();
+    },
+    handleLiteral: function(s){
+        var gen = this.codeGenerator();
+        if (s == "ELSIF"){
+            gen.closeScope("");
+            gen.write("else if (");
+        }
+        else if (s == "ELSE"){
+            gen.closeScope("");
+            gen.write("else ");
+            gen.openScope();
+        }
+    },
+    endParse: function(){
+        this.codeGenerator().closeScope("");
     }
 });
 
 exports.emitEndStatement = function(context){
     context.codeGenerator().write(";\n");
-};
-
-exports.emitIfEnd = function(context){
-    context.codeGenerator().closeScope("");
 };
 
 exports.Case = ChainedContext.extend({
@@ -1438,6 +1436,13 @@ exports.While = ChainedContext.extend({
         var gen = this.codeGenerator();
         gen.write(")");
         gen.openScope();
+    },
+    handleLiteral: function(s){
+        if (s == "ELSIF"){
+            var gen = this.codeGenerator();
+            gen.closeScope("");
+            gen.write("else if (");
+        }
     },
     endParse: function(){
         var gen = this.codeGenerator();

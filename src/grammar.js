@@ -122,10 +122,11 @@ var statement = optional(or(
                  ));
 var statementSequence = and(statement, repeat(and(";", statement)));
 
-var ifStatement = and("IF", context(expression, Context.If), required("THEN", "THEN expected"), statementSequence
-                    , repeat(and("ELSIF", context(expression, Context.ElseIf), required("THEN", "THEN expected"), statementSequence))
-                    , optional(and("ELSE", context(statementSequence, Context.Else)))
-                    , emit("END", Context.emitIfEnd));
+var ifStatement = and("IF", context(and(expression, required("THEN", "THEN expected"), statementSequence,
+                                        repeat(and("ELSIF", expression, required("THEN", "THEN expected"), statementSequence)),
+                                        optional(and("ELSE", statementSequence)),
+                                        "END"), 
+                                    Context.If));
 
 var label = or(integer, string, ident);
 var labelRange = context(and(label, optional(and("..", label))), Context.CaseRange);
@@ -137,7 +138,7 @@ var caseStatement = and("CASE", context(and(expression
 
 var whileStatement = and("WHILE", 
                          context(and(expression, "DO", statementSequence, 
-                                     repeat(and("ELSIF", context(expression, Context.ElseIf), "DO", statementSequence)),
+                                     repeat(and("ELSIF", expression, "DO", statementSequence)),
                                      "END"),
                                  contexts.whileContext));
 var repeatStatement = and("REPEAT", context(statementSequence, Context.Repeat)
