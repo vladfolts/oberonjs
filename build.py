@@ -105,17 +105,21 @@ def run_tests(bin, unit_test=None, code_test=None):
     print('run tests using "%s" ->' % bin)
     js_search_dirs = make_js_search_dirs(bin)
 
-    if not code_test:
+    if unit_test is None and code_test is None:
+        unit_test = '*'
+        code_test = '*'
+
+    if unit_test:
         unit_tests = os.path.join(root, 'test', 'test_unit.js')
         args = [unit_tests]
-        if unit_test:
+        if unit_test != '*':
             args += [unit_test]
         run_node(args, js_search_dirs)
 
-    if not unit_test:
+    if code_test:
         compile_tests = os.path.join(root, 'test', 'test_compile.js')
         args = [compile_tests]
-        if code_test:
+        if code_test != '*':
             args += [code_test]
         run_node(args, js_search_dirs, cwd=os.path.join(root, 'test'))
     print('<-tests')
@@ -235,8 +239,8 @@ class tests_target(object):
 
     @staticmethod
     def setup_options(parser):
-        parser.add_option('--unit', help='run specific unit test')
-        parser.add_option('--code', help='run specific code generator test')
+        parser.add_option('--unit', help='run specific unit test, use "*" to run all unit tests')
+        parser.add_option('--code', help='run specific code generator test, use "*" to run all generator tests')
 
     def __init__(self, options):
         bin = os.path.join(root, 'bin')
