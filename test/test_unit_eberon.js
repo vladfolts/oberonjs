@@ -362,13 +362,25 @@ exports.suite = {
         context(grammar.declarationSequence,
                 "VAR i: INTEGER;"),
         pass("PROCEDURE p(); BEGIN v1 <- 0; v2 <-0; END p;",
-             "PROCEDURE p(); BEGIN i <- 0; END p;",
-             "PROCEDURE p(); BEGIN WHILE FALSE DO v <- 0; END; WHILE FALSE DO v <- 0; END; END p;"
+             "PROCEDURE p(); BEGIN i <- 0; ASSERT(i = 0); END p;",
+             "PROCEDURE p(); BEGIN WHILE FALSE DO v <- 0; ASSERT(v = 0); END; WHILE FALSE DO v <- 0; END; END p;",
+             "PROCEDURE p(); BEGIN WHILE FALSE DO i1 <- 0; WHILE FALSE DO i2 <- 0; ASSERT(i1 = 0); ASSERT(i2 = 0); END; END; END p;",
+             "PROCEDURE p(); BEGIN IF FALSE THEN v <- 0; ASSERT(v = 0); END; IF FALSE THEN v <- 0; END; END p;",
+             "PROCEDURE p(); BEGIN IF FALSE THEN v <- 0; END; IF FALSE THEN v <- 0; END; END p;",
+             "PROCEDURE p(); BEGIN IF FALSE THEN v <- 0; ELSIF FALSE THEN v <- 0; ELSE v <- 0; END; END p;",
+             "PROCEDURE p(); BEGIN CASE i OF 0: v <- 0 | 1: v <- 1; ; ASSERT(v = 1); END; END p;",
+             "PROCEDURE p(); BEGIN REPEAT v <- 0; UNTIL FALSE; REPEAT v <- 0; UNTIL FALSE; END p;",
+             "PROCEDURE p(); BEGIN REPEAT v <- 0; ASSERT(v = 0); UNTIL v # 0; END p;",
+             "PROCEDURE p(); BEGIN FOR i := 0 TO 10 DO v <- 0; END; FOR i := 0 TO 10 DO v <- 0; END; END p;"
              ),
         fail(["PROCEDURE p(); BEGIN v <- 0; v <-0; END p;", "'v' already declared"],
              ["PROCEDURE p(); VAR v: INTEGER; BEGIN v <- 0; END p;", "'v' already declared"],
              ["PROCEDURE p(); BEGIN v <- 0; WHILE FALSE DO v <- 0; END; END p;", 
-              "'v' already declared in procedure scope"]
+              "'v' already declared in procedure scope"],
+             ["PROCEDURE p(); BEGIN i <- 0; IF FALSE THEN i <- 0; END; END p;",
+              "'i' already declared in procedure scope"],
+             ["PROCEDURE p(); BEGIN WHILE FALSE DO i <- 0; WHILE FALSE DO i <- 0; END; END; END p;",
+              "'i' already declared in procedure scope"]
             )
         ),
     "read-only": testWithContext(

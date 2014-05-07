@@ -66,7 +66,11 @@ exports.language = {
             variableDeclaration: ObContext.VariableDeclaration,
             addOperator:        Context.AddOperator,
             expression:         Context.Expression,
-            whileContext:       Context.While
+            For:                Context.For,
+            While:              Context.While,
+            If:                 Context.If,
+            CaseLabel:          Context.CaseLabel,
+            Repeat:             Context.Repeat
         },
         Grammar.reservedWords
         ),

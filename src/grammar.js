@@ -126,12 +126,12 @@ var ifStatement = and("IF", context(and(expression, required("THEN", "THEN expec
                                         repeat(and("ELSIF", expression, required("THEN", "THEN expected"), statementSequence)),
                                         optional(and("ELSE", statementSequence)),
                                         "END"), 
-                                    Context.If));
+                                    contexts.If));
 
 var label = or(integer, string, ident);
 var labelRange = context(and(label, optional(and("..", label))), Context.CaseRange);
 var caseLabelList = context(and(labelRange, repeat(and(",", labelRange))), Context.CaseLabelList);
-var caseParser = optional(context(and(caseLabelList, ":", statementSequence), Context.CaseLabel));
+var caseParser = optional(context(and(caseLabelList, ":", statementSequence), contexts.CaseLabel));
 var caseStatement = and("CASE", context(and(expression
                       , "OF", caseParser, repeat(and("|", caseParser)), "END")
                       , Context.Case));
@@ -140,15 +140,19 @@ var whileStatement = and("WHILE",
                          context(and(expression, "DO", statementSequence, 
                                      repeat(and("ELSIF", expression, "DO", statementSequence)),
                                      "END"),
-                                 contexts.whileContext));
-var repeatStatement = and("REPEAT", context(statementSequence, Context.Repeat)
-                        , "UNTIL", context(expression, Context.Until));
+                                 contexts.While));
+var repeatStatement = and("REPEAT", 
+                          context(and(statementSequence, 
+                                      "UNTIL", 
+                                      context(expression, Context.Until)), 
+                                  contexts.Repeat));
 
-var forStatement = context(and("FOR", ident, ":=", expression, "TO", expression
-                             , optional(and("BY", constExpression))
-                             , emit("DO", Context.emitForBegin)
-                             , statementSequence, required("END", "END expected (FOR)"))
-                         , Context.For);
+var forStatement = and("FOR", 
+                       context(and(ident, ":=", expression, "TO", expression
+                                 , optional(and("BY", constExpression))
+                                 , emit("DO", Context.emitForBegin)
+                                 , statementSequence, required("END", "END expected (FOR)"))
+                             , contexts.For));
 
 var fieldList = makeFieldList(
         identdef,

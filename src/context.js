@@ -28,6 +28,10 @@ function getSymbolAndScope(context, id){
     return s;
 }
 
+function getQIdSymbolAndScope(context, q){
+    return getSymbolAndScope(q.module ? q.module : context, q.id);
+}
+
 function getSymbol(context, id){
     return getSymbolAndScope(context, id).symbol();
 }
@@ -225,7 +229,8 @@ exports.BaseType = ChainedContext.extend({
     init: function BaseTypeContext(context){
         ChainedContext.prototype.init.call(this, context);
     },
-    handleSymbol: function(s){
+    handleQIdent: function(q){
+        var s = getQIdSymbolAndScope(this, q);
         this.parent().setBaseType(unwrapType(s.symbol().info()));
     }
 });
@@ -249,11 +254,12 @@ exports.QualifiedIdentificator = ChainedContext.extend({
         return undefined;
     },
     endParse: function(){
-        var s = getSymbolAndScope(this.__module ? this.__module : this, this.__id);
         var code = this.__code + this.__id;
-        if (this.__module && s.symbol().isVariable())
-            code += "()";
-        this.parent().handleSymbol(s, code);
+        this.parent().handleQIdent({
+            module: this.__module,
+            id: this.__id,
+            code: code
+        });
     }
 });
 
@@ -299,7 +305,8 @@ exports.Designator = ChainedContext.extend({
         this.__derefCode = undefined;
         this.__propCode = undefined;
     },
-    handleSymbol: function(found, code){
+    handleQIdent: function(q){
+        var found = getQIdSymbolAndScope(this, q);
         this.__scope = found.scope();
         var s = found.symbol();
         var info = s.info();
@@ -311,8 +318,12 @@ exports.Designator = ChainedContext.extend({
             this.__currentType = info.type();
         else if (s.isProcedure())
             this.__currentType = Type.procedureType(info);
+        
         this.__info = info;
-        this.__code += code;
+        this.__code += q.code;
+        
+        if (q.module && s.isVariable())
+            this.__code += "()";
     },
     handleIdent: function(id){
         var t = this.__currentType;
@@ -450,8 +461,8 @@ exports.Type = ChainedContext.extend({
     init: function Context$Type(context){
         ChainedContext.prototype.init.call(this, context);
     },
-    handleSymbol: function(s){
-        this.parent().handleSymbol(s);
+    handleQIdent: function(q){
+        this.parent().handleQIdent(q);
     }
 });
 
@@ -459,7 +470,8 @@ var HandleSymbolAsType = ChainedContext.extend({
     init: function Context$HandleSymbolAsType(context){
         ChainedContext.prototype.init.call(this, context);
     },
-    handleSymbol: function(s){
+    handleQIdent: function(q){
+        var s = getQIdSymbolAndScope(this, q);
         this.setType(unwrapType(s.symbol().info()));
     }
 });
@@ -519,7 +531,8 @@ exports.FormalParameters = ChainedContext.extend({
         }
         return ChainedContext.prototype.handleMessage.call(this, msg);
     },
-    handleSymbol: function(s){
+    handleQIdent: function(q){
+        var s = getQIdSymbolAndScope(this, q);
         var resultType = unwrapType(s.symbol().info());
         if (resultType instanceof Type.Array)
             throw new Errors.Error("the result type of a procedure cannot be an ARRAY");
@@ -668,8 +681,23 @@ exports.PointerDecl = ChainedContext.extend({
     init: function Context$PointerDecl(context){
         ChainedContext.prototype.init.call(this, context);
     },
-    handleSymbol: function(s){
-        var typeId = unwrapTypeId(s.symbol().info());
+    handleQIdent: function(q){
+        var id = q.id;
+        var s = q.module
+              ? getQIdSymbolAndScope(this, q)
+              : this.findSymbol(id);
+        
+        var info;
+        if (s)
+            info = s.symbol().info();
+        else {
+            var scope = this.currentScope();
+            Scope.addUnresolved(scope, id);
+            var resolve = function(){return getSymbol(this, id).info().type();}.bind(this);
+
+            info = Type.makeForwardTypeId(resolve);
+        }
+        var typeId = unwrapTypeId(info);
         this.__setTypeId(typeId);
     },
     __setTypeId: function(typeId){
@@ -691,21 +719,6 @@ exports.PointerDecl = ChainedContext.extend({
         var typeId = Type.makeTypeId(type);
         this.currentScope().addFinalizer(function(){typeId.strip();});
         this.__setTypeId(typeId);
-    },
-    findSymbol: function(id){
-        var parent = this.parent();
-        var existing = parent.findSymbol(id);
-        if (existing)
-            return existing;
-
-        var scope = this.currentScope();
-        Scope.addUnresolved(scope, id);
-        var resolve = function(){return getSymbol(parent, id).info().type();};
-
-        return Symbol.makeFound(
-            Symbol.makeSymbol(id, Type.makeForwardTypeId(resolve)),
-            scope
-            );
     },
     isAnonymousDeclaration: function(){return true;},
     exportField: function(field){
@@ -1795,7 +1808,8 @@ exports.TypeCast = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.__type = undefined;
     },
-    handleSymbol: function(s){
+    handleQIdent: function(q){
+        var s = getQIdSymbolAndScope(this, q);
         s = s.symbol();
         if (!s.isType())
             return; // this is not a type cast, may be procedure call

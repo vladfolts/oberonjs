@@ -170,11 +170,13 @@ var Designator = Context.Designator.extend({
             Context.Designator.prototype.handleExpression.call(this, e);
     },
     handleLiteral: function(s){
-        if (s == "SELF")
-            this.handleSymbol(Symbol.makeFound(this.handleMessage(getMethodSelf)), "this");
+        if (s == "SELF"){
+            var type = this.handleMessage(getMethodSelf);
+            this._advance(type, type, "this");
+        }
         else if (s == "SUPER"){
             var ms = this.handleMessage(getMethodSuper);
-            this.handleSymbol(Symbol.makeFound(ms.symbol), ms.code);
+            this._advance(ms.info.type, ms.info, ms.code);
         }
         else 
             Context.Designator.prototype.handleLiteral.call(this, s);
@@ -479,7 +481,6 @@ var RecordDecl = Context.RecordDecl.extend({
 var ProcOrMethodDecl = Context.ProcDecl.extend({
     init: function EberonContext$ProcOrMethodDecl(parent, stdSymbols){
         Context.ProcDecl.prototype.init.call(this, parent, stdSymbols);
-        this.__selfSymbol = undefined;
         this.__methodId = undefined;
         this.__methodType = undefined;
         this.__boundType = undefined;
@@ -489,7 +490,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         if (msg == getMethodSelf){
             if (!this.__boundType)
                 throw new Errors.Error("SELF can be used only in methods");
-            return this.__selfSymbol;
+            return this.__boundType;
         }
         if (msg == getMethodSuper)
             return this.__handleSuperCall();
@@ -497,7 +498,6 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             var id = msg.id;
             var type = msg.type;
             if (type){
-                this.__selfSymbol = Symbol.makeSymbol("SELF", type);
                 this.__methodId = id;
                 this.__boundType = type;
             }
@@ -523,7 +523,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             this.__methodType = new MethodType(this.__methodId.id(), type, methodCallGenerator);
     },
     handleIdent: function(id){
-        if (this.__selfSymbol){
+        if (this.__boundType){
             if (!this.__endingId)
                 this.__endingId = id + ".";
             else {
@@ -535,13 +535,12 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             Context.ProcDecl.prototype.handleIdent.call(this, id);
     },
     endParse: function(){
-        if (this.__selfSymbol){
+        if (this.__boundType){
             if (this.__endingId)
                 // should throw
                 Context.ProcDecl.prototype.handleIdent.call(this, this.__endingId);
 
-            var boundType = this.__selfSymbol.info();
-            boundType.defineMethod(this.__methodId, this.__methodType);
+            this.__boundType.defineMethod(this.__methodId, this.__methodType);
         }
         Context.ProcDecl.prototype.endParse.call(this);
     },
@@ -558,9 +557,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         var id = this.__methodId.id();
         baseType.requireMethodDefinition(id, "cannot use abstract method(s) in SUPER calls");
         return {
-            symbol: Symbol.makeSymbol(
-                "method",  
-                Type.makeProcedure(new MethodType(id, this.__methodType.procType(), superMethodCallGenerator))),
+            info: Type.makeProcedure(new MethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
             code: this.qualifyScope(Type.recordScope(baseType))
                 + Type.typeName(baseType) + ".prototype." + id + ".call"
         };
@@ -626,26 +623,103 @@ var Expression = Context.Expression.extend({
 var While = Context.While.extend({
     init: function EberonContext$While(context){
         Context.While.prototype.init.call(this, context);
+        var scope = EberonScope.makeOperator(
+            this.parent().currentScope(),
+            this.language().stdSymbols);
+        this.pushScope(scope);
+    },
+    endParse: function(){
+        this.popScope();
+        Context.While.prototype.endParse.call(this);
+    }
+});
+
+var If = Context.If.extend({
+    init: function EberonContext$If(context){
+        Context.If.prototype.init.call(this, context);
+        this.__scope = undefined;
+        this.__newScope();
+    },
+    handleLiteral: function(s){
+        Context.If.prototype.handleLiteral.call(this, s);
+        if (s == "ELSIF" || s == "ELSE")
+            this.__newScope();
+    },
+    __newScope: function(){
+        if (this.__scope)
+            this.popScope();
         this.__scope = EberonScope.makeOperator(
             this.parent().currentScope(),
             this.language().stdSymbols);
+        this.pushScope(this.__scope);
     },
-    currentScope: function EberonContext$While(){
-        return this.__scope;
+    endParse: function(){
+        this.popScope();
+        Context.If.prototype.endParse.call(this);
+    }
+});
+
+var CaseLabel = Context.CaseLabel.extend({
+    init: function EberonContext$CaseLabel(context){
+        Context.CaseLabel.prototype.init.call(this, context);
+    },
+    handleLiteral: function(s){
+        if (s == ':'){ // statement sequence is expected now
+            var scope = EberonScope.makeOperator(
+                this.parent().currentScope(),
+                this.language().stdSymbols);
+            this.pushScope(scope);
+        }
+    },
+    endParse: function(){
+        this.popScope();
+        Context.CaseLabel.prototype.endParse.call(this);
+    }
+});
+
+var Repeat = Context.Repeat.extend({
+    init: function EberonContext$Repeat(context){
+        Context.Repeat.prototype.init.call(this, context);
+        var scope = EberonScope.makeOperator(
+            this.parent().currentScope(),
+            this.language().stdSymbols);
+        this.pushScope(scope);
+    },
+    endParse: function(){
+        this.popScope();
+        //Context.Repeat.prototype.endParse.call(this);
+    }
+});
+
+var For = Context.For.extend({
+    init: function EberonContext$Repeat(context){
+        Context.For.prototype.init.call(this, context);
+        var scope = EberonScope.makeOperator(
+            this.parent().currentScope(),
+            this.language().stdSymbols);
+        this.pushScope(scope);
+    },
+    endParse: function(){
+        this.popScope();
+        Context.For.prototype.endParse.call(this);
     }
 });
 
 exports.AddOperator = AddOperator;
+exports.CaseLabel = CaseLabel;
 exports.ConstDecl = ConstDecl;
 exports.Designator = Designator;
 exports.Expression = Expression;
 exports.ExpressionProcedureCall = ExpressionProcedureCall;
+exports.For = For;
 exports.Identdef = Identdef;
+exports.If = If;
 exports.MethodHeading = MethodHeading;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;
+exports.Repeat = Repeat;
 exports.TemplValueInit = TemplValueInit;
 exports.TypeDeclaration = TypeDeclaration;
 exports.VariableDeclaration = VariableDeclaration;
