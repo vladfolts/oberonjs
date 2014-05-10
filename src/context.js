@@ -896,7 +896,13 @@ var RelationOps = Class.extend({
              : type == basicTypes.set   ? op.setInclR
                                         : undefined;
     },
-    is: function(){return op.is;},
+    is: function(type, context){
+        return function(left, right){
+                var d = left.designator();
+                checkTypeCast(d ? d.info() : undefined, left.type(), type, "type test");
+                return op.is(left, Code.makeExpression(castCode(type, context)));
+            };
+    },
     eqExpect: function(){return "numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE";},
     strongRelExpect: function(){return "numeric type or CHAR or character array";},
     relExpect: function(){return "numeric type or SET or CHAR or character array";}
@@ -950,11 +956,7 @@ function relationOp(leftType, rightType, literal, ops, context){
                 mismatch = ops.relExpect();
             break;
         case "IS":
-            o = function(leftExpression){
-                    var d = leftExpression.designator();
-                    checkTypeCast(d ? d.info() : undefined, leftType, type, "type test");
-                    return ops.is()(leftExpression, Code.makeExpression(castCode(type, context)));
-                };
+            o = ops.is(type, context);
             break;
         case "IN":
             o = op.setHasBit;
