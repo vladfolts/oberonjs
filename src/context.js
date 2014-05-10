@@ -896,6 +896,7 @@ var RelationOps = Class.extend({
              : type == basicTypes.set   ? op.setInclR
                                         : undefined;
     },
+    is: function(){return op.is;},
     eqExpect: function(){return "numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE";},
     strongRelExpect: function(){return "numeric type or CHAR or character array";},
     relExpect: function(){return "numeric type or SET or CHAR or character array";}
@@ -903,8 +904,18 @@ var RelationOps = Class.extend({
 
 var relationOps = new RelationOps();
 
-function relationOp(leftType, rightType, literal, ops){
-    var type = useTypeInRelation(leftType, rightType);
+function checkSetHasBit(leftType, rightType, context){
+    if (!Type.isInt(leftType))
+        throw new Errors.Error(
+            Type.intsDescription() + " expected as an element of SET, got '" + Type.typeName(leftType) + "'");
+    checkImplicitCast(context.language().types, rightType, basicTypes.set);
+}
+
+function relationOp(leftType, rightType, literal, ops, context){
+    var type = 
+          literal == "IS" ? unwrapType(rightType)
+        : literal == "IN" ? checkSetHasBit(leftType, rightType, context)
+                          : useTypeInRelation(leftType, rightType);
     var o;
     var mismatch;
     switch (literal){
@@ -938,6 +949,15 @@ function relationOp(leftType, rightType, literal, ops){
             if (!o)
                 mismatch = ops.relExpect();
             break;
+        case "IS":
+            o = function(leftExpression){
+                    var d = leftExpression.designator();
+                    checkTypeCast(d ? d.info() : undefined, leftType, type, "type test");
+                    return ops.is()(leftExpression, Code.makeExpression(castCode(type, context)));
+                };
+            break;
+        case "IN":
+            o = op.setHasBit;
         }
     if (mismatch)
         throwOperatorTypeMismatch(literal, mismatch, type);
@@ -1214,50 +1234,12 @@ exports.Expression = ChainedContext.extend({
         }
 
         var leftExpression = this.__expression;
-        var leftType = leftExpression.type();
-        var leftCode = leftExpression.code();
         var rightExpression = e;
-        var rightType = rightExpression.type();
-        var rightCode = rightExpression.code();
-        var resultExpression;
-        var code;
+        leftExpression = promoteTypeInExpression(leftExpression, rightExpression.type());
+        rightExpression = promoteTypeInExpression(rightExpression, leftExpression.type());
 
-        if (this.__relation == "IN"){
-            if (!Type.isInt(leftType))
-                throw new Errors.Error(
-                    Type.intsDescription() + " expected as an element of SET, got '" + Type.typeName(leftType) + "'");
-            checkImplicitCast(this.language().types, rightType, basicTypes.set);
-
-            code = "1 << " + leftCode + " & " + rightCode;
-        }
-        else if (this.__relation == "IS"){
-            rightType = unwrapType(rightType);
-            var d = leftExpression.designator();
-            checkTypeCast(d ? d.info() : undefined, leftType, rightType, "type test");
-            //rightExpression = , rightType);
-            resultExpression = op.is(leftExpression, Code.makeExpression(castCode(rightType, this)));
-            code = resultExpression.code();
-            //code = leftCode + " instanceof " + castCode(rightType, this);
-        }
-        else {
-            leftExpression = promoteTypeInExpression(leftExpression, rightType);
-            rightExpression = promoteTypeInExpression(rightExpression, leftType);
-            leftCode = leftExpression.code();
-            rightCode = rightExpression.code();
-            //checkImplicitCast(rightExpression.type(), leftExpression.type());
-        }
-
-        var value;
-        if (!code){
-            var o = relationOp(leftExpression.type(), rightExpression.type(), this.__relation, this.__relOps);
-            var oResult = o(leftExpression, rightExpression, this.language().rtl);
-            code = oResult.code();
-            value = oResult.constValue();
-        }
-
-        this.__expression = resultExpression 
-                          ? resultExpression
-                          : Code.makeExpression(code, basicTypes.bool, undefined, value);
+        var o = relationOp(leftExpression.type(), rightExpression.type(), this.__relation, this.__relOps, this);
+        this.__expression = o(leftExpression, rightExpression, this.language().rtl);
     },
     handleLiteral: function(relation){
         this.__relation = relation;

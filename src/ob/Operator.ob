@@ -161,6 +161,24 @@ PROCEDURE binaryWithCode*(
     RETURN binaryWithCodeEx(left, right, rtl, op, code, precedence, NIL, Precedence.none)
 END binaryWithCode;
 
+PROCEDURE relational*(
+    left, right: Code.PExpression; 
+    rtl: OberonRtl.PType;
+    op: BinaryOp;
+    code: STRING
+    ): Code.PExpression;
+    RETURN binaryWithCodeEx(left, right, rtl, op, code, Precedence.relational, Types.basic.bool, Precedence.none)
+END relational;
+
+PROCEDURE equal*(
+    left, right: Code.PExpression; 
+    rtl: OberonRtl.PType;
+    op: BinaryOp;
+    code: STRING
+    ): Code.PExpression;
+    RETURN binaryWithCodeEx(left, right, rtl, op, code, Precedence.equal, Types.basic.bool, Precedence.none)
+END equal;
+
 PROCEDURE promoteToWideIfNeeded(e: Code.PExpression): Code.PExpression;
 VAR
     result: Code.PExpression;
@@ -210,7 +228,7 @@ PROCEDURE binaryPred(
         op, 
         makePredCodeMaker(pred), 
         Precedence.none, 
-        NIL, 
+        Types.basic.bool, 
         Precedence.none
         )
 END binaryPred;
@@ -590,6 +608,16 @@ PROCEDURE setSymmetricDiff*(left, right: Code.PExpression; rtl: OberonRtl.PType)
     RETURN binaryWithCode(left, right, rtl, opSetSymmetricDiff, " ^ ", Precedence.bitXor)
 END setSymmetricDiff;
 
+PROCEDURE setHasBit*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN Code.makeExpressionWithPrecedence(
+            "1 << " + Code.adjustPrecedence(Code.derefExpression(left), Precedence.shift) 
+            + " & " + Code.adjustPrecedence(Code.derefExpression(right), Precedence.bitAnd),
+            Types.basic.bool,
+            NIL,
+            NIL,
+            Precedence.bitAnd)
+END setHasBit;
+
 PROCEDURE setInclL*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
     RETURN binaryPred(left, right, rtl, opSetInclL, codeSetInclL)
 END setInclL;
@@ -607,15 +635,15 @@ PROCEDURE and*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpre
 END and;
 
 PROCEDURE equalInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opEqualInt, " == ", Precedence.equal)
+    RETURN equal(left, right, rtl, opEqualInt, " == ")
 END equalInt;
 
 PROCEDURE equalReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opEqualReal, " == ", Precedence.equal)
+    RETURN equal(left, right, rtl, opEqualReal, " == ")
 END equalReal;
 
 PROCEDURE equalSet*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opEqualSet, " == ", Precedence.equal)
+    RETURN equal(left, right, rtl, opEqualSet, " == ")
 END equalSet;
 
 PROCEDURE equalStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
@@ -623,15 +651,15 @@ PROCEDURE equalStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.P
 END equalStr;
 
 PROCEDURE notEqualInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opNotEqualInt, " != ", Precedence.equal)
+    RETURN equal(left, right, rtl, opNotEqualInt, " != ")
 END notEqualInt;
 
 PROCEDURE notEqualReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opNotEqualReal, " != ", Precedence.equal)
+    RETURN equal(left, right, rtl, opNotEqualReal, " != ")
 END notEqualReal;
 
 PROCEDURE notEqualSet*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opNotEqualSet, " != ", Precedence.equal)
+    RETURN equal(left, right, rtl, opNotEqualSet, " != ")
 END notEqualSet;
 
 PROCEDURE notEqualStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
@@ -639,24 +667,15 @@ PROCEDURE notEqualStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Cod
 END notEqualStr;
 
 PROCEDURE is*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCodeEx(
-        left, 
-        right, 
-        rtl, 
-        NIL, 
-        " instanceof ", 
-        Precedence.relational, 
-        Types.basic.bool,
-        Precedence.none
-        )
+    RETURN relational(left, right, rtl, NIL, " instanceof ")
 END is;
 
 PROCEDURE lessInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opLessInt, " < ", Precedence.relational)
+    RETURN relational(left, right, rtl, opLessInt, " < ")
 END lessInt;
 
 PROCEDURE lessReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opLessReal, " < ", Precedence.relational)
+    RETURN relational(left, right, rtl, opLessReal, " < ")
 END lessReal;
 
 PROCEDURE lessStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
@@ -664,11 +683,11 @@ PROCEDURE lessStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PE
 END lessStr;
 
 PROCEDURE greaterInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opGreaterInt, " > ", Precedence.relational)
+    RETURN relational(left, right, rtl, opGreaterInt, " > ")
 END greaterInt;
 
 PROCEDURE greaterReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opGreaterReal, " > ", Precedence.relational)
+    RETURN relational(left, right, rtl, opGreaterReal, " > ")
 END greaterReal;
 
 PROCEDURE greaterStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
@@ -676,11 +695,11 @@ PROCEDURE greaterStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code
 END greaterStr;
 
 PROCEDURE eqLessInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opEqLessInt, " <= ", Precedence.relational)
+    RETURN relational(left, right, rtl, opEqLessInt, " <= ")
 END eqLessInt;
 
 PROCEDURE eqLessReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opEqLessReal, " <= ", Precedence.relational)
+    RETURN relational(left, right, rtl, opEqLessReal, " <= ")
 END eqLessReal;
 
 PROCEDURE eqLessStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
@@ -688,11 +707,11 @@ PROCEDURE eqLessStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.
 END eqLessStr;
 
 PROCEDURE eqGreaterInt*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opEqGreaterInt, " >= ", Precedence.relational)
+    RETURN relational(left, right, rtl, opEqGreaterInt, " >= ")
 END eqGreaterInt;
 
 PROCEDURE eqGreaterReal*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN binaryWithCode(left, right, rtl, opEqGreaterReal, " >= ", Precedence.relational)
+    RETURN relational(left, right, rtl, opEqGreaterReal, " >= ")
 END eqGreaterReal;
 
 PROCEDURE eqGreaterStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
