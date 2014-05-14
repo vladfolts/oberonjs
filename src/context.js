@@ -960,6 +960,7 @@ function relationOp(leftType, rightType, literal, ops, context){
             break;
         case "IN":
             o = op.setHasBit;
+            break;
         }
     if (mismatch)
         throwOperatorTypeMismatch(literal, mismatch, type);

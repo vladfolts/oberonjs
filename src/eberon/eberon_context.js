@@ -110,6 +110,18 @@ var ResultVariable = Type.Variable.extend({
     idType: function(){return "procedure call " + (this.type() ? "result" : "statement");}
 });
 
+var TempVariable = Type.Variable.extend({
+    init: function TempVariable(type){
+        this.__originalType = type;
+        this.__type = type;
+    },
+    type: function(){return this.__type;},
+    isReadOnly: function(){return true;},
+    idType: function(){return "temporary variable";},
+    promoteType: function(t){this.__type = t;},
+    resetPromotion: function(){this.__type = this.__originalType;}
+});
+
 var IdentdefInfo = Context.IdentdefInfo.extend({
     init: function(id, exported, ro){
         Context.IdentdefInfo.prototype.init.call(this, id, exported);
@@ -205,7 +217,7 @@ var TemplValueInit = Context.Chained.extend({
         gen.write("var " + this.__id + " = ");
     },
     handleExpression: function(e){
-        var v = Type.makeVariable(e.type(), true);
+        var v = new TempVariable(e.type());
         this.__symbol = Symbol.makeSymbol(this.__id, v);
     },
     endParse: function(){
@@ -564,6 +576,26 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     }
 });
 
+var Term = Context.Term.extend({
+    init: function EberonContext$Term(context){
+        Context.Term.prototype.init.call(this, context);
+    },
+    handleMessage: function(msg){
+        if (msg instanceof PromoteTypeMsg){
+            var promoted = msg.info;
+            promoted.promoteType(msg.type);
+            this.__promoted = promoted;
+            return undefined;
+        }
+        return Context.Term.prototype.handleMessage.call(this, msg);
+    },
+    endParse: function(){
+        if (this.__promoted)
+            this.__promoted.resetPromotion();
+        return Context.Term.prototype.endParse.call(this);
+    }
+});
+
 var AddOperator = Context.AddOperator.extend({
     init: function EberonContext$AddOperator(context){
         Context.AddOperator.prototype.init.call(this, context);
@@ -575,6 +607,11 @@ var AddOperator = Context.AddOperator.extend({
     },
     _expectPlusOperator: function(){return "numeric type or SET or STRING";}
 });
+
+function PromoteTypeMsg(info, type){
+    this.info = info;
+    this.type = type;
+}
 
 var RelationOps = Context.RelationOps.extend({
     init: function EberonContext$RelationOps(){
@@ -609,6 +646,18 @@ var RelationOps = Context.RelationOps.extend({
         return type == EberonString.string() 
             ? eOp.greaterEqualStr
             : Context.RelationOps.prototype.greaterEq.call(this, type);
+    },
+    is: function(type, context){
+        var impl = Context.RelationOps.prototype.is.call(this, type, context);
+        return function(left, right){
+            var d = left.designator();
+            if (d){
+                var v = d.info();
+                if (v instanceof TempVariable)
+                    context.handleMessage(new PromoteTypeMsg(v, type));
+            }
+            return impl(left, right);
+        };
     }
 });
 
@@ -721,6 +770,7 @@ exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;
 exports.Repeat = Repeat;
 exports.TemplValueInit = TemplValueInit;
+exports.Term = Term;
 exports.TypeDeclaration = TypeDeclaration;
 exports.VariableDeclaration = VariableDeclaration;
 exports.While = While;

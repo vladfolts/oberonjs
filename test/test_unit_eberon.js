@@ -387,8 +387,20 @@ exports.suite = {
         context(grammar.declarationSequence,
                 ""),
         pass(),
-        fail(["PROCEDURE p(); BEGIN v <- 0; v := 0; END p;", "cannot assign to read-only variable"]
+        fail(["PROCEDURE p(); BEGIN v <- 0; v := 0; END p;", 
+              "cannot assign to temporary variable"]
             )
+        ),
+    "type promotion": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE Base = RECORD END;"
+                + "Derived = RECORD (Base) flag: BOOLEAN END;"
+                + "PDerived = POINTER TO Derived;"
+                + "VAR pBase: POINTER TO Base;"
+               ),
+        pass("PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & b.flag); END p;"),
+        fail(["PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) OR b.flag); END p;",
+              "type 'Base' has no 'flag' field"])
         )
     }
 };

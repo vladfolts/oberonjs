@@ -236,13 +236,12 @@ END binaryPred;
 PROCEDURE unary(e: Code.PExpression; op: UnaryOp; code: STRING): Code.PExpression;
 VAR
     value: Code.PConst;
-    resultCode: STRING;
 BEGIN
     value := e.constValue();
     IF value # NIL THEN
         value := op(value);
     END;
-    resultCode := code 
+    resultCode <- code 
                 + Code.adjustPrecedence(Code.derefExpression(e), Precedence.unary);
     RETURN Code.makeExpression(resultCode, e.type(), NIL, value)
 END unary;
