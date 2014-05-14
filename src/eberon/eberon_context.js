@@ -579,19 +579,20 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
 var Term = Context.Term.extend({
     init: function EberonContext$Term(context){
         Context.Term.prototype.init.call(this, context);
+        this.__promotedTypes = [];
     },
     handleMessage: function(msg){
         if (msg instanceof PromoteTypeMsg){
             var promoted = msg.info;
             promoted.promoteType(msg.type);
-            this.__promoted = promoted;
+            this.__promotedTypes.push(promoted);
             return undefined;
         }
         return Context.Term.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
-        if (this.__promoted)
-            this.__promoted.resetPromotion();
+        for(var i = 0; i < this.__promotedTypes.length; ++i)
+            this.__promotedTypes[i].resetPromotion();
         return Context.Term.prototype.endParse.call(this);
     }
 });

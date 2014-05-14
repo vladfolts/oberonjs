@@ -396,11 +396,19 @@ exports.suite = {
                 "TYPE Base = RECORD END;"
                 + "Derived = RECORD (Base) flag: BOOLEAN END;"
                 + "PDerived = POINTER TO Derived;"
-                + "VAR pBase: POINTER TO Base;"
+                + "VAR pBase: POINTER TO Base; bVar: BOOLEAN;"
                ),
-        pass("PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & b.flag); END p;"),
+        pass("PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & b.flag); END p;",
+             "PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & bVar & b.flag); END p;",
+             "PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & (bVar OR b.flag)); END p;",
+             "PROCEDURE p(); BEGIN b1 <- pBase; b2 <- pBase; ASSERT((b1 IS PDerived) & (b2 IS PDerived) & b1.flag & b2.flag); END p;"),
         fail(["PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) OR b.flag); END p;",
-              "type 'Base' has no 'flag' field"])
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) OR bVar & b.flag); END p;",
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b1 <- pBase; b2 <- pBase; ASSERT(((b1 IS PDerived) & (b2 IS PDerived) OR bVar) & b1.flag); END p;",
+              "type 'Base' has no 'flag' field"]
+              )
         )
     }
 };
