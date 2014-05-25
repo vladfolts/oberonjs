@@ -89,7 +89,7 @@ var factor = context(
     , Context.Factor);
 
 var addOperator = context(or("+", "-", "OR"), contexts.AddOperator);
-var mulOperator = context(or("*", "/", "DIV", "MOD", "&"), Context.MulOperator);
+var mulOperator = context(or("*", "/", "DIV", "MOD", "&"), contexts.MulOperator);
 var term = context(and(factor, repeat(and(mulOperator, factor))), contexts.Term);
 var simpleExpression = context(
         and(optional(or("+", "-"))

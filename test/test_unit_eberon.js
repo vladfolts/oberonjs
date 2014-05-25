@@ -391,24 +391,57 @@ exports.suite = {
               "cannot assign to temporary variable"]
             )
         ),
-    "type promotion": testWithContext(
+    "type promotion in expression": testWithContext(
         context(grammar.declarationSequence,
                 "TYPE Base = RECORD END;"
                 + "Derived = RECORD (Base) flag: BOOLEAN END;"
                 + "PDerived = POINTER TO Derived;"
                 + "VAR pBase: POINTER TO Base; bVar: BOOLEAN;"
+                + "PROCEDURE proc(b: BOOLEAN): BOOLEAN; RETURN b END proc;"
                ),
         pass("PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & b.flag); END p;",
              "PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & bVar & b.flag); END p;",
              "PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & (bVar OR b.flag)); END p;",
-             "PROCEDURE p(); BEGIN b1 <- pBase; b2 <- pBase; ASSERT((b1 IS PDerived) & (b2 IS PDerived) & b1.flag & b2.flag); END p;"),
+             "PROCEDURE p(); BEGIN b1 <- pBase; b2 <- pBase; ASSERT((b1 IS PDerived) & (b2 IS PDerived) & b1.flag & b2.flag); END p;"
+             //TODO: "PROCEDURE p(); BEGIN b <- pBase; ASSERT(((b IS PDerived) = TRUE) & b.flag); END p;",
+             ),
         fail(["PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) OR b.flag); END p;",
               "type 'Base' has no 'flag' field"],
              ["PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) OR bVar & b.flag); END p;",
               "type 'Base' has no 'flag' field"],
              ["PROCEDURE p(); BEGIN b1 <- pBase; b2 <- pBase; ASSERT(((b1 IS PDerived) & (b2 IS PDerived) OR bVar) & b1.flag); END p;",
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b <- pBase; ASSERT(proc(b IS PDerived) & proc(b.flag)); END p;",
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b <- pBase; ASSERT(ORD(b IS PDerived) * ORD(b.flag) = 0); END p;",
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b <- pBase; ASSERT(((b IS PDerived) = FALSE) & b.flag); END p;",
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b <- pBase; ASSERT(b IS PDerived); ASSERT(b.flag); END p;",
               "type 'Base' has no 'flag' field"]
-              )
+             )
+        ),
+    "type promotion in condition": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE Base = RECORD END;"
+                + "Derived = RECORD (Base) flag: BOOLEAN END;"
+                + "PDerived = POINTER TO Derived;"
+                + "VAR pBase: POINTER TO Base; bVar: BOOLEAN;"
+                + "PROCEDURE proc(b: BOOLEAN): BOOLEAN; RETURN b END proc;"
+               ),
+        pass("PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN b.flag := FALSE; END; END p;",
+             "PROCEDURE p(); BEGIN b <- pBase; IF (b IS PDerived) & bVar THEN b.flag := FALSE; END; END p;",
+             "PROCEDURE p(); BEGIN b <- pBase; IF FALSE THEN ELSIF b IS PDerived THEN b.flag := FALSE; END; END p;"
+             ),
+        fail(["PROCEDURE p(); BEGIN b <- pBase; IF (b IS PDerived) OR bVar THEN b.flag := FALSE; END; END p;",
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN END; b.flag := FALSE; END p;",
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN ELSE b.flag := FALSE; END; END p;",
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN ELSIF TRUE THEN b.flag := FALSE; END; END p;",
+              "type 'Base' has no 'flag' field"]
+             )
         )
     }
 };

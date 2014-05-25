@@ -1,6 +1,7 @@
 "use strict";
 
 var Cast = require("js/Cast.js");
+var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var Context = require("context.js");
 var EberonScope = require("js/EberonScope.js");
@@ -173,6 +174,10 @@ var Designator = Context.Designator.extend({
             return this.__beginCall();
         if (msg == Context.endCallMsg)
             return this.__endCall();
+        
+        // this is function call and it breaks type promotion
+        if (msg instanceof PromoteTypeMsg)
+            return undefined;
         return Context.Designator.prototype.handleMessage.call(this, msg);
     },
     handleExpression: function(e){
@@ -504,8 +509,10 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 throw new Errors.Error("SELF can be used only in methods");
             return this.__boundType;
         }
+
         if (msg == getMethodSuper)
             return this.__handleSuperCall();
+
         if (msg instanceof MethodOrProcMsg){
             var id = msg.id;
             var type = msg.type;
@@ -522,6 +529,14 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 );
             return undefined;
         }
+
+        if (msg instanceof TransferPromotedTypesMsg){
+            var types = msg.types;
+            for(var i = 0; i < types.length; ++i)
+                types[i].resetPromotion();
+            return;
+        }
+
         return Context.ProcDecl.prototype.handleMessage.call(this, msg);
     },
     _prolog: function(){
@@ -579,20 +594,27 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
 var Term = Context.Term.extend({
     init: function EberonContext$Term(context){
         Context.Term.prototype.init.call(this, context);
+        this.__promote = undefined;
         this.__promotedTypes = [];
     },
     handleMessage: function(msg){
         if (msg instanceof PromoteTypeMsg){
-            var promoted = msg.info;
-            promoted.promoteType(msg.type);
-            this.__promotedTypes.push(promoted);
-            return undefined;
+            this.__promote = msg;
+            return;
         }
         return Context.Term.prototype.handleMessage.call(this, msg);
     },
+    handleLogicalAnd: function(){
+        if (this.__promote){
+            var promoted = this.__promote.info;
+            promoted.promoteType(this.__promote.type);
+            this.__promotedTypes.push(promoted);
+            this.__promote = undefined;
+        }
+    },
     endParse: function(){
-        for(var i = 0; i < this.__promotedTypes.length; ++i)
-            this.__promotedTypes[i].resetPromotion();
+        if (this.__promotedTypes.length)
+            this.handleMessage(new TransferPromotedTypesMsg(this.__promotedTypes));
         return Context.Term.prototype.endParse.call(this);
     }
 });
@@ -609,9 +631,24 @@ var AddOperator = Context.AddOperator.extend({
     _expectPlusOperator: function(){return "numeric type or SET or STRING";}
 });
 
+var MulOperator = Context.MulOperator.extend({
+    init: function EberonContext$MulOperator(context){
+        Context.MulOperator.prototype.init.call(this, context);
+    },
+    handleLiteral: function(s){
+        if (s == "&")
+            this.parent().handleLogicalAnd();
+        return Context.MulOperator.prototype.handleLiteral.call(this, s);
+    }
+});
+
 function PromoteTypeMsg(info, type){
     this.info = info;
     this.type = type;
+}
+
+function TransferPromotedTypesMsg(types){
+    this.types = types;
 }
 
 var RelationOps = Context.RelationOps.extend({
@@ -684,16 +721,49 @@ var While = Context.While.extend({
     }
 });
 
+var TypePromotionHandler = Class.extend({
+    init: function EberonContext$TypePromotionHandler(){
+        this.__promotedTypes = [];
+    },
+    handleMessage: function(msg){
+        if (msg instanceof PromoteTypeMsg){
+            var promoted = msg.info;
+            promoted.promoteType(msg.type);
+            this.__promotedTypes.push(promoted);
+            return true;
+        }
+        if (msg instanceof TransferPromotedTypesMsg){
+            this.__promotedTypes = msg.types;
+            return true;
+        }
+    return false;
+    },
+    reset: function(){
+        for(var i = 0; i < this.__promotedTypes.length; ++i)
+            this.__promotedTypes[i].resetPromotion();
+        this.__promotedTypes = [];
+    },
+});
+
 var If = Context.If.extend({
     init: function EberonContext$If(context){
         Context.If.prototype.init.call(this, context);
         this.__scope = undefined;
+        this.__typePromotion = new TypePromotionHandler();
         this.__newScope();
+    },
+    handleMessage: function(msg){
+        if (this.__typePromotion.handleMessage(msg))
+            return;
+
+        return Context.If.prototype.handleMessage.call(this, msg);
     },
     handleLiteral: function(s){
         Context.If.prototype.handleLiteral.call(this, s);
-        if (s == "ELSIF" || s == "ELSE")
+        if (s == "ELSIF" || s == "ELSE"){
+            this.__typePromotion.reset();
             this.__newScope();
+        }
     },
     __newScope: function(){
         if (this.__scope)
@@ -704,6 +774,7 @@ var If = Context.If.extend({
         this.pushScope(this.__scope);
     },
     endParse: function(){
+        this.__typePromotion.reset();
         this.popScope();
         Context.If.prototype.endParse.call(this);
     }
@@ -765,6 +836,7 @@ exports.For = For;
 exports.Identdef = Identdef;
 exports.If = If;
 exports.MethodHeading = MethodHeading;
+exports.MulOperator = MulOperator;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;
