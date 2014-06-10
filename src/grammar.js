@@ -86,7 +86,7 @@ var factor = context(
      , and("~", function(stream, context){
                     return factor(stream, context);}) // break recursive declaration of factor
      )
-    , Context.Factor);
+    , contexts.Factor);
 
 var addOperator = context(or("+", "-", "OR"), contexts.AddOperator);
 var mulOperator = context(or("*", "/", "DIV", "MOD", "&"), contexts.MulOperator);

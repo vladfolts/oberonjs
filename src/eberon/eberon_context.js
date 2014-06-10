@@ -115,12 +115,20 @@ var TempVariable = Type.Variable.extend({
     init: function TempVariable(type){
         this.__originalType = type;
         this.__type = type;
+        this.__negate = false;
     },
-    type: function(){return this.__type;},
+    type: function(){
+        return this.__negate ? this.__originalType : this.__type;
+    },
     isReadOnly: function(){return true;},
     idType: function(){return "temporary variable";},
-    promoteType: function(t){this.__type = t;},
-    resetPromotion: function(){this.__type = this.__originalType;}
+    promoteType: function(t){
+        this.__type = t;
+    },
+    negateType: function(){this.__negate = !this.__negate;},
+    resetPromotion: function(){
+        this.__type = this.__originalType;
+    }
 });
 
 var IdentdefInfo = Context.IdentdefInfo.extend({
@@ -175,9 +183,6 @@ var Designator = Context.Designator.extend({
         if (msg == Context.endCallMsg)
             return this.__endCall();
         
-        // this is function call and it breaks type promotion
-        if (msg instanceof PromoteTypeMsg)
-            return undefined;
         return Context.Designator.prototype.handleMessage.call(this, msg);
     },
     handleExpression: function(e){
@@ -237,6 +242,7 @@ var TemplValueInit = Context.Chained.extend({
 var ExpressionProcedureCall = Context.Chained.extend({
     init: function EberonContext$init(context){
         Context.Chained.prototype.init.call(this, context);
+        this.__typePromotion = new TypePromotionHandler();
     },
     setDesignator: function(d){
         var info = d.info();
@@ -245,6 +251,15 @@ var ExpressionProcedureCall = Context.Chained.extend({
             parent.handleExpression(info.expression());
         else
             parent.setDesignator(d);
+    },
+    handleMessage: function(msg){
+        if (this.__typePromotion.handleMessage(msg))
+            return;
+
+        return Context.Chained.prototype.handleMessage.call(this, msg);
+    },
+    endParse: function(){
+        this.__typePromotion.reset();
     }
 });
 
@@ -530,6 +545,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             return undefined;
         }
 
+        // reset type promotion made in separate statement
         if (msg instanceof TransferPromotedTypesMsg){
             var types = msg.types;
             for(var i = 0; i < types.length; ++i)
@@ -591,31 +607,26 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     }
 });
 
-var Term = Context.Term.extend({
-    init: function EberonContext$Term(context){
-        Context.Term.prototype.init.call(this, context);
-        this.__promote = undefined;
-        this.__promotedTypes = [];
+var Factor = Context.Factor.extend({
+    init: function EberonContext$Factor(context){
+        Context.Factor.prototype.init.call(this, context);
+        this.__typePromotion = new TypePromotionHandler();
+        this.__negate = false;
     },
     handleMessage: function(msg){
-        if (msg instanceof PromoteTypeMsg){
-            this.__promote = msg;
+        if (this.__typePromotion.handleMessage(msg))
             return;
-        }
-        return Context.Term.prototype.handleMessage.call(this, msg);
+        return Context.Factor.prototype.handleMessage.call(this, msg);
     },
-    handleLogicalAnd: function(){
-        if (this.__promote){
-            var promoted = this.__promote.info;
-            promoted.promoteType(this.__promote.type);
-            this.__promotedTypes.push(promoted);
-            this.__promote = undefined;
-        }
+    handleLiteral: function(s){
+        if (s == "~")
+            this.__negate = !this.__negate;
+        Context.Factor.prototype.handleLiteral.call(this, s);
     },
     endParse: function(){
-        if (this.__promotedTypes.length)
-            this.handleMessage(new TransferPromotedTypesMsg(this.__promotedTypes));
-        return Context.Term.prototype.endParse.call(this);
+        if (this.__negate)
+            this.__typePromotion.negate();
+        this.__typePromotion.transferTo(this.parent());
     }
 });
 
@@ -628,7 +639,10 @@ var AddOperator = Context.AddOperator.extend({
             return eOp.addStr;
         return Context.AddOperator.prototype._matchPlusOperator.call(this, type);
     },
-    _expectPlusOperator: function(){return "numeric type or SET or STRING";}
+    _expectPlusOperator: function(){return "numeric type or SET or STRING";},
+    endParse: function(){
+        this.handleMessage(resetTypePromotionMsg);
+    }
 });
 
 var MulOperator = Context.MulOperator.extend({
@@ -636,8 +650,8 @@ var MulOperator = Context.MulOperator.extend({
         Context.MulOperator.prototype.init.call(this, context);
     },
     handleLiteral: function(s){
-        if (s == "&")
-            this.parent().handleLogicalAnd();
+        if (s != "&")
+            this.handleMessage(resetTypePromotionMsg);
         return Context.MulOperator.prototype.handleLiteral.call(this, s);
     }
 });
@@ -646,6 +660,8 @@ function PromoteTypeMsg(info, type){
     this.info = info;
     this.type = type;
 }
+
+function resetTypePromotionMsg(){}
 
 function TransferPromotedTypesMsg(types){
     this.types = types;
@@ -704,6 +720,21 @@ var relationOps = new RelationOps();
 var Expression = Context.Expression.extend({
     init: function EberonContext$Expression(context){
         Context.Expression.prototype.init.call(this, context, relationOps);
+        this.__typePromotion = new TypePromotionHandler();
+    },
+    handleMessage: function(msg){
+        if (this.__typePromotion.handleMessage(msg))
+            return;
+
+        return Context.Expression.prototype.handleMessage.call(this, msg);
+    },
+    handleLiteral: function(s){
+        this.__typePromotion.reset();
+        Context.Expression.prototype.handleLiteral.call(this, s);
+    },
+    endParse: function(){
+        this.__typePromotion.transferTo(this.parent());
+        return Context.Expression.prototype.endParse.call(this);
     }
 });
 
@@ -733,16 +764,28 @@ var TypePromotionHandler = Class.extend({
             return true;
         }
         if (msg instanceof TransferPromotedTypesMsg){
-            this.__promotedTypes = msg.types;
+            Array.prototype.push.apply(this.__promotedTypes, msg.types);
+            return true;
+        }
+        if (msg == resetTypePromotionMsg){
+            this.reset();
             return true;
         }
     return false;
+    },
+    negate: function(){
+        for(var i = 0; i < this.__promotedTypes.length; ++i)
+            this.__promotedTypes[i].negateType();
     },
     reset: function(){
         for(var i = 0; i < this.__promotedTypes.length; ++i)
             this.__promotedTypes[i].resetPromotion();
         this.__promotedTypes = [];
     },
+    transferTo: function(context){
+        if (this.__promotedTypes.length)
+            context.handleMessage(new TransferPromotedTypesMsg(this.__promotedTypes));
+    }
 });
 
 var If = Context.If.extend({
@@ -761,7 +804,7 @@ var If = Context.If.extend({
     handleLiteral: function(s){
         Context.If.prototype.handleLiteral.call(this, s);
         if (s == "ELSIF" || s == "ELSE"){
-            this.__typePromotion.reset();
+            this.__typePromotion.negate();
             this.__newScope();
         }
     },
@@ -838,12 +881,13 @@ exports.If = If;
 exports.MethodHeading = MethodHeading;
 exports.MulOperator = MulOperator;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
+exports.Factor = Factor;
 exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;
 exports.Repeat = Repeat;
 exports.TemplValueInit = TemplValueInit;
-exports.Term = Term;
+exports.Term = Context.Term;
 exports.TypeDeclaration = TypeDeclaration;
 exports.VariableDeclaration = VariableDeclaration;
 exports.While = While;

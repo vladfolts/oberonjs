@@ -77,6 +77,7 @@ exports.language = {
             typeDeclaration:    EbContext.TypeDeclaration,
             recordDecl:         EbContext.RecordDecl,
             variableDeclaration: EbContext.VariableDeclaration,
+            Factor:             EbContext.Factor,
             Term:               EbContext.Term,
             AddOperator:        EbContext.AddOperator,
             MulOperator:        EbContext.MulOperator,

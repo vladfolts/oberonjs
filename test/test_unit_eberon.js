@@ -402,12 +402,18 @@ exports.suite = {
         pass("PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & b.flag); END p;",
              "PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & bVar & b.flag); END p;",
              "PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) & (bVar OR b.flag)); END p;",
-             "PROCEDURE p(); BEGIN b1 <- pBase; b2 <- pBase; ASSERT((b1 IS PDerived) & (b2 IS PDerived) & b1.flag & b2.flag); END p;"
+             "PROCEDURE p(); BEGIN b1 <- pBase; b2 <- pBase; ASSERT((b1 IS PDerived) & (b2 IS PDerived) & b1.flag & b2.flag); END p;",
+             "PROCEDURE p(); BEGIN b1 <- pBase; b2 <- pBase; ASSERT((b1 IS PDerived) & proc(TRUE) & b1.flag); END p;",
+             "PROCEDURE p(); BEGIN b1 <- pBase; b2 <- pBase; ASSERT((b1 IS PDerived) & ~proc(TRUE) & b1.flag); END p;",
+             "PROCEDURE p(); BEGIN b <- pBase; ASSERT(~(~(b IS PDerived)) & b.flag); END p;",
+             "PROCEDURE p(); BEGIN b <- pBase; ASSERT(~~(b IS PDerived) & b.flag); END p;"
              //TODO: "PROCEDURE p(); BEGIN b <- pBase; ASSERT(((b IS PDerived) = TRUE) & b.flag); END p;",
              ),
         fail(["PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) OR b.flag); END p;",
               "type 'Base' has no 'flag' field"],
              ["PROCEDURE p(); BEGIN b <- pBase; ASSERT((b IS PDerived) OR bVar & b.flag); END p;",
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b <- pBase; ASSERT(~(b IS PDerived) & b.flag); END p;",
               "type 'Base' has no 'flag' field"],
              ["PROCEDURE p(); BEGIN b1 <- pBase; b2 <- pBase; ASSERT(((b1 IS PDerived) & (b2 IS PDerived) OR bVar) & b1.flag); END p;",
               "type 'Base' has no 'flag' field"],
@@ -418,6 +424,8 @@ exports.suite = {
              ["PROCEDURE p(); BEGIN b <- pBase; ASSERT(((b IS PDerived) = FALSE) & b.flag); END p;",
               "type 'Base' has no 'flag' field"],
              ["PROCEDURE p(); BEGIN b <- pBase; ASSERT(b IS PDerived); ASSERT(b.flag); END p;",
+              "type 'Base' has no 'flag' field"],
+             ["PROCEDURE p(); BEGIN b <- pBase; bVar := b IS PDerived; ASSERT(b.flag); END p;",
               "type 'Base' has no 'flag' field"]
              )
         ),
@@ -442,6 +450,18 @@ exports.suite = {
              ["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN ELSIF TRUE THEN b.flag := FALSE; END; END p;",
               "type 'Base' has no 'flag' field"]
              )
+        ),
+    "negate type promotion in condition": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE Base = RECORD END;"
+                + "Derived = RECORD (Base) flag: BOOLEAN END;"
+                + "PDerived = POINTER TO Derived;"
+                + "VAR pBase: POINTER TO Base; bVar: BOOLEAN;"
+                + "PROCEDURE proc(b: BOOLEAN): BOOLEAN; RETURN b END proc;"
+               ),
+        pass("PROCEDURE p(); BEGIN b <- pBase; IF ~(b IS PDerived) THEN ELSE b.flag := FALSE; END; END p;"
+             ),
+        fail()
         )
     }
 };

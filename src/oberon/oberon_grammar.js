@@ -64,6 +64,7 @@ exports.language = {
             typeDeclaration:    Context.TypeDeclaration,
             recordDecl:         ObContext.RecordDecl,
             variableDeclaration: ObContext.VariableDeclaration,
+            Factor:             Context.Factor,
             Term:               Context.Term,
             AddOperator:        Context.AddOperator,
             MulOperator:        Context.MulOperator,
