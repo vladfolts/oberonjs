@@ -68,6 +68,7 @@ exports.language = {
             Term:               Context.Term,
             AddOperator:        Context.AddOperator,
             MulOperator:        Context.MulOperator,
+            SimpleExpression:   Context.SimpleExpression, 
             Expression:         Context.Expression,
             For:                Context.For,
             While:              Context.While,

@@ -81,6 +81,7 @@ exports.language = {
             Term:               EbContext.Term,
             AddOperator:        EbContext.AddOperator,
             MulOperator:        EbContext.MulOperator,
+            SimpleExpression:   EbContext.SimpleExpression, 
             Expression:         EbContext.Expression,
             For:                EbContext.For,
             While:              EbContext.While,

@@ -115,17 +115,18 @@ var TempVariable = Type.Variable.extend({
     init: function TempVariable(type){
         this.__originalType = type;
         this.__type = type;
-        this.__negate = false;
+        this.__invert = false;
     },
     type: function(){
-        return this.__negate ? this.__originalType : this.__type;
+        return this.__invert ? this.__originalType : this.__type;
     },
     isReadOnly: function(){return true;},
     idType: function(){return "temporary variable";},
     promoteType: function(t){
         this.__type = t;
     },
-    negateType: function(){this.__negate = !this.__negate;},
+    invertType: function(){this.__invert = !this.__invert;},
+    inverted: function(){return this.__invert;},
     resetPromotion: function(){
         this.__type = this.__originalType;
     }
@@ -611,7 +612,7 @@ var Factor = Context.Factor.extend({
     init: function EberonContext$Factor(context){
         Context.Factor.prototype.init.call(this, context);
         this.__typePromotion = new TypePromotionHandler();
-        this.__negate = false;
+        this.__invert = false;
     },
     handleMessage: function(msg){
         if (this.__typePromotion.handleMessage(msg))
@@ -620,12 +621,12 @@ var Factor = Context.Factor.extend({
     },
     handleLiteral: function(s){
         if (s == "~")
-            this.__negate = !this.__negate;
+            this.__invert = !this.__invert;
         Context.Factor.prototype.handleLiteral.call(this, s);
     },
     endParse: function(){
-        if (this.__negate)
-            this.__typePromotion.negate();
+        if (this.__invert)
+            this.__typePromotion.invert();
         this.__typePromotion.transferTo(this.parent());
     }
 });
@@ -641,7 +642,7 @@ var AddOperator = Context.AddOperator.extend({
     },
     _expectPlusOperator: function(){return "numeric type or SET or STRING";},
     endParse: function(){
-        this.handleMessage(resetTypePromotionMsg);
+        this.parent().handleLogicalOr();
     }
 });
 
@@ -649,10 +650,8 @@ var MulOperator = Context.MulOperator.extend({
     init: function EberonContext$MulOperator(context){
         Context.MulOperator.prototype.init.call(this, context);
     },
-    handleLiteral: function(s){
-        if (s != "&")
-            this.handleMessage(resetTypePromotionMsg);
-        return Context.MulOperator.prototype.handleLiteral.call(this, s);
+    endParse: function(s){
+        this.parent().handleLogicalAnd();
     }
 });
 
@@ -662,6 +661,8 @@ function PromoteTypeMsg(info, type){
 }
 
 function resetTypePromotionMsg(){}
+function resetInvertedPromotedTypesMsg(){}
+function invertTypePromotionMsg(){}
 
 function TransferPromotedTypesMsg(types){
     this.types = types;
@@ -712,6 +713,38 @@ var RelationOps = Context.RelationOps.extend({
             }
             return impl(left, right);
         };
+    }
+});
+
+var Term = Context.Term.extend({
+    init: function EberonContext$Term(context){
+        Context.Term.prototype.init.call(this, context);
+        this.__invertedTypePromotionReset = false;
+    },
+    handleLogicalAnd: function(){
+        if (!this.__invertedTypePromotionReset){
+            this.handleMessage(resetInvertedPromotedTypesMsg);
+            this.__invertedTypePromotionReset = true;
+        }
+    }
+});
+
+var SimpleExpression = Context.SimpleExpression.extend({
+    init: function EberonContext$SimpleExpression(context){
+        Context.SimpleExpression.prototype.init.call(this, context);
+        this.__typePromotionInverted = false;
+    },
+    handleLogicalOr: function(){
+        if (!this.__typePromotionInverted){
+            this.handleMessage(invertTypePromotionMsg);
+            this.handleMessage(resetInvertedPromotedTypesMsg);
+            this.__typePromotionInverted = true;
+        }
+    },
+    endParse: function(){
+        if (this.__typePromotionInverted)
+            this.handleMessage(invertTypePromotionMsg);
+        Context.SimpleExpression.prototype.endParse.call(this);
     }
 });
 
@@ -767,20 +800,38 @@ var TypePromotionHandler = Class.extend({
             Array.prototype.push.apply(this.__promotedTypes, msg.types);
             return true;
         }
-        if (msg == resetTypePromotionMsg){
-            this.reset();
-            return true;
+        switch (msg){
+            case resetTypePromotionMsg:
+                this.reset();
+                return true;
+            case invertTypePromotionMsg:
+                this.invert();
+                return true;
+            case resetInvertedPromotedTypesMsg:
+                this.resetInverted();
+                return true;
         }
     return false;
     },
-    negate: function(){
+    invert: function(){
         for(var i = 0; i < this.__promotedTypes.length; ++i)
-            this.__promotedTypes[i].negateType();
+            this.__promotedTypes[i].invertType();
     },
     reset: function(){
         for(var i = 0; i < this.__promotedTypes.length; ++i)
             this.__promotedTypes[i].resetPromotion();
         this.__promotedTypes = [];
+    },
+    resetInverted: function(inverted){
+        var left = [];
+        for(var i = 0; i < this.__promotedTypes.length; ++i){
+            var t = this.__promotedTypes[i];
+            if (t.inverted())
+                t.resetPromotion();
+            else
+                left.push(t);
+        }
+        this.__promotedTypes = left;
     },
     transferTo: function(context){
         if (this.__promotedTypes.length)
@@ -804,7 +855,7 @@ var If = Context.If.extend({
     handleLiteral: function(s){
         Context.If.prototype.handleLiteral.call(this, s);
         if (s == "ELSIF" || s == "ELSE"){
-            this.__typePromotion.negate();
+            this.__typePromotion.invert();
             this.__newScope();
         }
     },
@@ -886,8 +937,9 @@ exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;
 exports.Repeat = Repeat;
+exports.SimpleExpression = SimpleExpression;
 exports.TemplValueInit = TemplValueInit;
-exports.Term = Context.Term;
+exports.Term = Term;
 exports.TypeDeclaration = TypeDeclaration;
 exports.VariableDeclaration = VariableDeclaration;
 exports.While = While;

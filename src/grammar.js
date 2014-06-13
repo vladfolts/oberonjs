@@ -95,7 +95,7 @@ var simpleExpression = context(
         and(optional(or("+", "-"))
           , term
           , repeat(and(addOperator, term)))
-      , Context.SimpleExpression);
+      , contexts.SimpleExpression);
 var relation = or("=", "#", "<=", "<", ">=", ">", "IN", "IS");
 var expression = context(and(simpleExpression, optional(and(relation, simpleExpression)))
                        , contexts.Expression);
