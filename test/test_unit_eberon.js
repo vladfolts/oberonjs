@@ -26,22 +26,39 @@ var typePromotion = {
         grammar.declarationSequence,
         "TYPE Base = RECORD END;"
         + "Derived = RECORD (Base) flag: BOOLEAN END;"
+        + "Derived2 = RECORD (Derived) flag2: BOOLEAN END;"
         + "PDerived = POINTER TO Derived;"
+        + "PDerived2 = POINTER TO Derived2;"
         + "VAR pBase: POINTER TO Base; bVar: BOOLEAN;"
         + "PROCEDURE proc(b: BOOLEAN): BOOLEAN; RETURN b END proc;"),
-    expression: function(e){
+    __expression: function(e){
         return "PROCEDURE p(); BEGIN b <- pBase; b2 <- pBase; ASSERT(" + e + "); END p;";
     },
+    __condition: function(e){
+        return "PROCEDURE p(); BEGIN b <- pBase; b2 <- pBase; " + e + " END p;";
+    },
     passExpressions: function(){
-        var result = [];
-        for(var i = 0; i < arguments.length; ++i)
-            result.push(this.expression(arguments[i]));
-        return pass.apply(this, result);
+        return this.__pass(this.__expression.bind(this), arguments);
+    },
+    passConditions: function(){
+        return this.__pass(this.__condition.bind(this), arguments);
     },
     failExpressions: function(){
+        return this.__fail(this.__expression.bind(this), arguments);
+    },
+    failConditions: function(){
+        return this.__fail(this.__condition.bind(this), arguments);
+    },
+    __pass: function(make, cases){
         var result = [];
-        for(var i = 0; i < arguments.length; ++i)
-            result.push([this.expression(arguments[i]), "type 'Base' has no 'flag' field"]);
+        for(var i = 0; i < cases.length; ++i)
+            result.push(make(cases[i]));
+        return pass.apply(this, result);
+    },
+    __fail: function(make, cases){
+        var result = [];
+        for(var i = 0; i < cases.length; ++i)
+            result.push([make(cases[i]), "type 'Base' has no 'flag' field"]);
         return fail.apply(this, result);
     }
 };
@@ -426,7 +443,8 @@ exports.suite = {
              "(b IS PDerived) & proc(TRUE) & b.flag",
              "(b IS PDerived) & ~proc(TRUE) & b.flag",
              "~(~(b IS PDerived)) & b.flag",
-             "~~(b IS PDerived) & b.flag"
+             "~~(b IS PDerived) & b.flag",
+             "(b IS PDerived) & ((b IS PDerived2) OR bVar) & b.flag"
              //TODO: "((b IS PDerived) = TRUE) & b.flag); END p;",
              ),
         typePromotion.failExpressions(
@@ -463,43 +481,42 @@ exports.suite = {
             )
         ),
     "type promotion in condition": testWithContext(
-        context(grammar.declarationSequence,
-                "TYPE Base = RECORD END;"
-                + "Derived = RECORD (Base) flag: BOOLEAN END;"
-                + "Derived2 = RECORD (Derived) flag2: BOOLEAN END;"
-                + "PDerived = POINTER TO Derived;"
-                + "PDerived2 = POINTER TO Derived2;"
-                + "VAR pBase: POINTER TO Base; bVar: BOOLEAN;"
-                + "PROCEDURE proc(b: BOOLEAN): BOOLEAN; RETURN b END proc;"
-               ),
-        pass("PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN b.flag := FALSE; END; END p;",
-             "PROCEDURE p(); BEGIN b <- pBase; IF (b IS PDerived) & bVar THEN b.flag := FALSE; END; END p;",
-             "PROCEDURE p(); BEGIN b <- pBase; IF FALSE THEN ELSIF b IS PDerived THEN b.flag := FALSE; END; END p;",
-             "PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN bVar := (b IS PDerived2) & b.flag2; b.flag := FALSE; END; END p;"
-             ),
-        fail(["PROCEDURE p(); BEGIN b <- pBase; IF (b IS PDerived) OR bVar THEN b.flag := FALSE; END; END p;",
-              "type 'Base' has no 'flag' field"],
-             ["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN END; b.flag := FALSE; END p;",
-              "type 'Base' has no 'flag' field"],
-             ["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN ELSE b.flag := FALSE; END; END p;",
-              "type 'Base' has no 'flag' field"],
-             ["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN ELSIF TRUE THEN b.flag := FALSE; END; END p;",
-              "type 'Base' has no 'flag' field"],
-             ["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN bVar := b IS PDerived; b.flag := FALSE; END; END p;",
-              "invalid type test: 'Derived' is not an extension of 'Derived'"]
+        typePromotion.context,
+        typePromotion.passConditions(
+            "IF b IS PDerived THEN b.flag := FALSE; END;",
+            "IF (b IS PDerived) & bVar THEN b.flag := FALSE; END;",
+            "IF FALSE THEN ELSIF b IS PDerived THEN b.flag := FALSE; END;",
+            "IF b IS PDerived THEN bVar := (b IS PDerived2) & b.flag2; b.flag := FALSE; END;"
+            ),
+        typePromotion.failConditions(
+            "IF (b IS PDerived) OR bVar THEN b.flag := FALSE; END",
+            "IF b IS PDerived THEN END; b.flag := FALSE",
+            "IF ~(b IS PDerived) THEN END; b.flag := FALSE",
+            "IF ~(b IS PDerived) THEN ELSIF bVar THEN END; b.flag := FALSE",
+            "IF ~(b IS PDerived) THEN ELSIF bVar THEN ELSE END; b.flag := FALSE",
+            "IF bVar THEN ELSIF b IS PDerived THEN ELSE END; b.flag := FALSE",
+            "IF b IS PDerived THEN ELSE b.flag := FALSE; END",
+            "IF b IS PDerived THEN ELSIF TRUE THEN b.flag := FALSE; END"
+             //TODO: separate test
+             //["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN bVar := b IS PDerived; b.flag := FALSE; END; END p;",
+             // "invalid type test: 'Derived' is not an extension of 'Derived'"]
              )
         ),
     "invert type promotion in condition": testWithContext(
-        context(grammar.declarationSequence,
-                "TYPE Base = RECORD END;"
-                + "Derived = RECORD (Base) flag: BOOLEAN END;"
-                + "PDerived = POINTER TO Derived;"
-                + "VAR pBase: POINTER TO Base; bVar: BOOLEAN;"
-                + "PROCEDURE proc(b: BOOLEAN): BOOLEAN; RETURN b END proc;"
-               ),
-        pass("PROCEDURE p(); BEGIN b <- pBase; IF ~(b IS PDerived) THEN ELSE b.flag := FALSE; END; END p;"
-             ),
-        fail()
+        typePromotion.context,
+        typePromotion.passConditions(
+            "IF ~(b IS PDerived) THEN ELSE b.flag := FALSE; END;",
+            "IF ~(b IS PDerived) THEN ELSIF bVar THEN b.flag := FALSE; ELSE b.flag := FALSE; END;",
+            "IF ~(b IS PDerived) THEN ELSIF ~(b2 IS PDerived) THEN b.flag := FALSE; ELSE b.flag := FALSE; b2.flag := FALSE; END;",
+            "IF ~(b IS PDerived) OR bVar THEN ELSE b.flag := FALSE; END;",
+            "IF ~(b IS PDerived) OR b.flag THEN ELSE b.flag := FALSE; END;",
+            "IF ~(b IS PDerived) THEN bVar := b IS PDerived; ELSE b.flag := FALSE; END;",
+            "IF ~(b IS PDerived) THEN ASSERT((b IS PDerived) & b.flag); ELSE b.flag := FALSE; END;"
+            ),
+        typePromotion.failConditions(
+            "IF ~(b IS PDerived) & bVar THEN ELSE b.flag := FALSE; END; END p;",
+            "IF ~(b IS PDerived) THEN ELSIF ~(b2 IS PDerived) THEN b2.flag := FALSE; END;"
+            )
         )
     }
 };

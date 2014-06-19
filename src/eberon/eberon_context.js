@@ -13,6 +13,12 @@ var Symbol = require("js/Symbols.js");
 var Procedure = require("js/Procedure.js");
 var Type = require("js/Types.js");
 
+/*
+function log(s){
+    console.info(s);
+}
+*/
+
 function methodCallGenerator(context, id, type){
     return new Procedure.makeProcCallGenerator(context, id, type);
 }
@@ -21,6 +27,15 @@ function superMethodCallGenerator(context, id, type){
     var args = Procedure.makeArgumentsCode(context);
     args.write(Code.makeExpression("this"));
     return Procedure.makeProcCallGeneratorWithCustomArgs(context, id, type, args);
+}
+
+function resetPromotedTypes(types){
+    //log("reset promoted: " + types.length);
+    for(var i = 0; i < types.length; ++i){
+        var info = types[i];
+        //log("\t" + info.type.type().name + "->" + info.restore.name);
+        info.type.resetPromotion(info.restore);
+    }
 }
 
 var MethodType = Type.Procedure.extend({
@@ -113,22 +128,26 @@ var ResultVariable = Type.Variable.extend({
 
 var TempVariable = Type.Variable.extend({
     init: function TempVariable(type){
-        this.__originalType = type;
         this.__type = type;
-        this.__invert = false;
+        this.__invertedType = type;
     },
     type: function(){
-        return this.__invert ? this.__originalType : this.__type;
+        return this.__type;
     },
     isReadOnly: function(){return true;},
     idType: function(){return "temporary variable";},
     promoteType: function(t){
+        var result = this.__type;
         this.__type = t;
+        return result;
     },
-    invertType: function(){this.__invert = !this.__invert;},
-    inverted: function(){return this.__invert;},
-    resetPromotion: function(){
-        this.__type = this.__originalType;
+    invertType: function(){
+        var type = this.__type;
+        this.__type = this.__invertedType;
+        this.__invertedType = type;
+    },
+    resetPromotion: function(type){
+        this.__type = type;
     }
 });
 
@@ -548,9 +567,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
 
         // reset type promotion made in separate statement
         if (msg instanceof TransferPromotedTypesMsg){
-            var types = msg.types;
-            for(var i = 0; i < types.length; ++i)
-                types[i].resetPromotion();
+            resetPromotedTypes(msg.types);
             return;
         }
 
@@ -664,8 +681,9 @@ function resetTypePromotionMsg(){}
 function resetInvertedPromotedTypesMsg(){}
 function invertTypePromotionMsg(){}
 
-function TransferPromotedTypesMsg(types){
+function TransferPromotedTypesMsg(types, invertTypes){
     this.types = types;
+    this.invertTypes = invertTypes;
 }
 
 var RelationOps = Context.RelationOps.extend({
@@ -785,19 +803,26 @@ var While = Context.While.extend({
     }
 });
 
+//var id = 0;
+
 var TypePromotionHandler = Class.extend({
     init: function EberonContext$TypePromotionHandler(){
         this.__promotedTypes = [];
+        this.__invertPromotedTypes = [];
+        //this.__id = id++;
     },
     handleMessage: function(msg){
         if (msg instanceof PromoteTypeMsg){
             var promoted = msg.info;
-            promoted.promoteType(msg.type);
-            this.__promotedTypes.push(promoted);
+            var restore = promoted.promoteType(msg.type);
+            //log("promote: " + restore.name + "->" + msg.type.name + ", " + this.__id);
+            this.__promotedTypes.push({type: promoted, restore: restore});
             return true;
         }
         if (msg instanceof TransferPromotedTypesMsg){
+            //log("transfer, " + this.__id);
             Array.prototype.push.apply(this.__promotedTypes, msg.types);
+            Array.prototype.push.apply(this.__invertPromotedTypes, msg.invertTypes);
             return true;
         }
         switch (msg){
@@ -814,28 +839,28 @@ var TypePromotionHandler = Class.extend({
     return false;
     },
     invert: function(){
-        for(var i = 0; i < this.__promotedTypes.length; ++i)
-            this.__promotedTypes[i].invertType();
+        var all = this.__promotedTypes.concat(this.__invertPromotedTypes);
+        //log("invert: " + all.length + ", " + this.__id);
+        for(var i = 0; i < all.length; ++i){
+            //log("\t" + all[i].type.type().name + ", " + this.__id);
+            all[i].type.invertType();
+        }
+
+        var swap = this.__promotedTypes;
+        this.__promotedTypes = this.__invertPromotedTypes;
+        this.__invertPromotedTypes = swap;
     },
     reset: function(){
-        for(var i = 0; i < this.__promotedTypes.length; ++i)
-            this.__promotedTypes[i].resetPromotion();
+        resetPromotedTypes(this.__promotedTypes);
         this.__promotedTypes = [];
     },
     resetInverted: function(inverted){
-        var left = [];
-        for(var i = 0; i < this.__promotedTypes.length; ++i){
-            var t = this.__promotedTypes[i];
-            if (t.inverted())
-                t.resetPromotion();
-            else
-                left.push(t);
-        }
-        this.__promotedTypes = left;
+        resetPromotedTypes(this.__invertPromotedTypes);
+        this.__invertPromotedTypes = [];
     },
     transferTo: function(context){
-        if (this.__promotedTypes.length)
-            context.handleMessage(new TransferPromotedTypesMsg(this.__promotedTypes));
+        if (this.__promotedTypes.length || this.__invertPromotedTypes.length)
+            context.handleMessage(new TransferPromotedTypesMsg(this.__promotedTypes, this.__invertPromotedTypes));
     }
 });
 
@@ -844,9 +869,18 @@ var If = Context.If.extend({
         Context.If.prototype.init.call(this, context);
         this.__scope = undefined;
         this.__typePromotion = new TypePromotionHandler();
+        this.__typePromotions = [this.__typePromotion];
         this.__newScope();
     },
     handleMessage: function(msg){
+        /*
+        if (msg instanceof TransferPromotedTypesMsg){
+            log("suppress transfer");
+            resetPromotedTypes(msg.types);
+            return;
+        }
+        */
+
         if (this.__typePromotion.handleMessage(msg))
             return;
 
@@ -856,6 +890,8 @@ var If = Context.If.extend({
         Context.If.prototype.handleLiteral.call(this, s);
         if (s == "ELSIF" || s == "ELSE"){
             this.__typePromotion.invert();
+            this.__typePromotion = new TypePromotionHandler();
+            this.__typePromotions.push(this.__typePromotion);
             this.__newScope();
         }
     },
@@ -868,7 +904,9 @@ var If = Context.If.extend({
         this.pushScope(this.__scope);
     },
     endParse: function(){
-        this.__typePromotion.reset();
+        for(var i = 0; i < this.__typePromotions.length; ++i){
+            this.__typePromotions[i].reset();
+        }
         this.popScope();
         Context.If.prototype.endParse.call(this);
     }
