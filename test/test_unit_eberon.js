@@ -480,7 +480,7 @@ exports.suite = {
              "~(b IS PDerived) OR b.flag = b.flag"
             )
         ),
-    "type promotion in condition": testWithContext(
+    "type promotion in IF": testWithContext(
         typePromotion.context,
         typePromotion.passConditions(
             "IF b IS PDerived THEN b.flag := FALSE; END;",
@@ -502,7 +502,7 @@ exports.suite = {
              // "invalid type test: 'Derived' is not an extension of 'Derived'"]
              )
         ),
-    "invert type promotion in condition": testWithContext(
+    "invert type promotion in IF": testWithContext(
         typePromotion.context,
         typePromotion.passConditions(
             "IF ~(b IS PDerived) THEN ELSE b.flag := FALSE; END;",
@@ -516,6 +516,17 @@ exports.suite = {
         typePromotion.failConditions(
             "IF ~(b IS PDerived) & bVar THEN ELSE b.flag := FALSE; END; END p;",
             "IF ~(b IS PDerived) THEN ELSIF ~(b2 IS PDerived) THEN b2.flag := FALSE; END;"
+            )
+        ),
+    "type promotion in WHILE": testWithContext(
+        typePromotion.context,
+        typePromotion.passConditions(
+            "WHILE (b IS PDerived) & b.flag DO END;",
+            "WHILE ~(b IS PDerived) OR b.flag DO END;",
+            "WHILE b IS PDerived DO b.flag := FALSE; END;"
+            ),
+        typePromotion.failConditions(
+            "WHILE b IS PDerived DO END; b.flag := FALSE;"
             )
         )
     }

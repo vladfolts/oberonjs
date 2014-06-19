@@ -789,20 +789,6 @@ var Expression = Context.Expression.extend({
     }
 });
 
-var While = Context.While.extend({
-    init: function EberonContext$While(context){
-        Context.While.prototype.init.call(this, context);
-        var scope = EberonScope.makeOperator(
-            this.parent().currentScope(),
-            this.language().stdSymbols);
-        this.pushScope(scope);
-    },
-    endParse: function(){
-        this.popScope();
-        Context.While.prototype.endParse.call(this);
-    }
-});
-
 //var id = 0;
 
 var TypePromotionHandler = Class.extend({
@@ -864,6 +850,30 @@ var TypePromotionHandler = Class.extend({
     }
 });
 
+var While = Context.While.extend({
+    init: function EberonContext$While(context){
+        Context.While.prototype.init.call(this, context);
+
+        this.__typePromotion = new TypePromotionHandler();
+
+        var scope = EberonScope.makeOperator(
+            this.parent().currentScope(),
+            this.language().stdSymbols);
+        this.pushScope(scope);
+    },
+    handleMessage: function(msg){
+        if (this.__typePromotion.handleMessage(msg))
+            return;
+
+        return Context.While.prototype.handleMessage.call(this, msg);
+    },
+    endParse: function(){
+        this.popScope();
+        this.__typePromotion.reset();
+        Context.While.prototype.endParse.call(this);
+    }
+});
+
 var If = Context.If.extend({
     init: function EberonContext$If(context){
         Context.If.prototype.init.call(this, context);
@@ -873,14 +883,6 @@ var If = Context.If.extend({
         this.__newScope();
     },
     handleMessage: function(msg){
-        /*
-        if (msg instanceof TransferPromotedTypesMsg){
-            log("suppress transfer");
-            resetPromotedTypes(msg.types);
-            return;
-        }
-        */
-
         if (this.__typePromotion.handleMessage(msg))
             return;
 
