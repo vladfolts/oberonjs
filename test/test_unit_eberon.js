@@ -21,7 +21,7 @@ function testWithGrammar(parser, pass, faile){
     return TestUnitCommon.testWithGrammar(parser, language, pass, fail);
 }
 
-var typePromotion = {
+var temporaryValues = {
     context: context(
         grammar.declarationSequence,
         "TYPE Base = RECORD END;"
@@ -34,20 +34,20 @@ var typePromotion = {
     __expression: function(e){
         return "PROCEDURE p(); BEGIN b <- pBase; b2 <- pBase; ASSERT(" + e + "); END p;";
     },
-    __condition: function(e){
+    __statement: function(e){
         return "PROCEDURE p(); BEGIN b <- pBase; b2 <- pBase; " + e + " END p;";
     },
     passExpressions: function(){
         return this.__pass(this.__expression.bind(this), arguments);
     },
-    passConditions: function(){
-        return this.__pass(this.__condition.bind(this), arguments);
+    passStatements: function(){
+        return this.__pass(this.__statement.bind(this), arguments);
     },
     failExpressions: function(){
         return this.__fail(this.__expression.bind(this), arguments);
     },
-    failConditions: function(){
-        return this.__fail(this.__condition.bind(this), arguments);
+    failStatements: function(){
+        return this.__fail(this.__statement.bind(this), arguments);
     },
     __pass: function(make, cases){
         var result = [];
@@ -401,19 +401,20 @@ exports.suite = {
              ["v <- void()", "procedure returning no result cannot be used in an expression"])
         ),
     "scope": testWithContext(
-        context(grammar.declarationSequence,
-                "VAR i: INTEGER;"),
-        pass("PROCEDURE p(); BEGIN v1 <- 0; v2 <-0; END p;",
-             "PROCEDURE p(); BEGIN i <- 0; ASSERT(i = 0); END p;",
-             "PROCEDURE p(); BEGIN WHILE FALSE DO v <- 0; ASSERT(v = 0); END; WHILE FALSE DO v <- 0; END; END p;",
-             "PROCEDURE p(); BEGIN WHILE FALSE DO i1 <- 0; WHILE FALSE DO i2 <- 0; ASSERT(i1 = 0); ASSERT(i2 = 0); END; END; END p;",
-             "PROCEDURE p(); BEGIN IF FALSE THEN v <- 0; ASSERT(v = 0); END; IF FALSE THEN v <- 0; END; END p;",
-             "PROCEDURE p(); BEGIN IF FALSE THEN v <- 0; END; IF FALSE THEN v <- 0; END; END p;",
-             "PROCEDURE p(); BEGIN IF FALSE THEN v <- 0; ELSIF FALSE THEN v <- 0; ELSE v <- 0; END; END p;",
-             "PROCEDURE p(); BEGIN CASE i OF 0: v <- 0 | 1: v <- 1; ; ASSERT(v = 1); END; END p;",
-             "PROCEDURE p(); BEGIN REPEAT v <- 0; UNTIL FALSE; REPEAT v <- 0; UNTIL FALSE; END p;",
-             "PROCEDURE p(); BEGIN REPEAT v <- 0; ASSERT(v = 0); UNTIL v # 0; END p;",
-             "PROCEDURE p(); BEGIN FOR i := 0 TO 10 DO v <- 0; END; FOR i := 0 TO 10 DO v <- 0; END; END p;"
+        temporaryValues.context,
+        temporaryValues.passStatements(
+             "v1 <- 0; v2 <-0;",
+             "i <- 0; ASSERT(i = 0);",
+             "WHILE FALSE DO v <- 0; ASSERT(v = 0); END; WHILE FALSE DO v <- 0; END;",
+             "WHILE FALSE DO i1 <- 0; WHILE FALSE DO i2 <- 0; ASSERT(i1 = 0); ASSERT(i2 = 0); END; END;",
+             "WHILE bVar DO v <- 0; ELSIF ~bVar DO v <- 0 END;",
+             "IF FALSE THEN v <- 0; ASSERT(v = 0); END; IF FALSE THEN v <- 0; END;",
+             "IF FALSE THEN v <- 0; END; IF FALSE THEN v <- 0; END;",
+             "IF FALSE THEN v <- 0; ELSIF FALSE THEN v <- 0; ELSE v <- 0; END;",
+             "i <- 0; CASE i OF 0: v <- 0 | 1: v <- 1; ; ASSERT(v = 1); END;",
+             "REPEAT v <- 0; UNTIL FALSE; REPEAT v <- 0; UNTIL FALSE;",
+             "REPEAT v <- 0; ASSERT(v = 0); UNTIL v # 0;",
+             "i <- 0; FOR i := 0 TO 10 DO v <- 0; END; FOR i := 0 TO 10 DO v <- 0; END;"
              ),
         fail(["PROCEDURE p(); BEGIN v <- 0; v <-0; END p;", "'v' already declared"],
              ["PROCEDURE p(); VAR v: INTEGER; BEGIN v <- 0; END p;", "'v' already declared"],
@@ -434,8 +435,8 @@ exports.suite = {
             )
         ),
     "type promotion in expression": testWithContext(
-        typePromotion.context,
-        typePromotion.passExpressions(
+        temporaryValues.context,
+        temporaryValues.passExpressions(
              "(b IS PDerived) & b.flag",
              "(b IS PDerived) & bVar & b.flag",
              "(b IS PDerived) & (bVar OR b.flag)",
@@ -447,7 +448,7 @@ exports.suite = {
              "(b IS PDerived) & ((b IS PDerived2) OR bVar) & b.flag"
              //TODO: "((b IS PDerived) = TRUE) & b.flag); END p;",
              ),
-        typePromotion.failExpressions(
+        temporaryValues.failExpressions(
             "(b IS PDerived) OR b.flag",
              "(b IS PDerived) OR bVar & b.flag",
              "~(b IS PDerived) & b.flag",
@@ -460,8 +461,8 @@ exports.suite = {
              )
         ),
     "invert type promotion in expression": testWithContext(
-        typePromotion.context,
-        typePromotion.passExpressions(
+        temporaryValues.context,
+        temporaryValues.passExpressions(
              "~(b IS PDerived) OR b.flag",
              "~(b IS PDerived) OR b.flag OR bVar",
              "~(b IS PDerived) OR b.flag & bVar",
@@ -472,7 +473,7 @@ exports.suite = {
              "~(~(b IS PDerived) OR bVar) & b.flag",
              "~(~(b IS PDerived) OR b.flag) & b.flag"
              ),
-        typePromotion.failExpressions(
+        temporaryValues.failExpressions(
              "(~(b IS PDerived) OR bVar) & b.flag",
              "(ORD(~(b IS PDerived)) + ORD(b.flag)",
              "~(~(b IS PDerived) OR bVar) OR b.flag",
@@ -481,14 +482,14 @@ exports.suite = {
             )
         ),
     "type promotion in IF": testWithContext(
-        typePromotion.context,
-        typePromotion.passConditions(
+        temporaryValues.context,
+        temporaryValues.passStatements(
             "IF b IS PDerived THEN b.flag := FALSE; END;",
             "IF (b IS PDerived) & bVar THEN b.flag := FALSE; END;",
             "IF FALSE THEN ELSIF b IS PDerived THEN b.flag := FALSE; END;",
             "IF b IS PDerived THEN bVar := (b IS PDerived2) & b.flag2; b.flag := FALSE; END;"
             ),
-        typePromotion.failConditions(
+        temporaryValues.failStatements(
             "IF (b IS PDerived) OR bVar THEN b.flag := FALSE; END",
             "IF b IS PDerived THEN END; b.flag := FALSE",
             "IF ~(b IS PDerived) THEN END; b.flag := FALSE",
@@ -503,8 +504,8 @@ exports.suite = {
              )
         ),
     "invert type promotion in IF": testWithContext(
-        typePromotion.context,
-        typePromotion.passConditions(
+        temporaryValues.context,
+        temporaryValues.passStatements(
             "IF ~(b IS PDerived) THEN ELSE b.flag := FALSE; END;",
             "IF ~(b IS PDerived) THEN ELSIF bVar THEN b.flag := FALSE; ELSE b.flag := FALSE; END;",
             "IF ~(b IS PDerived) THEN ELSIF ~(b2 IS PDerived) THEN b.flag := FALSE; ELSE b.flag := FALSE; b2.flag := FALSE; END;",
@@ -513,19 +514,19 @@ exports.suite = {
             "IF ~(b IS PDerived) THEN bVar := b IS PDerived; ELSE b.flag := FALSE; END;",
             "IF ~(b IS PDerived) THEN ASSERT((b IS PDerived) & b.flag); ELSE b.flag := FALSE; END;"
             ),
-        typePromotion.failConditions(
+        temporaryValues.failStatements(
             "IF ~(b IS PDerived) & bVar THEN ELSE b.flag := FALSE; END; END p;",
             "IF ~(b IS PDerived) THEN ELSIF ~(b2 IS PDerived) THEN b2.flag := FALSE; END;"
             )
         ),
     "type promotion in WHILE": testWithContext(
-        typePromotion.context,
-        typePromotion.passConditions(
+        temporaryValues.context,
+        temporaryValues.passStatements(
             "WHILE (b IS PDerived) & b.flag DO END;",
             "WHILE ~(b IS PDerived) OR b.flag DO END;",
             "WHILE b IS PDerived DO b.flag := FALSE; END;"
             ),
-        typePromotion.failConditions(
+        temporaryValues.failStatements(
             "WHILE b IS PDerived DO END; b.flag := FALSE;"
             )
         )
