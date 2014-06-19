@@ -854,39 +854,53 @@ var OperatorScopes = Class.extend({
     init: function EberonContext$OperatorScopes(context){
         this.__context = context;
         this.__scope = undefined;
-        this.next();
+
+        this.__typePromotion = new TypePromotionHandler();
+        this.__typePromotions = [this.__typePromotion];
+
+        this.alternate();
     },
-    next: function(){
+    handleMessage: function(msg){
+        return this.__typePromotion.handleMessage(msg);
+    },
+    alternate: function(){
         if (this.__scope)
             this.__context.popScope();
         this.__scope = EberonScope.makeOperator(
             this.__context.parent().currentScope(),
             this.__context.language().stdSymbols);
         this.__context.pushScope(this.__scope);
+
+        this.__typePromotion.invert();
+        this.__typePromotion = new TypePromotionHandler();
+        this.__typePromotions.push(this.__typePromotion);
     },
-    reset: function(){this.__context.popScope();}
+    reset: function(){
+        this.__context.popScope();
+
+        for(var i = 0; i < this.__typePromotions.length; ++i){
+            this.__typePromotions[i].reset();
+        }
+    }
 });
 
 var While = Context.While.extend({
     init: function EberonContext$While(context){
         Context.While.prototype.init.call(this, context);
-
-        this.__typePromotion = new TypePromotionHandler();
         this.__scopes = new OperatorScopes(this);
     },
     handleLiteral: function(s){
         Context.While.prototype.handleLiteral.call(this, s);
         if (s == "ELSIF")
-            this.__scopes.next();
+            this.__scopes.alternate();
     },
     handleMessage: function(msg){
-        if (this.__typePromotion.handleMessage(msg))
+        if (this.__scopes.handleMessage(msg))
             return;
 
         return Context.While.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
-        this.__typePromotion.reset();
         this.__scopes.reset();
         Context.While.prototype.endParse.call(this);
     }
@@ -895,29 +909,20 @@ var While = Context.While.extend({
 var If = Context.If.extend({
     init: function EberonContext$If(context){
         Context.If.prototype.init.call(this, context);
-        this.__typePromotion = new TypePromotionHandler();
-        this.__typePromotions = [this.__typePromotion];
         this.__scopes = new OperatorScopes(this);
     },
     handleMessage: function(msg){
-        if (this.__typePromotion.handleMessage(msg))
+        if (this.__scopes.handleMessage(msg))
             return;
 
         return Context.If.prototype.handleMessage.call(this, msg);
     },
     handleLiteral: function(s){
         Context.If.prototype.handleLiteral.call(this, s);
-        if (s == "ELSIF" || s == "ELSE"){
-            this.__typePromotion.invert();
-            this.__typePromotion = new TypePromotionHandler();
-            this.__typePromotions.push(this.__typePromotion);
-            this.__scopes.next();
-        }
+        if (s == "ELSIF" || s == "ELSE")
+            this.__scopes.alternate();
     },
     endParse: function(){
-        for(var i = 0; i < this.__typePromotions.length; ++i){
-            this.__typePromotions[i].reset();
-        }
         this.__scopes.reset();
         Context.If.prototype.endParse.call(this);
     }

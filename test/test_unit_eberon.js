@@ -524,7 +524,9 @@ exports.suite = {
         temporaryValues.passStatements(
             "WHILE (b IS PDerived) & b.flag DO END;",
             "WHILE ~(b IS PDerived) OR b.flag DO END;",
-            "WHILE b IS PDerived DO b.flag := FALSE; END;"
+            "WHILE b IS PDerived DO b.flag := FALSE; END;",
+            "WHILE ~(b IS PDerived) DO ELSIF b.flag DO END;",
+            "WHILE ~(b IS PDerived) DO ELSIF bVar DO b.flag := FALSE; END;"
             ),
         temporaryValues.failStatements(
             "WHILE b IS PDerived DO END; b.flag := FALSE;"
