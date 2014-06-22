@@ -1684,7 +1684,7 @@ function isTypeRecursive(type, base){
     return false;
 }
 
-var RecordField = Class.extend({
+var RecordField = Type.Field.extend({
     init: function Context$RecordField(identdef, type, recordType){
         this.__identdef = identdef;
         this.__type = type;

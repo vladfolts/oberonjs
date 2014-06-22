@@ -170,8 +170,14 @@ BEGIN
             result := errNo;
         END;
     ELSIF (from IS Types.PPointer) & (to IS Types.PPointer) THEN
-        IF findPointerBaseType(to(Types.PPointer), from(Types.PPointer)^) # NIL THEN
+        IF ~toVar THEN
+            IF findPointerBaseType(to(Types.PPointer), from(Types.PPointer)^) # NIL THEN
+                result := errNo;
+            END;
+        ELSIF areTypesExactlyMatchImpl(to, from) THEN
             result := errNo;
+        ELSE
+            result := errVarParameter;
         END;
     ELSIF (from IS Types.PRecord) & (to IS Types.PRecord) THEN
         IF findBaseType(to(Types.PRecord), from(Types.PRecord)) # NIL THEN

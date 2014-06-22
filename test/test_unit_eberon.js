@@ -27,6 +27,7 @@ var temporaryValues = {
         "TYPE Base = RECORD END;"
         + "Derived = RECORD (Base) flag: BOOLEAN END;"
         + "Derived2 = RECORD (Derived) flag2: BOOLEAN END;"
+        + "PBase = POINTER TO Base;"
         + "PDerived = POINTER TO Derived;"
         + "PDerived2 = POINTER TO Derived2;"
         + "VAR pBase: POINTER TO Base; bVar: BOOLEAN;"
@@ -426,14 +427,6 @@ exports.suite = {
               "'i' already declared in procedure scope"]
             )
         ),
-    "read-only": testWithContext(
-        context(grammar.declarationSequence,
-                ""),
-        pass(),
-        fail(["PROCEDURE p(); BEGIN v <- 0; v := 0; END p;", 
-              "cannot assign to temporary variable"]
-            )
-        ),
     "type promotion in expression": testWithContext(
         temporaryValues.context,
         temporaryValues.passExpressions(
@@ -530,6 +523,20 @@ exports.suite = {
             ),
         temporaryValues.failStatements(
             "WHILE b IS PDerived DO END; b.flag := FALSE;"
+            )
+        ),
+    "type promotion cannot be reset by assignment": testWithContext(
+        temporaryValues.context,
+        pass(),
+        fail(["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN b := pBase; b.flag := FALSE; END; END p;",
+              "type mismatch: 'b' is 'PDerived' and cannot be assigned to 'POINTER TO Base' expression"]
+            )
+        ),
+    "type promotion cannot be reset by passing as VAR argument": testWithContext(
+        temporaryValues.context,
+        pass(),
+        fail(["PROCEDURE p(); PROCEDURE procBaseAsVar(VAR p: PBase); END procBaseAsVar;  BEGIN b <- pBase; IF b IS PDerived THEN procBaseAsVar(b); b.flag := FALSE; END; END p;",
+              "type mismatch for argument 1: cannot pass 'PDerived' as VAR parameter of type 'PBase'"]
             )
         )
     }

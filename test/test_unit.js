@@ -782,10 +782,13 @@ return {
 "VAR parameter": testWithContext(
     context(grammar.statement,
             "CONST c = 123;"
+            + "TYPE Base = RECORD END; Derived = RECORD (Base) END; PBase = POINTER TO Base; PDerived = POINTER TO Derived;"
             + "VAR i1: INTEGER; b1: BOOLEAN; a1: ARRAY 5 OF INTEGER;"
                 + "r1: RECORD f1: INTEGER END;"
+                + "pBase: PBase; pDerived: PDerived;"
             + "PROCEDURE p1(VAR i: INTEGER); END p1;"
             + "PROCEDURE p2(VAR b: BOOLEAN); END p2;"
+            + "PROCEDURE procBasePointer(VAR p: PBase); END procBasePointer;"
             ),
     pass("p1(i1)",
          "p1(a1[0])",
@@ -797,7 +800,10 @@ return {
          ["p1(i1 * i1)", "expression cannot be used as VAR parameter"],
          ["p1(+i1)", "expression cannot be used as VAR parameter"],
          ["p1(-i1)", "expression cannot be used as VAR parameter"],
-         ["p2(~b1)", "expression cannot be used as VAR parameter"])
+         ["p2(~b1)", "expression cannot be used as VAR parameter"],
+         ["procBasePointer(pDerived)", 
+          "type mismatch for argument 1: cannot pass 'PDerived' as VAR parameter of type 'PBase'"]
+         )
     ),
 "procedure call": testWithContext(
     context(grammar.statement,

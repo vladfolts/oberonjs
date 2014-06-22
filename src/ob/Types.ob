@@ -407,12 +407,12 @@ END Record.addField;
 
 PROCEDURE Record.findSymbol(id: STRING): PField;
 VAR
-    result: PField;
+    result: Object.PType;
 BEGIN
     IF ~JsMap.find(SELF.fields, id, result) & (SELF.base # NIL) THEN
         result := SELF.base.findSymbol(id);
     END;
-    RETURN result
+    RETURN result(PField)
 END Record.findSymbol;
 
 PROCEDURE recordBase*(r: Record): PRecord;

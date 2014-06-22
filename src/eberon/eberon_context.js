@@ -134,8 +134,7 @@ var TempVariable = Type.Variable.extend({
     type: function(){
         return this.__type;
     },
-    isReadOnly: function(){return true;},
-    idType: function(){return "temporary variable";},
+    //idType: function(){return "temporary variable";},
     promoteType: function(t){
         var result = this.__type;
         this.__type = t;
