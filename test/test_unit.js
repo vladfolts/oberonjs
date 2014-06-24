@@ -796,6 +796,7 @@ return {
     fail(["p1(c)", "constant cannot be used as VAR parameter"],
          ["p1(123)", "expression cannot be used as VAR parameter"],
          ["p2(TRUE)", "expression cannot be used as VAR parameter"],
+         ["procBasePointer(NIL)", "expression cannot be used as VAR parameter"],
          ["p1(i1 + i1)", "expression cannot be used as VAR parameter"],
          ["p1(i1 * i1)", "expression cannot be used as VAR parameter"],
          ["p1(+i1)", "expression cannot be used as VAR parameter"],
