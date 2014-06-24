@@ -450,7 +450,6 @@ exports.suite = {
              "ORD(b IS PDerived) * ORD(b.flag) = 0",
              "((b IS PDerived) = FALSE) & b.flag",
              "b IS PDerived); ASSERT(b.flag"
-             // TODO: move to statements test "bVar := b IS PDerived; ASSERT(b.flag)",
              )
         ),
     "invert type promotion in expression": testWithContext(
@@ -474,6 +473,11 @@ exports.suite = {
              "~(b IS PDerived) OR b.flag = b.flag"
             )
         ),
+    "type promotion in separate statements": testWithContext(
+        temporaryValues.context,
+        pass(),
+        temporaryValues.failStatements("bVar := b IS PDerived; ASSERT(b.flag)")
+        ),
     "type promotion in IF": testWithContext(
         temporaryValues.context,
         temporaryValues.passStatements(
@@ -491,9 +495,6 @@ exports.suite = {
             "IF bVar THEN ELSIF b IS PDerived THEN ELSE END; b.flag := FALSE",
             "IF b IS PDerived THEN ELSE b.flag := FALSE; END",
             "IF b IS PDerived THEN ELSIF TRUE THEN b.flag := FALSE; END"
-             //TODO: separate test
-             //["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN bVar := b IS PDerived; b.flag := FALSE; END; END p;",
-             // "invalid type test: 'Derived' is not an extension of 'Derived'"]
              )
         ),
     "invert type promotion in IF": testWithContext(
@@ -537,6 +538,13 @@ exports.suite = {
         pass(),
         fail(["PROCEDURE p(); PROCEDURE procBaseAsVar(VAR p: PBase); END procBaseAsVar;  BEGIN b <- pBase; IF b IS PDerived THEN procBaseAsVar(b); b.flag := FALSE; END; END p;",
               "type mismatch for argument 1: cannot pass 'PDerived' as VAR parameter of type 'PBase'"]
+            )
+        ),
+    "IS expression after type promotion": testWithContext(
+        temporaryValues.context,
+        pass(),
+        fail(["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN bVar := b IS PDerived; b.flag := FALSE; END; END p;",
+              "invalid type test: 'Derived' is not an extension of 'Derived'"]
             )
         ),
     "as references": testWithContext(
