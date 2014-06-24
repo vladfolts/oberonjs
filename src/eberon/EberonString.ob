@@ -18,6 +18,10 @@ PROCEDURE ElementVariable.type(): Types.PType;
     RETURN Types.basic.ch
 END ElementVariable.type;
 
+PROCEDURE ElementVariable.isReference(): BOOLEAN;
+    RETURN FALSE
+END ElementVariable.isReference;
+
 PROCEDURE makeElementVariable*(): Types.PVariable;
 VAR
     result: POINTER TO ElementVariable;

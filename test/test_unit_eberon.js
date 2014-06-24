@@ -382,7 +382,7 @@ exports.suite = {
          ["returnProc()", "procedure returning a result cannot be used as a statement"] // call is not applied implicitly to result
         )
     ),
-"temporary values": {
+"in place variables": {
     "initialization": testWithContext(
         context(grammar.statement,
                 "VAR i: INTEGER;"
@@ -538,6 +538,16 @@ exports.suite = {
         fail(["PROCEDURE p(); PROCEDURE procBaseAsVar(VAR p: PBase); END procBaseAsVar;  BEGIN b <- pBase; IF b IS PDerived THEN procBaseAsVar(b); b.flag := FALSE; END; END p;",
               "type mismatch for argument 1: cannot pass 'PDerived' as VAR parameter of type 'PBase'"]
             )
-        )
+        ),
+    "as references": testWithContext(
+          context(grammar.declarationSequence,
+                "TYPE Base = RECORD pBase: POINTER TO Base END; Derived = RECORD (Base) END;"
+                + "VAR base: Base;"
+               ),
+          pass("PROCEDURE p(); BEGIN baseRef <- base.pBase^; ASSERT(baseRef IS Derived); END p;",
+               "PROCEDURE p(VAR b: Base); BEGIN baseRef <- b; ASSERT(baseRef IS Derived); END p;"),
+          fail(["PROCEDURE p(b: Base); BEGIN baseRef <- b; ASSERT(baseRef IS Derived); END p;",
+                "invalid type test: a value variable cannot be used"])
+      )
     }
 };

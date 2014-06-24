@@ -18,7 +18,6 @@ function log(s){
     console.info(s);
 }
 */
-
 function methodCallGenerator(context, id, type){
     return new Procedure.makeProcCallGenerator(context, id, type);
 }
@@ -127,12 +126,23 @@ var ResultVariable = Type.Variable.extend({
 });
 
 var TempVariable = Type.Variable.extend({
-    init: function TempVariable(type){
-        this.__type = type;
-        this.__invertedType = type;
+    init: function TempVariable(e){
+        this.__type = e.type();
+        this.__invertedType = this.__type;
+
+        this.__isRef = false;
+        var d = e.designator();
+        if (d) {
+            var v = d.info();
+            if (v instanceof Type.Variable)
+                this.__isRef = v.isReference();
+        }
     },
     type: function(){
         return this.__type;
+    },
+    isReference: function(){
+        return this.__isRef;
     },
     //idType: function(){return "temporary variable";},
     promoteType: function(t){
@@ -246,7 +256,7 @@ var TemplValueInit = Context.Chained.extend({
         gen.write("var " + this.__id + " = ");
     },
     handleExpression: function(e){
-        var v = new TempVariable(e.type());
+        var v = new TempVariable(e);
         this.__symbol = Symbol.makeSymbol(this.__id, v);
     },
     endParse: function(){

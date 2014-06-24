@@ -97,7 +97,7 @@ function checkTypeCast(fromInfo, fromType, toType, msg){
             + fromType.description() + "'");
 
     if (fromType instanceof Type.Record){
-        if (!(fromInfo instanceof Type.VariableRef))
+        if (!fromInfo.isReference())
             throw new Errors.Error(
                 prefix + ": a value variable cannot be used");
         if (!(toType instanceof Type.Record))
@@ -449,7 +449,7 @@ exports.Designator = ChainedContext.extend({
     __makeRefCode: function(code){
         if (   this.__currentType instanceof Type.Array
             || this.__currentType instanceof Type.Record
-            || this.__info instanceof Type.VariableRef)
+            || this.__info.isReference())
             return code;
         if (this.__derefCode)
             return this.language().rtl.makeRef(this.__derefCode, this.__propCode);

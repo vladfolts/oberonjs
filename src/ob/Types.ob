@@ -51,23 +51,20 @@ TYPE
 
     Variable* = RECORD(Id)
         PROCEDURE type*(): PType;
-        PROCEDURE isReadOnly*(): BOOLEAN
+        PROCEDURE isReadOnly*(): BOOLEAN;
+        PROCEDURE isReference*(): BOOLEAN
     END;
 
     PVariable* = POINTER TO Variable;
 
     VariableImpl = RECORD(Variable)
-        mType: PType
+        mType: PType;
+        mRef: BOOLEAN
     END;
     PVariableImpl = POINTER TO VariableImpl;
 
     ReadOnlyVariable = RECORD(VariableImpl)
     END;
-
-    VariableRef* = RECORD(VariableImpl)
-    END;
-
-    PVariableRef* = POINTER TO VariableRef;
 
     ExportedVariable = RECORD(ReadOnlyVariable)
     END;
@@ -315,6 +312,10 @@ END ReadOnlyVariable.idType;
 PROCEDURE VariableImpl.type(): PType;
     RETURN SELF.mType
 END VariableImpl.type;
+
+PROCEDURE VariableImpl.isReference(): BOOLEAN;
+    RETURN SELF.mRef
+END VariableImpl.isReference;
 
 PROCEDURE procedureType*(p: ProcedureId): PType;
     RETURN p.type
@@ -637,12 +638,13 @@ BEGIN
     RETURN result
 END makeVariable;
 
-PROCEDURE makeVariableRef*(type: PType): PVariableRef;
+PROCEDURE makeVariableRef*(type: PType): PVariable;
 VAR
-    result: PVariableRef;
+    result: PVariableImpl;
 BEGIN
     NEW(result);
     result.mType := type;
+    result.mRef := TRUE;
     RETURN result
 END makeVariableRef;
 

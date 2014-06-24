@@ -528,7 +528,7 @@ BEGIN
                 castExp := Code.derefExpression(right);
             END;
             rightCode := castExp.code();
-            IF info IS Types.PVariableRef THEN
+            IF (info IS Types.PVariable) & info(Types.PVariable).isReference() THEN
                 rightCode := ".set(" + rightCode + ")";
             ELSE
                 rightCode := " = " + rightCode;
@@ -546,7 +546,8 @@ VAR
     result: STRING;
 BEGIN
     designator := left.designator();
-    IF designator.info() IS Types.PVariableRef THEN
+    info <- designator.info();
+    IF (info IS Types.PVariable) & info.isReference() THEN
         result := assign(left, altOp(left, right, cx.rtl), cx);
     ELSE
         rightExp := Code.derefExpression(right);
