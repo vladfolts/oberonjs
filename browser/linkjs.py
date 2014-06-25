@@ -48,7 +48,7 @@ def process(path, out, resolved, resolving, dirs):
 	resolved += [path]
 
 def encode_to_js_string(s):
-	escape = [('\n', '\\n'), ('\r', '\\r'), ('"', '""')]
+	escape = [('\n', '\\n'), ('\r', '\\r'), ('"', '\\"')]
 	for e in escape:
 		s = s.replace(e[0], e[1])
 	return '"%s"' % s
