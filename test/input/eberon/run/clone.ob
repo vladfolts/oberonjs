@@ -1,0 +1,14 @@
+MODULE m;
+TYPE
+    T = RECORD 
+    	b: BOOLEAN
+    END;
+
+VAR
+    r: T;
+
+BEGIN
+    r.b := TRUE;
+    temp <- r;
+	ASSERT(temp.b);
+END m.

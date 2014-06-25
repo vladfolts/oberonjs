@@ -160,6 +160,11 @@ var impl = {
             }
         }
     },
+    clone: function(from){
+        var to = new from.constructor();
+        this.copy(from, to);
+        return to;
+    },
     assert: function(condition){
         if (!condition)
             throw new Error("assertion failed");
@@ -167,5 +172,7 @@ var impl = {
 };
 
 exports.Class = Class;
+exports.dependencies = { "clone": ["copy"] };
+
 for(var e in impl)
     exports[e] = impl[e];

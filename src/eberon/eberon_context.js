@@ -130,6 +130,7 @@ var TempVariable = Type.Variable.extend({
         this.__type = e.type();
         this.__invertedType = this.__type;
 
+        /*
         this.__isRef = false;
         var d = e.designator();
         if (d) {
@@ -137,12 +138,13 @@ var TempVariable = Type.Variable.extend({
             if (v instanceof Type.Variable)
                 this.__isRef = v.isReference();
         }
+        */
     },
     type: function(){
         return this.__type;
     },
     isReference: function(){
-        return this.__isRef;
+        return false;
     },
     //idType: function(){return "temporary variable";},
     promoteType: function(t){
@@ -247,23 +249,29 @@ var TemplValueInit = Context.Chained.extend({
         Context.Chained.prototype.init.call(this, context);
         this.__id = undefined;
         this.__symbol = undefined;
+        this.__code = undefined;
     },
+    codeGenerator: function(){return Code.nullGenerator();},
     handleIdent: function(id){
         this.__id = id;
     },
     handleLiteral: function(){
-        var gen = this.codeGenerator();
-        gen.write("var " + this.__id + " = ");
+        this.__code = "var " + this.__id + " = ";
     },
     handleExpression: function(e){
         var v = new TempVariable(e);
         this.__symbol = Symbol.makeSymbol(this.__id, v);
+        if (e.type() instanceof Type.Record)
+            this.__code += this.language().rtl.clone(e.code());
+        else
+            this.__code += Code.derefExpression(e).code();
     },
     endParse: function(){
         if (!this.__symbol)
             return false;
 
         this.currentScope().addSymbol(this.__symbol);
+        this.parent().codeGenerator().write(this.__code);
         return true;
     }
 });

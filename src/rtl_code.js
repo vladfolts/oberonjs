@@ -55,6 +55,15 @@ exports.RTL = Rtl.Class.extend({
                 this.__demandedCallback();
             if (!this.__entries[name])
                 this.__entries[name] = Rtl[name];
+            
+            var dependencies = Rtl.dependencies[name];
+            if (dependencies)
+                for(var i = 0; i < dependencies.length; ++i){
+                    var d = dependencies[i];
+                    if (!this.__entries[d])
+                        this.__entries[d] = Rtl[d];
+                }
+
             return this.name() + "." + name;
         };
     },

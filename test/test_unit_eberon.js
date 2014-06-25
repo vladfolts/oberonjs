@@ -547,6 +547,21 @@ exports.suite = {
               "invalid type test: 'Derived' is not an extension of 'Derived'"]
             )
         ),
+    "record types as values": testWithContext(
+          context(grammar.declarationSequence,
+                "TYPE Base = RECORD pBase: POINTER TO Base END; Derived = RECORD (Base) END;"
+                + "VAR base: Base;"
+                + "PROCEDURE procBaseVar(VAR b: Base); END procBaseVar;"
+               ),
+          pass("PROCEDURE p(b: Base); BEGIN base <- b; procBaseVar(base); base := b; END p;"),
+          fail(["PROCEDURE p(); BEGIN baseVar <- base.pBase^; ASSERT(base IS Derived); END p;",
+                "invalid type test: a value variable cannot be used"],
+               ["PROCEDURE p(VAR b: Base); BEGIN base <- b; ASSERT(base IS Derived); END p;",
+                "invalid type test: a value variable cannot be used"],
+               ["PROCEDURE p(b: Base); BEGIN base <- b; ASSERT(base IS Derived); END p;",
+                "invalid type test: a value variable cannot be used"]
+              )
+      )/*
     "as references": testWithContext(
           context(grammar.declarationSequence,
                 "TYPE Base = RECORD pBase: POINTER TO Base END; Derived = RECORD (Base) END;"
@@ -556,6 +571,6 @@ exports.suite = {
                "PROCEDURE p(VAR b: Base); BEGIN baseRef <- b; ASSERT(baseRef IS Derived); END p;"),
           fail(["PROCEDURE p(b: Base); BEGIN baseRef <- b; ASSERT(baseRef IS Derived); END p;",
                 "invalid type test: a value variable cannot be used"])
-      )
+      )*/
     }
 };

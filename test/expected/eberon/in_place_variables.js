@@ -12,6 +12,22 @@ var RTL$ = {
         
         result.extend = extend;
         return result;
+    },
+    clone: function (from){
+        var to = new from.constructor();
+        this.copy(from, to);
+        return to;
+    },
+    copy: function (from, to){
+        for(var prop in to){
+            if (to.hasOwnProperty(prop)){
+                var v = from[prop];
+                if (v !== null && typeof v == "object")
+                    this.copy(v, to[prop]);
+                else
+                    to[prop] = v;
+            }
+        }
     }
 };
 var m = function (){
@@ -30,13 +46,13 @@ function void$(){
 }
 
 function valueArgs(r/*T*/, i/*INTEGER*/){
-	var v1 = r;
+	var v1 = RTL$.clone(r);
 	var v2 = i;
 }
 
 function varArgs(r/*VAR T*/, i/*VAR INTEGER*/){
-	var v1 = r;
-	var v2 = i;
+	var v1 = RTL$.clone(r);
+	var v2 = i.get();
 }
 var v1 = 0;
 var v2 = 1.23;
@@ -47,5 +63,5 @@ var v6 = i + i | 0;
 var v7 = p();
 var v8 = void$;
 var do$ = 0;
-var tempRecord = r;
+var tempRecord = RTL$.clone(r);
 }();
