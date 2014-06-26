@@ -5,6 +5,7 @@ Eberon extends original Oberon so any valid oberon program is also a valid ebero
 ### Extensions
 * [Methods](/vladfolts/oberonjs/wiki/eberon-methods)
 * [Strings](/vladfolts/oberonjs/wiki/eberon-strings)
+* [In Place Variables](/vladfolts/oberonjs/wiki/eberon-in-place-variables)
 * [Record fields read-only export](/vladfolts/oberonjs/wiki/eberon-record-fields-read-only-export)
 * [Procedure call result can be denoted](/vladfolts/oberonjs/wiki/eberon-procedure-call-result)
 * Non-scalar variables (arrays and records) can be exported (forbidden in oberon for some unknown reason).
