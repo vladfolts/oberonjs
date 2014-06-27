@@ -8,6 +8,7 @@ VAR
     r: T;
     a: ARRAY 2 OF BOOLEAN;
     charArray: ARRAY 2 OF CHAR;
+    ar: ARRAY 3 OF T;
 BEGIN
     r.b := TRUE;
     temp <- r;
@@ -23,4 +24,9 @@ BEGIN
     tempCharArray <- charArray;
     ASSERT(tempCharArray[0] = "a");
     ASSERT(tempCharArray[1] = "b");
+
+    ar[0].b := TRUE;
+    tempArrayRecords <- ar;
+    ASSERT(tempArrayRecords[0].b);
+    ASSERT(~tempArrayRecords[1].b);
 END m.
