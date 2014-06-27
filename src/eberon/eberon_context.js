@@ -261,8 +261,14 @@ var TemplValueInit = Context.Chained.extend({
     handleExpression: function(e){
         var v = new TempVariable(e);
         this.__symbol = Symbol.makeSymbol(this.__id, v);
-        if (e.type() instanceof Type.Record)
+        var type = e.type();
+        if (type instanceof Type.Record)
             this.__code += this.language().rtl.clone(e.code());
+        else if (type instanceof Type.Array){
+            if (Type.arrayLength(type) == Type.openArrayLength)
+                throw new Errors.Error("cannot initialize variable '" + this.__id + "' with open array");
+            this.__code += this.language().rtl.clone(e.code());
+        }
         else
             this.__code += Code.derefExpression(e).code();
     },

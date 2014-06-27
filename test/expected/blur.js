@@ -4,13 +4,7 @@ var RTL$ = {
         var length = forward.pop();
 
         if (!forward.length)
-            return makeCharArray(length);
-
-        function makeCharArray(length){
-            var result = new Uint16Array(length);
-            result.charCodeAt = function(i){return this[i];};
-            return result;
-        }
+            return this.__makeCharArray(length);
 
         function makeArray(){
             var forward = Array.prototype.slice.call(arguments);
@@ -27,8 +21,13 @@ var RTL$ = {
             return result;
         }
 
-        forward.push(makeCharArray.bind(undefined, length));
+        forward.push(this.__makeCharArray.bind(undefined, length));
         return makeArray.apply(undefined, forward);
+    },
+    __makeCharArray: function (length){
+        var result = new Uint16Array(length);
+        result.charCodeAt = function(i){return this[i];};
+        return result;
     }
 };
 var Blur = function (){

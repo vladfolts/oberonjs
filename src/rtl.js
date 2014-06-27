@@ -68,18 +68,17 @@ var impl = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
+    __makeCharArray: function(length){
+        var result = new Uint16Array(length);
+        result.charCodeAt = function(i){return this[i];};
+        return result;
+    },
     makeCharArray: function(/*dimensions*/){
         var forward = Array.prototype.slice.call(arguments);
         var length = forward.pop();
 
         if (!forward.length)
-            return makeCharArray(length);
-
-        function makeCharArray(length){
-            var result = new Uint16Array(length);
-            result.charCodeAt = function(i){return this[i];};
-            return result;
-        }
+            return this.__makeCharArray(length);
 
         function makeArray(){
             var forward = Array.prototype.slice.call(arguments);
@@ -96,7 +95,7 @@ var impl = {
             return result;
         }
 
-        forward.push(makeCharArray.bind(undefined, length));
+        forward.push(this.__makeCharArray.bind(undefined, length));
         return makeArray.apply(undefined, forward);
     },
     makeSet: function(/*...*/){
@@ -161,8 +160,34 @@ var impl = {
         }
     },
     clone: function(from){
-        var to = new from.constructor();
-        this.copy(from, to);
+        var to;
+        var len;
+        var i;
+        var Ctr = from.constructor;
+        if (Ctr == Uint16Array){
+            len = from.length;
+            to = this.__makeCharArray(len);
+            for(i = 0; i < len; ++i)
+                to[i] = from[i];
+        }
+        else {
+            to = new Ctr();
+            if (Ctr == Array)
+                len = from.length;
+                if (len){
+                    if (typeof from[0] != "object")
+                        for(i = 0; i < len; ++i)
+                            to[i] = from[i];
+                    else
+                        for(i = 0; i < len; ++i){
+                            var o = from[i];
+                            if (o !== null)
+                                to[i] = this.clone(o);
+                        }
+                }
+            else
+                this.copy(from, to);
+        }
         return to;
     },
     assert: function(condition){
@@ -172,7 +197,10 @@ var impl = {
 };
 
 exports.Class = Class;
-exports.dependencies = { "clone": ["copy"] };
+exports.dependencies = { 
+    "clone": ["copy", "__makeCharArray"] ,
+    "makeCharArray": ["__makeCharArray"]
+};
 
 for(var e in impl)
     exports[e] = impl[e];

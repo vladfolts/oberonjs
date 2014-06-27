@@ -16,7 +16,7 @@ variable will have type INTEGER. In the following example the variable will have
 
 Although the type is not specified explicitly a variable is still statically typed (its type cannot be changed) with deduced type in the same way as a regular variable (declared in VAR section).
 
-*In place* variable behaves in the same way as a regular variable (declared in VAR section). It can be reassigned or passed as a VAR parameter to procedure. When variable is initialized with a record type - it will be copied as if variable of this record type was declared in VAR section and then assigned to another variable of record type.
+*In place* variable behaves in the same way as a regular variable (declared in VAR section). It can be reassigned or passed as a VAR parameter to procedure. When variable is initialized with a record type - it will be copied as if variable of this record type was declared in VAR section and then assigned to another variable of record type. When variable is initialized with an array type - array will be copied. *In place* variable cannot be initialized with open array because its full type (including size) is unknown.
 
     PROCEDURE p(a1: SomeRecord; VAR a2: SomeRecord);
     BEGIN

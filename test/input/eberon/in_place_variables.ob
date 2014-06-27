@@ -3,10 +3,12 @@ MODULE m;
 TYPE
     T = RECORD
     END;
+    A = ARRAY 10 OF INTEGER;
 
 VAR 
     r: T;
     i: INTEGER;
+    a: A;
 
 PROCEDURE p(): BOOLEAN; 
     RETURN FALSE
@@ -15,16 +17,18 @@ END p;
 PROCEDURE void();
 END void;
 
-PROCEDURE valueArgs(r: T; i: INTEGER);
+PROCEDURE valueArgs(r: T; i: INTEGER; a: A);
 BEGIN
     v1 <- r;
     v2 <- i;
+    v3 <- a;
 END valueArgs;
 
-PROCEDURE varArgs(VAR r: T; VAR i: INTEGER);
+PROCEDURE varArgs(VAR r: T; VAR i: INTEGER; a: A);
 BEGIN
     v1 <- r;
     v2 <- i;
+    v3 <- a;
 END varArgs;
 
 BEGIN
@@ -39,4 +43,5 @@ BEGIN
     do <- {};
 
     tempRecord <- r;
+    tempArray <- a;
 END m.

@@ -561,7 +561,23 @@ exports.suite = {
                ["PROCEDURE p(b: Base); BEGIN base <- b; ASSERT(base IS Derived); END p;",
                 "invalid type test: a value variable cannot be used"]
               )
+      ),
+    "arrays as values": testWithContext(
+          context(grammar.declarationSequence,
+                "TYPE A = ARRAY 3 OF INTEGER; T = RECORD a: A END;"
+                + "VAR r: T;"
+                + "PROCEDURE procArrayVar(VAR a: A); END procArrayVar;"
+               ),
+          pass("PROCEDURE p(r: T); BEGIN a <- r.a; a[0] := 123; procArrayVar(a); END p;",
+               "PROCEDURE p(a: A); BEGIN tmp <- a; END p;",
+               "PROCEDURE p(); VAR a: A; BEGIN tmp <- a; END p;",
+               "PROCEDURE p(); VAR a: ARRAY 3 OF BOOLEAN; BEGIN tmp <- a; END p;"
+               ),
+          fail(["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN v <- a; END p;",
+                "cannot initialize variable 'v' with open array"]
+              )
       )/*
+      /*
     "as references": testWithContext(
           context(grammar.declarationSequence,
                 "TYPE Base = RECORD pBase: POINTER TO Base END; Derived = RECORD (Base) END;"

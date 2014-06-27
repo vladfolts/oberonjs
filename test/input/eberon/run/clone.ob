@@ -6,9 +6,21 @@ TYPE
 
 VAR
     r: T;
-
+    a: ARRAY 2 OF BOOLEAN;
+    charArray: ARRAY 2 OF CHAR;
 BEGIN
     r.b := TRUE;
     temp <- r;
 	ASSERT(temp.b);
+
+    a[0] := TRUE;
+    tempA <- a;
+    ASSERT(tempA[0]);
+    ASSERT(~tempA[1]);
+
+    charArray[0] := "a";
+    charArray[1] := "b";
+    tempCharArray <- charArray;
+    ASSERT(tempCharArray[0] = "a");
+    ASSERT(tempCharArray[1] = "b");
 END m.
