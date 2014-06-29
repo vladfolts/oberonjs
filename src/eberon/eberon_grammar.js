@@ -87,7 +87,8 @@ exports.language = {
             While:              EbContext.While,
             If:                 EbContext.If,
             CaseLabel:          EbContext.CaseLabel,
-            Repeat:             EbContext.Repeat
+            Repeat:             EbContext.Repeat,
+            ModuleDeclaration:  EbContext.ModuleDeclaration
         },
         Grammar.reservedWords + " SELF SUPER"
         ),

@@ -553,6 +553,13 @@ var RecordDecl = Context.RecordDecl.extend({
     }
 });
 
+function resetTypePromotionMadeInSeparateStatement(msg){
+    if (!(msg instanceof TransferPromotedTypesMsg))
+        return false;
+    resetPromotedTypes(msg.types);
+    return true;
+}
+
 var ProcOrMethodDecl = Context.ProcDecl.extend({
     init: function EberonContext$ProcOrMethodDecl(parent, stdSymbols){
         Context.ProcDecl.prototype.init.call(this, parent, stdSymbols);
@@ -588,11 +595,8 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             return undefined;
         }
 
-        // reset type promotion made in separate statement
-        if (msg instanceof TransferPromotedTypesMsg){
-            resetPromotedTypes(msg.types);
+        if (resetTypePromotionMadeInSeparateStatement(msg))
             return;
-        }
 
         return Context.ProcDecl.prototype.handleMessage.call(this, msg);
     },
@@ -997,6 +1001,18 @@ var For = Context.For.extend({
     }
 });
 
+var ModuleDeclaration = Context.ModuleDeclaration.extend({
+    init: function EberonContext$ModuleDeclaration(context){
+        Context.ModuleDeclaration.prototype.init.call(this, context);
+    },
+    handleMessage: function(msg){
+        if (resetTypePromotionMadeInSeparateStatement(msg))
+            return;
+
+        return Context.ModuleDeclaration.prototype.handleMessage.call(this, msg);
+    }
+});
+
 exports.AddOperator = AddOperator;
 exports.CaseLabel = CaseLabel;
 exports.ConstDecl = ConstDecl;
@@ -1007,6 +1023,7 @@ exports.For = For;
 exports.Identdef = Identdef;
 exports.If = If;
 exports.MethodHeading = MethodHeading;
+exports.ModuleDeclaration = ModuleDeclaration;
 exports.MulOperator = MulOperator;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.Factor = Factor;

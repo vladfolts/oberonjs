@@ -430,6 +430,7 @@ exports.suite = {
     "type promotion in expression": testWithContext(
         temporaryValues.context,
         temporaryValues.passExpressions(
+             "b IS PDerived",
              "(b IS PDerived) & b.flag",
              "(b IS PDerived) & bVar & b.flag",
              "(b IS PDerived) & (bVar OR b.flag)",
@@ -576,8 +577,12 @@ exports.suite = {
           fail(["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN v <- a; END p;",
                 "cannot initialize variable 'v' with open array"]
               )
-      )/*
-      /*
+      )    /*
+,
+    "FOR variable": testWithContext(
+          context(grammar.statement, ""),
+          pass("FOR i <- 0 TO 10 DO END")
+          ),
     "as references": testWithContext(
           context(grammar.declarationSequence,
                 "TYPE Base = RECORD pBase: POINTER TO Base END; Derived = RECORD (Base) END;"

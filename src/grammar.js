@@ -36,12 +36,6 @@ var ident = function(stream, context){
     return Lexer.ident(stream, context, reservedWords);
 };
 
-var ModuleDeclContext = Context.ModuleDeclaration.extend({
-    init: function Grammar$ModuleDeclContext(context){
-        Context.ModuleDeclaration.prototype.init.call(this, context);
-    }
-});
-
 var qualident = context(and(optional(and(ident, ".")), ident),
                         Context.QualifiedIdentificator);
 var identdef = makeIdentdef(ident);
@@ -222,7 +216,7 @@ result.module
                   result.declarationSequence,
                   optional(and("BEGIN", statementSequence)),
                   required("END", "END expected (MODULE)"), ident, point),
-              ModuleDeclContext);
+              contexts.ModuleDeclaration);
 return result;
 }
 

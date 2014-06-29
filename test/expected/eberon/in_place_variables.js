@@ -77,14 +77,26 @@ var RTL$ = {
         var result = new Uint16Array(length);
         result.charCodeAt = function(i){return this[i];};
         return result;
+    },
+    assert: function (condition){
+        if (!condition)
+            throw new Error("assertion failed");
     }
 };
 var m = function (){
-var T = RTL$.extend({
-	init: function T(){
+var Base = RTL$.extend({
+	init: function Base(){
 	}
 });
-var r = new T();
+var Derived = Base.extend({
+	init: function Derived(){
+		Base.prototype.init.call(this);
+		this.derivedField = 0;
+	}
+});
+var r = new Derived();
+var pbVar = null;
+var pdVar = null;
 var i = 0;
 var a = RTL$.makeArray(10, 0);
 
@@ -95,13 +107,13 @@ function p(){
 function void$(){
 }
 
-function valueArgs(r/*T*/, i/*INTEGER*/, a/*ARRAY 10 OF INTEGER*/){
+function valueArgs(r/*Derived*/, i/*INTEGER*/, a/*ARRAY 10 OF INTEGER*/){
 	var v1 = RTL$.clone(r);
 	var v2 = i;
 	var v3 = RTL$.clone(a);
 }
 
-function varArgs(r/*VAR T*/, i/*VAR INTEGER*/, a/*ARRAY 10 OF INTEGER*/){
+function varArgs(r/*VAR Derived*/, i/*VAR INTEGER*/, a/*ARRAY 10 OF INTEGER*/){
 	var v1 = RTL$.clone(r);
 	var v2 = i.get();
 	var v3 = RTL$.clone(a);
@@ -117,4 +129,11 @@ var v8 = void$;
 var do$ = 0;
 var tempRecord = RTL$.clone(r);
 var tempArray = RTL$.clone(a);
+pdVar = new Derived();
+pbVar = pdVar;
+var pb = pbVar;
+if (pb instanceof Derived){
+	pb.derivedField = 123;
+}
+RTL$.assert(!(pb instanceof Derived) || pb.derivedField == 123);
 }();

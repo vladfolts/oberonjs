@@ -74,7 +74,8 @@ exports.language = {
             While:              Context.While,
             If:                 Context.If,
             CaseLabel:          Context.CaseLabel,
-            Repeat:             Context.Repeat
+            Repeat:             Context.Repeat,
+            ModuleDeclaration:  Context.ModuleDeclaration
         },
         Grammar.reservedWords
         ),

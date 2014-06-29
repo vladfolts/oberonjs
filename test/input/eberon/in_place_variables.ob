@@ -1,12 +1,17 @@
 MODULE m;
 
 TYPE
-    T = RECORD
-    END;
+    Base = RECORD END;
+    PBase = POINTER TO Base;
+    Derived = RECORD (Base) derivedField: INTEGER END;
+    PDerived = POINTER TO Derived;
+
     A = ARRAY 10 OF INTEGER;
 
 VAR 
-    r: T;
+    r: Derived;
+    pbVar: PBase;
+    pdVar: PDerived;
     i: INTEGER;
     a: A;
 
@@ -17,14 +22,14 @@ END p;
 PROCEDURE void();
 END void;
 
-PROCEDURE valueArgs(r: T; i: INTEGER; a: A);
+PROCEDURE valueArgs(r: Derived; i: INTEGER; a: A);
 BEGIN
     v1 <- r;
     v2 <- i;
     v3 <- a;
 END valueArgs;
 
-PROCEDURE varArgs(VAR r: T; VAR i: INTEGER; a: A);
+PROCEDURE varArgs(VAR r: Derived; VAR i: INTEGER; a: A);
 BEGIN
     v1 <- r;
     v2 <- i;
@@ -44,4 +49,14 @@ BEGIN
 
     tempRecord <- r;
     tempArray <- a;
+
+    NEW(pdVar);
+    pbVar := pdVar;
+    pb <- pbVar;
+    IF pb IS PDerived THEN
+        pb.derivedField := 123;
+    END;
+
+    ASSERT(~(pb IS PDerived) OR (pb.derivedField = 123));
+
 END m.
