@@ -781,10 +781,16 @@ var SimpleExpression = Context.SimpleExpression.extend({
     },
     handleLogicalOr: function(){
         if (!this.__typePromotionInverted){
+            this.handleMessage(resetTypePromotionMsg);
             this.handleMessage(invertTypePromotionMsg);
-            this.handleMessage(resetInvertedPromotedTypesMsg);
             this.__typePromotionInverted = true;
         }
+    },
+    handleMessage: function(msg){
+        if (this.__typePromotionInverted 
+            && resetTypePromotionMadeInSeparateStatement(msg))
+            return;
+        return Context.SimpleExpression.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
         if (this.__typePromotionInverted)

@@ -444,13 +444,16 @@ exports.suite = {
              ),
         temporaryValues.failExpressions(
             "(b IS PDerived) OR b.flag",
+            "(bVar OR (b IS PDerived)) & b.flag",
              "(b IS PDerived) OR bVar & b.flag",
              "~(b IS PDerived) & b.flag",
              "((b IS PDerived) & (b2 IS PDerived) OR bVar) & b.flag",
              "proc(b IS PDerived) & proc(b.flag)",
              "ORD(b IS PDerived) * ORD(b.flag) = 0",
              "((b IS PDerived) = FALSE) & b.flag",
-             "b IS PDerived); ASSERT(b.flag"
+             "b IS PDerived); ASSERT(b.flag",
+             "((b IS PDerived) OR (b IS PDerived)) & b.flag",
+             "(b IS PDerived) OR (b IS PDerived) OR b.flag"
              )
         ),
     "invert type promotion in expression": testWithContext(
@@ -484,11 +487,20 @@ exports.suite = {
         temporaryValues.passStatements(
             "IF b IS PDerived THEN b.flag := FALSE; END;",
             "IF (b IS PDerived) & bVar THEN b.flag := FALSE; END;",
+            "IF bVar & (b IS PDerived) THEN b.flag := FALSE; END;",
             "IF FALSE THEN ELSIF b IS PDerived THEN b.flag := FALSE; END;",
             "IF b IS PDerived THEN bVar := (b IS PDerived2) & b.flag2; b.flag := FALSE; END;"
             ),
         temporaryValues.failStatements(
             "IF (b IS PDerived) OR bVar THEN b.flag := FALSE; END",
+            "IF bVar OR (b IS PDerived) THEN b.flag := FALSE; END",
+            "IF (b2 IS PDerived) OR (b IS PDerived) THEN b.flag := FALSE; END",
+            "IF (b IS PDerived) OR (b IS PDerived) THEN b.flag := FALSE; END",
+            "IF (b IS PDerived) OR (b IS PDerived) OR b.flag THEN END",
+            "IF (b IS PDerived) OR (b IS PDerived) OR (b IS PDerived) THEN b.flag := FALSE; END",
+            "IF ((b IS PDerived) OR (b IS PDerived)) THEN b.flag := FALSE; END",
+            "IF (b IS PDerived) OR (b IS PDerived2) THEN b.flag := FALSE; END",
+            "IF (b IS PDerived2) OR (b IS PDerived) THEN b.flag := FALSE; END",
             "IF b IS PDerived THEN END; b.flag := FALSE",
             "IF ~(b IS PDerived) THEN END; b.flag := FALSE",
             "IF ~(b IS PDerived) THEN ELSIF bVar THEN END; b.flag := FALSE",
