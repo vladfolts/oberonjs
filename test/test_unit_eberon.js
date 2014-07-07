@@ -453,7 +453,8 @@ exports.suite = {
              "((b IS PDerived) = FALSE) & b.flag",
              "b IS PDerived); ASSERT(b.flag",
              "((b IS PDerived) OR (b IS PDerived)) & b.flag",
-             "(b IS PDerived) OR (b IS PDerived) OR b.flag"
+             "(b IS PDerived) OR (b IS PDerived) OR b.flag",
+             "(bVar OR (b IS PDerived)) & b.flag"
              )
         ),
     "invert type promotion in expression": testWithContext(
@@ -467,7 +468,11 @@ exports.suite = {
              "~(b IS PDerived) OR bVar OR b.flag",
              "~(b IS PDerived) OR (bVar = b.flag)",
              "~(~(b IS PDerived) OR bVar) & b.flag",
-             "~(~(b IS PDerived) OR b.flag) & b.flag"
+             "~(~(b IS PDerived) OR b.flag) & b.flag",
+             "~(b IS PDerived) OR ~(b2 IS PDerived) OR b2.flag",
+             "~(b IS PDerived) OR b.flag OR ~(b2 IS PDerived) OR b2.flag",
+             "~((b IS PDerived) & b.flag) OR b.flag OR ~(b2 IS PDerived) OR b2.flag",
+             "~((b IS PDerived) & b.flag) OR b.flag OR ~((b2 IS PDerived) & b.flag & b2.flag) OR b2.flag"
              ),
         temporaryValues.failExpressions(
              "(~(b IS PDerived) OR bVar) & b.flag",
@@ -507,6 +512,9 @@ exports.suite = {
             "IF ~(b IS PDerived) THEN ELSIF bVar THEN ELSE END; b.flag := FALSE",
             "IF bVar THEN ELSIF b IS PDerived THEN ELSE END; b.flag := FALSE",
             "IF b IS PDerived THEN ELSE b.flag := FALSE; END",
+            "IF bVar OR (b IS PDerived) THEN b.flag := FALSE; END;",
+            "IF bVar OR (b IS PDerived) THEN ELSE b.flag := FALSE; END;",
+            "IF bVar OR ~(b IS PDerived) THEN b.flag := FALSE; END;",
             "IF b IS PDerived THEN ELSIF TRUE THEN b.flag := FALSE; END"
              )
         ),
@@ -518,12 +526,16 @@ exports.suite = {
             "IF ~(b IS PDerived) THEN ELSIF ~(b2 IS PDerived) THEN b.flag := FALSE; ELSE b.flag := FALSE; b2.flag := FALSE; END;",
             "IF ~(b IS PDerived) OR bVar THEN ELSE b.flag := FALSE; END;",
             "IF ~(b IS PDerived) OR b.flag THEN ELSE b.flag := FALSE; END;",
+            "IF ~(b IS PDerived) OR (b2 IS PDerived) THEN ELSE b.flag := FALSE; END;",
+            "IF ~(b IS PDerived) OR ~(b2 IS PDerived) THEN ELSE b2.flag := FALSE; END;",
             "IF ~(b IS PDerived) THEN bVar := b IS PDerived; ELSE b.flag := FALSE; END;",
-            "IF ~(b IS PDerived) THEN ASSERT((b IS PDerived) & b.flag); ELSE b.flag := FALSE; END;"
+            "IF ~(b IS PDerived) THEN ASSERT((b IS PDerived) & b.flag); ELSE b.flag := FALSE; END;",
+            "IF bVar OR ~(b IS PDerived) THEN ELSE b.flag := FALSE; END;"
             ),
         temporaryValues.failStatements(
             "IF ~(b IS PDerived) & bVar THEN ELSE b.flag := FALSE; END; END p;",
-            "IF ~(b IS PDerived) THEN ELSIF ~(b2 IS PDerived) THEN b2.flag := FALSE; END;"
+            "IF ~(b IS PDerived) THEN ELSIF ~(b2 IS PDerived) THEN b2.flag := FALSE; END;",
+            "IF bVar OR (b IS PDerived) THEN ELSE b.flag := FALSE; END;"
             )
         ),
     "type promotion in WHILE": testWithContext(

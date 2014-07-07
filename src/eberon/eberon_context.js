@@ -777,24 +777,30 @@ var Term = Context.Term.extend({
 var SimpleExpression = Context.SimpleExpression.extend({
     init: function EberonContext$SimpleExpression(context){
         Context.SimpleExpression.prototype.init.call(this, context);
-        this.__typePromotionInverted = false;
+        this.__typePromotion = new TypePromotionHandler();
+        this.__orTypePromotion = this.__typePromotion;
     },
     handleLogicalOr: function(){
-        if (!this.__typePromotionInverted){
-            this.handleMessage(resetTypePromotionMsg);
-            this.handleMessage(invertTypePromotionMsg);
-            this.__typePromotionInverted = true;
-        }
+        this.__orTypePromotion.reset();
+        this.__orTypePromotion.invert();
+        if (this.__orTypePromotion != this.__typePromotion)
+            this.__typePromotion.transferFrom(this.__orTypePromotion);
+        this.__orTypePromotion = new TypePromotionHandler();
     },
     handleMessage: function(msg){
-        if (this.__typePromotionInverted 
-            && resetTypePromotionMadeInSeparateStatement(msg))
+        if (this.__orTypePromotion.handleMessage(msg))
             return;
         return Context.SimpleExpression.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
-        if (this.__typePromotionInverted)
-            this.handleMessage(invertTypePromotionMsg);
+        if (this.__orTypePromotion != this.__typePromotion){
+
+            //this.__orTypePromotion.reset();
+            this.__orTypePromotion.invert();
+            this.__typePromotion.transferFrom(this.__orTypePromotion);
+            this.__typePromotion.invert();
+        }
+        this.__typePromotion.transferTo(this.parent());
         Context.SimpleExpression.prototype.endParse.call(this);
     }
 });
@@ -839,9 +845,7 @@ var TypePromotionHandler = Class.extend({
             return true;
         }
         if (msg instanceof TransferPromotedTypesMsg){
-            //log("transfer, " + this.__id);
-            Array.prototype.push.apply(this.__promotedTypes, msg.types);
-            Array.prototype.push.apply(this.__invertPromotedTypes, msg.invertTypes);
+            this.__transferFrom(msg.types, msg.invertTypes);
             return true;
         }
         switch (msg){
@@ -880,6 +884,14 @@ var TypePromotionHandler = Class.extend({
     transferTo: function(context){
         if (this.__promotedTypes.length || this.__invertPromotedTypes.length)
             context.handleMessage(new TransferPromotedTypesMsg(this.__promotedTypes, this.__invertPromotedTypes));
+    },
+    transferFrom: function(other){
+        this.__transferFrom(other.__promotedTypes, this.__invertPromotedTypes);
+    },
+    __transferFrom: function(promotedTypes, invertPromotedTypes){
+        //log("transfer, " + this.__id);
+        Array.prototype.push.apply(this.__promotedTypes, promotedTypes);
+        Array.prototype.push.apply(this.__invertPromotedTypes, invertPromotedTypes);
     }
 });
 
