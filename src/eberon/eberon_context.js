@@ -125,13 +125,13 @@ var ResultVariable = Type.Variable.extend({
     idType: function(){return "procedure call " + (this.type() ? "result" : "statement");}
 });
 
-var TempVariable = Type.Variable.extend({
-    init: function TempVariable(e){
-        this.__type = e.type();
+var TypeNarrowVariable = Type.Variable.extend({
+    init: function TypeNarrowVariable(type, isRef){
+        this.__type = type;
         this.__invertedType = this.__type;
+        this.__isRef = isRef;
 
         /*
-        this.__isRef = false;
         var d = e.designator();
         if (d) {
             var v = d.info();
@@ -144,7 +144,7 @@ var TempVariable = Type.Variable.extend({
         return this.__type;
     },
     isReference: function(){
-        return false;
+        return this.__isRef;
     },
     //idType: function(){return "temporary variable";},
     promoteType: function(t){
@@ -259,7 +259,7 @@ var TemplValueInit = Context.Chained.extend({
         this.__code = "var " + this.__id + " = ";
     },
     handleExpression: function(e){
-        var v = new TempVariable(e);
+        var v = new TypeNarrowVariable(e.type(), false);
         this.__symbol = Symbol.makeSymbol(this.__id, v);
         var type = e.type();
         if (type instanceof Type.Record)
@@ -605,6 +605,11 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             ? Type.typeName(this.__boundType) + ".prototype." + this.__methodId.id() + " = function("
             : Context.ProcDecl.prototype._prolog.call(this);
     },
+    _makeArgumentVariable: function(arg){
+        if (arg.isVar)
+            return new TypeNarrowVariable(arg.type, true);
+        return Context.ProcDecl.prototype._makeArgumentVariable.call(this, arg);
+    },
     setType: function(type){
         Context.ProcDecl.prototype.setType.call(this, type);
         if (this.__methodId)
@@ -753,7 +758,7 @@ var RelationOps = Context.RelationOps.extend({
             var d = left.designator();
             if (d){
                 var v = d.info();
-                if (v instanceof TempVariable)
+                if (v instanceof TypeNarrowVariable)
                     context.handleMessage(new PromoteTypeMsg(v, type));
             }
             return impl(left, right);

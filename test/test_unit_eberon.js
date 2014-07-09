@@ -617,5 +617,10 @@ exports.suite = {
           fail(["PROCEDURE p(b: Base); BEGIN baseRef <- b; ASSERT(baseRef IS Derived); END p;",
                 "invalid type test: a value variable cannot be used"])
       )*/
-    }
+    },
+    "type promotion for VAR arguments": testWithContext(
+        context(grammar.declarationSequence, 
+                "TYPE Base = RECORD END; Derived = RECORD (Base) flag: BOOLEAN END;"),
+        pass("PROCEDURE p(VAR b: Base); BEGIN ASSERT((b IS Derived) & b.flag); END p;")
+    )
 };

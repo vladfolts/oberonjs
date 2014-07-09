@@ -597,10 +597,7 @@ exports.ProcDecl = ChainedContext.extend({
     __addArgument: function(name, arg){
         if (name == this.__id.id())
             throw new Errors.Error("argument '" + name + "' has the same name as procedure");
-        var readOnly = !arg.isVar 
-                    && (arg.type instanceof Type.Array || arg.type instanceof Type.Record);
-        var v = arg.isVar ? Type.makeVariableRef(arg.type)
-                          : Type.makeVariable(arg.type, readOnly);
+        var v = this._makeArgumentVariable(arg);
         var s = Symbol.makeSymbol(name, v);
         this.currentScope().addSymbol(s);
 
@@ -610,6 +607,12 @@ exports.ProcDecl = ChainedContext.extend({
         else
             this.__firstArgument = false;
         code.write(name + "/*" + arg.description() + "*/");
+    },
+    _makeArgumentVariable: function(arg){
+        var readOnly = !arg.isVar 
+                    && (arg.type instanceof Type.Array || arg.type instanceof Type.Record);
+        return arg.isVar ? Type.makeVariableRef(arg.type)
+                         : Type.makeVariable(arg.type, readOnly);
     },
     handleMessage: function(msg){
         if (msg == endParametersMsg){

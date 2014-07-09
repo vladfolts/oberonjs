@@ -1,0 +1,24 @@
+MODULE m;
+
+TYPE
+    Message = RECORD END;
+    Derived1 = RECORD (Message) derivedField1: BOOLEAN END;
+    Derived2 = RECORD (Message) derivedField2: BOOLEAN END;
+
+VAR 
+    d1: Derived1; 
+    d2: Derived2;
+
+PROCEDURE handleMessage(VAR msg: Message);
+BEGIN
+    IF msg IS Derived1 THEN
+        ASSERT(msg.derivedField1);
+    ELSIF msg IS Derived2 THEN
+        ASSERT(msg.derivedField2);
+    END;
+END handleMessage;
+
+BEGIN
+    handleMessage(d1);
+    handleMessage(d2);
+END m.
