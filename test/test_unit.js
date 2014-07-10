@@ -1187,7 +1187,6 @@ return {
             "TYPE ProcType = PROCEDURE(): ProcType;"),
     pass("PROCEDURE p; END p",
          "PROCEDURE p; VAR i: INTEGER; BEGIN i := i + 1 END p",
-         "PROCEDURE p(a: INTEGER); BEGIN a := a + 1 END p",
          "PROCEDURE p(a1, a2: INTEGER); END p",
          "PROCEDURE p; BEGIN p() END p",
          "PROCEDURE p(a: INTEGER); BEGIN p(a) END p",
@@ -1249,8 +1248,6 @@ return {
          "PROCEDURE p(a: ARRAY OF T); BEGIN varInteger(a[0].p.i) END p"),
     fail(["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN a[0] := 0 END p",
           "cannot assign to read-only variable"],
-         ["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN p3(a) END p",
-          "read-only variable cannot be used as VAR parameter"],
          ["PROCEDURE p(a: ARRAY OF T); BEGIN a[0].i := 0 END p",
           "cannot assign to read-only variable"],
          ["PROCEDURE p(a: ARRAY OF T); BEGIN varInteger(a[0].i) END p",
@@ -1271,8 +1268,6 @@ return {
     fail(["PROCEDURE p(r: T); BEGIN r.i := 0 END p",
           "cannot assign to read-only variable"],
          ["PROCEDURE p(r: T); BEGIN intVar(r.i); END p",
-          "read-only variable cannot be used as VAR parameter"],
-         ["PROCEDURE p(r: T); BEGIN recordVar(r); END p",
           "read-only variable cannot be used as VAR parameter"]
         )
     ),
@@ -1293,9 +1288,7 @@ return {
 "open array assignment fails": testWithGrammar(
     grammar.procedureDeclaration,
     pass(),
-    fail(["PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
-          "cannot assign to read-only variable"],
-         ["PROCEDURE p(VAR s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
+    fail(["PROCEDURE p(VAR s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
           "'s1' is open 'ARRAY OF CHAR' and cannot be assigned"],
          ["PROCEDURE p(s1: ARRAY OF CHAR); VAR s2: ARRAY 10 OF CHAR; BEGIN s2 := s1 END p",
           "type mismatch: 's2' is 'ARRAY 10 OF CHAR' and cannot be assigned to 'ARRAY OF CHAR' expression"])
@@ -1335,8 +1328,7 @@ return {
 "string assignment to open array fails": testWithGrammar(
     grammar.procedureDeclaration,
     pass(),
-    fail(["PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "cannot assign to read-only variable"],
-         ["PROCEDURE p(VAR s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "string cannot be assigned to open ARRAY OF CHAR"])
+    fail(["PROCEDURE p(VAR s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "string cannot be assigned to open ARRAY OF CHAR"])
     ),
 "scope": testWithGrammar(
     grammar.declarationSequence,

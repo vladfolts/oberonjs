@@ -15,7 +15,9 @@ END pChar;
 
 PROCEDURE pString(s: STRING);
 BEGIN
-    s := 22X;
+    ASSERT(s = s);
+    (*ASSERT(s = "abc");*)
+    (*ASSERT(s = 22X);*)
 END pString;
 
 PROCEDURE pStringByRef(VAR s: STRING);

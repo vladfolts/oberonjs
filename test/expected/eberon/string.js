@@ -18,7 +18,7 @@ function pChar(c/*CHAR*/){
 }
 
 function pString(s/*STRING*/){
-	s = "\"";
+	RTL$.assert(s == s);
 }
 
 function pStringByRef(s/*VAR STRING*/){

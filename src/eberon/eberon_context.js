@@ -126,10 +126,11 @@ var ResultVariable = Type.Variable.extend({
 });
 
 var TypeNarrowVariable = Type.Variable.extend({
-    init: function TypeNarrowVariable(type, isRef){
+    init: function TypeNarrowVariable(type, isRef, isReadOnly){
         this.__type = type;
         this.__invertedType = this.__type;
         this.__isRef = isRef;
+        this.__isReadOnly = isReadOnly;
 
         /*
         var d = e.designator();
@@ -146,7 +147,13 @@ var TypeNarrowVariable = Type.Variable.extend({
     isReference: function(){
         return this.__isRef;
     },
-    //idType: function(){return "temporary variable";},
+    isReadOnly: function(){
+        return this.__isReadOnly;
+    },
+    idType: function(){
+        return this.__isReadOnly ? "non-VAR formal parameter"
+                                 : Type.Variable.prototype.idType.call(this);
+    },
     promoteType: function(t){
         var result = this.__type;
         this.__type = t;
@@ -259,7 +266,7 @@ var TemplValueInit = Context.Chained.extend({
         this.__code = "var " + this.__id + " = ";
     },
     handleExpression: function(e){
-        var v = new TypeNarrowVariable(e.type(), false);
+        var v = new TypeNarrowVariable(e.type(), false, false);
         this.__symbol = Symbol.makeSymbol(this.__id, v);
         var type = e.type();
         if (type instanceof Type.Record)
@@ -606,8 +613,12 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             : Context.ProcDecl.prototype._prolog.call(this);
     },
     _makeArgumentVariable: function(arg){
-        if (arg.isVar)
-            return new TypeNarrowVariable(arg.type, true);
+        if (!arg.isVar)
+            return new TypeNarrowVariable(arg.type, false, true);
+
+        if (arg.type instanceof Type.Record)
+            return new TypeNarrowVariable(arg.type, true, false);
+
         return Context.ProcDecl.prototype._makeArgumentVariable.call(this, arg);
     },
     setType: function(type){
@@ -921,6 +932,7 @@ var OperatorScopes = Class.extend({
             this.__context.language().stdSymbols);
         this.__context.pushScope(this.__scope);
 
+        this.__typePromotion.reset();
         this.__typePromotion.invert();
         this.__typePromotion = new TypePromotionHandler();
         this.__typePromotions.push(this.__typePromotion);

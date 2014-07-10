@@ -4,12 +4,10 @@ IMPORT Cast, EberonString, Types;
 PROCEDURE isOpenCharArray(type: Types.PType): BOOLEAN;
 VAR
     result: BOOLEAN;
-    array: Types.PArray;
 BEGIN
     IF type IS Types.PArray THEN
-        array := type(Types.PArray);
-        result := (Types.arrayElementsType(array^) = Types.basic.ch)
-                & (Types.arrayLength(array^) = Types.openArrayLength);
+        result := (Types.arrayElementsType(type^) = Types.basic.ch)
+                & (Types.arrayLength(type^) = Types.openArrayLength);
     END;
     RETURN result
 END isOpenCharArray;

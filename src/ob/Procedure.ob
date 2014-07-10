@@ -208,19 +208,20 @@ END makeCallGenerator;
 PROCEDURE GenArgCode.write(actual: Code.PExpression; expected: Types.PProcedureArgument; cast: Cast.PCastOp);
 VAR
     e: Code.PExpression;
+    coercedArg: Code.PExpression;
 BEGIN
     IF (expected # NIL) & expected.isVar THEN
-        actual := Code.refExpression(actual);
+        coercedArg := Code.refExpression(actual);
     ELSE
-        actual := Code.derefExpression(actual);
+        coercedArg := Code.derefExpression(actual);
     END;
     IF LEN(SELF.code) # 0 THEN
         SELF.code := SELF.code + ", ";
     END;
     IF cast # NIL THEN
-        e := cast.make(SELF.cx.rtl, actual);
+        e := cast.make(SELF.cx.rtl, coercedArg);
     ELSE
-        e := actual;
+        e := coercedArg;
     END;
     SELF.code := SELF.code + e.code();
 END GenArgCode.write;

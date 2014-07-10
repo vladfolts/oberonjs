@@ -133,10 +133,11 @@ PROCEDURE putIndent(s: STRING; indent: INTEGER): STRING;
 VAR
     i: INTEGER;
 BEGIN
+    result <- s;
     FOR i := 0 TO indent - 1 DO
-        s := s + kTab;
+        result := result + kTab;
     END;
-    RETURN s
+    RETURN result
 END putIndent;
 
 PROCEDURE Generator.write(s: STRING);

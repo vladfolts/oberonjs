@@ -221,6 +221,18 @@ class compile_target(object):
     def __init__(self, options):
         compile_using_snapshot(options.file)
 
+class self_recompile_target(object):
+    name = 'self_recompile'
+    description = 'compile itself using current sources'
+
+    @staticmethod
+    def setup_options(parser):
+        pass
+
+    def __init__(self, options):
+        bin = os.path.join(root, 'bin')
+        recompile(bin)
+
 class html_target(object):
     name = 'html'
     description = 'build html page'
@@ -276,7 +288,7 @@ class snapshot_target(object):
             os.rename(snapshot_root, old_dir)
         os.rename(new_dir, snapshot_root)
 
-targets = [compile_target, html_target, tests_target, pre_commit_target, snapshot_target]
+targets = [compile_target, self_recompile_target, html_target, tests_target, pre_commit_target, snapshot_target]
 
 def build(target, options):
     targets[target](options)

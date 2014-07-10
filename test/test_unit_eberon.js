@@ -494,7 +494,9 @@ exports.suite = {
             "IF (b IS PDerived) & bVar THEN b.flag := FALSE; END;",
             "IF bVar & (b IS PDerived) THEN b.flag := FALSE; END;",
             "IF FALSE THEN ELSIF b IS PDerived THEN b.flag := FALSE; END;",
-            "IF b IS PDerived THEN bVar := (b IS PDerived2) & b.flag2; b.flag := FALSE; END;"
+            "IF b IS PDerived THEN bVar := (b IS PDerived2) & b.flag2; b.flag := FALSE; END;",
+            "IF bVar THEN ELSIF b IS PDerived2 THEN ELSIF b IS PDerived THEN END;",
+            "IF bVar THEN ELSIF b IS PDerived THEN ELSIF b IS PDerived THEN ELSIF b IS PDerived THEN END;"
             ),
         temporaryValues.failStatements(
             "IF (b IS PDerived) OR bVar THEN b.flag := FALSE; END",
@@ -620,7 +622,37 @@ exports.suite = {
     },
     "type promotion for VAR arguments": testWithContext(
         context(grammar.declarationSequence, 
-                "TYPE Base = RECORD END; Derived = RECORD (Base) flag: BOOLEAN END;"),
-        pass("PROCEDURE p(VAR b: Base); BEGIN ASSERT((b IS Derived) & b.flag); END p;")
+                "TYPE Base = RECORD END; PBase = POINTER TO Base;"
+                + "Derived = RECORD (Base) flag: BOOLEAN END; PDerived = POINTER TO Derived;"),
+        pass("PROCEDURE p(VAR b: Base); BEGIN ASSERT((b IS Derived) & b.flag); END p;"),
+        fail(["PROCEDURE p(VAR b: PBase); BEGIN ASSERT((b IS PDerived) & b.flag); END p;",
+              "type 'Base' has no 'flag' field"])
+    ),
+    "type promotion for non-VAR arguments": testWithContext(
+        context(grammar.declarationSequence, 
+                "TYPE Base = RECORD END; PBase = POINTER TO Base;"
+                + "Derived = RECORD (Base) flag: BOOLEAN END; PDerived = POINTER TO Derived;"),
+        pass("PROCEDURE p(b: PBase); BEGIN ASSERT((b IS PDerived) & b.flag); END p;")
+    ),
+    "Non-VAR arguments cannot be modified": testWithContext(
+        context(grammar.declarationSequence, 
+                "TYPE PBase = POINTER TO RECORD END; T = RECORD i: INTEGER END;"
+                + "PROCEDURE pArrayRef(VAR a: ARRAY OF INTEGER); END pArrayRef;"
+                + "PROCEDURE recordVar(VAR r: T); END recordVar;"),
+        pass("PROCEDURE p(VAR i: INTEGER); BEGIN i := 0; END p;",
+             "PROCEDURE p(VAR b: PBase); BEGIN b := NIL; END p;"),
+        fail(["PROCEDURE p(i: INTEGER); BEGIN i := 0; END p;", 
+              "cannot assign to non-VAR formal parameter"],
+             ["PROCEDURE p(b: PBase); BEGIN b := NIL; END p;", 
+              "cannot assign to non-VAR formal parameter"],
+             ["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN pArrayRef(a) END p",
+              "non-VAR formal parameter cannot be used as VAR parameter"],
+             ["PROCEDURE p(r: T); BEGIN recordVar(r); END p",
+              "non-VAR formal parameter cannot be used as VAR parameter"],
+             ["PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
+              "cannot assign to non-VAR formal parameter"],
+             ["PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", 
+              "cannot assign to non-VAR formal parameter"]
+            )
     )
 };

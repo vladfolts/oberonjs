@@ -60,5 +60,39 @@ exports.suite = {
             "PROCEDURE p; END p;"),
     pass(),
     fail(["p()()", "not parsed"])
-    )
+    ),
+"procedure arguments can be modified": testWithContext(
+    context(grammar.procedureDeclaration, ""),
+    pass("PROCEDURE p(a: INTEGER); BEGIN a := a + 1 END p")
+    ),
+"Non-VAR ARRAY parameter cannot be passed as VAR": testWithContext(
+    context(grammar.procedureDeclaration,
+            "PROCEDURE pArrayRef(VAR a: ARRAY OF INTEGER); END pArrayRef;"
+            ),
+    pass(),
+    fail(["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN pArrayRef(a) END p",
+          "read-only variable cannot be used as VAR parameter"]
+         )
+    ),
+"Non-VAR RECORD parameter cannot be passed as VAR": testWithContext(
+    context(grammar.procedureDeclaration,
+            "TYPE T = RECORD i: INTEGER END;"
+            + "PROCEDURE recordVar(VAR r: T); END recordVar;"
+            ),
+    pass(),
+    fail(["PROCEDURE p(r: T); BEGIN recordVar(r); END p",
+          "read-only variable cannot be used as VAR parameter"]
+         )
+    ),
+"Non-VAR open array assignment fails": testWithGrammar(
+    grammar.procedureDeclaration,
+    pass(),
+    fail(["PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
+          "cannot assign to read-only variable"])
+    ),
+"string assignment to non-VAR open array fails": testWithGrammar(
+    grammar.procedureDeclaration,
+    pass(),
+    fail(["PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "cannot assign to read-only variable"])
+    ),
 };

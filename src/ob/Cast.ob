@@ -33,10 +33,11 @@ END CastOpDoNothing.make;
 *)
 PROCEDURE findBaseType(base: Types.PRecord; type: Types.PRecord): Types.PRecord;
 BEGIN
-    WHILE (type # NIL) & (type # base) DO
-        type := Types.recordBase(type^);
+    result <- type;
+    WHILE (result # NIL) & (result # base) DO
+        result := Types.recordBase(result^);
     END;
-    RETURN type
+    RETURN result
 END findBaseType;
 
 PROCEDURE findPointerBaseType*(base: Types.PPointer; type: Types.Pointer): Types.PPointer;
@@ -104,15 +105,14 @@ BEGIN
     IF t1 = t2 THEN
         result := TRUE;
     ELSIF (t1 IS Types.PArray) & (t2 IS Types.PArray) THEN
-        result := (Types.arrayLength(t1(Types.PArray)^) = Types.arrayLength(t2(Types.PArray)^)) 
-                & (areTypesMatch(Types.arrayElementsType(t1(Types.PArray)^), 
-                                 Types.arrayElementsType(t2(Types.PArray)^)));
+        result := (Types.arrayLength(t1^) = Types.arrayLength(t2^)) 
+                & (areTypesMatch(Types.arrayElementsType(t1^), 
+                                 Types.arrayElementsType(t2^)));
     ELSIF (t1 IS Types.PPointer) & (t2 IS Types.PPointer) THEN
-        result := areTypesMatch(Types.pointerBase(t1(Types.PPointer)^), 
-                                Types.pointerBase(t2(Types.PPointer)^));
+        result := areTypesMatch(Types.pointerBase(t1^), 
+                                Types.pointerBase(t2^));
     ELSIF (t1 IS Types.PDefinedProcedure) & (t2 IS Types.PDefinedProcedure) THEN
-        result := areProceduresMatch(t1(Types.PDefinedProcedure), 
-                                     t2(Types.PDefinedProcedure));
+        result := areProceduresMatch(t1, t2);
     END;
     RETURN result
 END areTypesExactlyMatchImpl;
@@ -155,7 +155,7 @@ BEGIN
         END;
     ELSIF from IS Types.PString THEN
         IF to = Types.basic.ch THEN
-            IF Types.stringAsChar(from(Types.PString)^, c) THEN
+            IF Types.stringAsChar(from^, c) THEN
                 op := makeCastOpStrToChar(c);
                 result := errNo;
             END;
@@ -163,15 +163,15 @@ BEGIN
             result := errNo;
         END;
     ELSIF (from IS Types.PArray) & (to IS Types.PArray) THEN
-        IF ((Types.arrayLength(from(Types.PArray)^) = Types.arrayLength(to(Types.PArray)^))
-                OR (Types.arrayLength(to(Types.PArray)^) = Types.openArrayLength))
-            & areTypesExactlyMatch(Types.arrayElementsType(from(Types.PArray)^), 
-                                   Types.arrayElementsType(to(Types.PArray)^)) THEN
+        IF ((Types.arrayLength(from^) = Types.arrayLength(to^))
+                OR (Types.arrayLength(to^) = Types.openArrayLength))
+            & areTypesExactlyMatch(Types.arrayElementsType(from^), 
+                                   Types.arrayElementsType(to^)) THEN
             result := errNo;
         END;
     ELSIF (from IS Types.PPointer) & (to IS Types.PPointer) THEN
         IF ~toVar THEN
-            IF findPointerBaseType(to(Types.PPointer), from(Types.PPointer)^) # NIL THEN
+            IF findPointerBaseType(to, from^) # NIL THEN
                 result := errNo;
             END;
         ELSIF areTypesExactlyMatchImpl(to, from) THEN
@@ -180,13 +180,13 @@ BEGIN
             result := errVarParameter;
         END;
     ELSIF (from IS Types.PRecord) & (to IS Types.PRecord) THEN
-        IF findBaseType(to(Types.PRecord), from(Types.PRecord)) # NIL THEN
+        IF findBaseType(to, from) # NIL THEN
             result := errNo;
         END;
     ELSIF (from = Types.nil) & matchesToNIL(to^) THEN
         result := errNo;
     ELSIF (from IS Types.PDefinedProcedure) & (to IS Types.PDefinedProcedure) THEN
-        IF areProceduresMatch(from(Types.PDefinedProcedure), to(Types.PDefinedProcedure)) THEN
+        IF areProceduresMatch(from, to) THEN
             result := errNo;
         END
     END;
