@@ -1,12 +1,15 @@
 **Eberon** is Experimental oBERON. It is my attempt to make a programming language in the right way (in my humble opinion of cause) taking Wirth's Oberon as a start point.
 
-Eberon extends original Oberon so any valid oberon program is also a valid eberon program. A new syntax was introduced for extensions but I tried to maintain the original syntax flavor (e.g. CAPS).
+Eberon basically extends original Oberon (excluding additional [restrictions](#restrictions) below) so any valid oberon program is also a valid eberon program. A new syntax was introduced for extensions but I tried to maintain the original syntax flavor (e.g. CAPS).
 
 ### Extensions
-* [Methods](/vladfolts/oberonjs/wiki/eberon-methods)
-* [Strings](/vladfolts/oberonjs/wiki/eberon-strings)
-* [In Place Variables](/vladfolts/oberonjs/wiki/eberon-in-place-variables)
-* [Implicit Type Narrowing](/vladfolts/oberonjs/wiki/eberon-implicit-type-narrowing)
-* [Record fields read-only export](/vladfolts/oberonjs/wiki/eberon-record-fields-read-only-export)
-* [Procedure call result can be denoted](/vladfolts/oberonjs/wiki/eberon-procedure-call-result)
+* [[Methods|eberon-methods]]
+* [[Strings|eberon-strings]]
+* [[In Place Variables|eberon-in-place-variables]]
+* [[Implicit Type Narrowing|eberon-implicit-type-narrowing]]
+* [[Record fields read-only export|eberon-record-fields-read-only-export]]
+* [[Procedure call result can be denoted|eberon-procedure-call-result]]
 * Non-scalar variables (arrays and records) can be exported (forbidden in oberon for some unknown reason).
+
+### Restrictions
+* [[Non-VAR arguments are read-only|eberon-non-VAR-arguments-are-read-only]]
