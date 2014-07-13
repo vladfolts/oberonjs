@@ -424,6 +424,12 @@ exports.suite = {
         fail(["v <-", "initialization expression expected"],
              ["v <- void()", "procedure returning no result cannot be used in an expression"])
         ),
+    "read-only if initialized with string literal": testWithContext(
+        context(grammar.declarationSequence, ""),
+        pass(),
+        fail(["PROCEDURE p(); BEGIN s <- \"abc\"; s := \"def\"; END p;", "cannot assign to string literal"],
+             ["PROCEDURE p(); BEGIN s <- \"abc\"; s[0] := \"d\"; END p;", "cannot assign to read-only variable"])
+        ),
     "scope": testWithContext(
         temporaryValues.context,
         temporaryValues.passStatements(

@@ -131,15 +131,6 @@ var TypeNarrowVariable = Type.Variable.extend({
         this.__invertedType = this.__type;
         this.__isRef = isRef;
         this.__isReadOnly = isReadOnly;
-
-        /*
-        var d = e.designator();
-        if (d) {
-            var v = d.info();
-            if (v instanceof Type.Variable)
-                this.__isRef = v.isReference();
-        }
-        */
     },
     type: function(){
         return this.__type;
@@ -167,6 +158,13 @@ var TypeNarrowVariable = Type.Variable.extend({
     resetPromotion: function(type){
         this.__type = type;
     }
+});
+
+var InPlaceStringLiteral = TypeNarrowVariable.extend({
+    init: function(type){
+        TypeNarrowVariable.prototype.init.call(this, type, false, true);
+    },
+    idType: function(){return "string literal";}
 });
 
 var IdentdefInfo = Context.IdentdefInfo.extend({
@@ -266,9 +264,10 @@ var TemplValueInit = Context.Chained.extend({
         this.__code = "var " + this.__id + " = ";
     },
     handleExpression: function(e){
-        var v = new TypeNarrowVariable(e.type(), false, false);
-        this.__symbol = Symbol.makeSymbol(this.__id, v);
         var type = e.type();
+        var v = Type.isString(type) ? new InPlaceStringLiteral(type) 
+                                    : new TypeNarrowVariable(type, false, false);
+        this.__symbol = Symbol.makeSymbol(this.__id, v);
         if (type instanceof Type.Record)
             this.__code += this.language().rtl.clone(e.code());
         else if (type instanceof Type.Array){

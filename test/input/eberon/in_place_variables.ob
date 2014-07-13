@@ -36,10 +36,26 @@ BEGIN
     v3 <- a;
 END varArgs;
 
+PROCEDURE pChar(c: CHAR);
+END pChar;
+
+PROCEDURE pCharArray(a: ARRAY OF CHAR);
+END pCharArray;
+
+PROCEDURE pString(s: STRING);
+END pString;
+
 BEGIN
     v1 <- 0;
     v2 <- 1.23;
     v3 <- "abc";
+    
+    vs <- 22X;
+    pChar(vs[0]);
+    pChar(vs);
+    pCharArray(vs);
+    pString(vs);
+    
     v4 <- TRUE;
     v5 <- i;
     v6 <- i + i;
