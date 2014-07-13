@@ -826,23 +826,6 @@ function assertIntOp(type, literal, op){
     return op;
 }
 
-function useTypeInRelation(leftType, rightType){
-    if (leftType instanceof Type.Pointer && rightType instanceof Type.Pointer){
-        var type = Cast.findPointerBaseType(leftType, rightType);
-        if (!type)
-            type = Cast.findPointerBaseType(rightType, leftType);
-        if (type)
-            return type;
-    }
-
-    // special case for strings
-    var isStrings = Type.isString(leftType) && Type.isString(rightType);
-    if (!isStrings)
-        checkTypeMatch(rightType, leftType);
-
-    return leftType;
-}
-
 function useIntOrderOp(t){
     return Type.isInt(t) || t == basicTypes.ch;
 }
@@ -908,7 +891,23 @@ var RelationOps = Class.extend({
     },
     eqExpect: function(){return "numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE";},
     strongRelExpect: function(){return "numeric type or CHAR or character array";},
-    relExpect: function(){return "numeric type or SET or CHAR or character array";}
+    relExpect: function(){return "numeric type or SET or CHAR or character array";},
+    coalesceType: function(leftType, rightType){
+        if (leftType instanceof Type.Pointer && rightType instanceof Type.Pointer){
+            var type = Cast.findPointerBaseType(leftType, rightType);
+            if (!type)
+                type = Cast.findPointerBaseType(rightType, leftType);
+            if (type)
+                return type;
+        }
+
+        // special case for strings
+        var isStrings = Type.isString(leftType) && Type.isString(rightType);
+        if (!isStrings)
+            checkTypeMatch(rightType, leftType);
+
+        return leftType;
+    }
 });
 
 var relationOps = new RelationOps();
@@ -924,7 +923,7 @@ function relationOp(leftType, rightType, literal, ops, context){
     var type = 
           literal == "IS" ? unwrapType(rightType)
         : literal == "IN" ? checkSetHasBit(leftType, rightType, context)
-                          : useTypeInRelation(leftType, rightType);
+                          : ops.coalesceType(leftType, rightType);
     var o;
     var mismatch;
     switch (literal){

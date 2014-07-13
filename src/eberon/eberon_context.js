@@ -774,6 +774,12 @@ var RelationOps = Context.RelationOps.extend({
             }
             return impl(left, right);
         };
+    },
+    coalesceType: function(leftType, rightType){
+        if ((leftType == EberonString.string() && rightType instanceof Type.String)
+            || (rightType == EberonString.string() && leftType instanceof Type.String))
+            return EberonString.string();
+        return Context.RelationOps.prototype.coalesceType.call(this, leftType, rightType);
     }
 });
 

@@ -15,12 +15,12 @@ END pChar;
 
 PROCEDURE pString(s: STRING);
 BEGIN
-    ASSERT(s = s);
-    (*ASSERT(s = "abc");*)
-    (*ASSERT(s = 22X);*)
+    r <- s;
 END pString;
 
 PROCEDURE pStringByRef(VAR s: STRING);
+BEGIN
+    s := "abc";
 END pStringByRef;
 
 BEGIN
@@ -34,6 +34,31 @@ BEGIN
 
     p1(s);
     ASSERT(LEN(s) = 0);
+
+    s := s + "abc";
+    s := s + 22X;
+    s := "abc" + s;
+    s := 22X + s;
+    b := s = "abc";
+    b := s = 22X;
+    b := "abc" = s;
+    b := 22X = s;
+    b := s > "abc";
+    b := s > 22X;
+    b := "abc" > s;
+    b := 22X > s;
+    b := s < "abc";
+    b := s < 22X;
+    b := "abc" < s;
+    b := 22X < s;
+    b := s >= "abc";
+    b := s >= 22X;
+    b := "abc" >= s;
+    b := 22X >= s;
+    b := s <= "abc";
+    b := s <= 22X;
+    b := "abc" <= s;
+    b := 22X <= s;
 
     pChar(s1[i]);
     pString(s1);

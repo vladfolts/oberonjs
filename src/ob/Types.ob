@@ -358,7 +358,7 @@ PROCEDURE intsDescription*(): STRING;
 END intsDescription;
 
 PROCEDURE isString*(t: PType): BOOLEAN;
-    RETURN ((t^ IS Array) & (t^(Array).elementsType = basic.ch))
+    RETURN ((t IS PArray) & (t.elementsType = basic.ch))
            OR (t^ IS String)
 END isString;
 

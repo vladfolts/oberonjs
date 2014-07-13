@@ -18,10 +18,11 @@ function pChar(c/*CHAR*/){
 }
 
 function pString(s/*STRING*/){
-	RTL$.assert(s == s);
+	var r = s;
 }
 
 function pStringByRef(s/*VAR STRING*/){
+	s.set("abc");
 }
 s = s1 + s2;
 b = s1 == s2;
@@ -32,6 +33,30 @@ b = s1 <= s2;
 b = s1 >= s2;
 p1(s);
 RTL$.assert(s.length == 0);
+s = s + "abc";
+s = s + "\"";
+s = "abc" + s;
+s = "\"" + s;
+b = s == "abc";
+b = s == "\"";
+b = "abc" == s;
+b = "\"" == s;
+b = s > "abc";
+b = s > "\"";
+b = "abc" > s;
+b = "\"" > s;
+b = s < "abc";
+b = s < "\"";
+b = "abc" < s;
+b = "\"" < s;
+b = s >= "abc";
+b = s >= "\"";
+b = "abc" >= s;
+b = "\"" >= s;
+b = s <= "abc";
+b = s <= "\"";
+b = "abc" <= s;
+b = "\"" <= s;
 pChar(s1.charCodeAt(i));
 pString(s1);
 pString("abc");
