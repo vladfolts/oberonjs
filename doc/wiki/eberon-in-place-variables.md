@@ -26,6 +26,12 @@ Although the type is not specified explicitly a variable is still statically typ
 
 Please notice that *v1* and *v2* will be copies (modifiable) of variables of type SomeRecord even if some descendants of type SomeRecord were passed to the procedure *p* as actual parameters.
 
+*In place* variable can be used as FOR variable:
+
+    FOR i <- 0 TO 10 DO 
+    ...
+    END
+
 ### Scope rules
 
 *In place* variable is visible from the place of declaration textually down to the end of procedure or outer IF/WHILE/FOR's END or ELSE/ELSIF/CASE branch.
