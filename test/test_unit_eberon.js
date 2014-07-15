@@ -453,7 +453,7 @@ exports.suite = {
              ["PROCEDURE p(); BEGIN i <- 0; IF FALSE THEN i <- 0; END; END p;",
               "'i' already declared in procedure scope"],
              ["PROCEDURE p(); BEGIN WHILE FALSE DO i <- 0; WHILE FALSE DO i <- 0; END; END; END p;",
-              "'i' already declared in procedure scope"]
+              "'i' already declared in operator scope"]
             )
         ),
     "type promotion in expression": testWithContext(

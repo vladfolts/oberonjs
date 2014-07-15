@@ -18,7 +18,7 @@ TYPE
 
     FoundSymbol* = RECORD
         PROCEDURE symbol(): PSymbol;
-        PROCEDURE scope(): ScopeBase.PType;
+        PROCEDURE scope*(): ScopeBase.PType;
 
         mSymbol: PSymbol;
         mScope: ScopeBase.PType

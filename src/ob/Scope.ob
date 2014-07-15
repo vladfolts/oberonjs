@@ -1,6 +1,7 @@
 MODULE Scope;
 IMPORT 
     Errors, 
+    JS,
     JsArray, 
     JsMap, 
     Object, 
@@ -11,7 +12,7 @@ IMPORT
 TYPE
     Type* = RECORD(ScopeBase.Type)
         PROCEDURE addSymbol*(s: Symbols.PSymbol; exported: BOOLEAN);
-        PROCEDURE findSymbol*(id: STRING): Symbols.PSymbol;
+        PROCEDURE findSymbol*(id: STRING): Symbols.PFoundSymbol;
         PROCEDURE close();
 
         stdSymbols: JsMap.Type;
@@ -180,16 +181,25 @@ BEGIN
     JsMap.put(SELF.symbols, id, s);
 END Type.addSymbol;
 
-PROCEDURE Type.findSymbol(id: STRING): Symbols.PSymbol;
+PROCEDURE Type.findSymbol(id: STRING): Symbols.PFoundSymbol;
 VAR
     result: Object.PType;
-    void: BOOLEAN;
+    found: Symbols.PFoundSymbol;
+    pSelf: PType;
 BEGIN
     IF ~JsMap.find(SELF.symbols, id, result) THEN
-        void := JsMap.find(SELF.stdSymbols, id, result);
+        void <- JsMap.find(SELF.stdSymbols, id, result);
     END;
-    RETURN result(Symbols.PSymbol)
+    IF result # NIL THEN
+        JS.do("pSelf = this");
+        found := Symbols.makeFound(result(Symbols.PSymbol), pSelf)
+    END;
+    RETURN found
 END Type.findSymbol;
+
+PROCEDURE Procedure.name(): STRING;
+    RETURN "procedure"
+END Procedure.name;
 
 PROCEDURE Procedure.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
 VAR
@@ -240,6 +250,10 @@ BEGIN
     END;
     RETURN result
 END CompiledModule.findSymbol;
+
+PROCEDURE Module.name(): STRING;
+    RETURN "module"
+END Module.name;
 
 PROCEDURE Module.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
 BEGIN

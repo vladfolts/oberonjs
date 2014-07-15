@@ -5,13 +5,16 @@ TYPE
         parent: Scope.PType
     END;
 
+PROCEDURE Operator.name(): STRING;
+    RETURN "operator"
+END Operator.name;
+
 PROCEDURE Operator.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
-VAR
-    id: STRING;
 BEGIN
-    id := s.id();
-    IF SELF.parent.findSymbol(id) # NIL THEN
-        Errors.raise("'" + id + "' already declared in procedure scope");
+    id <- s.id();
+    found <- SELF.parent.findSymbol(id);
+    IF found # NIL THEN
+        Errors.raise("'" + id + "' already declared in " + found.scope().name() + " scope");
     END;
     SUPER(s, exported);
 END Operator.addSymbol;

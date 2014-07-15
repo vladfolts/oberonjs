@@ -1,0 +1,1 @@
+line 4: 'i' already declared in module scope

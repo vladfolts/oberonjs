@@ -1,0 +1,5 @@
+MODULE m1;
+VAR i: INTEGER;
+BEGIN
+    FOR i <- 1 TO 10 END;
+END m1.

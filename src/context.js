@@ -1950,7 +1950,7 @@ exports.Context = Class.extend({
             var s = scope.findSymbol(ident);
 
             if (s)
-                return Symbol.makeFound(s, scope);
+                return s;
         }
         return undefined;
     },
