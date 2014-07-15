@@ -1489,29 +1489,37 @@ exports.For = ChainedContext.extend({
             throw new Errors.Error(
                   "'" + s.id() + "' is a '" 
 		+ type.description() + "' variable, 'FOR' control variable must be 'INTEGER'");
-        this.codeGenerator().write("for (" + id + " = ");
+        this._handleInitCode(id, "for (" + id + " = ");
+    },
+    _handleInitCode: function(id, code){
         this.__var = id;
+        this.codeGenerator().write(code);
+    },
+    _handleInitExpression: function(type){
+        if (type != basicTypes.integer)
+            throw new Errors.Error(
+                "'INTEGER' expression expected to assign '" + this.__var
+                + "', got '" + type.description() + "'");
+        this.__initExprParsed = true;
     },
     handleExpression: function(e){
         var type = e.type();
-        var value = e.constValue();
-        if (type !== basicTypes.integer)
-            throw new Errors.Error(
-                !this.__initExprParsed
-                    ? "'INTEGER' expression expected to assign '" + this.__var
-                      + "', got '" + type.description() + "'"
-                    : !this.__toParsed
-                    ? "'INTEGER' expression expected as 'TO' parameter, got '" + type.description() + "'"
-                    : "'INTEGER' expression expected as 'BY' parameter, got '" + type.description() + "'"
-                    );
         if (!this.__initExprParsed)
-            this.__initExprParsed = true;
-        else if (!this.__toParsed)
+            this._handleInitExpression(type);
+        else if (!this.__toParsed) {
+            if (type != basicTypes.integer)
+                throw new Errors.Error(
+                    "'INTEGER' expression expected as 'TO' parameter, got '" + type.description() + "'");
             this.__toParsed = true;
-        else if ( value === undefined )
-            throw new Errors.Error("constant expression expected as 'BY' parameter");
-        else
+        }
+        else {
+            if (type != basicTypes.integer)
+                throw new Errors.Error("'INTEGER' expression expected as 'BY' parameter, got '" + type.description() + "'");
+            var value = e.constValue();
+            if ( value === undefined )
+                throw new Errors.Error("constant expression expected as 'BY' parameter");
             this.__by = value.value;
+        }
     },
     codeGenerator: function(){
         if (this.__initExprParsed && !this.__toParsed)

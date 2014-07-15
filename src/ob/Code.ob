@@ -130,11 +130,9 @@ PROCEDURE SimpleGenerator.result(): STRING;
 END SimpleGenerator.result;
 
 PROCEDURE putIndent(s: STRING; indent: INTEGER): STRING;
-VAR
-    i: INTEGER;
 BEGIN
     result <- s;
-    FOR i := 0 TO indent - 1 DO
+    FOR i <- 0 TO indent - 1 DO
         result := result + kTab;
     END;
     RETURN result

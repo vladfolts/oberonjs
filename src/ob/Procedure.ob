@@ -250,14 +250,13 @@ VAR
     VAR
         expectedArgs: JsArray.Type;
         a: Object.PType;
-        i: INTEGER;
 
     BEGIN
         expectedArgs := SELF.args;
         IF expectedArgs # NIL THEN
             processArguments(args, expectedArgs, SELF.argumentsCode, cx.types);
         ELSE
-            FOR i := 0 TO JsArray.len(args) - 1 DO
+            FOR i <- 0 TO JsArray.len(args) - 1 DO
                 a := JsArray.at(args, i);
                 SELF.argumentsCode.write(a(Code.PExpression), NIL, NIL);
             END;
@@ -870,7 +869,6 @@ PROCEDURE dumpProcArgs(proc: Type): STRING;
 VAR
     result: STRING;
     len: INTEGER;
-    i: INTEGER;
     arg: Object.PType;
 BEGIN
     len := JsArray.len(proc.mArgs);
@@ -880,7 +878,7 @@ BEGIN
         END;
     ELSE
         result := "(";
-        FOR i := 0 TO len - 1 DO
+        FOR i <- 0 TO len - 1 DO
             IF i # 0 THEN
                 result := result + ", ";
             END;

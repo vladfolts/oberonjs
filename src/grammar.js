@@ -27,6 +27,7 @@ function make(makeIdentdef,
               makeProcedureHeading, 
               makeProcedureDeclaration,
               makeFieldList,
+              makeForInit,
               contexts,
               reservedWords
               ){
@@ -142,7 +143,7 @@ var repeatStatement = and("REPEAT",
                                   contexts.Repeat));
 
 var forStatement = and("FOR", 
-                       context(and(ident, ":=", expression, "TO", expression
+                       context(and(makeForInit(ident, expression, assignment), "TO", expression
                                  , optional(and("BY", constExpression))
                                  , emit("DO", Context.emitForBegin)
                                  , statementSequence, required("END", "END expected (FOR)"))

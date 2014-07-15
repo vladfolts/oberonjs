@@ -187,10 +187,8 @@ BEGIN
 END finalizeRecord;
 
 PROCEDURE Record.finalize();
-VAR
-    i: INTEGER;
 BEGIN
-    FOR i := 0 TO JsArray.stringsLen(SELF.notExported) - 1 DO
+    FOR i <- 0 TO JsArray.stringsLen(SELF.notExported) - 1 DO
         JsMap.erase(SELF.fields, JsArray.stringsAt(SELF.notExported, i))
     END;
     SELF.notExported := NIL;

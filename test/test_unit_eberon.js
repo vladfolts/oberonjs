@@ -632,22 +632,17 @@ exports.suite = {
           fail(["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN v <- a; END p;",
                 "cannot initialize variable 'v' with open array"]
               )
-      )    /*
-,
+    ),
     "FOR variable": testWithContext(
           context(grammar.statement, ""),
-          pass("FOR i <- 0 TO 10 DO END")
-          ),
-    "as references": testWithContext(
-          context(grammar.declarationSequence,
-                "TYPE Base = RECORD pBase: POINTER TO Base END; Derived = RECORD (Base) END;"
-                + "VAR base: Base;"
+          pass("FOR i <- 0 TO 10 DO END",
+               "FOR i <- 0 TO 10 DO FOR j <- 0 TO 10 BY 1 DO END END",
+               "IF TRUE THEN FOR i <- 0 TO 10 DO END; FOR i <- 0 TO 10 BY 1 DO END; END"
                ),
-          pass("PROCEDURE p(); BEGIN baseRef <- base.pBase^; ASSERT(baseRef IS Derived); END p;",
-               "PROCEDURE p(VAR b: Base); BEGIN baseRef <- b; ASSERT(baseRef IS Derived); END p;"),
-          fail(["PROCEDURE p(b: Base); BEGIN baseRef <- b; ASSERT(baseRef IS Derived); END p;",
-                "invalid type test: a value variable cannot be used"])
-      )*/
+          fail(["FOR i <- 0.0 TO 10 DO END", "'INTEGER' expression expected to assign 'i', got 'REAL'"],
+               ["IF TRUE THEN FOR i <- 0 TO 10 DO END; i := 1; END", "undeclared identifier: 'i'"]
+               )
+          )
     },
     "type promotion for VAR arguments": testWithContext(
         context(grammar.declarationSequence, 

@@ -150,4 +150,6 @@ if (pb instanceof Derived){
 	pb.derivedField = 123;
 }
 RTL$.assert(!(pb instanceof Derived) || pb.derivedField == 123);
+for (var j = 0; j <= 10; ++j){
+}
 }();

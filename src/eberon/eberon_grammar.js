@@ -21,9 +21,13 @@ function makeProcedureHeading(ident, identdef, formalParameters){
                );
 }
 
+function makeInPlaceInit(ident, expression, inPlaceContext){
+    return context(and(ident, "<-", required(expression, "initialization expression expected")), inPlaceContext);
+}
+
 function makeAssignmentOrProcedureCall(ident, designator, assignment, expression){
     return or(
-        context(and(ident, "<-", required(expression, "initialization expression expected")), EbContext.TemplValueInit),
+        makeInPlaceInit(ident, expression, EbContext.InPlaceVariableInit),
         context(and(designator, optional(assignment)), EbContext.AssignmentOrProcedureCall)
         );
 }
@@ -65,6 +69,11 @@ function makeFieldList(identdef, identList, type, formalParameters){
         Context.FieldListDeclaration);
 }
 
+function makeForInit(ident, expression, assignment){
+    return or(makeInPlaceInit(ident, expression, EbContext.InPlaceVariableInitFor), 
+              and(ident, assignment));
+}
+
 exports.language = {
     grammar: Grammar.make(
         makeIdentdef,
@@ -72,6 +81,7 @@ exports.language = {
         makeProcedureHeading,
         makeProcedureDeclaration,
         makeFieldList, 
+        makeForInit,
         { 
             constDeclaration:   EbContext.ConstDecl, 
             typeDeclaration:    EbContext.TypeDeclaration,

@@ -249,42 +249,54 @@ var Designator = Context.Designator.extend({
     }
 });
 
-var TemplValueInit = Context.Chained.extend({
-    init: function EberonContext$TemplValueInit(context){
+var InPlaceVariableInit = Context.Chained.extend({
+    init: function EberonContext$InPlaceVariableInit(context){
         Context.Chained.prototype.init.call(this, context);
         this.__id = undefined;
-        this.__symbol = undefined;
-        this.__code = undefined;
+        this._symbol = undefined;
+        this._code = undefined;
     },
     codeGenerator: function(){return Code.nullGenerator();},
     handleIdent: function(id){
         this.__id = id;
     },
     handleLiteral: function(){
-        this.__code = "var " + this.__id + " = ";
+        this._code = "var " + this.__id + " = ";
     },
     handleExpression: function(e){
         var type = e.type();
         var v = Type.isString(type) ? new InPlaceStringLiteral(type) 
                                     : new TypeNarrowVariable(type, false, false);
-        this.__symbol = Symbol.makeSymbol(this.__id, v);
+        this._symbol = Symbol.makeSymbol(this.__id, v);
         if (type instanceof Type.Record)
-            this.__code += this.language().rtl.clone(e.code());
+            this._code += this.language().rtl.clone(e.code());
         else if (type instanceof Type.Array){
             if (Type.arrayLength(type) == Type.openArrayLength)
                 throw new Errors.Error("cannot initialize variable '" + this.__id + "' with open array");
-            this.__code += this.language().rtl.clone(e.code());
+            this._code += this.language().rtl.clone(e.code());
         }
         else
-            this.__code += Code.derefExpression(e).code();
+            this._code += Code.derefExpression(e).code();
+    },
+    _onParsed: function(){
+        this.parent().codeGenerator().write(this._code);
     },
     endParse: function(){
-        if (!this.__symbol)
+        if (!this._symbol)
             return false;
 
-        this.currentScope().addSymbol(this.__symbol);
-        this.parent().codeGenerator().write(this.__code);
+        this.currentScope().addSymbol(this._symbol);
+        this._onParsed();
         return true;
+    }
+});
+
+var InPlaceVariableInitFor = InPlaceVariableInit.extend({
+    init: function EberonContext$InPlaceVariableInitFor(context){
+        InPlaceVariableInit.prototype.init.call(this, context);
+    },
+    _onParsed: function(){
+        this.parent().handleInPlaceInit(this._symbol, this._code);
     }
 });
 
@@ -1035,6 +1047,10 @@ var For = Context.For.extend({
             this.language().stdSymbols);
         this.pushScope(scope);
     },
+    handleInPlaceInit: function(symbol, code){
+        this._handleInitCode(symbol.id(), "for (" + code);
+        this._handleInitExpression(symbol.info().type());
+    },
     endParse: function(){
         this.popScope();
         Context.For.prototype.endParse.call(this);
@@ -1072,7 +1088,8 @@ exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;
 exports.Repeat = Repeat;
 exports.SimpleExpression = SimpleExpression;
-exports.TemplValueInit = TemplValueInit;
+exports.InPlaceVariableInit = InPlaceVariableInit;
+exports.InPlaceVariableInitFor = InPlaceVariableInitFor;
 exports.Term = Term;
 exports.TypeDeclaration = TypeDeclaration;
 exports.VariableDeclaration = VariableDeclaration;

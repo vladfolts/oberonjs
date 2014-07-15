@@ -53,7 +53,6 @@ END addSymbolForType;
 PROCEDURE makeStdSymbols*(): JsMap.Type;
 VAR 
     result: JsMap.Type;
-    i: INTEGER;
     proc: Object.PType;
 
     PROCEDURE addSymbol(t: Types.PBasicType);
@@ -69,7 +68,7 @@ BEGIN
     addSymbol(Types.basic.real);
     addSymbol(Types.basic.set); 
 
-    FOR i := 0 TO JsArray.len(Procedures.predefined) - 1 DO
+    FOR i <- 0 TO JsArray.len(Procedures.predefined) - 1 DO
         proc := JsArray.at(Procedures.predefined, i);
         JsMap.put(result, proc(Symbols.PSymbol).id(), proc);
     END;
@@ -141,12 +140,11 @@ END unresolved;
 
 PROCEDURE Type.close();
 VAR
-    i: INTEGER;
     p: Object.PType;
     finalizer: Finalizer;
 BEGIN
     IF SELF.finalizers # NIL THEN
-        FOR i := 0 TO JsArray.len(SELF.finalizers) - 1 DO
+        FOR i <- 0 TO JsArray.len(SELF.finalizers) - 1 DO
             p := JsArray.at(SELF.finalizers, i);
             finalizer := p(Finalizer);
             finalizer.proc(finalizer.closure);

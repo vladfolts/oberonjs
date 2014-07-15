@@ -75,4 +75,7 @@ BEGIN
 
     ASSERT(~(pb IS PDerived) OR (pb.derivedField = 123));
 
+    FOR j <- 0 TO 10 DO
+    END;
+
 END m.
