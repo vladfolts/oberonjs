@@ -3,8 +3,10 @@ TYPE
     T = RECORD
         PROCEDURE p();
         PROCEDURE p2(i: INTEGER): INTEGER;
+        PROCEDURE useSelfAsPointer();
 		i: INTEGER
 	END;
+    PT = POINTER TO T;
     D = RECORD(T) END;
 VAR
     d: D;
@@ -17,6 +19,25 @@ END T.p;
 PROCEDURE T.p2(i: INTEGER): INTEGER;
     RETURN i
 END T.p2;
+
+PROCEDURE acceptPointer(p: PT);
+END acceptPointer;
+
+PROCEDURE acceptReferenace(VAR p: T);
+END acceptReferenace;
+
+PROCEDURE acceptConstReferenace(p: T);
+END acceptConstReferenace;
+
+PROCEDURE T.useSelfAsPointer();
+VAR
+    pVar: PT;
+BEGIN
+    pVar := SELF(POINTER);
+    acceptPointer(SELF(POINTER));
+    acceptReferenace(SELF(POINTER)^);
+    acceptConstReferenace(SELF(POINTER)^);
+END T.useSelfAsPointer;
 
 PROCEDURE D.p();
 BEGIN

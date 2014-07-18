@@ -37,8 +37,9 @@ function makeIdentdef(ident){
 }
 
 function makeDesignator(ident, qualident, selector, actualParameters){
+    var self = and("SELF", optional(and("(", "POINTER", ")")));
     var designator = context(
-        and(or("SELF", "SUPER", qualident), repeat(or(selector, actualParameters))), EbContext.Designator);
+        and(or(self, "SUPER", qualident), repeat(or(selector, actualParameters))), EbContext.Designator);
     return { 
         factor: context(designator, EbContext.ExpressionProcedureCall),
         assignmentOrProcedureCall: function(assignment, expression){

@@ -231,6 +231,12 @@ var Designator = Context.Designator.extend({
         if (s == "SELF"){
             var type = this.handleMessage(getMethodSelf);
             this._advance(type, type, "this");
+        } 
+        else if (s == "POINTER"){
+            var typeId = Type.makeTypeId(this.__currentType);
+            var pointerType = Type.makePointer("", typeId);
+            var info = Type.makeVariable(pointerType, true);
+            this._advance(pointerType, info, "this");
         }
         else if (s == "SUPER"){
             var ms = this.handleMessage(getMethodSuper);

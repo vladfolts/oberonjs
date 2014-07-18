@@ -32,6 +32,22 @@ T.prototype.p = function(){
 T.prototype.p2 = function(i/*INTEGER*/){
 	return i;
 }
+
+function acceptPointer(p/*PT*/){
+}
+
+function acceptReferenace(p/*VAR T*/){
+}
+
+function acceptConstReferenace(p/*T*/){
+}
+T.prototype.useSelfAsPointer = function(){
+	var pVar = null;
+	pVar = this;
+	acceptPointer(this);
+	acceptReferenace(this);
+	acceptConstReferenace(this);
+}
 D.prototype.p = function(){
 	T.prototype.p.call(this);
 }

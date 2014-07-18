@@ -155,6 +155,18 @@ exports.suite = {
     fail(["PROCEDURE p(); BEGIN SELF.i := 0; END p;",
           "SELF can be used only in methods"])
     ),
+"SELF as pointer": testWithContext(
+    context(grammar.declarationSequence, 
+            "TYPE T = RECORD PROCEDURE method() END; PT = POINTER TO T;"
+            + "VAR pVar: PT;"
+            + "PROCEDURE refProc(VAR p: PT); END refProc;"
+            ),
+    pass("PROCEDURE T.method(); BEGIN pVar := SELF(POINTER) END T.method;"),
+    fail(["PROCEDURE T.method(); BEGIN refProc(SELF(POINTER)) END T.method;", 
+          "read-only variable cannot be used as VAR parameter"],
+         ["PROCEDURE T.method(); BEGIN SELF(POINTER) := pVar; END T.method;", 
+          "cannot assign to read-only variable"])
+    ),
 "method call": testWithContext(
     context(grammar.expression,
               "TYPE T = RECORD PROCEDURE p(); PROCEDURE f(): INTEGER END;"
