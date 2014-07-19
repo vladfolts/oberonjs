@@ -44,6 +44,19 @@ Example:
         END;
     END Triangle.draw;
 
+ **SELF** acts as a variable of record instance. If pointer to type is needed then a special syntax can be used to reference a pointer to record instance: **SELF(POINTER)**. The compiler check if **SELF(POINTER)** was used in record methods and forbids to declare variables of such types - only pointer (created with NEW) can be declared.
+
+Example:
+
+    TYPE 
+        T = RECORD PROCEDURE method() END;
+        PT = POINTER TO T;
+        VAR pVar: PT;
+
+    PROCEDURE T.method(); 
+    BEGIN 
+        pVar := SELF(POINTER);
+    END T.method;
 
 ### Semantics
 Methods semantics basically the same as in popular OOP languages (Java, C#, C++).
