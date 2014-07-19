@@ -9,7 +9,7 @@ TYPE
     PT = POINTER TO T;
     D = RECORD(T) END;
 VAR
-    d: D;
+    dp: POINTER TO D;
 
 PROCEDURE T.p();
 BEGIN
@@ -49,5 +49,6 @@ PROCEDURE D.p2(i: INTEGER): INTEGER;
 END D.p2;
 
 BEGIN
-    d.p();
+    NEW(dp);
+    dp.p();
 END m.

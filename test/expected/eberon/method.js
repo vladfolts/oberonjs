@@ -25,7 +25,7 @@ var D = T.extend({
 		T.prototype.init.call(this);
 	}
 });
-var d = new D();
+var dp = null;
 T.prototype.p = function(){
 	this.i = 123;
 }
@@ -54,5 +54,6 @@ D.prototype.p = function(){
 D.prototype.p2 = function(i/*INTEGER*/){
 	return T.prototype.p2.call(this, i);
 }
-d.p();
+dp = new D();
+dp.p();
 }();

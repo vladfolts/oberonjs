@@ -1,7 +1,6 @@
 MODULE Scope;
 IMPORT 
     Errors, 
-    JS,
     JsArray, 
     JsMap, 
     Object, 
@@ -185,14 +184,12 @@ PROCEDURE Type.findSymbol(id: STRING): Symbols.PFoundSymbol;
 VAR
     result: Object.PType;
     found: Symbols.PFoundSymbol;
-    pSelf: PType;
 BEGIN
     IF ~JsMap.find(SELF.symbols, id, result) THEN
         void <- JsMap.find(SELF.stdSymbols, id, result);
     END;
     IF result # NIL THEN
-        JS.do("pSelf = this");
-        found := Symbols.makeFound(result(Symbols.PSymbol), pSelf)
+        found := Symbols.makeFound(result(Symbols.PSymbol), SELF(POINTER))
     END;
     RETURN found
 END Type.findSymbol;

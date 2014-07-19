@@ -385,7 +385,7 @@ PROCEDURE makeNew(): Symbols.PSymbol;
             Errors.raise("non-exported RECORD type cannot be used in NEW");
         END;
         RETURN Code.makeSimpleExpression(
-                arg.code() + " = " + baseType.initializer(cx),
+                arg.code() + " = " + baseType.initializer(cx, TRUE),
                 NIL)
     END CallImpl.make;
 BEGIN

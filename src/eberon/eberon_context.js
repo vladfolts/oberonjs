@@ -104,6 +104,7 @@ var MethodHeading = Context.Chained.extend({
 });
 
 function getMethodSelf(){}
+function getSelfAsPointerMsg(){}
 function getMethodSuper(){}
 
 var MethodVariable = Type.Variable.extend({
@@ -233,7 +234,7 @@ var Designator = Context.Designator.extend({
             this._advance(type, type, "this");
         } 
         else if (s == "POINTER"){
-            var typeId = Type.makeTypeId(this.__currentType);
+            var typeId = Type.makeTypeId(this.handleMessage(getSelfAsPointerMsg));
             var pointerType = Type.makePointer("", typeId);
             var info = Type.makeVariable(pointerType, true);
             this._advance(pointerType, info, "this");
@@ -374,14 +375,23 @@ var RecordType = Type.Record.extend({
         this.__definedMethods = [];
         this.__abstractMethods = [];
         this.__instantiated = false;
+        this.__createByNewOnly = false;
+        this.__declaredAsVariable = false;
         this.__lazyDefinitions = {};
         this.__nonExportedMethods = [];
     },
-    initializer: function(context){
-        if (this.__finalized)
+    initializer: function(context, forNew){
+        if (this.__finalized){
             this.__ensureNonAbstract();
-        else
+            if (!forNew)
+                this.__ensureVariableCanBeDeclared();
+        }
+        else {
             this.__instantiated = true;
+            if (!forNew)
+                this.__declaredAsVariable = true;
+        }
+
         return Type.Record.prototype.initializer.call(this, context);
     },
     findSymbol: function(id){
@@ -446,6 +456,7 @@ var RecordType = Type.Record.extend({
                 ids.push(id);
             }
     },
+    requireNewOnly: function(){this.__createByNewOnly = true;},
     abstractMethods: function(){return this.__abstractMethods;},
     __collectAbstractMethods: function(){
         var selfMethods = Object.keys(this.__declaredMethods);
@@ -463,6 +474,8 @@ var RecordType = Type.Record.extend({
         this.__collectAbstractMethods();
         if (this.__instantiated)
             this.__ensureNonAbstract();
+        if (this.__declaredAsVariable)
+            this.__ensureVariableCanBeDeclared();
         this.__ensureMethodDefinitions(this.__lazyDefinitions);
 
         for(var i = 0; i < this.__nonExportedMethods.length; ++i)
@@ -507,6 +520,17 @@ var RecordType = Type.Record.extend({
                         baseType.requireMethodDefinition(id, errMsg(this));
                 }
             baseType = Type.recordBase(baseType);
+        }
+    },
+    __ensureVariableCanBeDeclared: function(){
+        var type = this;
+        while (type){
+            if (type.__createByNewOnly)
+                throw new Errors.Error(
+                    "cannot declare a variable of type '" 
+                  + Type.typeName(type) + "' (and derived types) "
+                  + "because SELF(POINTER) was used in its method(s)");
+            type = Type.recordBase(type);
         }
     },
     __hasMethodDeclaration: function(id){
@@ -596,6 +620,10 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         if (msg == getMethodSelf){
             if (!this.__boundType)
                 throw new Errors.Error("SELF can be used only in methods");
+            return this.__boundType;
+        }
+        if (msg == getSelfAsPointerMsg){
+            this.__boundType.requireNewOnly();
             return this.__boundType;
         }
 

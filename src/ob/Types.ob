@@ -17,7 +17,7 @@ TYPE
     PType* = POINTER TO Type;
 
     StorageType* = RECORD(Type)    
-        PROCEDURE initializer*(cx: Context.Type): STRING
+        PROCEDURE initializer*(cx: Context.Type; forNew: BOOLEAN): STRING
     END;
 
     TypeId* = RECORD(Id)
@@ -339,7 +339,7 @@ PROCEDURE BasicType.description(): STRING;
     RETURN SELF.name
 END BasicType.description;
 
-PROCEDURE BasicType.initializer(cx: Context.Type): STRING;
+PROCEDURE BasicType.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN SELF.mInitializer
 END BasicType.initializer;
 
@@ -386,7 +386,7 @@ BEGIN
     RETURN result
 END Record.description;
 
-PROCEDURE Record.initializer(cx: Context.Type): STRING;
+PROCEDURE Record.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "new " + cx.qualifyScope(SELF.scope) + SELF.cons + "()"
 END Record.initializer;
 
@@ -457,7 +457,7 @@ BEGIN
     RETURN result
 END Pointer.description;
 
-PROCEDURE Pointer.initializer(cx: Context.Type): STRING;
+PROCEDURE Pointer.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "null"
 END Pointer.initializer;
 
@@ -491,7 +491,7 @@ BEGIN
     RETURN result
 END Array.description;
 
-PROCEDURE Array.initializer(cx: Context.Type): STRING;
+PROCEDURE Array.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN SELF.mInitializer
 END Array.initializer;
 
@@ -503,7 +503,7 @@ PROCEDURE arrayLength*(a: Array): INTEGER;
     RETURN a.len
 END arrayLength;
 
-PROCEDURE Procedure.initializer(cx: Context.Type): STRING;
+PROCEDURE Procedure.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "null"
 END Procedure.initializer;
 

@@ -157,15 +157,32 @@ exports.suite = {
     ),
 "SELF as pointer": testWithContext(
     context(grammar.declarationSequence, 
-            "TYPE T = RECORD PROCEDURE method() END; PT = POINTER TO T;"
+            "TYPE T = RECORD PROCEDURE method() END;"
+            + "PT = POINTER TO T;"
             + "VAR pVar: PT;"
             + "PROCEDURE refProc(VAR p: PT); END refProc;"
             ),
-    pass("PROCEDURE T.method(); BEGIN pVar := SELF(POINTER) END T.method;"),
+    pass("PROCEDURE T.method(); BEGIN pVar := SELF(POINTER) END T.method;",
+         "PROCEDURE p();"
+          + "TYPE Derived = RECORD(T) END; VAR pd: POINTER TO Derived;"
+          + "PROCEDURE Derived.method(); VAR pVar: PT; BEGIN NEW(pd); pVar := SELF(POINTER); END Derived.method;"
+          + "END p;"),
     fail(["PROCEDURE T.method(); BEGIN refProc(SELF(POINTER)) END T.method;", 
           "read-only variable cannot be used as VAR parameter"],
          ["PROCEDURE T.method(); BEGIN SELF(POINTER) := pVar; END T.method;", 
-          "cannot assign to read-only variable"])
+          "cannot assign to read-only variable"],
+         ["PROCEDURE p();"
+          + "TYPE Derived = RECORD(T) END; VAR d: Derived;"
+          + "PROCEDURE Derived.method(); VAR pVar: PT; BEGIN pVar := SELF(POINTER); END Derived.method;"
+          + "END p;",
+          "cannot declare a variable of type 'Derived' (and derived types) because SELF(POINTER) was used in its method(s)"],
+         ["PROCEDURE p();"
+          + "TYPE Derived = RECORD(T) END; Derived2 = RECORD(Derived) END;"
+          + "VAR d: Derived2;"
+          + "PROCEDURE Derived.method(); VAR pVar: PT; BEGIN pVar := SELF(POINTER); END Derived.method;"
+          + "END p;",
+          "cannot declare a variable of type 'Derived' (and derived types) because SELF(POINTER) was used in its method(s)"]
+         )
     ),
 "method call": testWithContext(
     context(grammar.expression,

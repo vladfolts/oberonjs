@@ -30,7 +30,7 @@ PROCEDURE AnyType.description(): STRING;
     RETURN "JS.var"
 END AnyType.description;
 
-PROCEDURE AnyType.initializer(cx: Context.Type): STRING;
+PROCEDURE AnyType.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "undefined"
 END AnyType.initializer;
 
