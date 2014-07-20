@@ -451,7 +451,8 @@ exports.suite = {
              "v <- void" // procedure type
             ),
         fail(["v <-", "initialization expression expected"],
-             ["v <- void()", "procedure returning no result cannot be used in an expression"])
+             ["v <- void()", "procedure returning no result cannot be used in an expression"],
+             ["v <- NIL", "cannot use NIL to initialize variable"])
         ),
     "read-only if initialized with string literal": testWithContext(
         context(grammar.declarationSequence, ""),
@@ -634,7 +635,8 @@ exports.suite = {
         ),
     "record types as values": testWithContext(
           context(grammar.declarationSequence,
-                "TYPE Base = RECORD pBase: POINTER TO Base END; Derived = RECORD (Base) END;"
+                "TYPE Base = RECORD pBase: POINTER TO Base END;"
+                + "Derived = RECORD (Base) END;"
                 + "VAR base: Base;"
                 + "PROCEDURE procBaseVar(VAR b: Base); END procBaseVar;"
                ),
@@ -644,7 +646,11 @@ exports.suite = {
                ["PROCEDURE p(VAR b: Base); BEGIN base <- b; ASSERT(base IS Derived); END p;",
                 "invalid type test: a value variable cannot be used"],
                ["PROCEDURE p(b: Base); BEGIN base <- b; ASSERT(base IS Derived); END p;",
-                "invalid type test: a value variable cannot be used"]
+                "invalid type test: a value variable cannot be used"],
+               ["PROCEDURE p(); TYPE Abstract = RECORD PROCEDURE method() END; PROCEDURE test(a: Abstract); BEGIN v <- a; END test; END p;",
+                "cannot instantiate 'Abstract' because it has abstract method(s): method"],
+               ["PROCEDURE p(); TYPE T = RECORD PROCEDURE method() END; PROCEDURE T.method(); BEGIN ASSERT(SELF(POINTER) # NIL); END T.method; PROCEDURE test(r: T); BEGIN v <- r; END test; END p;",
+                "cannot declare a variable of type 'T' (and derived types) because SELF(POINTER) was used in its method(s)"]
               )
       ),
     "arrays as values": testWithContext(

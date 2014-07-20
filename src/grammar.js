@@ -157,9 +157,9 @@ var fieldList = makeFieldList(
         );
 var fieldListSequence = and(fieldList, repeat(and(";", fieldList)));
 
-var arrayType = and("ARRAY", context(and(
-                        context(and(constExpression, repeat(and(",", constExpression)))
-                              , Context.ArrayDimensions)
+var arrayType = and("ARRAY", 
+                    context(and(context(and(constExpression, repeat(and(",", constExpression))), 
+                                Context.ArrayDimensions)
                   , "OF", type), Context.ArrayDecl));
 
 var baseType = context(qualident, Context.BaseType);

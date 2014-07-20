@@ -272,11 +272,16 @@ var InPlaceVariableInit = Context.Chained.extend({
     },
     handleExpression: function(e){
         var type = e.type();
-        var v = Type.isString(type) ? new InPlaceStringLiteral(type) 
-                                    : new TypeNarrowVariable(type, false, false);
+        var isString = Type.isString(type);
+        if (!isString && !(type instanceof Type.StorageType))
+            throw new Errors.Error("cannot use " + type.description() + " to initialize variable");
+        var v = isString ? new InPlaceStringLiteral(type) 
+                         : new TypeNarrowVariable(type, false, false);
         this._symbol = Symbol.makeSymbol(this.__id, v);
-        if (type instanceof Type.Record)
+        if (type instanceof Type.Record){
+            type.initializer(this, false); // checks for abstract etc.
             this._code += this.language().rtl.clone(e.code());
+        }
         else if (type instanceof Type.Array){
             if (Type.arrayLength(type) == Type.openArrayLength)
                 throw new Errors.Error("cannot initialize variable '" + this.__id + "' with open array");
