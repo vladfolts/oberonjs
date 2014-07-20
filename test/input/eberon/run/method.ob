@@ -6,12 +6,24 @@ TYPE
     END;
 	TD = RECORD(T) END;
 
+    Base = RECORD
+        PROCEDURE method(): STRING
+    END;
+
+    Derived1 = RECORD(Base)
+    END;
+
+    Derived2 = RECORD(Base)
+    END;
+
 VAR
     pCalled: BOOLEAN;
     pDerivedCalled: BOOLEAN;
     pSuperCalled: INTEGER;
 	r: T;
 	rd: TD;
+    d1: Derived1;
+    d2: Derived2;
 
 PROCEDURE T.p();
 BEGIN
@@ -33,6 +45,20 @@ BEGIN
 	SUPER(i);
 END TD.pSuper;
 
+PROCEDURE Derived1.method(): STRING;
+BEGIN
+    RETURN "Derived1"
+END Derived1.method;
+
+PROCEDURE Derived2.method(): STRING;
+    RETURN "Derived2"
+END Derived2.method;
+
+PROCEDURE copyRecord(from: Base; VAR to: Base);
+BEGIN
+    to := from;
+END copyRecord;
+
 BEGIN
 	ASSERT(~pCalled);
 	ASSERT(~pDerivedCalled);
@@ -47,4 +73,9 @@ BEGIN
 
 	rd.pSuper(123);
 	ASSERT(pSuperCalled = 123);
+
+    (* methods are not copied*)
+    copyRecord(d1, d2);
+    ASSERT(d1.method() = "Derived1");
+    ASSERT(d2.method() = "Derived2");
 END m.
