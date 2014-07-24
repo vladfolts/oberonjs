@@ -161,6 +161,8 @@ TYPE
 
     PModule* = POINTER TO Module;
 
+    ArrayDimensionDescriptionCallback = PROCEDURE(dim: INTEGER): STRING;
+
 VAR
     basic*: RECORD
         bool*, ch*, integer*, uint8*, real*, set*: PBasicType
@@ -461,34 +463,47 @@ PROCEDURE Pointer.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "null"
 END Pointer.initializer;
 
-PROCEDURE foldArrayDimensions(a: Array; VAR sizes, of: STRING);
+PROCEDURE foldArrayDimensions(a: Array; dimToStr: ArrayDimensionDescriptionCallback; VAR sizes, of: STRING);
 BEGIN  
-    IF (a.len # openArrayLength) & (a.elementsType IS PArray) THEN
-        foldArrayDimensions(a.elementsType^(Array), sizes, of);
-        sizes := Str.fromInt(a.len) + ", " + sizes;
+    elementsType <- a.elementsType;
+    IF (a.len # openArrayLength) & (elementsType IS PArray) THEN
+        foldArrayDimensions(elementsType^, dimToStr, sizes, of);
+        sizes := dimToStr(a.len) + ", " + sizes;
     ELSE
-        IF a.len # openArrayLength THEN
-            sizes := Str.fromInt(a.len);
-        END;
+        sizes := dimToStr(a.len);
         of := a.elementsType.description();
     END
 END foldArrayDimensions;
 
-PROCEDURE Array.description(): STRING;
+PROCEDURE arrayDimensionDescription*(dim: INTEGER): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF dim # openArrayLength THEN
+        result := Str.fromInt(dim);
+    END;
+    RETURN result
+END arrayDimensionDescription;
+
+PROCEDURE arrayDescription*(a: Array; dimToStr: ArrayDimensionDescriptionCallback): STRING;
 VAR
     result: STRING;
     sizes, of: STRING;
 BEGIN
-    IF SELF.elementsType = NIL THEN (* special arrays, see procedure "LEN" *)
-        result := SELF.name;
+    IF a.elementsType = NIL THEN (* special arrays, see procedure "LEN" *)
+        result := a.name;
     ELSE
-        foldArrayDimensions(SELF, sizes, of);
+        foldArrayDimensions(a, dimToStr, sizes, of);
         IF LEN(sizes) # 0 THEN
             sizes := " " + sizes;
         END;
         result := "ARRAY" + sizes + " OF " + of;
     END;
     RETURN result
+END arrayDescription;
+
+PROCEDURE Array.description(): STRING;
+    RETURN arrayDescription(SELF, arrayDimensionDescription)
 END Array.description;
 
 PROCEDURE Array.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
@@ -561,8 +576,20 @@ BEGIN
     RETURN result
 END makeString;
 
+PROCEDURE initArray*(
+    initializer: STRING;
+    elementsType: PType;
+    len: INTEGER; (* see openArrayLength *)
+    VAR result: Array
+    );
+BEGIN
+    (*result.name := name;*)
+    result.mInitializer := initializer;
+    result.elementsType := elementsType;
+    result.len := len;
+END initArray;
+
 PROCEDURE makeArray*(
-    name: STRING;
     initializer: STRING;
     elementsType: PType;
     len: INTEGER (* see openArrayLength *)
@@ -571,10 +598,7 @@ VAR
     result: PArray;
 BEGIN
     NEW(result);
-    result.name := name;
-    result.mInitializer := initializer;
-    result.elementsType := elementsType;
-    result.len := len;
+    initArray(initializer, elementsType, len, result^);
     RETURN result
 END makeArray;
 

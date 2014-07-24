@@ -6,6 +6,7 @@ var Code = require("js/Code.js");
 var Context = require("context.js");
 var EberonScope = require("js/EberonScope.js");
 var EberonString = require("js/EberonString.js");
+var EberonTypes = require("js/EberonTypes.js");
 var Errors = require("js/Errors.js");
 var op = require("js/Operator.js");
 var eOp = require("js/EberonOperator.js");
@@ -1096,6 +1097,49 @@ var For = Context.For.extend({
     }
 });
 
+var ArrayDimensions = Context.ArrayDimensions.extend({
+    init: function EberonContext$ArrayDimensions(context){
+        Context.ArrayDimensions.prototype.init.call(this, context);
+    },
+    handleLiteral: function(s){
+        if ( s == "*" )
+            this._addDimension(EberonTypes.dynamicArrayLength);
+        else
+            Context.ArrayDimensions.prototype.handleLiteral.call(this, s);
+    }
+});
+
+var ArrayDecl = Context.ArrayDecl.extend({
+    init: function EberonContext$ArrayDecl(context){
+        Context.ArrayDecl.prototype.init.call(this, context);
+    },
+    _makeType: function(elementsType, init, length){
+        return EberonTypes.makeArray(init, elementsType, length);
+    }
+});
+
+var FormalParameters = Context.FormalParameters.extend({
+    init: function EberonContext$FormalParameters(context){
+        Context.FormalParameters.prototype.init.call(this, context);
+    },
+    _checkResultType: function(type){
+        if (EberonTypes.isDynamicArray(type))
+            return;
+        Context.FormalParameters.prototype._checkResultType.call(this, type);
+    }
+});
+
+var FormalParametersProcDecl = Context.FormalParametersProcDecl.extend({
+    init: function EberonContext$FormalParametersProcDecl(context){
+        Context.FormalParametersProcDecl.prototype.init.call(this, context);
+    },
+    _checkResultType: function(type){
+        if (EberonTypes.isDynamicArray(type))
+            return;
+        Context.FormalParametersProcDecl.prototype._checkResultType.call(this, type);
+    }
+});
+
 var ModuleDeclaration = Context.ModuleDeclaration.extend({
     init: function EberonContext$ModuleDeclaration(context){
         Context.ModuleDeclaration.prototype.init.call(this, context);
@@ -1109,12 +1153,16 @@ var ModuleDeclaration = Context.ModuleDeclaration.extend({
 });
 
 exports.AddOperator = AddOperator;
+exports.ArrayDecl = ArrayDecl;
+exports.ArrayDimensions = ArrayDimensions;
 exports.CaseLabel = CaseLabel;
 exports.ConstDecl = ConstDecl;
 exports.Designator = Designator;
 exports.Expression = Expression;
 exports.ExpressionProcedureCall = ExpressionProcedureCall;
 exports.For = For;
+exports.FormalParameters = FormalParameters;
+exports.FormalParametersProcDecl = FormalParametersProcDecl;
 exports.Identdef = Identdef;
 exports.If = If;
 exports.MethodHeading = MethodHeading;

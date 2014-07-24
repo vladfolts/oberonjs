@@ -56,6 +56,15 @@ function makeForInit(ident, expression, assignment){
     return and(ident, assignment);
 }
 
+function makeArrayDimensions(constExpression){
+    return context(and(constExpression, repeat(and(",", constExpression))), 
+                   Context.ArrayDimensions);
+}
+
+function makeFormalArray(){
+    return and("ARRAY", "OF");
+}
+
 exports.language = {
     grammar: Grammar.make(
         makeIdentdef,
@@ -64,12 +73,16 @@ exports.language = {
         makeProcedureDeclaration,
         makeFieldList,
         makeForInit,
+        makeArrayDimensions,
+        makeFormalArray,
         {
             constDeclaration:   Context.ConstDecl, 
             typeDeclaration:    Context.TypeDeclaration,
             recordDecl:         ObContext.RecordDecl,
             variableDeclaration: ObContext.VariableDeclaration,
+            ArrayDecl:          Context.ArrayDecl,
             Factor:             Context.Factor,
+            FormalParameters:   Context.FormalParameters,
             Term:               Context.Term,
             AddOperator:        Context.AddOperator,
             MulOperator:        Context.MulOperator,

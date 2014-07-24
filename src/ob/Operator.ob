@@ -799,7 +799,7 @@ PROCEDURE CastToUint8.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExp
 END CastToUint8.make;
 
 BEGIN
-    openArrayChar := Types.makeArray("", "", Types.basic.ch, Types.openArrayLength);
+    openArrayChar := Types.makeArray("", Types.basic.ch, Types.openArrayLength);
 
     NEW(castToUint8);
     castOperations.castToUint8 := castToUint8;

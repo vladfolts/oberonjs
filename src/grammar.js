@@ -28,6 +28,8 @@ function make(makeIdentdef,
               makeProcedureDeclaration,
               makeFieldList,
               makeForInit,
+              makeArrayDimensions,
+              makeFormalArray,
               contexts,
               reservedWords
               ){
@@ -158,9 +160,8 @@ var fieldList = makeFieldList(
 var fieldListSequence = and(fieldList, repeat(and(";", fieldList)));
 
 var arrayType = and("ARRAY", 
-                    context(and(context(and(constExpression, repeat(and(",", constExpression))), 
-                                Context.ArrayDimensions)
-                  , "OF", type), Context.ArrayDecl));
+                    context(and(makeArrayDimensions(constExpression), "OF", type), 
+                            contexts.ArrayDecl));
 
 var baseType = context(qualident, Context.BaseType);
 var recordType = and("RECORD", context(and(optional(and("(", baseType, ")")), optional(fieldListSequence)
@@ -168,7 +169,7 @@ var recordType = and("RECORD", context(and(optional(and("(", baseType, ")")), op
 
 var pointerType = and("POINTER", "TO", context(type, Context.PointerDecl));
 
-var formalType = context(and(repeat(and("ARRAY", "OF")), qualident), Context.FormalType);
+var formalType = context(and(repeat(makeFormalArray()), qualident), Context.FormalType);
 var fpSection = and(optional(literal("VAR")), ident, repeat(and(",", ident)), ":", formalType);
 var formalParameters = and(
           "("
@@ -177,7 +178,7 @@ var formalParameters = and(
         , optional(and(":", qualident)));
 
 var procedureType = and("PROCEDURE"
-                      , context(optional(formalParameters), Context.FormalParameters)
+                      , context(optional(formalParameters), contexts.FormalParameters)
                         );
 var strucType = or(arrayType, recordType, pointerType, procedureType);
 var typeDeclaration = context(and(identdef, "=", strucType), contexts.typeDeclaration);

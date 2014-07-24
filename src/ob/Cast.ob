@@ -24,7 +24,7 @@ TYPE
 
 VAR
     (*workaround recursive usage*)
-    areTypesExactlyMatch: PROCEDURE (t1: Types.PType; t2: Types.PType): BOOLEAN;
+    areTypesExactlyMatch*: PROCEDURE (t1: Types.PType; t2: Types.PType): BOOLEAN;
     doNothing*: POINTER TO CastOpDoNothing;
 (*
 PROCEDURE CastOpDoNothing.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;

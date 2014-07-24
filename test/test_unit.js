@@ -177,13 +177,16 @@ return {
     pass("T = ARRAY 10 OF ARRAY 5 OF INTEGER",
          "T = ARRAY 10, 5 OF INTEGER")
     ),
-"PROCEDURE type declaration": testWithGrammar(
-    grammar.typeDeclaration,
+"PROCEDURE type declaration": testWithContext(
+    context(grammar.typeDeclaration, "TYPE R = RECORD END; A = ARRAY 3 OF INTEGER;"),
     pass("T = PROCEDURE",
          "T = PROCEDURE()",
          "T = PROCEDURE(a: INTEGER)",
          "T = PROCEDURE(a: INTEGER; b: BOOLEAN)",
-         "T = PROCEDURE(): T")
+         "T = PROCEDURE(): T"),
+    fail(["T = PROCEDURE(): A;", "the result type of a procedure cannot be an ARRAY"],
+         ["T = PROCEDURE(): R;", "the result type of a procedure cannot be a RECORD"]
+        )
     ),
 "POINTER declaration": testWithGrammar(
     grammar.typeDeclaration,

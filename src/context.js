@@ -483,8 +483,7 @@ exports.FormalType = HandleSymbolAsType.extend({
     },
     setType: function(type){           
         for(var i = 0; i < this.__arrayDimension; ++i)
-            type = Type.makeArray("ARRAY OF " + Type.typeName(type),
-                                  undefined,
+            type = Type.makeArray(undefined,
                                   type,
                                   0);
         this.parent().setType(type);
@@ -534,14 +533,17 @@ exports.FormalParameters = ChainedContext.extend({
     handleQIdent: function(q){
         var s = getQIdSymbolAndScope(this, q);
         var resultType = unwrapType(s.symbol().info());
-        if (resultType instanceof Type.Array)
-            throw new Errors.Error("the result type of a procedure cannot be an ARRAY");
-        if (resultType instanceof Type.Record)
-            throw new Errors.Error("the result type of a procedure cannot be a RECORD");
+        this._checkResultType(resultType);
         this.__result = resultType;
     },
     endParse: function(){
         this.__type.define(this.__arguments, this.__result);
+    },
+    _checkResultType: function(type){
+        if (type instanceof Type.Array)
+            throw new Errors.Error("the result type of a procedure cannot be an ARRAY");
+        if (type instanceof Type.Record)
+            throw new Errors.Error("the result type of a procedure cannot be a RECORD");
     }
 });
 
@@ -749,16 +751,18 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
                 ? isCharArray ? rtl.makeCharArray(dimensions)
                               : rtl.makeArray(dimensions + ", " + initializer)
                 : undefined;
-            type = Type.makeArray("ARRAY OF " + Type.typeName(type),
-                                  arrayInit,
-                                  type,
-                                  length);
+            type = this._makeType(type, arrayInit, length);
         }
 
         this.__type = type;
     },
     isAnonymousDeclaration: function(){return true;},
-    endParse: function(){this.parent().setType(this.__type);}
+    endParse: function(){this.parent().setType(this.__type);},
+    _makeType: function(elementsType, init, length){
+        return Type.makeArray(init,
+                              elementsType,
+                              length);
+    }
 });
 
 exports.ArrayDimensions = ChainedContext.extend({
@@ -776,10 +780,13 @@ exports.ArrayDimensions = ChainedContext.extend({
             throw new Errors.Error("constant expression expected as ARRAY size");
         if (value.value <= 0)
             throw new Errors.Error("array size must be greater than 0, got " + value.value);
-        this.__dimensions.push(value.value);
+        this._addDimension(value.value);
     },
     endParse: function(){
         this.parent().handleDimensions(this.__dimensions);
+    },
+    _addDimension: function(size){
+        this.__dimensions.push(size);
     }
 });
 

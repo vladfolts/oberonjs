@@ -1,0 +1,45 @@
+MODULE EberonTypes;
+IMPORT Types;
+
+CONST
+    dynamicArrayLength* = Types.openArrayLength - 1;
+
+TYPE
+    Array = RECORD(Types.Array)
+    END;
+    PArray = POINTER TO Array;
+
+PROCEDURE isDynamicArray*(VAR type: Types.Type): BOOLEAN;
+    RETURN (type IS Types.Array) & (Types.arrayLength(type) = dynamicArrayLength)
+END isDynamicArray;
+
+PROCEDURE arrayDimensionDescription*(dim: INTEGER): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF dim = dynamicArrayLength THEN
+        result := "*";
+    ELSE
+        result := Types.arrayDimensionDescription(dim);
+    END;
+    RETURN result
+END arrayDimensionDescription;
+
+PROCEDURE Array.description(): STRING;
+    RETURN Types.arrayDescription(SELF, arrayDimensionDescription)
+END Array.description;
+
+PROCEDURE makeArray*(
+    initializer: STRING;
+    elementsType: Types.PType;
+    len: INTEGER (* see openArrayLength *)
+    ): PArray;
+VAR
+    result: PArray;
+BEGIN
+    NEW(result);
+    Types.initArray(initializer, elementsType, len, result^);
+    RETURN result
+END makeArray;
+
+END EberonTypes.

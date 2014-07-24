@@ -1,5 +1,5 @@
 MODULE EberonCast;
-IMPORT Cast, EberonString, Types;
+IMPORT Cast, EberonString, EberonTypes, Types;
 
 PROCEDURE isOpenCharArray(type: Types.PType): BOOLEAN;
 VAR
@@ -19,6 +19,14 @@ BEGIN
     IF   ((from = EberonString.string) & ((to IS Types.PString) OR isOpenCharArray(to))
       OR ((from IS Types.PString) & (to = EberonString.string))) THEN
         IF toVar THEN 
+            result := Cast.errVarParameter;
+        ELSE
+            result := Cast.errNo;
+        END;
+    ELSIF (from IS Types.PArray) & EberonTypes.isDynamicArray(to^) 
+        & Cast.areTypesExactlyMatch(Types.arrayElementsType(from^), 
+                                    Types.arrayElementsType(to^(Types.Array))) THEN
+        IF toVar & ~EberonTypes.isDynamicArray(from^) THEN
             result := Cast.errVarParameter;
         ELSE
             result := Cast.errNo;

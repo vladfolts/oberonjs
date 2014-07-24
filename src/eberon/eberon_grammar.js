@@ -17,7 +17,7 @@ var required = Parser.required;
 function makeProcedureHeading(ident, identdef, formalParameters){
     return and("PROCEDURE",
                context(and(optional(and(ident, ".")), identdef), EbContext.ProcOrMethodId),
-               context(optional(formalParameters), Context.FormalParametersProcDecl)
+               context(optional(formalParameters), EbContext.FormalParametersProcDecl)
                );
 }
 
@@ -59,7 +59,7 @@ function makeMethodHeading(identdef, formalParameters){
     return context(
         and("PROCEDURE",
             identdef,
-            context(optional(formalParameters), Context.FormalParametersProcDecl)),
+            context(optional(formalParameters), EbContext.FormalParametersProcDecl)),
         EbContext.MethodHeading);
 }
 
@@ -75,6 +75,16 @@ function makeForInit(ident, expression, assignment){
               and(ident, assignment));
 }
 
+function makeArrayDimensions(constExpression){
+    var oneDimension = or("*", constExpression);
+    return context(and(oneDimension, repeat(and(",", oneDimension))), 
+                   EbContext.ArrayDimensions);
+}
+
+function makeFormalArray(){
+    return and("ARRAY", optional("*"), "OF");
+}
+
 exports.language = {
     grammar: Grammar.make(
         makeIdentdef,
@@ -83,12 +93,16 @@ exports.language = {
         makeProcedureDeclaration,
         makeFieldList, 
         makeForInit,
+        makeArrayDimensions,
+        makeFormalArray,
         { 
             constDeclaration:   EbContext.ConstDecl, 
             typeDeclaration:    EbContext.TypeDeclaration,
             recordDecl:         EbContext.RecordDecl,
             variableDeclaration: EbContext.VariableDeclaration,
+            ArrayDecl:          EbContext.ArrayDecl,
             Factor:             EbContext.Factor,
+            FormalParameters:   EbContext.FormalParameters,
             Term:               EbContext.Term,
             AddOperator:        EbContext.AddOperator,
             MulOperator:        EbContext.MulOperator,

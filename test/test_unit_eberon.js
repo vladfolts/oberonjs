@@ -713,5 +713,53 @@ exports.suite = {
              ["PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", 
               "cannot assign to non-VAR formal parameter"]
             )
-    )
+    ),
+    "dynamic ARRAY": {
+        "declaration": testWithContext(
+            context(grammar.declarationSequence, ""),
+            pass("TYPE A = ARRAY * OF INTEGER;",
+                 "TYPE A = ARRAY * OF ARRAY * OF INTEGER;",
+                 "TYPE A = ARRAY *, * OF INTEGER;",
+                 "TYPE A = ARRAY 3, * OF INTEGER;",
+                 "TYPE A = ARRAY *, 3 OF INTEGER;",
+                 "TYPE A = ARRAY * OF INTEGER; P = PROCEDURE(): A;",
+                 "VAR a: ARRAY * OF INTEGER;",
+                 "PROCEDURE p(VAR a: ARRAY * OF INTEGER);END p;",
+                 "PROCEDURE p(VAR a: ARRAY * OF ARRAY * OF INTEGER);END p;",
+                 "PROCEDURE p(VAR a: ARRAY OF ARRAY * OF INTEGER);END p;"
+                 ),
+            fail(["TYPE A = ARRAY OF INTEGER;", "not parsed"],
+                 ["TYPE P = PROCEDURE(): ARRAY OF INTEGER;", "';' expected"])
+        ),
+        "return": testWithContext(
+            context(grammar.declarationSequence, 
+                    "TYPE A = ARRAY * OF INTEGER; B = ARRAY * OF BOOLEAN;"
+                    + "VAR a: A; b: B;"),
+            pass("PROCEDURE p(): A; RETURN a END p;",
+                 "PROCEDURE p(): A; VAR static: ARRAY 3 OF INTEGER; RETURN static END p;"),
+            fail(["PROCEDURE p(): ARRAY OF INTEGER; RETURN a; END p;", "not parsed"],
+                 ["PROCEDURE p(): A; RETURN b; END p;", "RETURN 'ARRAY * OF INTEGER' expected, got 'ARRAY * OF BOOLEAN'"])
+        ),
+        "pass as non-VAR argument": testWithContext(
+            context(grammar.statement, 
+                    "TYPE A = ARRAY * OF INTEGER; B = ARRAY * OF BOOLEAN;"
+                    + "VAR a: A; b: B; aStatic: ARRAY 3 OF INTEGER;"
+                    + "PROCEDURE pa(a: A); END pa;"
+                    + "PROCEDURE pOpenA(a: ARRAY OF INTEGER); END pOpenA;"),
+            pass("pa(a)",
+                 "pa(aStatic)",
+                 "pOpenA(a)"),
+            fail(["pa(b)", "type mismatch for argument 1: 'ARRAY * OF BOOLEAN' cannot be converted to 'ARRAY * OF INTEGER'"])
+        ),
+        "pass as VAR argument": testWithContext(
+            context(grammar.statement, 
+                    "TYPE A = ARRAY * OF INTEGER; B = ARRAY * OF BOOLEAN;"
+                    + "VAR a: A; b: B; aStatic: ARRAY 3 OF INTEGER;"
+                    + "PROCEDURE paVar(VAR a: A); END paVar;"
+                    + "PROCEDURE paVarOpen(VAR a: ARRAY OF INTEGER); END paVarOpen;"),
+            pass("paVar(a)",
+                 "paVarOpen(a)"),
+            fail(["paVar(aStatic)", "type mismatch for argument 1: cannot pass 'ARRAY 3 OF INTEGER' as VAR parameter of type 'ARRAY * OF INTEGER'"])
+        )
+    }
 };
