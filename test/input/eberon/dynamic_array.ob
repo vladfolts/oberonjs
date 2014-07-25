@@ -1,0 +1,4 @@
+MODULE m;
+VAR
+    a: ARRAY * OF INTEGER;
+END m.

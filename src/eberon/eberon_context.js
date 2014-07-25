@@ -1113,6 +1113,11 @@ var ArrayDecl = Context.ArrayDecl.extend({
     init: function EberonContext$ArrayDecl(context){
         Context.ArrayDecl.prototype.init.call(this, context);
     },
+    _makeInit: function(type, dimensions, length){
+        if (length == EberonTypes.dynamicArrayLength)
+            return '[]';
+        return Context.ArrayDecl.prototype._makeInit.call(this, type, dimensions, length);
+    },
     _makeType: function(elementsType, init, length){
         return EberonTypes.makeArray(init, elementsType, length);
     }

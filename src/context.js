@@ -737,20 +737,14 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
         this.__dimensions = undefined;
     },
     handleDimensions: function(dimensions){this.__dimensions = dimensions;},
-    setType: function(type){
-        var initializer = type instanceof Type.Array || type instanceof Type.Record
-            ? "function(){return " + type.initializer(this) + ";}"
-            : type.initializer(this);
-        var isCharArray = (type == basicTypes.ch);
+    setType: function(elementsType){
+        var type = elementsType;
         var dimensions = "";
         for(var i = this.__dimensions.length; i-- ;){
             var length = this.__dimensions[i];
             dimensions = length + (dimensions.length ? ", " + dimensions : "");
-            var rtl = this.language().rtl;
-            var arrayInit = !i
-                ? isCharArray ? rtl.makeCharArray(dimensions)
-                              : rtl.makeArray(dimensions + ", " + initializer)
-                : undefined;
+            var arrayInit = i ? undefined
+                              : this._makeInit(elementsType, dimensions, length);
             type = this._makeType(type, arrayInit, length);
         }
 
@@ -758,6 +752,16 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
     },
     isAnonymousDeclaration: function(){return true;},
     endParse: function(){this.parent().setType(this.__type);},
+    _makeInit: function(type, dimensions, length){
+        var rtl = this.language().rtl;
+        if (type == basicTypes.ch)
+            return rtl.makeCharArray(dimensions);
+
+        var initializer = type instanceof Type.Array || type instanceof Type.Record
+            ? "function(){return " + type.initializer(this) + ";}"
+            : type.initializer(this);
+        return rtl.makeArray(dimensions + ", " + initializer);
+    },
     _makeType: function(elementsType, init, length){
         return Type.makeArray(init,
                               elementsType,
