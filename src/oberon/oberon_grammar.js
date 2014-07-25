@@ -83,6 +83,7 @@ exports.language = {
             ArrayDecl:          Context.ArrayDecl,
             Factor:             Context.Factor,
             FormalParameters:   Context.FormalParameters,
+            FormalType:         Context.FormalType,
             Term:               Context.Term,
             AddOperator:        Context.AddOperator,
             MulOperator:        Context.MulOperator,

@@ -103,6 +103,7 @@ exports.language = {
             ArrayDecl:          EbContext.ArrayDecl,
             Factor:             EbContext.Factor,
             FormalParameters:   EbContext.FormalParameters,
+            FormalType:         EbContext.FormalType,
             Term:               EbContext.Term,
             AddOperator:        EbContext.AddOperator,
             MulOperator:        EbContext.MulOperator,

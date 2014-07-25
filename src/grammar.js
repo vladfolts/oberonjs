@@ -169,8 +169,8 @@ var recordType = and("RECORD", context(and(optional(and("(", baseType, ")")), op
 
 var pointerType = and("POINTER", "TO", context(type, Context.PointerDecl));
 
-var formalType = context(and(repeat(makeFormalArray()), qualident), Context.FormalType);
-var fpSection = and(optional(literal("VAR")), ident, repeat(and(",", ident)), ":", formalType);
+var formalType = context(and(repeat(makeFormalArray()), qualident), contexts.FormalType);
+var fpSection = and(optional("VAR"), ident, repeat(and(",", ident)), ":", formalType);
 var formalParameters = and(
           "("
         , optional(context(and(fpSection, repeat(and(";", fpSection))), Context.ProcParams))

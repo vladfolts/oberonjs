@@ -2005,3 +2005,4 @@ exports.unwrapType = unwrapType;
 exports.IdentdefInfo = IdentdefInfo;
 exports.RecordField = RecordField;
 exports.RelationOps = RelationOps;
+exports.HandleSymbolAsType = HandleSymbolAsType;

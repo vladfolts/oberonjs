@@ -1118,9 +1118,27 @@ var ArrayDecl = Context.ArrayDecl.extend({
     }
 });
 
+function assertArgumentIsNotNonVarDynamicArray(msg){
+    if (msg instanceof Context.AddArgumentMsg){
+        var arg = msg.arg;
+        if (!arg.isVar){
+            var type = arg.type;
+            while (type instanceof Type.Array){
+                if (EberonTypes.isDynamicArray(type))
+                    throw new Errors.Error("dynamic array has no use as non-VAR argument '" + msg.name + "'");
+                type = Type.arrayElementsType(type);
+            }
+        }
+    }
+}
+
 var FormalParameters = Context.FormalParameters.extend({
     init: function EberonContext$FormalParameters(context){
         Context.FormalParameters.prototype.init.call(this, context);
+    },
+    handleMessage: function(msg){
+        assertArgumentIsNotNonVarDynamicArray(msg);
+        return Context.FormalParameters.prototype.handleMessage.call(this, msg);
     },
     _checkResultType: function(type){
         if (EberonTypes.isDynamicArray(type))
@@ -1129,9 +1147,37 @@ var FormalParameters = Context.FormalParameters.extend({
     }
 });
 
+var FormalType = Context.HandleSymbolAsType.extend({
+    init: function EberonContext$FormalType(context){
+        Context.HandleSymbolAsType.prototype.init.call(this, context);
+        this.__arrayDimensions = [];
+        this.__dynamicDimension = false;
+    },
+    setType: function(type){           
+        for(var i = this.__arrayDimensions.length; i--;){
+            var length = this.__arrayDimensions[i] ? EberonTypes.dynamicArrayLength 
+                                                  : Type.openArrayLength;
+            type = EberonTypes.makeArray(undefined, type, length);
+        }
+        this.parent().setType(type);
+    },
+    handleLiteral: function(s){
+        if (s == "*")
+            this.__dynamicDimension = true;
+        else if ( s == "OF"){
+            this.__arrayDimensions.push(this.__dynamicDimension);
+            this.__dynamicDimension = false;
+        }
+    }
+});
+
 var FormalParametersProcDecl = Context.FormalParametersProcDecl.extend({
     init: function EberonContext$FormalParametersProcDecl(context){
         Context.FormalParametersProcDecl.prototype.init.call(this, context);
+    },
+    handleMessage: function(msg){
+        assertArgumentIsNotNonVarDynamicArray(msg);
+        return Context.FormalParametersProcDecl.prototype.handleMessage.call(this, msg);
     },
     _checkResultType: function(type){
         if (EberonTypes.isDynamicArray(type))
@@ -1163,6 +1209,7 @@ exports.ExpressionProcedureCall = ExpressionProcedureCall;
 exports.For = For;
 exports.FormalParameters = FormalParameters;
 exports.FormalParametersProcDecl = FormalParametersProcDecl;
+exports.FormalType = FormalType;
 exports.Identdef = Identdef;
 exports.If = If;
 exports.MethodHeading = MethodHeading;

@@ -716,20 +716,30 @@ exports.suite = {
     ),
     "dynamic ARRAY": {
         "declaration": testWithContext(
-            context(grammar.declarationSequence, ""),
+            context(grammar.declarationSequence, 
+                    "TYPE DA = ARRAY * OF INTEGER;"),
             pass("TYPE A = ARRAY * OF INTEGER;",
                  "TYPE A = ARRAY * OF ARRAY * OF INTEGER;",
                  "TYPE A = ARRAY *, * OF INTEGER;",
                  "TYPE A = ARRAY 3, * OF INTEGER;",
                  "TYPE A = ARRAY *, 3 OF INTEGER;",
-                 "TYPE A = ARRAY * OF INTEGER; P = PROCEDURE(): A;",
+                 "TYPE P = PROCEDURE(): DA;",
+                 "TYPE P = PROCEDURE(VAR a: DA): DA;",
+                 "TYPE P = PROCEDURE(VAR a: ARRAY * OF INTEGER): DA;",
                  "VAR a: ARRAY * OF INTEGER;",
                  "PROCEDURE p(VAR a: ARRAY * OF INTEGER);END p;",
                  "PROCEDURE p(VAR a: ARRAY * OF ARRAY * OF INTEGER);END p;",
                  "PROCEDURE p(VAR a: ARRAY OF ARRAY * OF INTEGER);END p;"
                  ),
             fail(["TYPE A = ARRAY OF INTEGER;", "not parsed"],
-                 ["TYPE P = PROCEDURE(): ARRAY OF INTEGER;", "';' expected"])
+                 ["TYPE P = PROCEDURE(): ARRAY OF INTEGER;", "';' expected"],
+                 ["TYPE P = PROCEDURE(a: DA);", "dynamic array has no use as non-VAR argument 'a'"],
+                 ["TYPE P = PROCEDURE(a: ARRAY * OF INTEGER);", "dynamic array has no use as non-VAR argument 'a'"],
+                 ["PROCEDURE p(a: DA);END p;", "dynamic array has no use as non-VAR argument 'a'"],
+                 ["PROCEDURE p(a: ARRAY * OF INTEGER);END p;", "dynamic array has no use as non-VAR argument 'a'"],
+                 ["PROCEDURE p(a: ARRAY OF ARRAY * OF INTEGER);END p;", "dynamic array has no use as non-VAR argument 'a'"],
+                 ["PROCEDURE p(a: ARRAY * OF ARRAY OF INTEGER);END p;", "dynamic array has no use as non-VAR argument 'a'"]
+                 )
         ),
         "return": testWithContext(
             context(grammar.declarationSequence, 
@@ -739,17 +749,6 @@ exports.suite = {
                  "PROCEDURE p(): A; VAR static: ARRAY 3 OF INTEGER; RETURN static END p;"),
             fail(["PROCEDURE p(): ARRAY OF INTEGER; RETURN a; END p;", "not parsed"],
                  ["PROCEDURE p(): A; RETURN b; END p;", "RETURN 'ARRAY * OF INTEGER' expected, got 'ARRAY * OF BOOLEAN'"])
-        ),
-        "pass as non-VAR argument": testWithContext(
-            context(grammar.statement, 
-                    "TYPE A = ARRAY * OF INTEGER; B = ARRAY * OF BOOLEAN;"
-                    + "VAR a: A; b: B; aStatic: ARRAY 3 OF INTEGER;"
-                    + "PROCEDURE pa(a: A); END pa;"
-                    + "PROCEDURE pOpenA(a: ARRAY OF INTEGER); END pOpenA;"),
-            pass("pa(a)",
-                 "pa(aStatic)",
-                 "pOpenA(a)"),
-            fail(["pa(b)", "type mismatch for argument 1: 'ARRAY * OF BOOLEAN' cannot be converted to 'ARRAY * OF INTEGER'"])
         ),
         "pass as VAR argument": testWithContext(
             context(grammar.statement, 
