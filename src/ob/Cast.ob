@@ -105,7 +105,7 @@ BEGIN
     IF t1 = t2 THEN
         result := TRUE;
     ELSIF (t1 IS Types.PArray) & (t2 IS Types.PArray) THEN
-        result := (Types.arrayLength(t1^) = Types.arrayLength(t2^)) 
+        result := (t1.length() = t2.length()) 
                 & (areTypesMatch(Types.arrayElementsType(t1^), 
                                  Types.arrayElementsType(t2^)));
     ELSIF (t1 IS Types.PPointer) & (t2 IS Types.PPointer) THEN
@@ -163,8 +163,8 @@ BEGIN
             result := errNo;
         END;
     ELSIF (from IS Types.PArray) & (to IS Types.PArray) THEN
-        IF ((Types.arrayLength(from^) = Types.arrayLength(to^))
-                OR (Types.arrayLength(to^) = Types.openArrayLength))
+        IF ((from.length() = to.length())
+                OR (to.length() = Types.openArrayLength))
             & areTypesExactlyMatch(Types.arrayElementsType(from^), 
                                    Types.arrayElementsType(to^)) THEN
             result := errNo;

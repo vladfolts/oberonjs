@@ -472,7 +472,6 @@ VAR
     designator: Code.PDesignator;
     info: Types.PId;
     leftCode, rightCode: STRING;
-    leftType, rightType: Types.PType;
     isArray: BOOLEAN;
     castOperation: Cast.PCastOp;
     castExp: Code.PExpression;
@@ -481,10 +480,11 @@ VAR
 
     PROCEDURE assignArrayFromString(a: Types.Array; s: Types.String): STRING;
     BEGIN
-        IF Types.arrayLength(a) = Types.openArrayLength THEN
+        len <- a.length();
+        IF len = Types.openArrayLength THEN
             Errors.raise("string cannot be assigned to open " + a.description());
-        ELSIF Types.stringLen(s) > Types.arrayLength(a) THEN
-            Errors.raise(String.fromInt(Types.arrayLength(a)) 
+        ELSIF Types.stringLen(s) > len THEN
+            Errors.raise(String.fromInt(len) 
                          + "-character ARRAY is too small for "
                          + String.fromInt(Types.stringLen(s))
                          + "-character string");
@@ -501,22 +501,21 @@ BEGIN
 
     leftCode := left.lval();
     rightCode := right.code();
-    leftType := left.type();
-    rightType := right.type();
+    leftType <- left.type();
+    rightType <- right.type();
 
     isArray := leftType IS Types.PArray;
     IF isArray
         & (Types.arrayElementsType(leftType(Types.PArray)^) = Types.basic.ch)
         & (rightType IS Types.PString) THEN
-        result := assignArrayFromString(leftType(Types.PArray)^, rightType(Types.PString)^);
+        result := assignArrayFromString(leftType(Types.PArray)^, rightType^);
     ELSE
         IF cx.types.implicitCast(rightType, leftType, FALSE, castOperations, castOperation)
             # Cast.errNo THEN;
             Errors.raise("type mismatch: '" + leftCode + "' is '" + leftType.description()
                          + "' and cannot be assigned to '" + rightType.description() + "' expression");
         END;
-        IF isArray & (rightType IS Types.PArray) 
-            & (Types.arrayLength(leftType(Types.PArray)^) = Types.openArrayLength) THEN
+        IF (leftType IS Types.POpenArray) & (rightType IS Types.PArray) THEN
             Errors.raise("'" + leftCode + "' is open '" + leftType.description() + "' and cannot be assigned");
         END;
         IF isArray OR (rightType IS Types.PRecord) THEN
@@ -799,7 +798,7 @@ PROCEDURE CastToUint8.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExp
 END CastToUint8.make;
 
 BEGIN
-    openArrayChar := Types.makeArray("", Types.basic.ch, Types.openArrayLength);
+    openArrayChar := Types.makeOpenArray(Types.basic.ch);
 
     NEW(castToUint8);
     castOperations.castToUint8 := castToUint8;

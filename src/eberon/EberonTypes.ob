@@ -1,45 +1,45 @@
 MODULE EberonTypes;
-IMPORT Types;
+IMPORT Context, Types;
 
 CONST
     dynamicArrayLength* = Types.openArrayLength - 1;
 
 TYPE
-    Array = RECORD(Types.Array)
+    DynamicArray* = RECORD(Types.Array)
     END;
-    PArray = POINTER TO Array;
+    PDynamicArray* = POINTER TO DynamicArray;
 
-PROCEDURE isDynamicArray*(VAR type: Types.Type): BOOLEAN;
-    RETURN (type IS Types.Array) & (Types.arrayLength(type) = dynamicArrayLength)
-END isDynamicArray;
-
-PROCEDURE arrayDimensionDescription*(dim: INTEGER): STRING;
+PROCEDURE arrayDimensionDescription*(VAR a: Types.Array): STRING;
 VAR
     result: STRING;
 BEGIN
-    IF dim = dynamicArrayLength THEN
+    IF a IS DynamicArray THEN
         result := "*";
     ELSE
-        result := Types.arrayDimensionDescription(dim);
+        result := Types.arrayDimensionDescription(a);
     END;
     RETURN result
 END arrayDimensionDescription;
 
-PROCEDURE Array.description(): STRING;
-    RETURN Types.arrayDescription(SELF, arrayDimensionDescription)
-END Array.description;
+PROCEDURE DynamicArray.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+    RETURN "[]"
+END DynamicArray.initializer;
 
-PROCEDURE makeArray*(
-    initializer: STRING;
-    elementsType: Types.PType;
-    len: INTEGER (* see openArrayLength *)
-    ): PArray;
+PROCEDURE DynamicArray.length(): INTEGER;
+    RETURN Types.openArrayLength
+END DynamicArray.length;
+
+PROCEDURE DynamicArray.description(): STRING;
+    RETURN Types.arrayDescription(SELF, arrayDimensionDescription)
+END DynamicArray.description;
+
+PROCEDURE makeDynamicArray*(elementsType: Types.PType): PDynamicArray;
 VAR
-    result: PArray;
+    result: PDynamicArray;
 BEGIN
     NEW(result);
-    Types.initArray(initializer, elementsType, len, result^);
+    Types.initArray(elementsType, result^);
     RETURN result
-END makeArray;
+END makeDynamicArray;
 
 END EberonTypes.

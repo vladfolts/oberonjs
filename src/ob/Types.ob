@@ -88,12 +88,20 @@ TYPE
     END;
 
     Array* = RECORD(NamedType)
+        PROCEDURE length*(): INTEGER;
+
+        elementsType: PType
+    END;
+    PArray* = POINTER TO Array;
+
+    OpenArray* = RECORD(Array)
+    END;
+    POpenArray* = POINTER TO OpenArray;
+
+    StaticArray* = RECORD(Array)
         mInitializer: STRING;
-        elementsType: PType;
         len: INTEGER
     END;
-
-    PArray* = POINTER TO Array;
 
     PRecord* = POINTER TO Record;
 
@@ -161,7 +169,7 @@ TYPE
 
     PModule* = POINTER TO Module;
 
-    ArrayDimensionDescriptionCallback = PROCEDURE(dim: INTEGER): STRING;
+    ArrayDimensionDescriptionCallback = PROCEDURE(VAR a: Array): STRING;
 
 VAR
     basic*: RECORD
@@ -463,29 +471,29 @@ PROCEDURE Pointer.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "null"
 END Pointer.initializer;
 
-PROCEDURE foldArrayDimensions(a: Array; dimToStr: ArrayDimensionDescriptionCallback; VAR sizes, of: STRING);
+PROCEDURE foldArrayDimensions(VAR a: Array; dimToStr: ArrayDimensionDescriptionCallback; VAR sizes, of: STRING);
 BEGIN  
     elementsType <- a.elementsType;
-    IF (a.len # openArrayLength) & (elementsType IS PArray) THEN
+    IF ~(a IS OpenArray) & (elementsType IS PArray) THEN
         foldArrayDimensions(elementsType^, dimToStr, sizes, of);
-        sizes := dimToStr(a.len) + ", " + sizes;
+        sizes := dimToStr(a) + ", " + sizes;
     ELSE
-        sizes := dimToStr(a.len);
+        sizes := dimToStr(a);
         of := a.elementsType.description();
     END
 END foldArrayDimensions;
 
-PROCEDURE arrayDimensionDescription*(dim: INTEGER): STRING;
+PROCEDURE arrayDimensionDescription*(VAR a: Array): STRING;
 VAR
     result: STRING;
 BEGIN
-    IF dim # openArrayLength THEN
-        result := Str.fromInt(dim);
+    IF ~(a IS OpenArray) THEN
+        result := Str.fromInt(a.length());
     END;
     RETURN result
 END arrayDimensionDescription;
 
-PROCEDURE arrayDescription*(a: Array; dimToStr: ArrayDimensionDescriptionCallback): STRING;
+PROCEDURE arrayDescription*(VAR a: Array; dimToStr: ArrayDimensionDescriptionCallback): STRING;
 VAR
     result: STRING;
     sizes, of: STRING;
@@ -506,17 +514,25 @@ PROCEDURE Array.description(): STRING;
     RETURN arrayDescription(SELF, arrayDimensionDescription)
 END Array.description;
 
-PROCEDURE Array.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+PROCEDURE OpenArray.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+    RETURN ""
+END OpenArray.initializer;
+
+PROCEDURE StaticArray.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN SELF.mInitializer
-END Array.initializer;
+END StaticArray.initializer;
 
 PROCEDURE arrayElementsType*(a: Array): PType;
     RETURN a.elementsType
 END arrayElementsType;
 
-PROCEDURE arrayLength*(a: Array): INTEGER;
-    RETURN a.len
-END arrayLength;
+PROCEDURE OpenArray.length(): INTEGER;
+    RETURN openArrayLength
+END OpenArray.length;
+
+PROCEDURE StaticArray.length(): INTEGER;
+    RETURN SELF.len
+END StaticArray.length;
 
 PROCEDURE Procedure.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "null"
@@ -576,31 +592,34 @@ BEGIN
     RETURN result
 END makeString;
 
-PROCEDURE initArray*(
-    initializer: STRING;
-    elementsType: PType;
-    len: INTEGER; (* see openArrayLength *)
-    VAR result: Array
-    );
+PROCEDURE initArray*(elementsType: PType; VAR result: Array);
 BEGIN
-    (*result.name := name;*)
-    result.mInitializer := initializer;
     result.elementsType := elementsType;
-    result.len := len;
 END initArray;
 
-PROCEDURE makeArray*(
+PROCEDURE makeOpenArray*(elementsType: PType): PArray;
+VAR
+    result: POpenArray;
+BEGIN
+    NEW(result);
+    initArray(elementsType, result^);
+    RETURN result
+END makeOpenArray;
+
+PROCEDURE makeStaticArray*(
     initializer: STRING;
     elementsType: PType;
     len: INTEGER (* see openArrayLength *)
     ): PArray;
 VAR
-    result: PArray;
+    result: POINTER TO StaticArray;
 BEGIN
     NEW(result);
-    initArray(initializer, elementsType, len, result^);
+    initArray(elementsType, result^);
+    result.mInitializer := initializer;
+    result.len := len;
     RETURN result
-END makeArray;
+END makeStaticArray;
 
 PROCEDURE makePointer*(name: STRING; base: PTypeId): PPointer;
 VAR

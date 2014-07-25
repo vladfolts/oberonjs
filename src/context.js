@@ -379,7 +379,7 @@ exports.Designator = ChainedContext.extend({
         if (!isArray && !(type instanceof Type.String))
             throw new Errors.Error("ARRAY or string expected, got '" + type.description() + "'");
 
-        var length = isArray ? Type.arrayLength(type) : Type.stringLen(type);
+        var length = isArray ? type.length() : Type.stringLen(type);
         if (!isArray && !length)
             throw new Errors.Error("cannot index empty string" );
         var indexType = isArray ? Type.arrayElementsType(type) : basicTypes.ch;
@@ -483,9 +483,7 @@ exports.FormalType = HandleSymbolAsType.extend({
     },
     setType: function(type){           
         for(var i = 0; i < this.__arrayDimension; ++i)
-            type = Type.makeArray(undefined,
-                                  type,
-                                  0);
+            type = Type.makeOpenArray(type);
         this.parent().setType(type);
 
     },
@@ -763,9 +761,7 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
         return rtl.makeArray(dimensions + ", " + initializer);
     },
     _makeType: function(elementsType, init, length){
-        return Type.makeArray(init,
-                              elementsType,
-                              length);
+        return Type.makeStaticArray(init, elementsType, length);
     }
 });
 

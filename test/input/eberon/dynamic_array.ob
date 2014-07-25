@@ -1,4 +1,18 @@
 MODULE m;
+TYPE
+    T = RECORD
+        a: ARRAY * OF INTEGER
+    END;
 VAR
     a: ARRAY * OF INTEGER;
+    r: T;
+
+PROCEDURE assignDynamicArrayFromStatic();
+VAR 
+    static: ARRAY 3 OF INTEGER;
+    dynamic: ARRAY * OF INTEGER;
+BEGIN
+    dynamic := static;
+END assignDynamicArrayFromStatic;
+
 END m.

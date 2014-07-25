@@ -284,7 +284,7 @@ var InPlaceVariableInit = Context.Chained.extend({
             this._code += this.language().rtl.clone(e.code());
         }
         else if (type instanceof Type.Array){
-            if (Type.arrayLength(type) == Type.openArrayLength)
+            if (type.length() == Type.openArrayLength)
                 throw new Errors.Error("cannot initialize variable '" + this.__id + "' with open array");
             this._code += this.language().rtl.clone(e.code());
         }
@@ -1119,7 +1119,9 @@ var ArrayDecl = Context.ArrayDecl.extend({
         return Context.ArrayDecl.prototype._makeInit.call(this, type, dimensions, length);
     },
     _makeType: function(elementsType, init, length){
-        return EberonTypes.makeArray(init, elementsType, length);
+        return length == EberonTypes.dynamicArrayLength
+            ? EberonTypes.makeDynamicArray(elementsType)
+            : Type.makeStaticArray(init, elementsType, length);
     }
 });
 
@@ -1129,7 +1131,7 @@ function assertArgumentIsNotNonVarDynamicArray(msg){
         if (!arg.isVar){
             var type = arg.type;
             while (type instanceof Type.Array){
-                if (EberonTypes.isDynamicArray(type))
+                if (type instanceof EberonTypes.DynamicArray)
                     throw new Errors.Error("dynamic array has no use as non-VAR argument '" + msg.name + "'");
                 type = Type.arrayElementsType(type);
             }
@@ -1146,7 +1148,7 @@ var FormalParameters = Context.FormalParameters.extend({
         return Context.FormalParameters.prototype.handleMessage.call(this, msg);
     },
     _checkResultType: function(type){
-        if (EberonTypes.isDynamicArray(type))
+        if (type instanceof EberonTypes.DynamicArray)
             return;
         Context.FormalParameters.prototype._checkResultType.call(this, type);
     }
@@ -1160,9 +1162,9 @@ var FormalType = Context.HandleSymbolAsType.extend({
     },
     setType: function(type){           
         for(var i = this.__arrayDimensions.length; i--;){
-            var length = this.__arrayDimensions[i] ? EberonTypes.dynamicArrayLength 
-                                                  : Type.openArrayLength;
-            type = EberonTypes.makeArray(undefined, type, length);
+            type = this.__arrayDimensions[i] 
+                ? EberonTypes.makeDynamicArray(type)
+                : Type.makeOpenArray(type);
         }
         this.parent().setType(type);
     },
@@ -1185,7 +1187,7 @@ var FormalParametersProcDecl = Context.FormalParametersProcDecl.extend({
         return Context.FormalParametersProcDecl.prototype.handleMessage.call(this, msg);
     },
     _checkResultType: function(type){
-        if (EberonTypes.isDynamicArray(type))
+        if (type instanceof EberonTypes.DynamicArray)
             return;
         Context.FormalParametersProcDecl.prototype._checkResultType.call(this, type);
     }

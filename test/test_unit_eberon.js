@@ -759,6 +759,19 @@ exports.suite = {
             pass("paVar(a)",
                  "paVarOpen(a)"),
             fail(["paVar(aStatic)", "type mismatch for argument 1: cannot pass 'ARRAY 3 OF INTEGER' as VAR parameter of type 'ARRAY * OF INTEGER'"])
+        ),
+        "assign": testWithContext(
+            context(grammar.statement, 
+                    "VAR stat: ARRAY 3 OF INTEGER; dynamic: ARRAY * OF INTEGER;"),
+            pass("dynamic := stat"),
+            fail(["stat := dynamic", "type mismatch: 'stat' is 'ARRAY 3 OF INTEGER' and cannot be assigned to 'ARRAY * OF INTEGER' expression"])
+        ),
+        "indexing": testWithContext(
+            context(grammar.expression, 
+                    "VAR a: ARRAY * OF INTEGER;"),
+            pass("a[0]", "a[1]"),
+            fail(["a[-1]", "index is negative: -1"], 
+                 ["a[-2]", "index is negative: -2"])
         )
     }
 };
