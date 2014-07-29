@@ -985,7 +985,7 @@ var OperatorScopes = Class.extend({
         if (this.__scope)
             this.__context.popScope();
         this.__scope = EberonScope.makeOperator(
-            this.__context.parent().currentScope(),
+            this.__context.currentScope(),
             this.__context.language().stdSymbols);
         this.__context.pushScope(this.__scope);
 

@@ -482,6 +482,8 @@ exports.suite = {
               "'v' already declared in procedure scope"],
              ["PROCEDURE p(); BEGIN i <- 0; IF FALSE THEN i <- 0; END; END p;",
               "'i' already declared in procedure scope"],
+             ["PROCEDURE p(); BEGIN i <- 0; IF TRUE THEN IF TRUE THEN i <- 0; END; END; END p;",
+              "'i' already declared in procedure scope"],
              ["PROCEDURE p(); BEGIN WHILE FALSE DO i <- 0; WHILE FALSE DO i <- 0; END; END; END p;",
               "'i' already declared in operator scope"]
             )

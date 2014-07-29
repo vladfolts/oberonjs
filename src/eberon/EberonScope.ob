@@ -4,6 +4,7 @@ TYPE
     Operator = RECORD(Scope.Type)
         parent: Scope.PType
     END;
+    POperator = POINTER TO Operator;
 
 PROCEDURE Operator.name(): STRING;
     RETURN "operator"
@@ -12,9 +13,19 @@ END Operator.name;
 PROCEDURE Operator.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
 BEGIN
     id <- s.id();
-    found <- SELF.parent.findSymbol(id);
-    IF found # NIL THEN
-        Errors.raise("'" + id + "' already declared in " + found.scope().name() + " scope");
+    parent <- SELF.parent;
+    WHILE parent # NIL DO
+        found <- parent.findSymbol(id);
+        IF found # NIL THEN
+            Errors.raise("'" + id + "' already declared in " + found.scope().name() + " scope");
+        END;
+
+        next <- parent;
+        IF next IS POperator THEN
+            parent := next.parent;
+        ELSE
+            parent := NIL;
+        END;
     END;
     SUPER(s, exported);
 END Operator.addSymbol;
