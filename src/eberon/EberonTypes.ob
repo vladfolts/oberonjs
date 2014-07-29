@@ -1,9 +1,6 @@
 MODULE EberonTypes;
 IMPORT Context, Types;
 
-CONST
-    dynamicArrayLength* = Types.openArrayLength - 1;
-
 TYPE
     DynamicArray* = RECORD(Types.Array)
     END;
@@ -24,10 +21,6 @@ END arrayDimensionDescription;
 PROCEDURE DynamicArray.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "[]"
 END DynamicArray.initializer;
-
-PROCEDURE DynamicArray.length(): INTEGER;
-    RETURN Types.openArrayLength
-END DynamicArray.length;
 
 PROCEDURE DynamicArray.description(): STRING;
     RETURN Types.arrayDescription(SELF, arrayDimensionDescription)

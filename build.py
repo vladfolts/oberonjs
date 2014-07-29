@@ -222,7 +222,7 @@ class compile_target(object):
         compile_using_snapshot(options.file)
 
 class self_recompile_target(object):
-    name = 'self_recompile'
+    name = 'self-recompile'
     description = 'compile itself using current sources'
 
     @staticmethod

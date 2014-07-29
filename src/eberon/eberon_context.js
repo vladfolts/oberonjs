@@ -284,7 +284,7 @@ var InPlaceVariableInit = Context.Chained.extend({
             this._code += this.language().rtl.clone(e.code());
         }
         else if (type instanceof Type.Array){
-            if (type.length() == Type.openArrayLength)
+            if (type instanceof Type.OpenArray)
                 throw new Errors.Error("cannot initialize variable '" + this.__id + "' with open array");
             this._code += this.language().rtl.clone(e.code());
         }
@@ -1097,13 +1097,15 @@ var For = Context.For.extend({
     }
 });
 
+var dynamicArrayLength = -1;
+
 var ArrayDimensions = Context.ArrayDimensions.extend({
     init: function EberonContext$ArrayDimensions(context){
         Context.ArrayDimensions.prototype.init.call(this, context);
     },
     handleLiteral: function(s){
         if ( s == "*" )
-            this._addDimension(EberonTypes.dynamicArrayLength);
+            this._addDimension(dynamicArrayLength);
         else
             Context.ArrayDimensions.prototype.handleLiteral.call(this, s);
     }
@@ -1114,12 +1116,12 @@ var ArrayDecl = Context.ArrayDecl.extend({
         Context.ArrayDecl.prototype.init.call(this, context);
     },
     _makeInit: function(type, dimensions, length){
-        if (length == EberonTypes.dynamicArrayLength)
+        if (length == dynamicArrayLength)
             return '[]';
         return Context.ArrayDecl.prototype._makeInit.call(this, type, dimensions, length);
     },
     _makeType: function(elementsType, init, length){
-        return length == EberonTypes.dynamicArrayLength
+        return length == dynamicArrayLength
             ? EberonTypes.makeDynamicArray(elementsType)
             : Type.makeStaticArray(init, elementsType, length);
     }

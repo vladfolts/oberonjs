@@ -1,8 +1,6 @@
 MODULE Types;
 IMPORT
     Context, Errors, JS, JsArray, JsMap, Object, ScopeBase, Str := String;
-CONST
-    openArrayLength* = 0;
 
 TYPE
     Id* = RECORD(Object.Type)
@@ -88,8 +86,6 @@ TYPE
     END;
 
     Array* = RECORD(NamedType)
-        PROCEDURE length*(): INTEGER;
-
         elementsType: PType
     END;
     PArray* = POINTER TO Array;
@@ -99,9 +95,12 @@ TYPE
     POpenArray* = POINTER TO OpenArray;
 
     StaticArray* = RECORD(Array)
+        PROCEDURE length*(): INTEGER;
+
         mInitializer: STRING;
         len: INTEGER
     END;
+    PStaticArray* = POINTER TO StaticArray;
 
     PRecord* = POINTER TO Record;
 
@@ -487,7 +486,7 @@ PROCEDURE arrayDimensionDescription*(VAR a: Array): STRING;
 VAR
     result: STRING;
 BEGIN
-    IF ~(a IS OpenArray) THEN
+    IF a IS StaticArray THEN
         result := Str.fromInt(a.length());
     END;
     RETURN result
@@ -525,10 +524,6 @@ END StaticArray.initializer;
 PROCEDURE arrayElementsType*(a: Array): PType;
     RETURN a.elementsType
 END arrayElementsType;
-
-PROCEDURE OpenArray.length(): INTEGER;
-    RETURN openArrayLength
-END OpenArray.length;
 
 PROCEDURE StaticArray.length(): INTEGER;
     RETURN SELF.len
@@ -609,10 +604,10 @@ END makeOpenArray;
 PROCEDURE makeStaticArray*(
     initializer: STRING;
     elementsType: PType;
-    len: INTEGER (* see openArrayLength *)
+    len: INTEGER
     ): PArray;
 VAR
-    result: POINTER TO StaticArray;
+    result: PStaticArray;
 BEGIN
     NEW(result);
     initArray(elementsType, result^);

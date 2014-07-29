@@ -62,12 +62,9 @@ PROCEDURE areTypesMatch*(t1: Types.PType; t2: Types.PType): BOOLEAN;
 END areTypesMatch;
 
 PROCEDURE areArgsMatch(oa1, oa2: Object.PType; p1, p2: Types.PDefinedProcedure): BOOLEAN;
-VAR
-    a1: Types.PProcedureArgument;
-    a2: Types.PProcedureArgument;
 BEGIN
-    a1 := oa1(Types.PProcedureArgument);
-    a2 := oa2(Types.PProcedureArgument);
+    a1 <- oa1(Types.PProcedureArgument);
+    a2 <- oa2(Types.PProcedureArgument);
     RETURN (a1.isVar = a2.isVar)
         & (    ((a1.type = p1) & (a2.type = p2))
             OR areTypesExactlyMatch(a1.type, a2.type))
@@ -76,22 +73,19 @@ END areArgsMatch;
 PROCEDURE areProceduresMatch*(p1, p2: Types.PDefinedProcedure): BOOLEAN;
 VAR
     result: BOOLEAN;
-    args1, args2: JsArray.Type;
-    argsLen: INTEGER;
-    i: INTEGER;
-    r1, r2: Types.PType;
 BEGIN
-    args1 := p1.args();
-    args2 := p2.args();
-    argsLen := JsArray.len(args1);
+    args1 <- p1.args();
+    args2 <- p2.args();
+    argsLen <- JsArray.len(args1);
     IF JsArray.len(args2) = argsLen THEN
+        i <- 0;
         WHILE (i < argsLen) 
             & areArgsMatch(JsArray.at(args1, i), JsArray.at(args2, i), p1, p2) DO
             INC(i);
         END;
         IF i = argsLen THEN
-            r1 := p1.result();
-            r2 := p2.result();
+            r1 <- p1.result();
+            r2 <- p2.result();
             result := ((r1 = p1) & (r2 = p2)) OR areTypesExactlyMatch(r1, r2);
         END;
     END;
@@ -104,7 +98,10 @@ VAR
 BEGIN
     IF t1 = t2 THEN
         result := TRUE;
-    ELSIF (t1 IS Types.PArray) & (t2 IS Types.PArray) THEN
+    ELSIF (t1 IS Types.POpenArray) & (t2 IS Types.POpenArray) THEN
+        result := areTypesMatch(Types.arrayElementsType(t1^), 
+                                Types.arrayElementsType(t2^));
+    ELSIF (t1 IS Types.PStaticArray) & (t2 IS Types.PStaticArray) THEN
         result := (t1.length() = t2.length()) 
                 & (areTypesMatch(Types.arrayElementsType(t1^), 
                                  Types.arrayElementsType(t2^)));
@@ -132,11 +129,10 @@ END makeCastOpStrToChar;
 
 PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Operations; VAR op: PCastOp): INTEGER;
 VAR
-    result: INTEGER;
     c: CHAR;
     ignore: BOOLEAN;
 BEGIN
-    result := err;
+    result <- err;
     op := NIL;
     IF from = to THEN
         result := errNo;
@@ -162,13 +158,15 @@ BEGIN
         ELSIF Types.isString(to) THEN
             result := errNo;
         END;
-    ELSIF (from IS Types.PArray) & (to IS Types.PArray) THEN
-        IF ((from.length() = to.length())
-                OR (to.length() = Types.openArrayLength))
-            & areTypesExactlyMatch(Types.arrayElementsType(from^), 
-                                   Types.arrayElementsType(to^)) THEN
+    ELSIF (from IS Types.PArray) & (to IS Types.POpenArray)
+        & areTypesExactlyMatch(Types.arrayElementsType(from^), 
+                               Types.arrayElementsType(to^)) THEN
             result := errNo;
-        END;
+    ELSIF (from IS Types.PStaticArray) & (to IS Types.PStaticArray) 
+        & (from.length() = to.length())
+        & areTypesExactlyMatch(Types.arrayElementsType(from^), 
+                               Types.arrayElementsType(to^)) THEN
+            result := errNo;
     ELSIF (from IS Types.PPointer) & (to IS Types.PPointer) THEN
         IF ~toVar THEN
             IF findPointerBaseType(to, from^) # NIL THEN

@@ -356,13 +356,15 @@ exports.Designator = ChainedContext.extend({
                 Type.intsDescription() + " expression expected, got '" + expType.description() + "'");
 
         var index = this._indexSequence(this.__currentType, this.__info);
-        var length = index.length;
         var pValue = e.constValue();
         if (pValue){
             var value = pValue.value;
             if (value < 0)
                 throw new Errors.Error("index is negative: " + value);
-            if (length != Type.openArrayLength && value >= length)
+            
+            var length = index.length;
+            if ((this.__currentType instanceof Type.StaticArray || this.__currentType instanceof Type.String)
+             && value >= length)
                 throw new Errors.Error("index out of bounds: maximum possible index is "
                                      + (length - 1)
                                      + ", got " + value );
@@ -379,7 +381,9 @@ exports.Designator = ChainedContext.extend({
         if (!isArray && !(type instanceof Type.String))
             throw new Errors.Error("ARRAY or string expected, got '" + type.description() + "'");
 
-        var length = isArray ? type.length() : Type.stringLen(type);
+        var length = isArray ? type instanceof Type.StaticArray ? type.length() 
+                                                                : undefined
+                             : Type.stringLen(type);
         if (!isArray && !length)
             throw new Errors.Error("cannot index empty string" );
         var indexType = isArray ? Type.arrayElementsType(type) : basicTypes.ch;

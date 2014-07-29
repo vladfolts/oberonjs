@@ -478,13 +478,12 @@ VAR
     ignored: BOOLEAN;
     result: STRING;
 
-    PROCEDURE assignArrayFromString(a: Types.Array; s: Types.String): STRING;
+    PROCEDURE assignArrayFromString(VAR a: Types.Array; s: Types.String): STRING;
     BEGIN
-        len <- a.length();
-        IF len = Types.openArrayLength THEN
+        IF ~(a IS Types.StaticArray) THEN
             Errors.raise("string cannot be assigned to open " + a.description());
-        ELSIF Types.stringLen(s) > len THEN
-            Errors.raise(String.fromInt(len) 
+        ELSIF Types.stringLen(s) > a.length() THEN
+            Errors.raise(String.fromInt(a.length()) 
                          + "-character ARRAY is too small for "
                          + String.fromInt(Types.stringLen(s))
                          + "-character string");
