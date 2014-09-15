@@ -2,7 +2,7 @@ MODULE do;
 TYPE throw = PROCEDURE;
 VAR
     break, case, catch, continue, debugger, default, delete, else,
-    class, enum, export, extends, import, super,
+    class, const, enum, export, extends, import, super,
     true, false, null,
     implements, interface, let, package, private, protected, public, static, yield,
     finally, for, if, in, instanceof, new, return, switch, this, 
