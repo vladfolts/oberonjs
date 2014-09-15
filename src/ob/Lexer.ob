@@ -9,7 +9,7 @@ CONST
     jsReservedWords 
         = "break case catch continue debugger default delete do else finally "
         + "for function if in instanceof new return switch this throw try typeof "
-        + "var void while with false true null class enum export extends "
+        + "var void while with false true null class enum export extends const"
         + "import super implements interface let package private protected "
         + "public static yield "
         + "Math" (* Math is used in generated code for some functions so it is 
