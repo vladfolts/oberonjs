@@ -38,7 +38,8 @@ var TestContext = Context.Context.extend({
                 });
         this.pushScope(Scope.makeModule("test", language.stdSymbols));
     },
-    qualifyScope: function(){return "";}
+    qualifyScope: function(){return "";},
+    handleMessage: function(){}
 });
 
 function makeContext(language){return new TestContext(language);}
@@ -172,6 +173,23 @@ function testWithModule(src, language, pass, fail){
         fail);
 }
 
+function nthLine(s, n){
+    var result = 0;
+    while (n--)
+        result = s.indexOf('\n', result) + 1;
+    return result;
+}
+
+function assert(cond){
+    if (!cond){
+        var stack = new Error().stack;
+        var from = nthLine(stack, 2);
+        stack = stack.substring(from, stack.indexOf('\n', from));
+        throw new TestError("assertion failed: " + stack);
+    }
+}
+
+exports.assert = assert;
 exports.context = context;
 exports.pass = pass;
 exports.fail = fail;

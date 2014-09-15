@@ -13,6 +13,7 @@ var eOp = require("js/EberonOperator.js");
 var Symbol = require("js/Symbols.js");
 var Procedure = require("js/Procedure.js");
 var Type = require("js/Types.js");
+var TypePromotion = require("eberon/eberon_type_promotion.js");
 
 /*
 function log(s){
@@ -27,15 +28,6 @@ function superMethodCallGenerator(context, id, type){
     var args = Procedure.makeArgumentsCode(context);
     args.write(Code.makeExpression("this"));
     return Procedure.makeProcCallGeneratorWithCustomArgs(context, id, type, args);
-}
-
-function resetPromotedTypes(types){
-    //log("reset promoted: " + types.length);
-    for(var i = 0; i < types.length; ++i){
-        var info = types[i];
-        //log("\t" + info.type.type().name + "->" + info.restore.name);
-        info.type.resetPromotion(info.restore);
-    }
 }
 
 var MethodType = Type.Procedure.extend({
@@ -130,7 +122,6 @@ var ResultVariable = Type.Variable.extend({
 var TypeNarrowVariable = Type.Variable.extend({
     init: function TypeNarrowVariable(type, isRef, isReadOnly){
         this.__type = type;
-        this.__invertedType = this.__type;
         this.__isRef = isRef;
         this.__isReadOnly = isReadOnly;
     },
@@ -147,17 +138,7 @@ var TypeNarrowVariable = Type.Variable.extend({
         return this.__isReadOnly ? "non-VAR formal parameter"
                                  : Type.Variable.prototype.idType.call(this);
     },
-    promoteType: function(t){
-        var result = this.__type;
-        this.__type = t;
-        return result;
-    },
-    invertType: function(){
-        var type = this.__type;
-        this.__type = this.__invertedType;
-        this.__invertedType = type;
-    },
-    resetPromotion: function(type){
+    setType: function(type){
         this.__type = type;
     }
 });
@@ -220,6 +201,10 @@ var Designator = Context.Designator.extend({
             return this.__beginCall();
         if (msg == Context.endCallMsg)
             return this.__endCall();
+
+        // no type promotion after calling functions
+        if (breakTypePromotion(msg))
+            return;
         
         return Context.Designator.prototype.handleMessage.call(this, msg);
     },
@@ -316,7 +301,6 @@ var InPlaceVariableInitFor = InPlaceVariableInit.extend({
 var ExpressionProcedureCall = Context.Chained.extend({
     init: function EberonContext$init(context){
         Context.Chained.prototype.init.call(this, context);
-        this.__typePromotion = new TypePromotionHandler();
     },
     setDesignator: function(d){
         var info = d.info();
@@ -325,15 +309,6 @@ var ExpressionProcedureCall = Context.Chained.extend({
             parent.handleExpression(info.expression());
         else
             parent.setDesignator(d);
-    },
-    handleMessage: function(msg){
-        if (this.__typePromotion.handleMessage(msg))
-            return;
-
-        return Context.Chained.prototype.handleMessage.call(this, msg);
-    },
-    endParse: function(){
-        this.__typePromotion.reset();
     }
 });
 
@@ -607,11 +582,23 @@ var RecordDecl = Context.RecordDecl.extend({
     }
 });
 
-function resetTypePromotionMadeInSeparateStatement(msg){
-    if (!(msg instanceof TransferPromotedTypesMsg))
-        return false;
-    resetPromotedTypes(msg.types);
-    return true;
+function breakTypePromotion(msg){
+    if (msg instanceof TransferPromotedTypesMsg){
+        msg.promotion.clear();
+        return true;
+    }
+    if (msg instanceof PromoteTypeMsg)
+        return true;
+}
+
+function handleTypePromotionMadeInSeparateStatement(msg){
+    if (breakTypePromotion(msg))
+        return true;
+    if (msg instanceof BeginTypePromotionOrMsg){
+        msg.result = new TypePromotion.OrPromotions();
+        return true;
+    }
+    return false;
 }
 
 var ProcOrMethodDecl = Context.ProcDecl.extend({
@@ -653,7 +640,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             return undefined;
         }
 
-        if (resetTypePromotionMadeInSeparateStatement(msg))
+        if (handleTypePromotionMadeInSeparateStatement(msg))
             return;
 
         return Context.ProcDecl.prototype.handleMessage.call(this, msg);
@@ -719,28 +706,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     }
 });
 
-var Factor = Context.Factor.extend({
-    init: function EberonContext$Factor(context){
-        Context.Factor.prototype.init.call(this, context);
-        this.__typePromotion = new TypePromotionHandler();
-        this.__invert = false;
-    },
-    handleMessage: function(msg){
-        if (this.__typePromotion.handleMessage(msg))
-            return;
-        return Context.Factor.prototype.handleMessage.call(this, msg);
-    },
-    handleLiteral: function(s){
-        if (s == "~")
-            this.__invert = !this.__invert;
-        Context.Factor.prototype.handleLiteral.call(this, s);
-    },
-    endParse: function(){
-        if (this.__invert)
-            this.__typePromotion.invert();
-        this.__typePromotion.transferTo(this.parent());
-    }
-});
+var Factor = Context.Factor;
 
 var AddOperator = Context.AddOperator.extend({
     init: function EberonContext$AddOperator(context){
@@ -771,13 +737,8 @@ function PromoteTypeMsg(info, type){
     this.type = type;
 }
 
-function resetTypePromotionMsg(){}
-function resetInvertedPromotedTypesMsg(){}
-function invertTypePromotionMsg(){}
-
-function TransferPromotedTypesMsg(types, invertTypes){
-    this.types = types;
-    this.invertTypes = invertTypes;
+function TransferPromotedTypesMsg(promotion){
+    this.promotion = promotion;
 }
 
 var RelationOps = Context.RelationOps.extend({
@@ -834,47 +795,103 @@ var RelationOps = Context.RelationOps.extend({
     }
 });
 
+function BeginTypePromotionAndMsg(){
+    this.result = undefined;
+}
+
+function BeginTypePromotionOrMsg(){
+    this.result = undefined;
+}
+
 var Term = Context.Term.extend({
     init: function EberonContext$Term(context){
         Context.Term.prototype.init.call(this, context);
-        this.__invertedTypePromotionReset = false;
+        this.__typePromotion = undefined;
+        this.__currentPromotion = undefined;
+        this.__andHandled = false;
+    },
+    handleMessage: function(msg){
+        if (msg instanceof PromoteTypeMsg) {
+            var promoted = msg.info;
+            var p = this.__getCurrentPromotion();
+            if (p)
+                p.promote(promoted, msg.type);
+            return;
+        }
+        if (msg instanceof BeginTypePromotionOrMsg){
+            var cp = this.__getCurrentPromotion();
+            if (cp)
+                msg.result = cp.makeOr();
+            return;
+        }
+        return Context.Term.prototype.handleMessage.call(this, msg);
     },
     handleLogicalAnd: function(){
-        if (!this.__invertedTypePromotionReset){
-            this.handleMessage(resetInvertedPromotedTypesMsg);
-            this.__invertedTypePromotionReset = true;
+        if (this.__typePromotion)
+            this.__currentPromotion = this.__typePromotion.next();
+        else
+            this.__andHandled = true;
+    },
+    handleLogicalNot: function(){
+        Context.Term.prototype.handleLogicalNot.call(this);
+        var p = this.__getCurrentPromotion();
+        if (p)
+            p.invert();
+    },
+    __getCurrentPromotion: function(){
+        if (!this.__currentPromotion){
+            var msg = new BeginTypePromotionAndMsg();
+            this.parent().handleMessage(msg);
+            this.__typePromotion = msg.result;
+            if (this.__typePromotion){
+                if (this.__andHandled)
+                    this.__typePromotion.next();
+                this.__currentPromotion = this.__typePromotion.next();
+            }
         }
+        return this.__currentPromotion;
     }
 });
 
 var SimpleExpression = Context.SimpleExpression.extend({
     init: function EberonContext$SimpleExpression(context){
         Context.SimpleExpression.prototype.init.call(this, context);
-        this.__typePromotion = new TypePromotionHandler();
-        this.__orTypePromotion = this.__typePromotion;
+        this.__typePromotion = undefined;
+        this.__currentTypePromotion = undefined;
+        this.__orHandled = false;
     },
     handleLogicalOr: function(){
-        this.__orTypePromotion.reset();
-        this.__orTypePromotion.invert();
-        if (this.__orTypePromotion != this.__typePromotion)
-            this.__typePromotion.transferFrom(this.__orTypePromotion);
-        this.__orTypePromotion = new TypePromotionHandler();
+        if (this.__typePromotion)
+            this.__currentPromotion = this.__typePromotion.next();
+        else
+            this.__orHandled = true;
     },
     handleMessage: function(msg){
-        if (this.__orTypePromotion.handleMessage(msg))
+        if (msg instanceof BeginTypePromotionAndMsg){
+            var p = this.__getCurrentPromotion();
+            if (p)
+                msg.result = p.makeAnd();
             return;
+        }
         return Context.SimpleExpression.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
-        if (this.__orTypePromotion != this.__typePromotion){
-
-            //this.__orTypePromotion.reset();
-            this.__orTypePromotion.invert();
-            this.__typePromotion.transferFrom(this.__orTypePromotion);
-            this.__typePromotion.invert();
-        }
-        this.__typePromotion.transferTo(this.parent());
+        if (this.__typePromotion)
+            this.parent().handleTypePromotion(this.__typePromotion);
         Context.SimpleExpression.prototype.endParse.call(this);
+    },
+    __getCurrentPromotion: function(){
+        if (!this.__currentPromotion){
+            var msg = new BeginTypePromotionOrMsg();
+            this.parent().handleMessage(msg);
+            this.__typePromotion = msg.result;
+            if (this.__typePromotion){
+                if (this.__orHandled)
+                    this.__typePromotion.next();
+                this.__currentPromotion = this.__typePromotion.next();
+            }
+        }
+        return this.__currentPromotion;
     }
 });
 
@@ -883,88 +900,27 @@ var relationOps = new RelationOps();
 var Expression = Context.Expression.extend({
     init: function EberonContext$Expression(context){
         Context.Expression.prototype.init.call(this, context, relationOps);
-        this.__typePromotion = new TypePromotionHandler();
+        this.__typePromotion = undefined;
+        this.__currentTypePromotion = undefined;
     },
     handleMessage: function(msg){
-        if (this.__typePromotion.handleMessage(msg))
+        if (msg instanceof TransferPromotedTypesMsg)
             return;
-
         return Context.Expression.prototype.handleMessage.call(this, msg);
     },
+    handleTypePromotion: function(t){
+        this.__currentTypePromotion = t;
+    },
     handleLiteral: function(s){
-        this.__typePromotion.reset();
+        if (this.__currentTypePromotion){
+            this.__currentTypePromotion.clear();
+        }
         Context.Expression.prototype.handleLiteral.call(this, s);
     },
     endParse: function(){
-        this.__typePromotion.transferTo(this.parent());
+        if (this.__currentTypePromotion)
+            this.parent().handleMessage(new TransferPromotedTypesMsg(this.__currentTypePromotion));
         return Context.Expression.prototype.endParse.call(this);
-    }
-});
-
-//var id = 0;
-
-var TypePromotionHandler = Class.extend({
-    init: function EberonContext$TypePromotionHandler(){
-        this.__promotedTypes = [];
-        this.__invertPromotedTypes = [];
-        //this.__id = id++;
-    },
-    handleMessage: function(msg){
-        if (msg instanceof PromoteTypeMsg){
-            var promoted = msg.info;
-            var restore = promoted.promoteType(msg.type);
-            //log("promote: " + restore.name + "->" + msg.type.name + ", " + this.__id);
-            this.__promotedTypes.push({type: promoted, restore: restore});
-            return true;
-        }
-        if (msg instanceof TransferPromotedTypesMsg){
-            this.__transferFrom(msg.types, msg.invertTypes);
-            return true;
-        }
-        switch (msg){
-            case resetTypePromotionMsg:
-                this.reset();
-                return true;
-            case invertTypePromotionMsg:
-                this.invert();
-                return true;
-            case resetInvertedPromotedTypesMsg:
-                this.resetInverted();
-                return true;
-        }
-    return false;
-    },
-    invert: function(){
-        var all = this.__promotedTypes.concat(this.__invertPromotedTypes);
-        //log("invert: " + all.length + ", " + this.__id);
-        for(var i = 0; i < all.length; ++i){
-            //log("\t" + all[i].type.type().name + ", " + this.__id);
-            all[i].type.invertType();
-        }
-
-        var swap = this.__promotedTypes;
-        this.__promotedTypes = this.__invertPromotedTypes;
-        this.__invertPromotedTypes = swap;
-    },
-    reset: function(){
-        resetPromotedTypes(this.__promotedTypes);
-        this.__promotedTypes = [];
-    },
-    resetInverted: function(inverted){
-        resetPromotedTypes(this.__invertPromotedTypes);
-        this.__invertPromotedTypes = [];
-    },
-    transferTo: function(context){
-        if (this.__promotedTypes.length || this.__invertPromotedTypes.length)
-            context.handleMessage(new TransferPromotedTypesMsg(this.__promotedTypes, this.__invertPromotedTypes));
-    },
-    transferFrom: function(other){
-        this.__transferFrom(other.__promotedTypes, this.__invertPromotedTypes);
-    },
-    __transferFrom: function(promotedTypes, invertPromotedTypes){
-        //log("transfer, " + this.__id);
-        Array.prototype.push.apply(this.__promotedTypes, promotedTypes);
-        Array.prototype.push.apply(this.__invertPromotedTypes, invertPromotedTypes);
     }
 });
 
@@ -973,13 +929,33 @@ var OperatorScopes = Class.extend({
         this.__context = context;
         this.__scope = undefined;
 
-        this.__typePromotion = new TypePromotionHandler();
-        this.__typePromotions = [this.__typePromotion];
-
+        this.__typePromotion = undefined;
+        this.__typePromotions = [];
+        this.__ignorePromotions = false;
         this.alternate();
     },
     handleMessage: function(msg){
-        return this.__typePromotion.handleMessage(msg);
+        if (this.__ignorePromotions)
+            return false;
+        if (msg instanceof TransferPromotedTypesMsg)
+            return true;
+        if (msg instanceof PromoteTypeMsg){
+            this.__typePromotion = new TypePromotion.Promotion(msg.info, msg.type);
+            this.__typePromotions.push(this.__typePromotion);
+            return true;
+        }
+        if (msg instanceof BeginTypePromotionOrMsg){
+            this.__typePromotion = new TypePromotion.OrPromotions();
+            this.__typePromotions.push(this.__typePromotion);
+            msg.result = this.__typePromotion;
+            return true;
+        }
+        return false;
+    },
+    doThen: function(){
+        if (this.__typePromotion)
+            this.__typePromotion.and();
+        this.__ignorePromotions = true;
     },
     alternate: function(){
         if (this.__scope)
@@ -989,14 +965,15 @@ var OperatorScopes = Class.extend({
             this.__context.language().stdSymbols);
         this.__context.pushScope(this.__scope);
 
-        this.__typePromotion.reset();
-        this.__typePromotion.invert();
-        this.__typePromotion = new TypePromotionHandler();
-        this.__typePromotions.push(this.__typePromotion);
+        if (this.__typePromotion){
+            this.__typePromotion.reset();
+            this.__typePromotion.or();
+            this.__typePromotion = undefined;
+        }
+        this.__ignorePromotions = false;
     },
     reset: function(){
         this.__context.popScope();
-
         for(var i = 0; i < this.__typePromotions.length; ++i){
             this.__typePromotions[i].reset();
         }
@@ -1010,7 +987,9 @@ var While = Context.While.extend({
     },
     handleLiteral: function(s){
         Context.While.prototype.handleLiteral.call(this, s);
-        if (s == "ELSIF")
+        if (s == "DO")
+            this.__scopes.doThen();
+        else if (s == "ELSIF")
             this.__scopes.alternate();
     },
     handleMessage: function(msg){
@@ -1038,7 +1017,9 @@ var If = Context.If.extend({
     },
     handleLiteral: function(s){
         Context.If.prototype.handleLiteral.call(this, s);
-        if (s == "ELSIF" || s == "ELSE")
+        if (s == "THEN")
+            this.__scopes.doThen();
+        else if (s == "ELSIF" || s == "ELSE")
             this.__scopes.alternate();
     },
     endParse: function(){
@@ -1200,9 +1181,8 @@ var ModuleDeclaration = Context.ModuleDeclaration.extend({
         Context.ModuleDeclaration.prototype.init.call(this, context);
     },
     handleMessage: function(msg){
-        if (resetTypePromotionMadeInSeparateStatement(msg))
+        if (handleTypePromotionMadeInSeparateStatement(msg))
             return;
-
         return Context.ModuleDeclaration.prototype.handleMessage.call(this, msg);
     }
 });

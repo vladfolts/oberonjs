@@ -1,8 +1,11 @@
 "use strict";
 
+var Class = require("rtl.js").Class;
 var language = require("eberon/eberon_grammar.js").language;
 var TestUnitCommon = require("test_unit_common.js");
+var TypePromotion = require("eberon/eberon_type_promotion.js");
 
+var assert = TestUnitCommon.assert;
 var pass = TestUnitCommon.pass;
 var fail = TestUnitCommon.fail;
 var context = TestUnitCommon.context;
@@ -63,6 +66,14 @@ var temporaryValues = {
         return fail.apply(this, result);
     }
 };
+
+var TestVar = Class.extend({
+    init: function(){
+        this.__type = "type";
+    },
+    type: function(){return this.__type;},
+    setType: function(type){this.__type = type;}
+});
 
 exports.suite = {
 "arithmetic operators": testWithContext(
@@ -434,6 +445,124 @@ exports.suite = {
          ["returnProc()", "procedure returning a result cannot be used as a statement"] // call is not applied implicitly to result
         )
     ),
+"type promotion": {
+    "or" : pass(
+        function(){
+            var or = new TypePromotion.OrPromotions();
+            var a = new TestVar();
+            var p = or.next();
+            assert(a.type() == "type");
+            p.invert();
+            p.promote(a, "type1");
+            assert(a.type() == "type");
+            or.next();
+            assert(a.type() == "type1");
+            or.reset();
+            assert(a.type() == "type");
+        },
+        function(){
+            var or = new TypePromotion.OrPromotions();
+            var a = new TestVar();
+            var p = or.next(p);
+            p.promote(a, "type1");
+            or.next();
+            assert(a.type() == "type");
+        },
+        function(){
+            var or = new TypePromotion.OrPromotions();
+            var a = new TestVar();
+            var p1 = or.next();
+            p1.promote(a, "type1");
+            var p2 = or.next();
+            p2.invert();
+            p2.promote(a, "type2");
+            assert(a.type() == "type");
+            assert(a.type() == "type");
+            or.next();
+            assert(a.type() == "type2");
+            or.reset();
+            assert(a.type() == "type");
+        }
+    ),
+    "and": pass(
+        function(){
+            var and = new TypePromotion.AndPromotions();
+            var a = new TestVar();
+            var p = and.next();
+            p.promote(a, "type1");
+            and.next();
+            assert(a.type() == "type1");
+            and.reset();
+            assert(a.type() == "type");
+        },
+        function(){ // (a IS type1) & (v OR (a IS type2)) & v
+            var and = new TypePromotion.AndPromotions();
+            var a = new TestVar();
+            var p = and.next();
+            p.promote(a, "type1");
+            var subOr = and.next().makeOr();
+            subOr.next();
+            subOr.next().promote(a, "type2");
+            and.next();
+            assert(a.type() == "type1");
+            and.reset();
+            assert(a.type() == "type");
+        },
+        function(){ // (a IS type1) & ~(v OR ~(a IS type2)) & v
+            var and = new TypePromotion.AndPromotions();
+            var a = new TestVar();
+            and.next().promote(a, "type1");
+            var subOr = and.next();
+            subOr.invert();
+            subOr = subOr.makeOr();
+            subOr.next();
+            var p = subOr.next();
+            p.invert();
+            p.promote(a, "type2");
+            and.next();
+            assert(a.type() == "type2");
+            and.reset();
+            assert(a.type() == "type");
+        },
+        function(){ // (a IS type1) & (v & (a IS type2))
+            var and = new TypePromotion.AndPromotions();
+            var a = new TestVar();
+            and.next().promote(a, "type1");
+            var sub = and.next().makeAnd();
+            sub.next();
+            assert(a.type() == "type1");
+            sub.next().promote(a, "type2");
+            assert(a.type() == "type1");
+            and.and();
+            assert(a.type() == "type2");
+            and.or();
+            assert(a.type() == "type");
+        },
+        function(){ // (~(~(a IS type1)) & v) OR v
+            var a = new TestVar();
+            var or = new TypePromotion.OrPromotions();
+            var and = or.next().makeAnd();
+            var p1 = and.next();
+            p1.invert();
+            var p2 = p1.makeOr().next().makeAnd().next();
+            p2.invert();
+            p2.promote(a, "type1");
+            and.next();
+            assert(a.type() == "type1");
+            or.next();
+            assert(a.type() == "type");
+        },
+        function(){ // (v OR (a IS type1)) & v)
+            var a = new TestVar();
+            var and = new TypePromotion.AndPromotions();
+            var or = and.next().makeOr();
+            or.next();
+            or.next().makeAnd().next().promote(a, "type1");
+            and.next();
+            assert(a.type() == "type");
+        }
+    )
+},
 "in place variables": {
     "initialization": testWithContext(
         context(grammar.statement,
@@ -491,18 +620,20 @@ exports.suite = {
     "type promotion in expression": testWithContext(
         temporaryValues.context,
         temporaryValues.passExpressions(
-             "b IS PDerived",
-             "(b IS PDerived) & b.flag",
-             "(b IS PDerived) & bVar & b.flag",
-             "(b IS PDerived) & (bVar OR b.flag)",
-             "(b IS PDerived) & (b2 IS PDerived) & b.flag & b2.flag",
-             "(b IS PDerived) & proc(TRUE) & b.flag",
-             "(b IS PDerived) & ~proc(TRUE) & b.flag",
-             "~(~(b IS PDerived)) & b.flag",
-             "~~(b IS PDerived) & b.flag",
-             "(b IS PDerived) & ((b IS PDerived2) OR bVar) & b.flag"
-             //TODO: "((b IS PDerived) = TRUE) & b.flag); END p;",
-             ),
+            "(b IS PDerived) & b.flag",
+            "(b IS PDerived) & bVar & b.flag",
+            "(b IS PDerived) & (bVar OR b.flag)",
+            "(b IS PDerived) & (b2 IS PDerived) & b.flag & b2.flag",
+            "(b IS PDerived) & proc(TRUE) & b.flag",
+            "(b IS PDerived) & ~proc(TRUE) & b.flag",
+            "~(~(b IS PDerived)) & b.flag",
+            "~~(b IS PDerived) & b.flag",
+            "(b IS PDerived) & ((b IS PDerived2) OR bVar) & b.flag",
+            "(b IS PDerived) & (bVar OR (b IS PDerived2)) & b.flag",
+            "(b IS PDerived) & ~(bVar OR ~(b IS PDerived2)) & b.flag2",
+            "~(bVar & (b IS PDerived)) OR b.flag"
+            //TODO: "((b IS PDerived) = TRUE) & b.flag); END p;",
+            ),
         temporaryValues.failExpressions(
             "(b IS PDerived) OR b.flag",
             "(bVar OR (b IS PDerived)) & b.flag",
@@ -512,10 +643,12 @@ exports.suite = {
              "proc(b IS PDerived) & proc(b.flag)",
              "ORD(b IS PDerived) * ORD(b.flag) = 0",
              "((b IS PDerived) = FALSE) & b.flag",
+             "((b IS PDerived) & bVar) = b.flag",
              "b IS PDerived); ASSERT(b.flag",
              "((b IS PDerived) OR (b IS PDerived)) & b.flag",
              "(b IS PDerived) OR (b IS PDerived) OR b.flag",
-             "(bVar OR (b IS PDerived)) & b.flag"
+             "(bVar OR (b IS PDerived)) & b.flag",
+             "~(bVar & ~(b IS PDerived)) & b.flag"
              )
         ),
     "invert type promotion in expression": testWithContext(
@@ -546,7 +679,10 @@ exports.suite = {
     "type promotion in separate statements": testWithContext(
         temporaryValues.context,
         pass(),
-        temporaryValues.failStatements("bVar := b IS PDerived; ASSERT(b.flag)")
+        temporaryValues.failStatements(
+            "bVar := b IS PDerived; ASSERT(b.flag)",
+            "bVar := (b IS PDerived) & bVar; ASSERT(b.flag)"
+            )
         ),
     "type promotion in IF": testWithContext(
         temporaryValues.context,
@@ -557,7 +693,8 @@ exports.suite = {
             "IF FALSE THEN ELSIF b IS PDerived THEN b.flag := FALSE; END;",
             "IF b IS PDerived THEN bVar := (b IS PDerived2) & b.flag2; b.flag := FALSE; END;",
             "IF bVar THEN ELSIF b IS PDerived2 THEN ELSIF b IS PDerived THEN END;",
-            "IF bVar THEN ELSIF b IS PDerived THEN ELSIF b IS PDerived THEN ELSIF b IS PDerived THEN END;"
+            "IF bVar THEN ELSIF b IS PDerived THEN ELSIF b IS PDerived THEN ELSIF b IS PDerived THEN END;",
+            "IF b IS PDerived THEN IF bVar OR (b IS PDerived2) THEN b.flag := FALSE; END; END"
             ),
         temporaryValues.failStatements(
             "IF (b IS PDerived) OR bVar THEN b.flag := FALSE; END",
@@ -578,7 +715,8 @@ exports.suite = {
             "IF bVar OR (b IS PDerived) THEN b.flag := FALSE; END;",
             "IF bVar OR (b IS PDerived) THEN ELSE b.flag := FALSE; END;",
             "IF bVar OR ~(b IS PDerived) THEN b.flag := FALSE; END;",
-            "IF b IS PDerived THEN ELSIF TRUE THEN b.flag := FALSE; END"
+            "IF b IS PDerived THEN ELSIF TRUE THEN b.flag := FALSE; END",
+            "IF bVar THEN bVar := (b IS PDerived) & bVar; ASSERT(b.flag); END"
              )
         ),
     "invert type promotion in IF": testWithContext(
