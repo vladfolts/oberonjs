@@ -1474,11 +1474,16 @@ exports.Repeat = ChainedContext.extend({
 exports.Until = ChainedContext.extend({
     init: function UntilContext(context){
         ChainedContext.prototype.init.call(this, context);
-        var gen = context.codeGenerator();
-        gen.closeScope(" while (");
+        context.codeGenerator().closeScope(" while (");
     },
-    handleExpression: handleIfExpression,
-    endParse: function(){this.codeGenerator().write(");\n");}
+    codeGenerator: function(){ return nullCodeGenerator; },
+    handleExpression: function(e){
+        handleIfExpression(e);
+        this.parent().codeGenerator().write( op.not(e).code() );
+    },
+    endParse: function(){
+        this.parent().codeGenerator().write(");\n");
+    }
 });
 
 exports.For = ChainedContext.extend({
