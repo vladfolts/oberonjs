@@ -766,6 +766,11 @@ exports.suite = {
               "type mismatch for argument 1: cannot pass 'PDerived' as VAR parameter of type 'PBase'"]
             )
         ),
+    "type promotion after dereferencing": testWithContext(
+        temporaryValues.context,
+        temporaryValues.passExpressions(
+            "(b^ IS Derived) & b.flag")
+        ),
     "IS expression after type promotion": testWithContext(
         temporaryValues.context,
         pass(),

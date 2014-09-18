@@ -119,7 +119,12 @@ var ResultVariable = Type.Variable.extend({
     idType: function(){return "procedure call " + (this.type() ? "result" : "statement");}
 });
 
-var TypeNarrowVariable = Type.Variable.extend({
+var TypeNarrowVariableBase = Type.Variable.extend({
+    init: function TypeNarrowVariableBase(){
+    }    
+});
+
+var TypeNarrowVariable = TypeNarrowVariableBase.extend({
     init: function TypeNarrowVariable(type, isRef, isReadOnly){
         this.__type = type;
         this.__isRef = isRef;
@@ -136,10 +141,28 @@ var TypeNarrowVariable = Type.Variable.extend({
     },
     idType: function(){
         return this.__isReadOnly ? "non-VAR formal parameter"
-                                 : Type.Variable.prototype.idType.call(this);
+                                 : TypeNarrowVariableBase.prototype.idType.call(this);
     },
     setType: function(type){
         this.__type = type;
+    }
+});
+
+var DereferencedTypeNarrowVariable = TypeNarrowVariableBase.extend({
+    init: function DereferencedTypeNarrowVariable(v){
+        this.__v = v;
+    },
+    type: function(){
+        return this.__v.type();
+    },
+    isReference: function(){
+        return true;
+    },
+    isReadOnly: function(){
+        return false;
+    },
+    setType: function(type){
+        this.__v.setType(type);
     }
 });
 
@@ -195,6 +218,11 @@ var Designator = Context.Designator.extend({
         if (!isReadOnly && this.qualifyScope(Type.recordScope(field.recordType())))
             isReadOnly = field.identdef().isReadOnly();
         return Context.Designator.prototype._makeDenoteVar(field, isReadOnly);
+    },
+    _makeDerefVar: function(info){
+        if (info instanceof TypeNarrowVariable)
+            return new DereferencedTypeNarrowVariable(info);
+        return Context.Designator.prototype._makeDerefVar(info);
     },
     handleMessage: function(msg){
         if (msg == Context.beginCallMsg)
@@ -781,7 +809,7 @@ var RelationOps = Context.RelationOps.extend({
             var d = left.designator();
             if (d){
                 var v = d.info();
-                if (v instanceof TypeNarrowVariable)
+                if (v instanceof TypeNarrowVariableBase)
                     context.handleMessage(new PromoteTypeMsg(v, type));
             }
             return impl(left, right);

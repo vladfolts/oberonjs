@@ -347,6 +347,9 @@ exports.Designator = ChainedContext.extend({
     _makeDenoteVar: function(field, isReadOnly){
         return Type.makeVariable(field.type(), isReadOnly);
     },
+    _makeDerefVar: function(){
+        return Type.makeVariableRef(this.__currentType, false);
+    },
     handleExpression: function(e){this.__indexExpression = e;},
     __handleIndexExpression: function(){
         var e = this.__indexExpression;
@@ -410,7 +413,7 @@ exports.Designator = ChainedContext.extend({
         }
         else if (s == "^"){
             this.__handleDeref();
-            this.__info = Type.makeVariableRef(this.__currentType, false);
+            this.__info = this._makeDerefVar(this.__info);
         }
     },
     __handleDeref: function(){
