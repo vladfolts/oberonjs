@@ -1,5 +1,5 @@
 ### The goal of the project
-I could formulate the goal as "to have traditional static-typed language on the Web". But more realistically it is: to built my own compiler (never did it before but always wanted). Also I wanted to [experiment](https://github.com/vladfolts/oberonjs/wiki/Eberon) with my own language.
+I could formulate the goal as "to have traditional static-typed language on the Web". But more realistically it is: to built my own compiler (never did it before but always wanted). Also I wanted to [[experiment|Eberon]] with my own language.
 
 ### How to use
 You can use the project as any other JavaScript library. There is no third-party dependencies. The project is developing using nodejs so you may have some additional operations to accommodate nodejs source modules in your project. All source code is under src/ folder. Compiler entry point is oc.js.
@@ -14,5 +14,8 @@ To build a test html page locally and see how it works run build.cmd (Python 2.x
 * All included tests are passing.
 * Please report bugs or any deviations from language report.
 
-### [Implementation details](/vladfolts/oberonjs/wiki/Original-report-refinements)
-### [Experiments](/vladfolts/oberonjs/wiki/Eberon)
+### Implementation details
+* [[JS module|JS-module]]
+* [[Report refinements|Original-report-refinements]]
+
+### [[Experiments|Eberon]]
