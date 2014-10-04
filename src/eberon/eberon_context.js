@@ -193,14 +193,6 @@ var Designator = Context.Designator.extend({
         }
         return Context.Designator.prototype._indexSequence.call(this, type, info);
     },
-    _makeDenoteVar: function(field, isReadOnly){
-        var type = field.type();
-        if (type instanceof EberonTypes.MethodType)
-            return new MethodVariable(type);
-        if (!isReadOnly && this.qualifyScope(Type.recordScope(field.recordType())))
-            isReadOnly = field.identdef().isReadOnly();
-        return Context.Designator.prototype._makeDenoteVar(field, isReadOnly);
-    },
     _makeDerefVar: function(info){
         if (info instanceof TypeNarrowVariable)
             return new DereferencedTypeNarrowVariable(info);
@@ -357,6 +349,26 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
     }
 });
 
+var RecordField = Context.RecordField.extend({
+    init: function EberonContext$RecordField(field, type, recordType){
+        Context.RecordField.prototype.init.call(this, field, type);
+        this.__recordType = recordType;
+    },
+    asVar: function(isReadOnly, context){ 
+        if (!isReadOnly && context.qualifyScope(Type.recordScope(this.__recordType)))
+            isReadOnly = this.identdef().isReadOnly();
+        return Context.RecordField.prototype.asVar.call(this, isReadOnly); 
+    }
+});
+
+var RecordFieldAsMethod = Context.RecordField.extend({
+    init: function EberonContext$RecordFieldAsMethod(field, type){
+        Context.RecordField.prototype.init.call(this, field, type);
+    },
+    asVar: function(){ 
+        return new MethodVariable(this.type()); 
+    }
+});
 var RecordType = Type.Record.extend({
     init: function EberonContext$RecordType(name, cons, scope){
         Type.Record.prototype.init.call(this);
@@ -408,7 +420,7 @@ var RecordType = Type.Record.extend({
                   + "': method already was declared"
                 : "cannot declare method, record already has field '" + id + "'");
 
-        this.__declaredMethods[id] = new Context.RecordField(methodId, type);
+        this.__declaredMethods[id] = new RecordFieldAsMethod(methodId, type);
 
         if (!methodId.exported())
             this.__nonExportedMethods.push(id);
@@ -589,6 +601,9 @@ var RecordDecl = Context.RecordDecl.extend({
         if (msg instanceof Context.AddArgumentMsg) // not used
             return undefined;
         return Context.RecordDecl.prototype.handleMessage.call(this, msg);
+    },
+    _makeField: function(field, type){
+        return new RecordField(field, type, this.__type);
     }
 });
 

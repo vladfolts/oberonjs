@@ -9,7 +9,8 @@ TYPE
     AnyType* = RECORD(Types.StorageType)
         PROCEDURE callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
         PROCEDURE denote(id: STRING): Types.PField;
-        asField: POINTER TO AnyField
+        asField: POINTER TO AnyField;
+        asVar: Types.PId
     END;
 
     AnyField = RECORD(Types.Field)
@@ -54,9 +55,9 @@ PROCEDURE AnyField.type(): Types.PType;
     RETURN any
 END AnyField.type;
 
-PROCEDURE AnyField.recordType(): Types.PType;
-    RETURN any
-END AnyField.recordType;
+PROCEDURE AnyField.asVar(): Types.PId;
+    RETURN any.asVar
+END AnyField.asVar;
 
 PROCEDURE AnyTypeProc.args(): JsArray.Type;
     RETURN NIL
@@ -138,6 +139,7 @@ BEGIN
     
     NEW(any);
     NEW(any.asField); 
+    any.asVar := Types.makeTypeId(any);
 
     doProcSymbol := makeDoProcSymbol();
     varTypeSymbol := makeVarTypeSymbol();

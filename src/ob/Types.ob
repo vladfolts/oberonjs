@@ -85,7 +85,7 @@ TYPE
         PROCEDURE id*(): STRING;
         PROCEDURE exported*(): BOOLEAN;
         PROCEDURE type*(): PType;
-        PROCEDURE recordType*(): PType 
+        PROCEDURE asVar*(): PId 
     END;
     PField* = POINTER TO Field;
 

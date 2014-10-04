@@ -337,12 +337,9 @@ exports.Designator = ChainedContext.extend({
         this.__derefCode = this.__code;
         this.__propCode = "\"" + id + "\"";
         this.__code += "." + id;
-        this.__info = this._makeDenoteVar(field, isReadOnly);
+        this.__info = field.asVar(isReadOnly, this);
         this.__currentType = field.type();
         this.__scope = undefined;
-    },
-    _makeDenoteVar: function(field, isReadOnly){
-        return Type.makeVariable(field.type(), isReadOnly);
     },
     _makeDerefVar: function(){
         return Type.makeVariableRef(this.__currentType, false);
@@ -1697,16 +1694,17 @@ function isTypeRecursive(type, base){
 }
 
 var RecordField = Type.Field.extend({
-    init: function Context$RecordField(identdef, type, recordType){
+    init: function Context$RecordField(identdef, type){
         this.__identdef = identdef;
         this.__type = type;
-        this.__refcordType = recordType;
     },
     id: function(){return this.__identdef.id();},
     exported: function(){return this.__identdef.exported();},
     identdef: function(){return this.__identdef;},
     type: function(){return this.__type;},
-    recordType: function(){return this.__refcordType;}
+    asVar: function(isReadOnly){ 
+        return Type.makeVariable(this.__type, isReadOnly); 
+    }
 });
 
 exports.RecordDecl = ChainedContext.extend({
@@ -1724,7 +1722,7 @@ exports.RecordDecl = ChainedContext.extend({
         if (isTypeRecursive(type, this.__type))
             throw new Errors.Error("recursive field definition: '"
                 + field.id() + "'");
-        this.__type.addField(new RecordField(field, type, this.__type));
+        this.__type.addField(this._makeField(field, type));
         if (field.exported())
             this.parent().exportField(field.id());
     },
@@ -1758,6 +1756,9 @@ exports.RecordDecl = ChainedContext.extend({
 
         gen.closeScope("");
         gen.closeScope(");\n");
+    },
+    _makeField: function(field, type){
+        return new RecordField(field, type);
     }
 });
 

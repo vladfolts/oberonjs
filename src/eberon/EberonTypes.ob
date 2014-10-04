@@ -108,9 +108,9 @@ PROCEDURE DynamicArrayMethod.type(): Types.PType;
     RETURN dynamicArrayAddType
 END DynamicArrayMethod.type;
 
-PROCEDURE DynamicArrayMethod.recordType(): Types.PType;
+PROCEDURE DynamicArrayMethod.asVar(): Types.PId;
     RETURN NIL
-END DynamicArrayMethod.recordType;
+END DynamicArrayMethod.asVar;
 
 BEGIN
     (*dynamicArrayAddType := makeMethodType("add", Procedure.makeStd("add", NIL), Procedure.makeProcCallGenerator);*)
