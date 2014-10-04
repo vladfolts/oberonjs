@@ -175,7 +175,7 @@ BEGIN
     result.call := call;
 END initStd;
 
-PROCEDURE makeStd(name: STRING; call: PCall): Types.PProcedure;
+PROCEDURE makeStd*(name: STRING; call: PCall): Types.PProcedure;
 VAR
     result: POINTER TO Std;
 BEGIN

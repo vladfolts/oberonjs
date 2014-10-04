@@ -363,7 +363,7 @@ return {
             + "PROCEDURE proc(): P; RETURN NIL END proc;"
             ),
     pass("NEW(p)"),
-    fail(["NEW.NEW(p)", "cannot designate 'standard procedure NEW'"],
+    fail(["NEW.NEW(p)", "selector '.NEW' cannot be applied to 'standard procedure NEW'"],
          ["NEW(i)", "POINTER variable expected, got 'INTEGER'"],
          ["NEW(r)", "POINTER variable expected, got 'anonymous RECORD'"],
          ["NEW()", "1 argument(s) expected, got 0"],
@@ -1176,7 +1176,7 @@ return {
          ["VAR i: INTEGER; i := 1; END", "END expected (PROCEDURE)"],
          ["VAR i: INTEGER; BEGIN j := 1 END", "undeclared identifier: 'j'"],
          ["VAR i: INTEGER; BEGIN i.field := 1 END",
-          "cannot designate 'INTEGER'"],
+          "selector '.field' cannot be applied to 'INTEGER'"],
          ["VAR i: INTEGER; BEGIN i := j END", "undeclared identifier: 'j'"],
          ["TYPE T = RECORD field: INTEGER END; VAR v: T; BEGIN v := 1 END",
           "type mismatch: 'v' is 'T' and cannot be assigned to 'INTEGER' expression"],

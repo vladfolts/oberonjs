@@ -917,6 +917,12 @@ exports.suite = {
             pass("a[0]", "a[1]"),
             fail(["a[-1]", "index is negative: -1"], 
                  ["a[-2]", "index is negative: -2"])
+        ),
+        "add": testWithContext(
+            context(grammar.statement, 
+                    "VAR a: ARRAY * OF INTEGER;"),
+            pass(/*"a.add(123)"*/),
+            fail()
         )
     }
 };

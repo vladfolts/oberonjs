@@ -20,30 +20,12 @@ function log(s){
     console.info(s);
 }
 */
-function methodCallGenerator(context, id, type){
-    return new Procedure.makeProcCallGenerator(context, id, type);
-}
 
 function superMethodCallGenerator(context, id, type){
     var args = Procedure.makeArgumentsCode(context);
     args.write(Code.makeExpression("this"));
     return Procedure.makeProcCallGeneratorWithCustomArgs(context, id, type, args);
 }
-
-var MethodType = Type.Procedure.extend({
-    init: function EberonContext$MethodType(id, type, callGenerator){
-        Type.Procedure.prototype.init.call(this);
-        this.__id = id;
-        this.__type = type;
-        this.__callGenerator = callGenerator;
-    },
-    procType: function(){return this.__type;},
-    args: function(){return this.__type.args();},
-    result: function(){return this.__type.result();},
-    description: function(){return "method " + this.__id;},
-    procDescription: function(){return this.__type.description();},
-    callGenerator: function(context, id){return this.__callGenerator(context, id, this);}
-});
 
 function MethodOrProcMsg(id, type){
     this.id = id;
@@ -213,7 +195,7 @@ var Designator = Context.Designator.extend({
     },
     _makeDenoteVar: function(field, isReadOnly){
         var type = field.type();
-        if (type instanceof MethodType)
+        if (type instanceof EberonTypes.MethodType)
             return new MethodVariable(type);
         if (!isReadOnly && this.qualifyScope(Type.recordScope(field.recordType())))
             isReadOnly = field.identdef().isReadOnly();
@@ -421,7 +403,7 @@ var RecordType = Type.Record.extend({
         var existingField = this.findSymbol(id);
         if (existingField)
             throw new Errors.Error(
-                  existingField.type() instanceof MethodType
+                  existingField.type() instanceof EberonTypes.MethodType
                 ?   "cannot declare a new method '" + id 
                   + "': method already was declared"
                 : "cannot declare method, record already has field '" + id + "'");
@@ -435,7 +417,7 @@ var RecordType = Type.Record.extend({
         var base = Type.recordBase(this);
         var id = methodId.id();
         var existingField = this.findSymbol(id);
-        if (!existingField || !(existingField.type() instanceof MethodType)){
+        if (!existingField || !(existingField.type() instanceof EberonTypes.MethodType)){
             throw new Errors.Error(
                   "'" + Type.typeName(this) + "' has no declaration for method '" + id 
                 + "'");
@@ -601,7 +583,7 @@ var RecordDecl = Context.RecordDecl.extend({
         if (msg instanceof MethodOrProcMsg)
             return this.type().addMethod(
                 msg.id,
-                new MethodType(msg.id.id(), msg.type, methodCallGenerator));
+                EberonTypes.makeMethodType(msg.id.id(), msg.type, Procedure.makeProcCallGenerator));
         if (msg == Context.endParametersMsg) // not used
             return undefined;
         if (msg instanceof Context.AddArgumentMsg) // not used
@@ -690,7 +672,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     setType: function(type){
         Context.ProcDecl.prototype.setType.call(this, type);
         if (this.__methodId)
-            this.__methodType = new MethodType(this.__methodId.id(), type, methodCallGenerator);
+            this.__methodType = EberonTypes.makeMethodType(this.__methodId.id(), type, Procedure.makeProcCallGenerator);
     },
     handleIdent: function(id){
         if (this.__boundType){
@@ -727,7 +709,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         var id = this.__methodId.id();
         baseType.requireMethodDefinition(id, "cannot use abstract method(s) in SUPER calls");
         return {
-            info: Type.makeProcedure(new MethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
+            info: Type.makeProcedure(EberonTypes.makeMethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
             code: this.qualifyScope(Type.recordScope(baseType))
                 + Type.typeName(baseType) + ".prototype." + id + ".call"
         };

@@ -327,19 +327,16 @@ exports.Designator = ChainedContext.extend({
     },
     handleIdent: function(id){
         var t = this.__currentType;
-        var pointerType;
         var isReadOnly = this.__info instanceof Type.Variable 
                       && this.__info.isReadOnly();
         if (t instanceof Type.Pointer){
-            pointerType = t;
             this.__handleDeref();
             isReadOnly = false;
         }
-        else if (!(t instanceof Type.Record
-                || t instanceof Module.AnyType))
-            throw new Errors.Error("cannot designate '" + t.description() + "'");
-
-        var field = this.__denote(id, pointerType);
+        var field = t.denote(id);
+        this.__derefCode = this.__code;
+        this.__propCode = "\"" + id + "\"";
+        this.__code += "." + id;
         this.__info = this._makeDenoteVar(field, isReadOnly);
         this.__currentType = field.type();
         this.__scope = undefined;
@@ -431,20 +428,6 @@ exports.Designator = ChainedContext.extend({
         this.__code = code;
 
         this.__currentType = type;
-    },
-    __denote: function(id, pointerType){
-        var t = this.__currentType;
-        var field = t.findSymbol(id);
-        if (!field){
-            var typeDesc = !Type.typeName(t) && pointerType && Type.typeName(pointerType)
-                ? Type.typeName(pointerType)
-                : t.description();
-            throw new Errors.Error("type '" + typeDesc + "' has no '" + id + "' field");
-        }
-        this.__derefCode = this.__code;
-        this.__propCode = "\"" + id + "\"";
-        this.__code += "." + id;
-        return field;
     },
     endParse: function(){
         var code = this.__code;

@@ -8,7 +8,7 @@ TYPE
 
     AnyType* = RECORD(Types.StorageType)
         PROCEDURE callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
-        PROCEDURE findSymbol(id: STRING): Types.PField;
+        PROCEDURE denote(id: STRING): Types.PField;
         asField: POINTER TO AnyField
     END;
 
@@ -38,9 +38,9 @@ PROCEDURE AnyType.callGenerator(cx: LanguageContext.PType; id: STRING): Procedur
     RETURN Procedure.makeProcCallGenerator(cx, id, anyProc)
 END AnyType.callGenerator;
 
-PROCEDURE AnyType.findSymbol(id: STRING): Types.PField;
+PROCEDURE AnyType.denote(id: STRING): Types.PField;
     RETURN any.asField
-END AnyType.findSymbol;
+END AnyType.denote;
 
 PROCEDURE AnyField.id(): STRING;
     RETURN "any field"

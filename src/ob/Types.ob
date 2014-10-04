@@ -81,7 +81,17 @@ TYPE
 
     PString* = POINTER TO String;
 
+    Field* = RECORD(Object.Type)
+        PROCEDURE id*(): STRING;
+        PROCEDURE exported*(): BOOLEAN;
+        PROCEDURE type*(): PType;
+        PROCEDURE recordType*(): PType 
+    END;
+    PField* = POINTER TO Field;
+
     NamedType* = RECORD(StorageType)
+        PROCEDURE denote*(id: STRING): PField;
+
         name*: STRING
     END;
 
@@ -134,14 +144,6 @@ TYPE
     END;
 
     PBasicType* = POINTER TO BasicType;
-
-    Field* = RECORD(Object.Type)
-        PROCEDURE id*(): STRING;
-        PROCEDURE exported*(): BOOLEAN;
-        PROCEDURE type*(): PType;
-        PROCEDURE recordType*(): PType 
-    END;
-    PField* = POINTER TO Field;
 
     Record* = RECORD(NamedType)
         PROCEDURE addField(f: PField);
@@ -423,6 +425,20 @@ BEGIN
     RETURN result(PField)
 END Record.findSymbol;
 
+PROCEDURE existingField(r: Record; id: STRING; d: NamedType): PField;
+BEGIN
+    result <- r.findSymbol(id);
+    IF result = NIL THEN
+        Errors.raise("type '" + d.description() + "' has no '" + id + "' field");
+    END;
+    RETURN result
+END existingField;
+
+PROCEDURE Record.denote(id: STRING): PField;
+BEGIN
+    RETURN existingField(SELF, id, SELF)
+END Record.denote;
+
 PROCEDURE recordBase*(r: Record): PRecord;
     RETURN r.base
 END recordBase;
@@ -470,6 +486,19 @@ PROCEDURE Pointer.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "null"
 END Pointer.initializer;
 
+PROCEDURE Pointer.denote(id: STRING): PField;
+VAR
+    d: POINTER TO NamedType;
+BEGIN
+    base <- pointerBase(SELF);
+    IF (LEN(SELF.name) = 0) OR (LEN(base.name) # 0) THEN
+        d := base;
+    ELSE
+        d := SELF(POINTER);
+    END;
+    RETURN existingField(base^, id, d^)
+END Pointer.denote;
+
 PROCEDURE foldArrayDimensions(VAR a: Array; dimToStr: ArrayDimensionDescriptionCallback; VAR sizes, of: STRING);
 BEGIN  
     elementsType <- a.elementsType;
@@ -512,6 +541,13 @@ END arrayDescription;
 PROCEDURE Array.description(): STRING;
     RETURN arrayDescription(SELF, arrayDimensionDescription)
 END Array.description;
+
+PROCEDURE NamedType.denote(id: STRING): PField;
+BEGIN
+    Errors.raise("selector '." + id + "' cannot be applied to '" 
+               + SELF.description() + "'");
+    RETURN NIL
+END NamedType.denote;
 
 PROCEDURE OpenArray.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN ""

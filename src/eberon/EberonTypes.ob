@@ -1,10 +1,31 @@
 MODULE EberonTypes;
-IMPORT Context, Types;
+IMPORT Context, JsArray, LanguageContext, Procedure, Types;
 
 TYPE
+    CallGenerator = PROCEDURE(cx: LanguageContext.PType; id: STRING; type: Types.DefinedProcedure): Procedure.PCallGenerator;
+
+    MethodType* = RECORD(Procedure.Std)
+        PROCEDURE procType(): Types.PProcedure;
+        PROCEDURE args(): JsArray.Type;
+        PROCEDURE result(): Types.PType;
+        PROCEDURE procDescription(): STRING;
+        PROCEDURE callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
+
+        type: Types.PDefinedProcedure;
+        call: CallGenerator
+    END;
+    PMethodType = POINTER TO MethodType;
+
     DynamicArray* = RECORD(Types.Array)
     END;
     PDynamicArray* = POINTER TO DynamicArray;
+
+    DynamicArrayMethod = RECORD(Types.Field)
+    END;
+
+VAR
+    dynamicArrayAdd: POINTER TO DynamicArrayMethod;
+    dynamicArrayAddType: Types.PProcedure;
 
 PROCEDURE arrayDimensionDescription*(VAR a: Types.Array): STRING;
 VAR
@@ -26,6 +47,46 @@ PROCEDURE DynamicArray.description(): STRING;
     RETURN Types.arrayDescription(SELF, arrayDimensionDescription)
 END DynamicArray.description;
 
+PROCEDURE DynamicArray.denote(id: STRING): Types.PField;
+BEGIN
+    RETURN dynamicArrayAdd
+END DynamicArray.denote;
+
+PROCEDURE MethodType.procType(): Types.PProcedure;
+    RETURN SELF.type
+END MethodType.procType;
+
+PROCEDURE MethodType.args(): JsArray.Type;
+    RETURN SELF.type.args()
+END MethodType.args;
+
+PROCEDURE MethodType.result(): Types.PType;
+    RETURN SELF.type.result()
+END MethodType.result;
+
+PROCEDURE MethodType.description(): STRING;
+    RETURN "method " + SELF.name
+END MethodType.description;
+
+PROCEDURE MethodType.procDescription(): STRING;
+    RETURN SELF.type.description()
+END MethodType.procDescription;
+
+PROCEDURE MethodType.callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
+    RETURN SELF.call(cx, id, SELF.type^)
+END MethodType.callGenerator;
+
+PROCEDURE makeMethodType*(id: STRING; t: Types.PDefinedProcedure; call: CallGenerator): PMethodType;
+VAR
+    result: PMethodType;
+BEGIN
+    NEW(result);
+    result.name := id;
+    result.type := t;
+    result.call := call;
+    RETURN result
+END makeMethodType;
+
 PROCEDURE makeDynamicArray*(elementsType: Types.PType): PDynamicArray;
 VAR
     result: PDynamicArray;
@@ -35,4 +96,24 @@ BEGIN
     RETURN result
 END makeDynamicArray;
 
+PROCEDURE DynamicArrayMethod.id(): STRING;
+    RETURN "add"
+END DynamicArrayMethod.id;
+
+PROCEDURE DynamicArrayMethod.exported(): BOOLEAN;
+    RETURN FALSE
+END DynamicArrayMethod.exported;
+
+PROCEDURE DynamicArrayMethod.type(): Types.PType;
+    RETURN dynamicArrayAddType
+END DynamicArrayMethod.type;
+
+PROCEDURE DynamicArrayMethod.recordType(): Types.PType;
+    RETURN NIL
+END DynamicArrayMethod.recordType;
+
+BEGIN
+    (*dynamicArrayAddType := makeMethodType("add", Procedure.makeStd("add", NIL), Procedure.makeProcCallGenerator);*)
+    dynamicArrayAddType := Procedure.makeStd("add", NIL);
+    NEW(dynamicArrayAdd);
 END EberonTypes.
