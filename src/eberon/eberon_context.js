@@ -21,10 +21,10 @@ function log(s){
 }
 */
 
-function superMethodCallGenerator(context, id, type){
+function superMethodCallGenerator(context, type){
     var args = Procedure.makeArgumentsCode(context);
     args.write(Code.makeExpression("this"));
-    return Procedure.makeProcCallGeneratorWithCustomArgs(context, id, type, args);
+    return Procedure.makeProcCallGeneratorWithCustomArgs(context, type, args);
 }
 
 function MethodOrProcMsg(id, type){
@@ -81,15 +81,6 @@ var MethodHeading = Context.Chained.extend({
 function getMethodSelf(){}
 function getSelfAsPointerMsg(){}
 function getMethodSuper(){}
-
-var MethodVariable = Type.Variable.extend({
-    init: function(type){
-        this.__type = type;
-    },
-    type: function(){return this.__type;},
-    isReadOnly: function(){return true;},
-    idType: function(){return "method";}
-});
 
 var ResultVariable = Type.Variable.extend({
     init: function(e){
@@ -225,7 +216,7 @@ var Designator = Context.Designator.extend({
             var typeId = Type.makeTypeId(this.handleMessage(getSelfAsPointerMsg));
             var pointerType = Type.makePointer("", typeId);
             var info = Type.makeVariable(pointerType, true);
-            this._advance(pointerType, info, "this");
+            this._advance(pointerType, info, "");
         }
         else if (s == "SUPER"){
             var ms = this.handleMessage(getMethodSuper);
@@ -235,7 +226,7 @@ var Designator = Context.Designator.extend({
             Context.Designator.prototype.handleLiteral.call(this, s);
     },
     __beginCall: function(){
-        this.__procCall = Context.makeProcCall(this, this.__currentType, this.__info, this.__code);
+        this.__procCall = Context.makeProcCall(this, this.__currentType, this.__info);
     },
     __endCall: function(){
         var e = this.__procCall.end();
@@ -307,8 +298,10 @@ var ExpressionProcedureCall = Context.Chained.extend({
     setDesignator: function(d){
         var info = d.info();
         var parent = this.parent();
-        if (info instanceof ResultVariable)
-            parent.handleExpression(info.expression());
+        if (info instanceof ResultVariable){
+            var e = info.expression();
+            parent.handleExpression(Code.makeExpressionWithPrecedence(d.code(), d.type(), undefined, e.constValue(), e.maxPrecedence()));
+        }
         else
             parent.setDesignator(d);
     }
@@ -335,10 +328,10 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
             code = op.assign(left, this.__right, this.language());
         }
         else if (!(d.info() instanceof ResultVariable)){
-            var procCall = Context.makeProcCall(this, d.type(), d.info(), d.code());
+            var procCall = Context.makeProcCall(this, d.type(), d.info());
             var result = procCall.end();
             Context.assertProcStatementResult(result.type());
-            code = result.code();
+            code = d.code() + result.code();
         }
         else{
             Context.assertProcStatementResult(d.type());
@@ -366,7 +359,7 @@ var RecordFieldAsMethod = Context.RecordField.extend({
         Context.RecordField.prototype.init.call(this, field, type);
     },
     asVar: function(){ 
-        return new MethodVariable(this.type()); 
+        return EberonTypes.makeMethodVariable(this.type()); 
     }
 });
 var RecordType = Type.Record.extend({

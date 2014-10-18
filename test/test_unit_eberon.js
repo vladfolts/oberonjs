@@ -921,8 +921,8 @@ exports.suite = {
         "add": testWithContext(
             context(grammar.statement, 
                     "VAR a: ARRAY * OF INTEGER;"),
-            pass(/*"a.add(123)"*/),
-            fail()
+            pass("a.add(123)"),
+            fail(["a.add := a.add", "cannot assign to method"])
         )
     }
 };

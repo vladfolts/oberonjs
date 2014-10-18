@@ -27,12 +27,14 @@ var ProcedureCall = Context.Chained.extend({
     init: function ProcedureCallContext(context){
         Context.Chained.prototype.init.call(this, context);
         this.__type = undefined;
+        this.__id = undefined;
         this.__procCall = undefined;
         this.__code = Code.makeSimpleGenerator();
     },
     setDesignator: function(d){
         this.__type = d.type();
-        this.__procCall = Context.makeProcCall(this, this.__type, d.info(), d.code());
+        this.__id = d.code();
+        this.__procCall = Context.makeProcCall(this, this.__type, d.info());
         this.__callExpression = undefined;
     },
     codeGenerator: function(){return this.__code;},
@@ -44,7 +46,10 @@ var ProcedureCall = Context.Chained.extend({
     },
     handleExpression: function(e){this.__procCall.handleArgument(e);},
     callExpression: function(){return this.__callExpression;},
-    endParse: function(){this.__callExpression = this.__procCall.end();}
+    endParse: function(){
+        var e = this.__procCall.end();
+        this.__callExpression = Code.makeExpressionWithPrecedence(this.__id + e.code(), e.type(), undefined, e.constValue(), e.maxPrecedence());
+    }
 });
 
 var StatementProcedureCall = ProcedureCall.extend({

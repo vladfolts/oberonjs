@@ -31,8 +31,8 @@ TYPE
     END;
 
     CallGenerator* = RECORD
-        PROCEDURE handleArgument(e: Code.PExpression);
-        PROCEDURE end(): Code.PExpression;
+        PROCEDURE handleArgument*(e: Code.PExpression);
+        PROCEDURE end*(): Code.PExpression;
 
         args: JsArray.Type;
         cx: LanguageContext.PType;
@@ -40,12 +40,8 @@ TYPE
     END;
     PCallGenerator* = POINTER TO CallGenerator;
 
-    Impl = RECORD(Types.Procedure)
-        PROCEDURE callGenerator(cx: LanguageContext.PType): PCallGenerator
-    END;
-
     Type* = RECORD(Types.DefinedProcedure)
-        PROCEDURE callGenerator(cx: LanguageContext.PType; id: STRING): PCallGenerator;
+        PROCEDURE callGenerator(cx: LanguageContext.PType): PCallGenerator;
         PROCEDURE define(args: JsArray.Type; result: Types.PType);
 
         mArgs: JsArray.Type;
@@ -53,7 +49,9 @@ TYPE
     END;
     PType = POINTER TO Type;
 
-    Std* = RECORD(Impl)
+    Std* = RECORD(Types.Procedure)
+        PROCEDURE callGenerator*(cx: LanguageContext.PType): PCallGenerator;
+
         call: PCall
     END;
 
@@ -232,13 +230,11 @@ END GenArgCode.result;
 
 PROCEDURE makeProcCallGeneratorWithCustomArgs*(
     cx: LanguageContext.PType; 
-    id: STRING; 
     type: Types.DefinedProcedure;
     argumentsCode: PArgumentsCode
     ) : PCallGenerator;
 TYPE
     CallImpl = RECORD(Call)
-        id: STRING;
         args: JsArray.Type;
         result: Types.PType;
         argumentsCode: PArgumentsCode
@@ -262,13 +258,12 @@ VAR
             END;
         END;
         RETURN Code.makeSimpleExpression(
-                SELF.id + "(" + SELF.argumentsCode.result() + ")",
+                "(" + SELF.argumentsCode.result() + ")",
                 SELF.result
                 )
     END CallImpl.make;
 BEGIN
     NEW(call);
-    call.id := id;
     call.args := type.args();
     call.result := type.result();
     call.argumentsCode := argumentsCode;
@@ -286,10 +281,9 @@ END makeArgumentsCode;
 
 PROCEDURE makeProcCallGenerator*(
     cx: LanguageContext.PType; 
-    id: STRING; 
     type: Types.DefinedProcedure
     ) : PCallGenerator;
-    RETURN makeProcCallGeneratorWithCustomArgs(cx, id, type, makeArgumentsCode(cx))
+    RETURN makeProcCallGeneratorWithCustomArgs(cx, type, makeArgumentsCode(cx))
 END makeProcCallGenerator;
 
 PROCEDURE Std.description(): STRING;
@@ -299,6 +293,10 @@ END Std.description;
 PROCEDURE Std.callGenerator(cx: LanguageContext.PType): PCallGenerator;
     RETURN makeCallGenerator(SELF.call, cx)
 END Std.callGenerator;
+
+PROCEDURE Std.designatorCode(id: STRING): STRING;
+    RETURN ""
+END Std.designatorCode;
 
 PROCEDURE makeSymbol*(p: Types.PProcedure): Symbols.PSymbol;
     RETURN Symbols.makeSymbol(p.name, Types.makeProcedure(p))
@@ -904,8 +902,8 @@ BEGIN
     RETURN result
 END Type.description;
 
-PROCEDURE Type.callGenerator(cx: LanguageContext.PType; id: STRING): PCallGenerator;
-    RETURN makeProcCallGenerator(cx, id, SELF)
+PROCEDURE Type.callGenerator(cx: LanguageContext.PType): PCallGenerator;
+    RETURN makeProcCallGenerator(cx, SELF)
 END Type.callGenerator;
 
 PROCEDURE Type.define(args: JsArray.Type; result: Types.PType);

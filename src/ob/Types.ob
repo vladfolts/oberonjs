@@ -121,6 +121,7 @@ TYPE
     PPointer* = POINTER TO Pointer;
 
     Procedure* = RECORD(NamedType)
+        PROCEDURE designatorCode*(id: STRING): STRING
     END;
     PProcedure* = POINTER TO Procedure;
 
@@ -572,6 +573,10 @@ END Procedure.initializer;
 PROCEDURE Procedure.description(): STRING;
     RETURN SELF.name
 END Procedure.description;
+
+PROCEDURE DefinedProcedure.designatorCode(id: STRING): STRING;
+    RETURN id
+END DefinedProcedure.designatorCode;
 
 PROCEDURE ProcedureArgument.description(): STRING;
 VAR

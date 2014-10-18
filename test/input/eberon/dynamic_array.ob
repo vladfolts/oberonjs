@@ -13,6 +13,8 @@ VAR
     dynamic: ARRAY * OF INTEGER;
 BEGIN
     dynamic := static;
+
+    dynamic.add(3);
 END assignDynamicArrayFromStatic;
 
 END m.

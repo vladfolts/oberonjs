@@ -7,8 +7,9 @@ TYPE
     PType* = POINTER TO Type;
 
     AnyType* = RECORD(Types.StorageType)
-        PROCEDURE callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
+        PROCEDURE callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
         PROCEDURE denote(id: STRING): Types.PField;
+        PROCEDURE designatorCode(id: STRING): STRING;
         asField: POINTER TO AnyField;
         asVar: Types.PId
     END;
@@ -35,13 +36,17 @@ PROCEDURE AnyType.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "undefined"
 END AnyType.initializer;
 
-PROCEDURE AnyType.callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
-    RETURN Procedure.makeProcCallGenerator(cx, id, anyProc)
+PROCEDURE AnyType.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+    RETURN Procedure.makeProcCallGenerator(cx, anyProc)
 END AnyType.callGenerator;
 
 PROCEDURE AnyType.denote(id: STRING): Types.PField;
     RETURN any.asField
 END AnyType.denote;
+
+PROCEDURE AnyType.designatorCode(id: STRING): STRING;
+    RETURN id
+END AnyType.designatorCode;
 
 PROCEDURE AnyField.id(): STRING;
     RETURN "any field"

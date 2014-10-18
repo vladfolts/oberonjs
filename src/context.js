@@ -17,7 +17,11 @@ var nullCodeGenerator = Code.nullGenerator();
 var nilType = Type.nil();
 
 var castOperations = op.castOperations();
-
+/*
+function log(s){
+    console.info(s);
+}
+*/
 function getSymbolAndScope(context, id){
     var s = context.findSymbol(id);
     if (!s)
@@ -310,20 +314,23 @@ exports.Designator = ChainedContext.extend({
         this.__scope = found.scope();
         var s = found.symbol();
         var info = s.info();
+        var code = q.code;
         if (info instanceof Type.Type || s.isType())
             this.__currentType = info;
         else if (s.isConst())
             this.__currentType = Type.constType(info);
-        else if (s.isVariable())
+        else if (s.isVariable()){
             this.__currentType = info.type();
-        else if (s.isProcedure())
+            if (q.module)
+                code += "()";
+        }
+        else if (s.isProcedure()){
             this.__currentType = Type.procedureType(info);
+            code = this.__currentType.designatorCode(code);
+        }
         
         this.__info = info;
-        this.__code += q.code;
-        
-        if (q.module && s.isVariable())
-            this.__code += "()";
+        this.__code += code;
     },
     handleIdent: function(id){
         var t = this.__currentType;
@@ -336,9 +343,12 @@ exports.Designator = ChainedContext.extend({
         var field = t.denote(id);
         this.__derefCode = this.__code;
         this.__propCode = "\"" + id + "\"";
-        this.__code += "." + id;
         this.__info = field.asVar(isReadOnly, this);
         this.__currentType = field.type();
+        var code = this.__currentType instanceof Type.Procedure 
+                 ? this.__currentType.designatorCode(id)
+                 : id;
+        this.__code += "." + code;
         this.__scope = undefined;
     },
     _makeDerefVar: function(){
@@ -371,7 +381,7 @@ exports.Designator = ChainedContext.extend({
     _advance: function(type, info, code){
         this.__currentType = type;
         this.__info = info;
-        this.__code = code;
+        this.__code += code;
     },
     _indexSequence: function(type, info){
         var isArray = type instanceof Type.Array;
@@ -1977,15 +1987,14 @@ exports.Context = Class.extend({
     }
 });
 
-function makeProcCall(context, type, info, code){
+function makeProcCall(context, type, info){
     assertProcType(type, info);
     var l = context.language();
     return type.callGenerator(
         { types: l.types, 
           rtl: l.rtl, 
           qualifyScope: context.qualifyScope.bind(context)
-        }, 
-        code);
+        });
 }
 
 exports.AddArgumentMsg = AddArgumentMsg;

@@ -1,31 +1,43 @@
 MODULE EberonTypes;
-IMPORT Context, JsArray, LanguageContext, Procedure, Types;
+IMPORT Code, Context, JsArray, LanguageContext, Procedure, Types;
 
 TYPE
-    CallGenerator = PROCEDURE(cx: LanguageContext.PType; id: STRING; type: Types.DefinedProcedure): Procedure.PCallGenerator;
+    CallGenerator = PROCEDURE(cx: LanguageContext.PType; type: Types.DefinedProcedure): Procedure.PCallGenerator;
 
     MethodType* = RECORD(Procedure.Std)
         PROCEDURE procType(): Types.PProcedure;
         PROCEDURE args(): JsArray.Type;
         PROCEDURE result(): Types.PType;
         PROCEDURE procDescription(): STRING;
-        PROCEDURE callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
 
         type: Types.PDefinedProcedure;
         call: CallGenerator
     END;
     PMethodType = POINTER TO MethodType;
 
+    MethodVariable* = RECORD(Types.Variable)
+        mType: Types.PType
+    END;
+
     DynamicArray* = RECORD(Types.Array)
     END;
     PDynamicArray* = POINTER TO DynamicArray;
 
-    DynamicArrayMethod = RECORD(Types.Field)
+    DynamicArrayMethodField = RECORD(Types.Field)
+    END;
+    (*
+    DynamicArrayAddCall = RECORD(Procedure.StdCall)
+    END;
+    *)
+    DynamicArrayAddCallGenerator = RECORD(Procedure.CallGenerator)
+        arg: Code.PExpression
     END;
 
+    DynamicArrayMethod = RECORD(Procedure.Std)
+    END;
 VAR
-    dynamicArrayAdd: POINTER TO DynamicArrayMethod;
-    dynamicArrayAddType: Types.PProcedure;
+    dynamicArrayAdd: POINTER TO DynamicArrayMethodField;
+    dynamicArrayAddMethod: POINTER TO DynamicArrayMethod;
 
 PROCEDURE arrayDimensionDescription*(VAR a: Types.Array): STRING;
 VAR
@@ -52,6 +64,10 @@ BEGIN
     RETURN dynamicArrayAdd
 END DynamicArray.denote;
 
+PROCEDURE MethodType.designatorCode(id: STRING): STRING;
+    RETURN id
+END MethodType.designatorCode;
+
 PROCEDURE MethodType.procType(): Types.PProcedure;
     RETURN SELF.type
 END MethodType.procType;
@@ -72,8 +88,8 @@ PROCEDURE MethodType.procDescription(): STRING;
     RETURN SELF.type.description()
 END MethodType.procDescription;
 
-PROCEDURE MethodType.callGenerator(cx: LanguageContext.PType; id: STRING): Procedure.PCallGenerator;
-    RETURN SELF.call(cx, id, SELF.type^)
+PROCEDURE MethodType.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+    RETURN SELF.call(cx, SELF.type^)
 END MethodType.callGenerator;
 
 PROCEDURE makeMethodType*(id: STRING; t: Types.PDefinedProcedure; call: CallGenerator): PMethodType;
@@ -87,6 +103,31 @@ BEGIN
     RETURN result
 END makeMethodType;
 
+PROCEDURE MethodVariable.type(): Types.PType;
+    RETURN SELF.mType
+END MethodVariable.type;
+
+PROCEDURE MethodVariable.isReadOnly(): BOOLEAN;
+    RETURN TRUE
+END MethodVariable.isReadOnly;
+
+PROCEDURE MethodVariable.idType(): STRING;
+    RETURN "method"
+END MethodVariable.idType;
+
+PROCEDURE MethodVariable.isReference(): BOOLEAN;
+    RETURN FALSE
+END MethodVariable.isReference;
+
+PROCEDURE makeMethodVariable*(type: Types.PType): Types.PVariable;
+VAR
+    result: POINTER TO MethodVariable;
+BEGIN
+    NEW(result);
+    result.mType := type;
+    RETURN result
+END makeMethodVariable;
+
 PROCEDURE makeDynamicArray*(elementsType: Types.PType): PDynamicArray;
 VAR
     result: PDynamicArray;
@@ -96,24 +137,54 @@ BEGIN
     RETURN result
 END makeDynamicArray;
 
-PROCEDURE DynamicArrayMethod.id(): STRING;
+PROCEDURE DynamicArrayMethodField.id(): STRING;
     RETURN "add"
-END DynamicArrayMethod.id;
+END DynamicArrayMethodField.id;
 
-PROCEDURE DynamicArrayMethod.exported(): BOOLEAN;
+PROCEDURE DynamicArrayMethodField.exported(): BOOLEAN;
     RETURN FALSE
-END DynamicArrayMethod.exported;
+END DynamicArrayMethodField.exported;
 
-PROCEDURE DynamicArrayMethod.type(): Types.PType;
-    RETURN dynamicArrayAddType
-END DynamicArrayMethod.type;
+PROCEDURE DynamicArrayMethodField.type(): Types.PType;
+    RETURN dynamicArrayAddMethod
+END DynamicArrayMethodField.type;
 
-PROCEDURE DynamicArrayMethod.asVar(): Types.PId;
-    RETURN NIL
-END DynamicArrayMethod.asVar;
+PROCEDURE DynamicArrayMethodField.asVar(): Types.PId;
+    RETURN makeMethodVariable(dynamicArrayAddMethod)
+END DynamicArrayMethodField.asVar;
+(*
+PROCEDURE DynamicArrayAddCall.make(args: JsArray.Type; cx: LanguageContext.Type): Code.PExpression;
+BEGIN
+    arg <- Procedure.checkSingleArgument(args, SELF, cx.types);
+    RETURN Code.makeSimpleExpression(
+            SELF.varId + ".push(" + arg.code() + ")",
+            NIL)
+END DynamicArrayAddCall.make;
+*)
+PROCEDURE DynamicArrayAddCallGenerator.handleArgument(e: Code.PExpression);
+BEGIN
+    SELF.arg := e;
+END DynamicArrayAddCallGenerator.handleArgument;
+
+PROCEDURE DynamicArrayAddCallGenerator.end(): Code.PExpression;
+    RETURN Code.makeSimpleExpression(
+            "(" + SELF.arg.code() + ")",
+            NIL)
+END DynamicArrayAddCallGenerator.end;
+
+PROCEDURE DynamicArrayMethod.designatorCode(id: STRING): STRING;
+    RETURN "push"
+END DynamicArrayMethod.designatorCode;
+
+PROCEDURE DynamicArrayMethod.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+VAR
+    result: POINTER TO DynamicArrayAddCallGenerator;
+BEGIN
+    NEW(result);
+    RETURN result
+END DynamicArrayMethod.callGenerator;
 
 BEGIN
-    (*dynamicArrayAddType := makeMethodType("add", Procedure.makeStd("add", NIL), Procedure.makeProcCallGenerator);*)
-    dynamicArrayAddType := Procedure.makeStd("add", NIL);
+    NEW(dynamicArrayAddMethod);
     NEW(dynamicArrayAdd);
 END EberonTypes.

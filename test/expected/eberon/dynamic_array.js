@@ -56,5 +56,6 @@ function assignDynamicArrayFromStatic(){
 	var static$ = RTL$.makeArray(3, 0);
 	var dynamic = [];
 	RTL$.copy(static$, dynamic);
+	dynamic.push(3);
 }
 }();
