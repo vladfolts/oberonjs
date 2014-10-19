@@ -56,4 +56,5 @@ D.prototype.p2 = function(i/*INTEGER*/){
 }
 dp = new D();
 dp.p();
+dp.p();
 }();

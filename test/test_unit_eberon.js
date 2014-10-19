@@ -205,6 +205,16 @@ exports.suite = {
     pass("o.f()"),
     fail(["o.p()", "procedure returning no result cannot be used in an expression"])
     ),
+"method call as statement": testWithContext(
+    context(grammar.statement,
+              "TYPE T = RECORD PROCEDURE p(); PROCEDURE f(): INTEGER END;"
+            + "VAR o: T;"
+            + "PROCEDURE T.p(); END T.p;"
+            + "PROCEDURE T.f(): INTEGER; RETURN 0 END T.f;"
+            ),
+    pass("o.p"),
+    fail(["o.f", "procedure returning a result cannot be used as a statement"])
+    ),
 "cannot assign to method": testWithContext(
     context(grammar.statement,
               "TYPE T = RECORD PROCEDURE p() END;"
@@ -212,7 +222,7 @@ exports.suite = {
             + "PROCEDURE T.p(); END T.p;"
             ),
     pass(),
-    fail(["o.p := o.p", "cannot assign to method"],
+    fail(["o.p := o.p", "method 'p' cannot be referenced"],
          ["o.p := NIL", "cannot assign to method"])
     ),
 "method cannot be referenced": testWithContext(
@@ -224,7 +234,8 @@ exports.suite = {
             + "PROCEDURE proc(p: Proc); END proc;"
             ),
     pass(),
-    fail(["proc(o.p)", "type mismatch for argument 1: 'method p' cannot be converted to 'Proc'"])
+    fail(["proc(o.p)", "method 'p' cannot be referenced"],
+         ["v <- o.p", "method 'p' cannot be referenced"])
     ),
 "method super call": testWithContext(
     context(grammar.declarationSequence,
@@ -922,7 +933,9 @@ exports.suite = {
             context(grammar.statement, 
                     "VAR a: ARRAY * OF INTEGER;"),
             pass("a.add(123)"),
-            fail(["a.add := a.add", "cannot assign to method"])
+            fail(["a.add := NIL", "cannot assign to method"],
+                 ["v <- a.add", "standard procedure 'add' cannot be referenced"]                
+                )
         )
     }
 };

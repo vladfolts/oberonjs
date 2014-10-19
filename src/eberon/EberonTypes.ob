@@ -15,8 +15,7 @@ TYPE
     END;
     PMethodType = POINTER TO MethodType;
 
-    MethodVariable* = RECORD(Types.Variable)
-        mType: Types.PType
+    MethodVariable* = RECORD(Types.ProcedureId)
     END;
 
     DynamicArray* = RECORD(Types.Array)
@@ -81,7 +80,7 @@ PROCEDURE MethodType.result(): Types.PType;
 END MethodType.result;
 
 PROCEDURE MethodType.description(): STRING;
-    RETURN "method " + SELF.name
+    RETURN "method '" + SELF.name + "'"
 END MethodType.description;
 
 PROCEDURE MethodType.procDescription(): STRING;
@@ -103,28 +102,16 @@ BEGIN
     RETURN result
 END makeMethodType;
 
-PROCEDURE MethodVariable.type(): Types.PType;
-    RETURN SELF.mType
-END MethodVariable.type;
-
-PROCEDURE MethodVariable.isReadOnly(): BOOLEAN;
-    RETURN TRUE
-END MethodVariable.isReadOnly;
-
 PROCEDURE MethodVariable.idType(): STRING;
     RETURN "method"
 END MethodVariable.idType;
 
-PROCEDURE MethodVariable.isReference(): BOOLEAN;
-    RETURN FALSE
-END MethodVariable.isReference;
-
-PROCEDURE makeMethodVariable*(type: Types.PType): Types.PVariable;
+PROCEDURE makeMethodVariable*(type: Types.PType): Types.PProcedureId;
 VAR
     result: POINTER TO MethodVariable;
 BEGIN
     NEW(result);
-    result.mType := type;
+    result.type := type;
     RETURN result
 END makeMethodVariable;
 
@@ -186,5 +173,6 @@ END DynamicArrayMethod.callGenerator;
 
 BEGIN
     NEW(dynamicArrayAddMethod);
+    dynamicArrayAddMethod.name := "'add'";
     NEW(dynamicArrayAdd);
 END EberonTypes.

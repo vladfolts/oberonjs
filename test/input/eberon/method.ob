@@ -51,4 +51,5 @@ END D.p2;
 BEGIN
     NEW(dp);
     dp.p();
+    dp.p;
 END m.

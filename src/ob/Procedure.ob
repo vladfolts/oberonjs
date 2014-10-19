@@ -287,7 +287,7 @@ PROCEDURE makeProcCallGenerator*(
 END makeProcCallGenerator;
 
 PROCEDURE Std.description(): STRING;
-    RETURN "standard procedure " + Types.typeName(SELF)
+    RETURN "standard procedure " + SELF.name
 END Std.description;
 
 PROCEDURE Std.callGenerator(cx: LanguageContext.PType): PCallGenerator;

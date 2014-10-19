@@ -17,11 +17,11 @@ var nullCodeGenerator = Code.nullGenerator();
 var nilType = Type.nil();
 
 var castOperations = op.castOperations();
-/*
+
 function log(s){
     console.info(s);
 }
-*/
+
 function getSymbolAndScope(context, id){
     var s = context.findSymbol(id);
     if (!s)
