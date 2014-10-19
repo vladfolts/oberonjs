@@ -931,10 +931,14 @@ exports.suite = {
         ),
         "add": testWithContext(
             context(grammar.statement, 
-                    "VAR a: ARRAY * OF INTEGER;"),
-            pass("a.add(123)"),
+                    "VAR a: ARRAY * OF INTEGER; byte: BYTE;"),
+            pass("a.add(123)",
+                 "a.add(byte)"),
             fail(["a.add := NIL", "cannot assign to method"],
-                 ["v <- a.add", "standard procedure 'add' cannot be referenced"]                
+                 ["v <- a.add", "dynamic array method 'add' cannot be referenced"],                
+                 ["a.add()", "method 'add' expects one argument, got nothing"],
+                 ["a.add(1, 2)", "method 'add' expects one argument, got many"],                
+                 ["a.add(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"]                
                 )
         )
     }

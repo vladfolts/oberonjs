@@ -359,7 +359,7 @@ var RecordFieldAsMethod = Context.RecordField.extend({
         Context.RecordField.prototype.init.call(this, field, type);
     },
     asVar: function(){ 
-        return EberonTypes.makeMethodVariable(this.type()); 
+        return EberonTypes.makeMethod(this.type()); 
     }
 });
 var RecordType = Type.Record.extend({

@@ -55,7 +55,19 @@ var r = new T();
 function assignDynamicArrayFromStatic(){
 	var static$ = RTL$.makeArray(3, 0);
 	var dynamic = [];
+	var dynamicString = [];
+	var dynamicByte = [];
+	var i = 0;
+	var s = '';
+	var byte = 0;
 	RTL$.copy(static$, dynamic);
 	dynamic.push(3);
+	dynamic.push(i);
+	dynamic.push(byte);
+	dynamicString.push("abc");
+	dynamicString.push("\"");
+	dynamicString.push(s);
+	dynamicByte.push(byte);
+	dynamicByte.push(i & 0xFF);
 }
 }();

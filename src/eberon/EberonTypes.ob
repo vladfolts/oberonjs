@@ -1,5 +1,5 @@
 MODULE EberonTypes;
-IMPORT Code, Context, JsArray, LanguageContext, Procedure, Types;
+IMPORT Code, Context, Errors, JsArray, Language, LanguageContext, Procedure, Types;
 
 TYPE
     CallGenerator = PROCEDURE(cx: LanguageContext.PType; type: Types.DefinedProcedure): Procedure.PCallGenerator;
@@ -23,20 +23,22 @@ TYPE
     PDynamicArray* = POINTER TO DynamicArray;
 
     DynamicArrayMethodField = RECORD(Types.Field)
+        method: POINTER TO DynamicArrayMethod
     END;
+
     (*
     DynamicArrayAddCall = RECORD(Procedure.StdCall)
     END;
     *)
     DynamicArrayAddCallGenerator = RECORD(Procedure.CallGenerator)
-        arg: Code.PExpression
+        cx: LanguageContext.PType;
+        elementsType: Types.PType;
+        argCode: Procedure.PArgumentsCode
     END;
 
     DynamicArrayMethod = RECORD(Procedure.Std)
+        elementsType: Types.PType
     END;
-VAR
-    dynamicArrayAdd: POINTER TO DynamicArrayMethodField;
-    dynamicArrayAddMethod: POINTER TO DynamicArrayMethod;
 
 PROCEDURE arrayDimensionDescription*(VAR a: Types.Array): STRING;
 VAR
@@ -59,8 +61,14 @@ PROCEDURE DynamicArray.description(): STRING;
 END DynamicArray.description;
 
 PROCEDURE DynamicArray.denote(id: STRING): Types.PField;
+VAR
+    result: POINTER TO DynamicArrayMethodField;
 BEGIN
-    RETURN dynamicArrayAdd
+    NEW(result);
+    NEW(result.method);
+    result.method.name := "add";
+    result.method.elementsType := SELF.elementsType;
+    RETURN result
 END DynamicArray.denote;
 
 PROCEDURE MethodType.designatorCode(id: STRING): STRING;
@@ -106,14 +114,14 @@ PROCEDURE MethodVariable.idType(): STRING;
     RETURN "method"
 END MethodVariable.idType;
 
-PROCEDURE makeMethodVariable*(type: Types.PType): Types.PProcedureId;
+PROCEDURE makeMethod*(type: Types.PType): Types.PProcedureId;
 VAR
     result: POINTER TO MethodVariable;
 BEGIN
     NEW(result);
     result.type := type;
     RETURN result
-END makeMethodVariable;
+END makeMethod;
 
 PROCEDURE makeDynamicArray*(elementsType: Types.PType): PDynamicArray;
 VAR
@@ -133,31 +141,41 @@ PROCEDURE DynamicArrayMethodField.exported(): BOOLEAN;
 END DynamicArrayMethodField.exported;
 
 PROCEDURE DynamicArrayMethodField.type(): Types.PType;
-    RETURN dynamicArrayAddMethod
+    RETURN SELF.method
 END DynamicArrayMethodField.type;
 
 PROCEDURE DynamicArrayMethodField.asVar(): Types.PId;
-    RETURN makeMethodVariable(dynamicArrayAddMethod)
+    RETURN makeMethod(SELF.method)
 END DynamicArrayMethodField.asVar;
-(*
-PROCEDURE DynamicArrayAddCall.make(args: JsArray.Type; cx: LanguageContext.Type): Code.PExpression;
-BEGIN
-    arg <- Procedure.checkSingleArgument(args, SELF, cx.types);
-    RETURN Code.makeSimpleExpression(
-            SELF.varId + ".push(" + arg.code() + ")",
-            NIL)
-END DynamicArrayAddCall.make;
-*)
+
 PROCEDURE DynamicArrayAddCallGenerator.handleArgument(e: Code.PExpression);
 BEGIN
-    SELF.arg := e;
+    IF SELF.argCode # NIL THEN
+        Errors.raise("method 'add' expects one argument, got many");
+    END;
+
+    SELF.argCode := Procedure.makeArgumentsCode(SELF.cx);
+    Procedure.checkArgument(
+        e, 
+        Types.makeProcedureArgument(SELF.elementsType, FALSE), 
+        0, 
+        SELF.argCode, 
+        SELF.cx.types);
 END DynamicArrayAddCallGenerator.handleArgument;
 
 PROCEDURE DynamicArrayAddCallGenerator.end(): Code.PExpression;
+BEGIN
+    IF SELF.argCode = NIL THEN
+        Errors.raise("method 'add' expects one argument, got nothing");
+    END;
     RETURN Code.makeSimpleExpression(
-            "(" + SELF.arg.code() + ")",
+            "(" + SELF.argCode.result() + ")",
             NIL)
 END DynamicArrayAddCallGenerator.end;
+
+PROCEDURE DynamicArrayMethod.description(): STRING;
+    RETURN "dynamic array method '" + SELF.name + "'"
+END DynamicArrayMethod.description;
 
 PROCEDURE DynamicArrayMethod.designatorCode(id: STRING): STRING;
     RETURN "push"
@@ -168,11 +186,10 @@ VAR
     result: POINTER TO DynamicArrayAddCallGenerator;
 BEGIN
     NEW(result);
+    result.cx := cx;
+    result.elementsType := SELF.elementsType;
     RETURN result
 END DynamicArrayMethod.callGenerator;
 
 BEGIN
-    NEW(dynamicArrayAddMethod);
-    dynamicArrayAddMethod.name := "'add'";
-    NEW(dynamicArrayAdd);
 END EberonTypes.

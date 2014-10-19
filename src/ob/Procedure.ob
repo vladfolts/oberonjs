@@ -55,14 +55,14 @@ TYPE
         call: PCall
     END;
 
-    ArgumentsCode = RECORD
+    ArgumentsCode* = RECORD
         PROCEDURE write(actual: Code.PExpression; 
                         expected: Types.PProcedureArgument; 
                         cast: Cast.PCastOp
                         );
-        PROCEDURE result(): STRING
+        PROCEDURE result*(): STRING
     END;
-    PArgumentsCode = POINTER TO ArgumentsCode;
+    PArgumentsCode* = POINTER TO ArgumentsCode;
 
     GenArgCode = RECORD(ArgumentsCode)
         code: STRING;
@@ -74,7 +74,7 @@ TYPE
 VAR
     predefined*: JsArray.Type;
 
-PROCEDURE checkArgument(
+PROCEDURE checkArgument*(
     actual: Code.PExpression; 
     expected: Types.PProcedureArgument; 
     pos: INTEGER;

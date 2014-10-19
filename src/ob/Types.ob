@@ -96,7 +96,7 @@ TYPE
     END;
 
     Array* = RECORD(NamedType)
-        elementsType: PType
+        elementsType-: PType
     END;
     PArray* = POINTER TO Array;
 

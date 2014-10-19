@@ -11,10 +11,24 @@ PROCEDURE assignDynamicArrayFromStatic();
 VAR 
     static: ARRAY 3 OF INTEGER;
     dynamic: ARRAY * OF INTEGER;
+    dynamicString: ARRAY * OF STRING;
+    dynamicByte: ARRAY * OF BYTE;
+    i: INTEGER;
+    s: STRING;
+    byte: BYTE;
 BEGIN
     dynamic := static;
 
     dynamic.add(3);
+    dynamic.add(i);
+    dynamic.add(byte);
+
+    dynamicString.add("abc");
+    dynamicString.add(22X);
+    dynamicString.add(s);
+    
+    dynamicByte.add(byte);
+    dynamicByte.add(i);
 END assignDynamicArrayFromStatic;
 
 END m.
