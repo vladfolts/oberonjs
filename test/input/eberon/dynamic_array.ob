@@ -3,25 +3,32 @@ TYPE
     T = RECORD
         a: ARRAY * OF INTEGER
     END;
+
+    A = ARRAY 3 OF INTEGER;
 VAR
-    a: ARRAY * OF INTEGER;
     r: T;
+    a: A;
+    dynamicInt: ARRAY * OF INTEGER;
+    dynamicString: ARRAY * OF STRING;
+    dynamicByte: ARRAY * OF BYTE;
+    dynamicRecord: ARRAY * OF T;
+    dynamicArrayOfStaticArrayInt: ARRAY * OF A;
+    i: INTEGER;
+    s: STRING;
+    byte: BYTE;
 
 PROCEDURE assignDynamicArrayFromStatic();
 VAR 
     static: ARRAY 3 OF INTEGER;
     dynamic: ARRAY * OF INTEGER;
-    dynamicString: ARRAY * OF STRING;
-    dynamicByte: ARRAY * OF BYTE;
-    i: INTEGER;
-    s: STRING;
-    byte: BYTE;
 BEGIN
     dynamic := static;
+END assignDynamicArrayFromStatic;
 
-    dynamic.add(3);
-    dynamic.add(i);
-    dynamic.add(byte);
+BEGIN
+    dynamicInt.add(3);
+    dynamicInt.add(i);
+    dynamicInt.add(byte);
 
     dynamicString.add("abc");
     dynamicString.add(22X);
@@ -29,6 +36,8 @@ BEGIN
     
     dynamicByte.add(byte);
     dynamicByte.add(i);
-END assignDynamicArrayFromStatic;
 
+    dynamicRecord.add(r);
+
+    dynamicArrayOfStaticArrayInt.add(a);
 END m.

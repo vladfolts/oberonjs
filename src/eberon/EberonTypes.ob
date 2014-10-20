@@ -33,7 +33,7 @@ TYPE
     DynamicArrayAddCallGenerator = RECORD(Procedure.CallGenerator)
         cx: LanguageContext.PType;
         elementsType: Types.PType;
-        argCode: Procedure.PArgumentsCode
+        code: STRING
     END;
 
     DynamicArrayMethod = RECORD(Procedure.Std)
@@ -150,26 +150,32 @@ END DynamicArrayMethodField.asVar;
 
 PROCEDURE DynamicArrayAddCallGenerator.handleArgument(e: Code.PExpression);
 BEGIN
-    IF SELF.argCode # NIL THEN
+    IF SELF.code # "" THEN
         Errors.raise("method 'add' expects one argument, got many");
     END;
 
-    SELF.argCode := Procedure.makeArgumentsCode(SELF.cx);
+    argCode <- Procedure.makeArgumentsCode(SELF.cx);
     Procedure.checkArgument(
         e, 
         Types.makeProcedureArgument(SELF.elementsType, FALSE), 
         0, 
-        SELF.argCode, 
+        argCode, 
         SELF.cx.types);
+    SELF.code := argCode.result();
+    
+    t <- e.type();
+    IF (t IS Types.PRecord) OR (t IS Types.PArray) THEN
+        SELF.code := SELF.cx.rtl.clone(SELF.code);
+    END;
 END DynamicArrayAddCallGenerator.handleArgument;
 
 PROCEDURE DynamicArrayAddCallGenerator.end(): Code.PExpression;
 BEGIN
-    IF SELF.argCode = NIL THEN
+    IF SELF.code = "" THEN
         Errors.raise("method 'add' expects one argument, got nothing");
     END;
     RETURN Code.makeSimpleExpression(
-            "(" + SELF.argCode.result() + ")",
+            "(" + SELF.code + ")",
             NIL)
 END DynamicArrayAddCallGenerator.end;
 

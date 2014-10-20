@@ -931,14 +931,28 @@ exports.suite = {
         ),
         "add": testWithContext(
             context(grammar.statement, 
-                    "VAR a: ARRAY * OF INTEGER; byte: BYTE;"),
+                    "VAR a: ARRAY * OF INTEGER;"
+                     + "a2: ARRAY * OF ARRAY * OF INTEGER;"
+                     + "aStatic: ARRAY 3 OF INTEGER;"
+                     + "byte: BYTE;"),
             pass("a.add(123)",
-                 "a.add(byte)"),
+                 "a.add(byte)",
+                 "a2.add(a)",
+                 "a2.add(aStatic)"
+                 ),
             fail(["a.add := NIL", "cannot assign to method"],
                  ["v <- a.add", "dynamic array method 'add' cannot be referenced"],                
                  ["a.add()", "method 'add' expects one argument, got nothing"],
                  ["a.add(1, 2)", "method 'add' expects one argument, got many"],                
                  ["a.add(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"]                
+                )
+        ),
+        "add open array to dynamic array of static arrays": testWithContext(
+            context(grammar.declarationSequence, 
+                    "VAR a: ARRAY * OF ARRAY 3 OF INTEGER;"),
+            pass(),
+            fail(["PROCEDURE p(paramA: ARRAY OF INTEGER); BEGIN a.add(paramA); END p", 
+                  "type mismatch for argument 1: 'ARRAY OF INTEGER' cannot be converted to 'ARRAY 3 OF INTEGER'"]                
                 )
         )
     }

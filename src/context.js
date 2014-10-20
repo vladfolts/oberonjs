@@ -1880,6 +1880,12 @@ exports.ModuleDeclaration = ChainedContext.extend({
     qualifyScope: function(scope){
         if (scope != this.__moduleScope && scope instanceof Scope.Module){
             var id = Scope.moduleSymbol(scope).id();
+            
+            // implicitly imported module, e.g.: record.pointerToRecordFromAnotherModule.field
+            // should not be used in code generation, 
+            // just return non-empty value to indicate this is not current module
+            if (!(id in this.__imports))
+                return "module '" + id + "' is not imported";
             return this.__imports[id].id() + ".";
         }
         return "";

@@ -41,6 +41,42 @@ var RTL$ = {
                     to[prop] = v;
             }
         }
+    },
+    clone: function (from){
+        var to;
+        var len;
+        var i;
+        var Ctr = from.constructor;
+        if (Ctr == Uint16Array){
+            len = from.length;
+            to = this.__makeCharArray(len);
+            for(i = 0; i < len; ++i)
+                to[i] = from[i];
+        }
+        else {
+            to = new Ctr();
+            if (Ctr == Array)
+                len = from.length;
+                if (len){
+                    if (typeof from[0] != "object")
+                        for(i = 0; i < len; ++i)
+                            to[i] = from[i];
+                    else
+                        for(i = 0; i < len; ++i){
+                            var o = from[i];
+                            if (o !== null)
+                                to[i] = this.clone(o);
+                        }
+                }
+            else
+                this.copy(from, to);
+        }
+        return to;
+    },
+    __makeCharArray: function (length){
+        var result = new Uint16Array(length);
+        result.charCodeAt = function(i){return this[i];};
+        return result;
     }
 };
 var m = function (){
@@ -49,25 +85,30 @@ var T = RTL$.extend({
 		this.a = [];
 	}
 });
-var a = [];
 var r = new T();
+var a = RTL$.makeArray(3, 0);
+var dynamicInt = [];
+var dynamicString = [];
+var dynamicByte = [];
+var dynamicRecord = [];
+var dynamicArrayOfStaticArrayInt = [];
+var i = 0;
+var s = '';
+var byte = 0;
 
 function assignDynamicArrayFromStatic(){
 	var static$ = RTL$.makeArray(3, 0);
 	var dynamic = [];
-	var dynamicString = [];
-	var dynamicByte = [];
-	var i = 0;
-	var s = '';
-	var byte = 0;
 	RTL$.copy(static$, dynamic);
-	dynamic.push(3);
-	dynamic.push(i);
-	dynamic.push(byte);
-	dynamicString.push("abc");
-	dynamicString.push("\"");
-	dynamicString.push(s);
-	dynamicByte.push(byte);
-	dynamicByte.push(i & 0xFF);
 }
+dynamicInt.push(3);
+dynamicInt.push(i);
+dynamicInt.push(byte);
+dynamicString.push("abc");
+dynamicString.push("\"");
+dynamicString.push(s);
+dynamicByte.push(byte);
+dynamicByte.push(i & 0xFF);
+dynamicRecord.push(RTL$.clone(r));
+dynamicArrayOfStaticArrayInt.push(RTL$.clone(a));
 }();
