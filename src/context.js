@@ -366,8 +366,7 @@ exports.Designator = ChainedContext.extend({
         var pValue = e.constValue();
         if (pValue){
             var value = pValue.value;
-            if (value < 0)
-                throw new Errors.Error("index is negative: " + value);
+            Code.checkIndex(value);
             
             var length = index.length;
             if ((this.__currentType instanceof Type.StaticArray || this.__currentType instanceof Type.String)

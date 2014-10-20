@@ -954,6 +954,17 @@ exports.suite = {
             fail(["PROCEDURE p(paramA: ARRAY OF INTEGER); BEGIN a.add(paramA); END p", 
                   "type mismatch for argument 1: 'ARRAY OF INTEGER' cannot be converted to 'ARRAY 3 OF INTEGER'"]                
                 )
-        )
+        ),
+        "remove": testWithContext(
+            context(grammar.statement, 
+                    "VAR a: ARRAY * OF INTEGER;"),
+            pass("a.remove(0)"),
+            fail(["a.remove(-1)", "index is negative: -1"],
+                 ["a.remove()", "1 argument(s) expected, got 0"],
+                 ["a.remove(0, 1)", "1 argument(s) expected, got 2"],
+                 ["a.remove(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
+                 ["a.Remove(0)", "selector '.Remove' cannot be applied to 'ARRAY * OF INTEGER'"]
+                )
+        ),
     }
 };

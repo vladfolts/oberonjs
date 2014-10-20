@@ -4,6 +4,7 @@ var Cast = require("js/Cast.js");
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var Context = require("context.js");
+var EberonDynamicArray= require("js/EberonDynamicArray.js");
 var EberonScope = require("js/EberonScope.js");
 var EberonString = require("js/EberonString.js");
 var EberonTypes = require("js/EberonTypes.js");
@@ -1121,7 +1122,7 @@ var ArrayDecl = Context.ArrayDecl.extend({
     },
     _makeType: function(elementsType, init, length){
         return length == dynamicArrayLength
-            ? EberonTypes.makeDynamicArray(elementsType)
+            ? EberonDynamicArray.makeDynamicArray(elementsType)
             : Type.makeStaticArray(init, elementsType, length);
     }
 });
@@ -1132,7 +1133,7 @@ function assertArgumentIsNotNonVarDynamicArray(msg){
         if (!arg.isVar){
             var type = arg.type;
             while (type instanceof Type.Array){
-                if (type instanceof EberonTypes.DynamicArray)
+                if (type instanceof EberonDynamicArray.DynamicArray)
                     throw new Errors.Error("dynamic array has no use as non-VAR argument '" + msg.name + "'");
                 type = Type.arrayElementsType(type);
             }
@@ -1149,7 +1150,7 @@ var FormalParameters = Context.FormalParameters.extend({
         return Context.FormalParameters.prototype.handleMessage.call(this, msg);
     },
     _checkResultType: function(type){
-        if (type instanceof EberonTypes.DynamicArray)
+        if (type instanceof EberonDynamicArray.DynamicArray)
             return;
         Context.FormalParameters.prototype._checkResultType.call(this, type);
     }
@@ -1164,7 +1165,7 @@ var FormalType = Context.HandleSymbolAsType.extend({
     setType: function(type){           
         for(var i = this.__arrayDimensions.length; i--;){
             type = this.__arrayDimensions[i] 
-                ? EberonTypes.makeDynamicArray(type)
+                ? EberonDynamicArray.makeDynamicArray(type)
                 : Type.makeOpenArray(type);
         }
         this.parent().setType(type);
@@ -1188,7 +1189,7 @@ var FormalParametersProcDecl = Context.FormalParametersProcDecl.extend({
         return Context.FormalParametersProcDecl.prototype.handleMessage.call(this, msg);
     },
     _checkResultType: function(type){
-        if (type instanceof EberonTypes.DynamicArray)
+        if (type instanceof EberonDynamicArray.DynamicArray)
             return;
         Context.FormalParametersProcDecl.prototype._checkResultType.call(this, type);
     }

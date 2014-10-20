@@ -1,6 +1,7 @@
 MODULE Code;
 IMPORT 
     JsMap, 
+    Errors,
     Object, 
     Stream, 
     ScopeBase, 
@@ -485,4 +486,12 @@ BEGIN
     result.imports := imports;
     RETURN result
 END makeModuleGenerator;
+
+PROCEDURE checkIndex*(i: INTEGER);
+BEGIN
+    IF i < 0 THEN
+        Errors.raise("index is negative: " + String.fromInt(i));
+    END;
+END checkIndex;
+
 END Code.

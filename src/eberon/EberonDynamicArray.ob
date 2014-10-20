@@ -1,0 +1,194 @@
+MODULE EberonDynamicArray;
+IMPORT Code, Context, EberonTypes, Errors, JsArray, LanguageContext, Procedure, Types;
+TYPE
+    DynamicArray* = RECORD(Types.Array)
+    END;
+    PDynamicArray* = POINTER TO DynamicArray;
+
+    DynamicArrayMethod = RECORD(Procedure.Std)
+    END;
+    PDynamicArrayMethod = POINTER TO DynamicArrayMethod;
+
+    DynamicArrayMethodField = RECORD(Types.Field)
+        method: PDynamicArrayMethod
+    END;
+
+    DynamicArrayAddCallGenerator = RECORD(Procedure.CallGenerator)
+        cx: LanguageContext.PType;
+        elementsType: Types.PType;
+        code: STRING
+    END;
+
+    DynamicArrayMethodAdd = RECORD(DynamicArrayMethod)
+        elementsType: Types.PType
+    END;
+
+    DynamicArrayMethodRemove = RECORD(DynamicArrayMethod)
+    END;
+
+    RemoveMethodCall = RECORD(Procedure.StdCall)
+    END;
+
+PROCEDURE arrayDimensionDescription(VAR a: Types.Array): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF a IS DynamicArray THEN
+        result := "*";
+    ELSE
+        result := Types.arrayDimensionDescription(a);
+    END;
+    RETURN result
+END arrayDimensionDescription;
+
+PROCEDURE DynamicArray.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+    RETURN "[]"
+END DynamicArray.initializer;
+
+PROCEDURE DynamicArray.description(): STRING;
+    RETURN Types.arrayDescription(SELF, arrayDimensionDescription)
+END DynamicArray.description;
+
+PROCEDURE makeAddField(elementsType: Types.PType): PDynamicArrayMethod;
+VAR
+    result: POINTER TO DynamicArrayMethodAdd;
+BEGIN
+    NEW(result);
+    result.name := "add";
+    result.elementsType := elementsType;
+    RETURN result
+END makeAddField;
+
+PROCEDURE makeRemoveField(): PDynamicArrayMethod;
+VAR
+    result: POINTER TO DynamicArrayMethodRemove;
+BEGIN
+    NEW(result);
+    result.name := "remove";
+    RETURN result
+END makeRemoveField;
+
+PROCEDURE DynamicArray.denote(id: STRING): Types.PField;
+VAR
+    field: POINTER TO DynamicArrayMethodField;
+    method: PDynamicArrayMethod;
+    result: Types.PField;
+BEGIN
+    IF      id = "add" THEN
+        method := makeAddField(SELF.elementsType);
+    ELSIF   id = "remove" THEN
+        method := makeRemoveField();
+    END;
+    IF method # NIL THEN
+        NEW(field);
+        field.method := method;
+        result := field;
+    ELSE
+        result := SUPER(id);
+    END;
+    RETURN result
+END DynamicArray.denote;
+
+PROCEDURE makeDynamicArray*(elementsType: Types.PType): PDynamicArray;
+VAR
+    result: PDynamicArray;
+BEGIN
+    NEW(result);
+    Types.initArray(elementsType, result^);
+    RETURN result
+END makeDynamicArray;
+
+PROCEDURE DynamicArrayMethodField.id(): STRING;
+    RETURN "add"
+END DynamicArrayMethodField.id;
+
+PROCEDURE DynamicArrayMethodField.exported(): BOOLEAN;
+    RETURN FALSE
+END DynamicArrayMethodField.exported;
+
+PROCEDURE DynamicArrayMethodField.type(): Types.PType;
+    RETURN SELF.method
+END DynamicArrayMethodField.type;
+
+PROCEDURE DynamicArrayMethodField.asVar(): Types.PId;
+    RETURN EberonTypes.makeMethod(SELF.method)
+END DynamicArrayMethodField.asVar;
+
+PROCEDURE DynamicArrayAddCallGenerator.handleArgument(e: Code.PExpression);
+BEGIN
+    IF SELF.code # "" THEN
+        Errors.raise("method 'add' expects one argument, got many");
+    END;
+
+    argCode <- Procedure.makeArgumentsCode(SELF.cx);
+    Procedure.checkArgument(
+        e, 
+        Types.makeProcedureArgument(SELF.elementsType, FALSE), 
+        0, 
+        argCode, 
+        SELF.cx.types);
+    SELF.code := argCode.result();
+    
+    t <- e.type();
+    IF (t IS Types.PRecord) OR (t IS Types.PArray) THEN
+        SELF.code := SELF.cx.rtl.clone(SELF.code);
+    END;
+END DynamicArrayAddCallGenerator.handleArgument;
+
+PROCEDURE DynamicArrayAddCallGenerator.end(): Code.PExpression;
+BEGIN
+    IF SELF.code = "" THEN
+        Errors.raise("method 'add' expects one argument, got nothing");
+    END;
+    RETURN Code.makeSimpleExpression(
+            "(" + SELF.code + ")",
+            NIL)
+END DynamicArrayAddCallGenerator.end;
+
+PROCEDURE DynamicArrayMethod.description(): STRING;
+    RETURN "dynamic array method '" + SELF.name + "'"
+END DynamicArrayMethod.description;
+
+PROCEDURE DynamicArrayMethodAdd.designatorCode(id: STRING): STRING;
+    RETURN "push"
+END DynamicArrayMethodAdd.designatorCode;
+
+PROCEDURE DynamicArrayMethodAdd.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+VAR
+    result: POINTER TO DynamicArrayAddCallGenerator;
+BEGIN
+    NEW(result);
+    result.cx := cx;
+    result.elementsType := SELF.elementsType;
+    RETURN result
+END DynamicArrayMethodAdd.callGenerator;
+
+PROCEDURE RemoveMethodCall.make(args: JsArray.Type; cx: LanguageContext.Type): Code.PExpression;
+BEGIN
+    arg <- Procedure.checkSingleArgument(args, SELF, cx.types);
+    value <- arg.constValue();
+    IF (value # NIL) & (value^ IS Code.IntConst) THEN
+        Code.checkIndex(value.value);
+    END;
+    RETURN Code.makeSimpleExpression("(" + arg.code() + ")", NIL)
+END RemoveMethodCall.make;
+
+PROCEDURE DynamicArrayMethodRemove.designatorCode(id: STRING): STRING;
+    RETURN "splice"
+END DynamicArrayMethodRemove.designatorCode;
+
+PROCEDURE DynamicArrayMethodRemove.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+VAR
+    a: Types.PProcedureArgument;
+    call: POINTER TO RemoveMethodCall;
+BEGIN
+    NEW(call);
+    Procedure.initStdCall(call);
+
+    NEW(a);
+    a.type := Types.basic.integer;
+    JsArray.add(call.args, a);
+    RETURN Procedure.makeCallGenerator(call, cx)
+END DynamicArrayMethodRemove.callGenerator;
+
+END EberonDynamicArray.

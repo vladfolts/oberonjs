@@ -21,7 +21,7 @@ TYPE
     PCall = POINTER TO Call;
 
     StdCall* = RECORD(Call)
-        args: JsArray.Type
+        args*: JsArray.Type
     END;
     PStdCall = POINTER TO StdCall;
 
