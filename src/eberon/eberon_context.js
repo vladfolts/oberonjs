@@ -323,19 +323,24 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
     codeGenerator: function(){return Code.nullGenerator();},
     endParse: function(){
         var d = this.__left;
+        var type = d.type();
         var code;
         if (this.__right){
-            var left = Code.makeExpression(d.code(), d.type(), d);
-            code = op.assign(left, this.__right, this.language());
+            if (type instanceof EberonDynamicArray.DynamicArray)
+                code = d.code() + " = " + this.language().rtl.clone(this.__right.code());
+            else {
+                var left = Code.makeExpression(d.code(), type, d);
+                code = op.assign(left, this.__right, this.language());
+            } 
         }
         else if (!(d.info() instanceof ResultVariable)){
-            var procCall = Context.makeProcCall(this, d.type(), d.info());
+            var procCall = Context.makeProcCall(this, type, d.info());
             var result = procCall.end();
             Context.assertProcStatementResult(result.type());
             code = d.code() + result.code();
         }
         else{
-            Context.assertProcStatementResult(d.type());
+            Context.assertProcStatementResult(type);
             code = d.code();
         }
     

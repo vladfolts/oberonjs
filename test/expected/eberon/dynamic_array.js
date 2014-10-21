@@ -31,17 +31,6 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-    copy: function (from, to){
-        for(var prop in to){
-            if (to.hasOwnProperty(prop)){
-                var v = from[prop];
-                if (v !== null && typeof v == "object")
-                    this.copy(v, to[prop]);
-                else
-                    to[prop] = v;
-            }
-        }
-    },
     clone: function (from){
         var to;
         var len;
@@ -73,6 +62,17 @@ var RTL$ = {
         }
         return to;
     },
+    copy: function (from, to){
+        for(var prop in to){
+            if (to.hasOwnProperty(prop)){
+                var v = from[prop];
+                if (v !== null && typeof v == "object")
+                    this.copy(v, to[prop]);
+                else
+                    to[prop] = v;
+            }
+        }
+    },
     __makeCharArray: function (length){
         var result = new Uint16Array(length);
         result.charCodeAt = function(i){return this[i];};
@@ -99,7 +99,7 @@ var byte = 0;
 function assignDynamicArrayFromStatic(){
 	var static$ = RTL$.makeArray(3, 0);
 	var dynamic = [];
-	RTL$.copy(static$, dynamic);
+	dynamic = RTL$.clone(static$);
 }
 dynamicInt.push(3);
 dynamicInt.push(i);
