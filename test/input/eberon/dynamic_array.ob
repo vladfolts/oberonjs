@@ -40,4 +40,6 @@ BEGIN
     dynamicRecord.add(r);
 
     dynamicArrayOfStaticArrayInt.add(a);
+
+    dynamicInt.remove(i);
 END m.

@@ -170,7 +170,7 @@ BEGIN
     IF (value # NIL) & (value^ IS Code.IntConst) THEN
         Code.checkIndex(value.value);
     END;
-    RETURN Code.makeSimpleExpression("(" + arg.code() + ")", NIL)
+    RETURN Code.makeSimpleExpression("(" + arg.code() + ", 1)", NIL)
 END RemoveMethodCall.make;
 
 PROCEDURE DynamicArrayMethodRemove.designatorCode(id: STRING): STRING;

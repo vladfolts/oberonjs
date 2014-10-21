@@ -111,4 +111,5 @@ dynamicByte.push(byte);
 dynamicByte.push(i & 0xFF);
 dynamicRecord.push(RTL$.clone(r));
 dynamicArrayOfStaticArrayInt.push(RTL$.clone(a));
+dynamicInt.splice(i, 1);
 }();
