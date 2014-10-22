@@ -966,5 +966,14 @@ exports.suite = {
                  ["a.Remove(0)", "selector '.Remove' cannot be applied to 'ARRAY * OF INTEGER'"]
                 )
         ),
+        "indexOf": testWithContext(
+            context(grammar.expression, 
+                    "VAR intArray: ARRAY * OF INTEGER; boolArray: ARRAY * OF BOOLEAN;"),
+            pass("intArray.indexOf(0)",
+                 "boolArray.indexOf(FALSE) = -1"
+                ),
+            fail(["intArray.indexOf(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"]
+                )
+        )
     }
 };

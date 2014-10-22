@@ -77,6 +77,10 @@ var RTL$ = {
         var result = new Uint16Array(length);
         result.charCodeAt = function(i){return this[i];};
         return result;
+    },
+    assert: function (condition){
+        if (!condition)
+            throw new Error("assertion failed");
     }
 };
 var m = function (){
@@ -111,5 +115,6 @@ dynamicByte.push(byte);
 dynamicByte.push(i & 0xFF);
 dynamicRecord.push(RTL$.clone(r));
 dynamicArrayOfStaticArrayInt.push(RTL$.clone(a));
+RTL$.assert(dynamicInt.indexOf(i) != -1);
 dynamicInt.splice(i, 1);
 }();

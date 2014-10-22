@@ -41,5 +41,7 @@ BEGIN
 
     dynamicArrayOfStaticArrayInt.add(a);
 
+    ASSERT(dynamicInt.indexOf(i) # -1);
+
     dynamicInt.remove(i);
 END m.
