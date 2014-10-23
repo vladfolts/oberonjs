@@ -101,12 +101,12 @@ VAR
     call: POINTER TO Call;
     proc: POINTER TO Proc;
 
-    PROCEDURE Call.make(args: JsArray.Type; cx: LanguageContext.Type): Code.PExpression;
+    PROCEDURE Call.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
     VAR
         arg: Code.PExpression;
         type: Types.PType;
     BEGIN
-        arg := Procedure.checkSingleArgument(args, SELF, cx.types);
+        arg := Procedure.checkSingleArgument(args, SELF, cx.types, NIL);
         type := arg.type();
         IF ~(type IS Types.PString) THEN
             Errors.raise("string is expected as an argument of "

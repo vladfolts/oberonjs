@@ -186,20 +186,22 @@ BEGIN
     RETURN result
 END MethodAdd.callGenerator;
 
-PROCEDURE MethodCallRemove.make(args: JsArray.Type; cx: LanguageContext.Type): Code.PExpression;
+PROCEDURE MethodCallRemove.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
-    arg <- Procedure.checkSingleArgument(args, SELF, cx.types);
+    argCode <- Procedure.makeArgumentsCode(cx);
+    arg <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
     value <- arg.constValue();
     IF (value # NIL) & (value^ IS Code.IntConst) THEN
         Code.checkIndex(value.value);
     END;
-    RETURN Code.makeSimpleExpression("(" + arg.code() + ", 1)", NIL)
+    RETURN Code.makeSimpleExpression("(" + argCode.result() + ", 1)", NIL)
 END MethodCallRemove.make;
 
-PROCEDURE MethodCallIndexOf.make(args: JsArray.Type; cx: LanguageContext.Type): Code.PExpression;
+PROCEDURE MethodCallIndexOf.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
-    arg <- Procedure.checkSingleArgument(args, SELF, cx.types);
-    RETURN Code.makeSimpleExpression("(" + arg.code() + ")", Types.basic.integer)
+    argCode <- Procedure.makeArgumentsCode(cx);
+    void <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
+    RETURN Code.makeSimpleExpression("(" + argCode.result() + ")", Types.basic.integer)
 END MethodCallIndexOf.make;
 
 PROCEDURE MethodRemove.designatorCode(id: STRING): STRING;

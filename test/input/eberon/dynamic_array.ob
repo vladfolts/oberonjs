@@ -10,6 +10,7 @@ VAR
     a: A;
     dynamicInt: ARRAY * OF INTEGER;
     dynamicString: ARRAY * OF STRING;
+    dynamicChar: ARRAY * OF CHAR;
     dynamicByte: ARRAY * OF BYTE;
     dynamicRecord: ARRAY * OF T;
     dynamicArrayOfStaticArrayInt: ARRAY * OF A;
@@ -33,6 +34,8 @@ BEGIN
     dynamicString.add("abc");
     dynamicString.add(22X);
     dynamicString.add(s);
+
+    dynamicChar.add(22X);
     
     dynamicByte.add(byte);
     dynamicByte.add(i);
@@ -42,6 +45,7 @@ BEGIN
     dynamicArrayOfStaticArrayInt.add(a);
 
     ASSERT(dynamicInt.indexOf(i) # -1);
+    ASSERT(dynamicChar.indexOf(22X) # -1);
 
     dynamicInt.remove(i);
 END m.
