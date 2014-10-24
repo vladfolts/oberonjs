@@ -200,7 +200,10 @@ END MethodCallRemove.make;
 PROCEDURE MethodCallIndexOf.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
-    void <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
+    argType <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode).type();
+    IF (argType IS Types.PRecord) OR (argType IS Types.PArray) THEN
+        Errors.raise("cannot search for element of type '" + argType.description() + "'");
+    END;
     RETURN Code.makeSimpleExpression("(" + argCode.result() + ")", Types.basic.integer)
 END MethodCallIndexOf.make;
 

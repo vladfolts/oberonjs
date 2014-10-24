@@ -968,11 +968,21 @@ exports.suite = {
         ),
         "indexOf": testWithContext(
             context(grammar.expression, 
-                    "VAR intArray: ARRAY * OF INTEGER; boolArray: ARRAY * OF BOOLEAN;"),
+                    "TYPE "
+                    + "T = RECORD END;"
+                    + "VAR "
+                    + "r: T;"
+                    + "intArray: ARRAY * OF INTEGER;"
+                    + "boolArray: ARRAY * OF BOOLEAN;"
+                    + "recordArray: ARRAY * OF T;"
+                    + "arrayOfArray: ARRAY *,* OF INTEGER;"
+                    ),
             pass("intArray.indexOf(0)",
                  "boolArray.indexOf(FALSE) = -1"
                 ),
-            fail(["intArray.indexOf(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"]
+            fail(["intArray.indexOf(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
+                 ["recordArray.indexOf(r)", "cannot search for element of type 'T'"],
+                 ["arrayOfArray.indexOf(intArray)", "cannot search for element of type 'ARRAY * OF INTEGER'"]
                 )
         )
     }
