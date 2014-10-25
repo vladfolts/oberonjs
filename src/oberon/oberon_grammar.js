@@ -94,6 +94,7 @@ exports.language = {
             If:                 Context.If,
             CaseLabel:          Context.CaseLabel,
             Repeat:             Context.Repeat,
+            Return:             Context.Return,
             ModuleDeclaration:  Context.ModuleDeclaration
         },
         Grammar.reservedWords

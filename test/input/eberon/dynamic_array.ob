@@ -5,6 +5,7 @@ TYPE
     END;
 
     A = ARRAY 3 OF INTEGER;
+    DynamicInt = ARRAY * OF INTEGER;
 VAR
     r: T;
     a: A;
@@ -25,6 +26,10 @@ VAR
 BEGIN
     dynamic := static;
 END assignDynamicArrayFromStatic;
+
+PROCEDURE returnOuterArray(): DynamicInt;
+    RETURN a
+END returnOuterArray;
 
 BEGIN
     dynamicInt.add(3);

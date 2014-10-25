@@ -210,7 +210,7 @@ result.declarationSequence
 result.procedureBody
     = and(result.declarationSequence,
           optional(and("BEGIN", statementSequence)),
-          optional(context(and("RETURN", expression), Context.Return)),
+          optional(context(and("RETURN", expression), contexts.Return)),
           required("END", "END expected (PROCEDURE)"));
 result.module
     = context(and("MODULE", ident, ";",

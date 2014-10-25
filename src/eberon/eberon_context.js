@@ -1084,6 +1084,18 @@ var Repeat = Context.Repeat.extend({
     }
 });
 
+var Return = Context.Return.extend({
+    init: function EberonContext$Return(context){
+        Context.Return.prototype.init.call(this, context);
+    },
+    handleExpression: function(e){
+        var type = e.type();
+        if (type instanceof Type.Array)
+            e = Code.makeSimpleExpression(this.language().rtl.clone(e.code()), type);
+        Context.Return.prototype.handleExpression.call(this, e);
+    }
+});
+
 var For = Context.For.extend({
     init: function EberonContext$Repeat(context){
         Context.For.prototype.init.call(this, context);
@@ -1234,6 +1246,7 @@ exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;
 exports.Repeat = Repeat;
+exports.Return = Return;
 exports.SimpleExpression = SimpleExpression;
 exports.InPlaceVariableInit = InPlaceVariableInit;
 exports.InPlaceVariableInitFor = InPlaceVariableInitFor;

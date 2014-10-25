@@ -106,6 +106,10 @@ function assignDynamicArrayFromStatic(){
 	var dynamic = [];
 	dynamic = RTL$.clone(static$);
 }
+
+function returnOuterArray(){
+	return RTL$.clone(a);
+}
 dynamicInt.push(3);
 dynamicInt.push(i);
 dynamicInt.push(byte);
