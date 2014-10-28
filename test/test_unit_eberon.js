@@ -920,7 +920,8 @@ exports.suite = {
             context(grammar.statement, 
                     "VAR stat: ARRAY 3 OF INTEGER; dynamic: ARRAY * OF INTEGER;"),
             pass("dynamic := stat"),
-            fail(["stat := dynamic", "type mismatch: 'stat' is 'ARRAY 3 OF INTEGER' and cannot be assigned to 'ARRAY * OF INTEGER' expression"])
+            fail(["stat := dynamic", "type mismatch: 'stat' is 'ARRAY 3 OF INTEGER' and cannot be assigned to 'ARRAY * OF INTEGER' expression"],
+                 ["dynamic := NIL", "type mismatch: 'dynamic' is 'ARRAY * OF INTEGER' and cannot be assigned to 'NIL' expression"])
         ),
         "indexing": testWithContext(
             context(grammar.expression, 
@@ -984,6 +985,12 @@ exports.suite = {
                  ["recordArray.indexOf(r)", "cannot search for element of type 'T'"],
                  ["arrayOfArray.indexOf(intArray)", "cannot search for element of type 'ARRAY * OF INTEGER'"]
                 )
+        ),
+        "clear": testWithContext(
+            context(grammar.statement, 
+                    "VAR a: ARRAY * OF INTEGER;"),
+            pass("a.clear()"),
+            fail(["a.clear(0)", "0 argument(s) expected, got 1"])
         )
     }
 };

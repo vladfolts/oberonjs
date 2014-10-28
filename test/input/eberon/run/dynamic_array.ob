@@ -22,6 +22,9 @@ BEGIN
     ASSERT(LEN(a) = 2);
     ASSERT(a[0] = 1);
     ASSERT(a[1] = 3);
+
+    a.clear();
+    ASSERT(LEN(a) = 0);
 END testAddRemove;
 
 PROCEDURE testArrayReturn();

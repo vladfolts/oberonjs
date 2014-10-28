@@ -53,4 +53,5 @@ BEGIN
     ASSERT(dynamicChar.indexOf(22X) # -1);
 
     dynamicInt.remove(i);
+    dynamicInt.clear();
 END m.

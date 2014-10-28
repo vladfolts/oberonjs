@@ -517,7 +517,7 @@ BEGIN
         IF (leftType IS Types.POpenArray) & (rightType IS Types.PArray) THEN
             Errors.raise("'" + leftCode + "' is open '" + leftType.description() + "' and cannot be assigned");
         END;
-        IF isArray OR (rightType IS Types.PRecord) THEN
+        IF (castOperation = NIL) & (isArray OR (rightType IS Types.PRecord)) THEN
             result := cx.rtl.copy(rightCode, leftCode);
         ELSE
             IF castOperation # NIL THEN

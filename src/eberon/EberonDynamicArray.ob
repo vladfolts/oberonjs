@@ -2,8 +2,9 @@ MODULE EberonDynamicArray;
 IMPORT Code, Context, EberonTypes, Errors, JsArray, LanguageContext, Procedure, Types;
 CONST
     methodNameAdd = "add";
-    methodNameRemove = "remove";
+    methodNameClear = "clear";
     methodNameIndexOf = "indexOf";
+    methodNameRemove = "remove";
 TYPE
     DynamicArray* = RECORD(Types.Array)
     END;
@@ -27,11 +28,17 @@ TYPE
         elementsType: Types.PType
     END;
 
-    MethodRemove = RECORD(Method)
+    MethodClear = RECORD(Method)
     END;
 
     MethodIndexOf = RECORD(Method)
         elementsType: Types.PType
+    END;
+
+    MethodRemove = RECORD(Method)
+    END;
+
+    MethodCallClear = RECORD(Procedure.StdCall)
     END;
 
     MethodCallRemove = RECORD(Procedure.StdCall)
@@ -70,16 +77,16 @@ BEGIN
     RETURN result
 END makeAddField;
 
-PROCEDURE makeRemoveField(): PMethod;
+PROCEDURE makeClearMethod(): PMethod;
 VAR
-    result: POINTER TO MethodRemove;
+    result: POINTER TO MethodClear;
 BEGIN
     NEW(result);
-    result.name := methodNameRemove;
+    result.name := methodNameClear;
     RETURN result
-END makeRemoveField;
+END makeClearMethod;
 
-PROCEDURE makeIndexOfField(elementsType: Types.PType): PMethod;
+PROCEDURE makeIndexOfMethod(elementsType: Types.PType): PMethod;
 VAR
     result: POINTER TO MethodIndexOf;
 BEGIN
@@ -87,7 +94,16 @@ BEGIN
     result.name := methodNameIndexOf;
     result.elementsType := elementsType;
     RETURN result
-END makeIndexOfField;
+END makeIndexOfMethod;
+
+PROCEDURE makeRemoveMethod(): PMethod;
+VAR
+    result: POINTER TO MethodRemove;
+BEGIN
+    NEW(result);
+    result.name := methodNameRemove;
+    RETURN result
+END makeRemoveMethod;
 
 PROCEDURE DynamicArray.denote(id: STRING): Types.PField;
 VAR
@@ -97,10 +113,12 @@ VAR
 BEGIN
     IF      id = methodNameAdd THEN
         method := makeAddField(SELF.elementsType);
-    ELSIF   id = methodNameRemove THEN
-        method := makeRemoveField();
+    ELSIF   id = methodNameClear THEN
+        method := makeClearMethod();
     ELSIF   id = methodNameIndexOf THEN
-        method := makeIndexOfField(SELF.elementsType);
+        method := makeIndexOfMethod(SELF.elementsType);
+    ELSIF   id = methodNameRemove THEN
+        method := makeRemoveMethod();
     END;
     IF method # NIL THEN
         NEW(field);
@@ -186,6 +204,16 @@ BEGIN
     RETURN result
 END MethodAdd.callGenerator;
 
+PROCEDURE MethodClear.designatorCode(id: STRING): STRING;
+    RETURN "splice"
+END MethodClear.designatorCode;
+
+PROCEDURE MethodCallClear.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+BEGIN
+    Procedure.processArguments(args, SELF.args, NIL, cx.types);
+    RETURN Code.makeSimpleExpression("(0, Number.MAX_VALUE)", NIL)
+END MethodCallClear.make;
+
 PROCEDURE MethodCallRemove.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
@@ -214,6 +242,15 @@ END MethodRemove.designatorCode;
 PROCEDURE MethodIndexOf.designatorCode(id: STRING): STRING;
     RETURN "indexOf"
 END MethodIndexOf.designatorCode;
+
+PROCEDURE MethodClear.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+VAR
+    call: POINTER TO MethodCallClear;
+BEGIN
+    NEW(call);
+    Procedure.initStdCall(call);
+    RETURN Procedure.makeCallGenerator(call, cx)
+END MethodClear.callGenerator;
 
 PROCEDURE MethodRemove.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
 VAR

@@ -151,7 +151,7 @@ BEGIN
     END;
 END checkArgumentsCount;
 
-PROCEDURE processArguments(
+PROCEDURE processArguments*(
     actual: JsArray.Type; 
     expected: JsArray.Type; 
     code: PArgumentsCode;

@@ -124,4 +124,5 @@ dynamicArrayOfStaticArrayInt.push(RTL$.clone(a));
 RTL$.assert(dynamicInt.indexOf(i) != -1);
 RTL$.assert(dynamicChar.indexOf(34) != -1);
 dynamicInt.splice(i, 1);
+dynamicInt.splice(0, Number.MAX_VALUE);
 }();

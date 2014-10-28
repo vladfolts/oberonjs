@@ -326,9 +326,12 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
         var type = d.type();
         var code;
         if (this.__right){
-            if (type instanceof EberonDynamicArray.DynamicArray)
+        /*    if (type instanceof EberonDynamicArray.DynamicArray){
+                if (!(this.__right.type() instanceof Type.Array))
+                    throw new Errors.Error("type mismatch");
                 code = d.code() + " = " + this.language().rtl.clone(this.__right.code());
-            else {
+            }
+            else */{
                 var left = Code.makeExpression(d.code(), type, d);
                 code = op.assign(left, this.__right, this.language());
             } 

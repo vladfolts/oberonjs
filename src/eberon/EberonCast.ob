@@ -1,5 +1,15 @@
 MODULE EberonCast;
-IMPORT Cast, EberonString, EberonDynamicArray, Types;
+IMPORT Cast, Code, EberonString, EberonDynamicArray, OberonRtl, Types;
+TYPE
+    CastOpToDynamicArray = RECORD (Cast.CastOp)
+    END;
+
+VAR
+    castOpToDynamicArray: POINTER TO CastOpToDynamicArray;
+
+PROCEDURE CastOpToDynamicArray.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
+    RETURN Code.makeSimpleExpression(rtl.clone(e.code()), NIL)
+END CastOpToDynamicArray.make;
 
 PROCEDURE isOpenCharArray(type: Types.PType): BOOLEAN;
     RETURN (type IS Types.POpenArray) 
@@ -23,6 +33,7 @@ BEGIN
         IF toVar & ~(from IS EberonDynamicArray.PDynamicArray) THEN
             result := Cast.errVarParameter;
         ELSE
+            op := castOpToDynamicArray;
             result := Cast.errNo;
         END;
     ELSE
@@ -31,4 +42,6 @@ BEGIN
     RETURN result
 END implicit;
 
+BEGIN
+    NEW(castOpToDynamicArray);
 END EberonCast.
