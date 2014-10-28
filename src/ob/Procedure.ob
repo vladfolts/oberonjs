@@ -56,10 +56,10 @@ TYPE
     END;
 
     ArgumentsCode* = RECORD
-        PROCEDURE write(actual: Code.PExpression; 
-                        expected: Types.PProcedureArgument; 
-                        cast: Cast.PCastOp
-                        );
+        PROCEDURE write*(actual: Code.PExpression; 
+                         expected: Types.PProcedureArgument; 
+                         cast: Cast.PCastOp
+                         );
         PROCEDURE result*(): STRING
     END;
     PArgumentsCode* = POINTER TO ArgumentsCode;
@@ -72,7 +72,7 @@ TYPE
     BinaryOp = PROCEDURE(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
     BinaryOpStr = PROCEDURE (x, y: STRING): STRING;
 VAR
-    predefined*: JsArray.Type;
+    predefined*: ARRAY * OF Symbols.PSymbol;
 
 PROCEDURE checkArgument*(
     actual: Code.PExpression; 
@@ -243,20 +243,8 @@ VAR
     call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
-    VAR
-        expectedArgs: JsArray.Type;
-        a: Object.PType;
-
     BEGIN
-        expectedArgs := SELF.args;
-        IF expectedArgs # NIL THEN
-            processArguments(args, expectedArgs, SELF.argumentsCode, cx.types);
-        ELSE
-            FOR i <- 0 TO JsArray.len(args) - 1 DO
-                a := JsArray.at(args, i);
-                SELF.argumentsCode.write(a(Code.PExpression), NIL, NIL);
-            END;
-        END;
+        processArguments(args, SELF.args, SELF.argumentsCode, cx.types);
         RETURN Code.makeSimpleExpression(
                 "(" + SELF.argumentsCode.result() + ")",
                 SELF.result
@@ -643,7 +631,7 @@ PROCEDURE makeAbs(): Symbols.PSymbol;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
         argType := arg.type();
-        IF ~JsArray.contains(Types.numeric, argType) THEN
+        IF Types.numeric.indexOf(argType) = -1 THEN
             Errors.raise("type mismatch: expected numeric type, got '"
                          + argType.description() + "'");
         END;
@@ -935,22 +923,21 @@ BEGIN
 END make;
 
 BEGIN
-    predefined := JsArray.make();
-    JsArray.add(predefined, makeNew());
-    JsArray.add(predefined, makeOdd());
-    JsArray.add(predefined, makeAssert());
-    JsArray.add(predefined, setBitImpl("INCL", inclOp));
-    JsArray.add(predefined, setBitImpl("EXCL", exclOp));
-    JsArray.add(predefined, incImpl("INC", "++", incOp));
-    JsArray.add(predefined, incImpl("DEC", "--", decOp));
-    JsArray.add(predefined, makeAbs());
-    JsArray.add(predefined, makeFloor());
-    JsArray.add(predefined, makeFlt());
-    JsArray.add(predefined, bitShiftImpl("LSL", Operator.lsl));
-    JsArray.add(predefined, bitShiftImpl("ASR", Operator.asr));
-    JsArray.add(predefined, bitShiftImpl("ROR", Operator.ror));
-    JsArray.add(predefined, makeOrd());
-    JsArray.add(predefined, makeChr());
-    JsArray.add(predefined, makePack());
-    JsArray.add(predefined, makeUnpk());
+    predefined.add(makeNew());
+    predefined.add(makeOdd());
+    predefined.add(makeAssert());
+    predefined.add(setBitImpl("INCL", inclOp));
+    predefined.add(setBitImpl("EXCL", exclOp));
+    predefined.add(incImpl("INC", "++", incOp));
+    predefined.add(incImpl("DEC", "--", decOp));
+    predefined.add(makeAbs());
+    predefined.add(makeFloor());
+    predefined.add(makeFlt());
+    predefined.add(bitShiftImpl("LSL", Operator.lsl));
+    predefined.add(bitShiftImpl("ASR", Operator.asr));
+    predefined.add(bitShiftImpl("ROR", Operator.ror));
+    predefined.add(makeOrd());
+    predefined.add(makeChr());
+    predefined.add(makePack());
+    predefined.add(makeUnpk());
 END Procedure.

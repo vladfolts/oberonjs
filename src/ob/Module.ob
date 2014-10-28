@@ -17,7 +17,10 @@ TYPE
     AnyField = RECORD(Types.Field)
     END;
 
-    AnyTypeProc* = RECORD(Types.DefinedProcedure)
+    AnyTypeProc* = RECORD(Procedure.Std)
+    END;
+
+    AnyProcCall = RECORD(Procedure.Call)
     END;
 
     JS = RECORD(Type)
@@ -36,8 +39,16 @@ PROCEDURE AnyType.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
     RETURN "undefined"
 END AnyType.initializer;
 
+PROCEDURE makeCallGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+VAR
+    call: POINTER TO AnyProcCall;
+BEGIN
+    NEW(call);
+    RETURN Procedure.makeCallGenerator(call, cx)
+END makeCallGenerator;
+
 PROCEDURE AnyType.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
-    RETURN Procedure.makeProcCallGenerator(cx, anyProc)
+    RETURN makeCallGenerator(cx)
 END AnyType.callGenerator;
 
 PROCEDURE AnyType.denote(id: STRING): Types.PField;
@@ -64,13 +75,19 @@ PROCEDURE AnyField.asVar(): Types.PId;
     RETURN any.asVar
 END AnyField.asVar;
 
-PROCEDURE AnyTypeProc.args(): JsArray.Type;
-    RETURN NIL
-END AnyTypeProc.args;
+PROCEDURE AnyTypeProc.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+    RETURN makeCallGenerator(cx)
+END AnyTypeProc.callGenerator;
 
-PROCEDURE AnyTypeProc.result(): Types.PType;
-    RETURN any
-END AnyTypeProc.result;
+PROCEDURE AnyProcCall.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+BEGIN
+    argCode <- Procedure.makeArgumentsCode(cx);
+    FOR i <- 0 TO JsArray.len(args) - 1 DO
+        a <- JsArray.at(args, i);
+        argCode.write(a(Code.PExpression), NIL, NIL);
+    END;
+    RETURN Code.makeSimpleExpression("(" + argCode.result() + ")", any)
+END AnyProcCall.make;
 
 PROCEDURE JS.findSymbol(id: STRING): Symbols.PFoundSymbol;
 VAR

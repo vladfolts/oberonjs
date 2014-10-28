@@ -155,7 +155,7 @@ TYPE
         base:   PRecord;
         cons:   STRING;
         scope:  ScopeBase.PType;
-        notExported: JsArray.Strings
+        notExported: ARRAY * OF STRING
     END;
     
     NonExportedRecord* = RECORD(Record)
@@ -178,7 +178,7 @@ VAR
         bool*, ch*, integer*, uint8*, real*, set*: PBasicType
     END;
 
-    numeric*: JsArray.Type;
+    numeric*: ARRAY * OF PType;
     nil*: POINTER TO Nil;
 
 PROCEDURE TypeId.description(): STRING;
@@ -200,10 +200,10 @@ END finalizeRecord;
 
 PROCEDURE Record.finalize();
 BEGIN
-    FOR i <- 0 TO JsArray.stringsLen(SELF.notExported) - 1 DO
-        JsMap.erase(SELF.fields, JsArray.stringsAt(SELF.notExported, i))
+    FOR i <- 0 TO LEN(SELF.notExported) - 1 DO
+        JsMap.erase(SELF.fields, SELF.notExported[i])
     END;
-    SELF.notExported := NIL;
+    SELF.notExported.clear();
 END Record.finalize;
 
 PROCEDURE initRecord*(r: PRecord; name: STRING; cons: STRING; scope: ScopeBase.PType);
@@ -212,7 +212,6 @@ BEGIN
     r.cons := cons;
     r.scope := scope;
     r.fields := JsMap.make();
-    r.notExported := JsArray.makeStrings();
     scope.addFinalizer(finalizeRecord, r);
 END initRecord;
 
@@ -412,7 +411,7 @@ BEGIN
     END;
     JsMap.put(SELF.fields, f.id(), f);
     IF ~f.exported() THEN
-        JsArray.addString(SELF.notExported, f.id());
+        SELF.notExported.add(f.id());
     END;
 END Record.addField;
 
@@ -761,10 +760,9 @@ BEGIN
     basic.real := makeBasic("REAL", "0");
     basic.set := makeBasic("SET", "0");
 
-    numeric := JsArray.make();
-    JsArray.add(numeric, basic.integer);
-    JsArray.add(numeric, basic.uint8);
-    JsArray.add(numeric, basic.real);
+    numeric.add(basic.integer);
+    numeric.add(basic.uint8);
+    numeric.add(basic.real);
 
     NEW(nil);
 END Types.

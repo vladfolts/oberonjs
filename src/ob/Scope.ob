@@ -1,7 +1,6 @@
 MODULE Scope;
 IMPORT 
     Errors, 
-    JsArray, 
     JsMap, 
     Object, 
     Procedures := Procedure, 
@@ -9,6 +8,13 @@ IMPORT
     Symbols, 
     Types;
 TYPE
+    Unresolved = ARRAY * OF STRING;
+
+    Finalizer = POINTER TO RECORD
+        proc: ScopeBase.FinalizerProc;
+        closure: Object.PType
+    END;
+
     Type* = RECORD(ScopeBase.Type)
         PROCEDURE addSymbol*(s: Symbols.PSymbol; exported: BOOLEAN);
         PROCEDURE findSymbol*(id: STRING): Symbols.PFoundSymbol;
@@ -16,8 +22,8 @@ TYPE
 
         stdSymbols: JsMap.Type;
         symbols: JsMap.Type;
-        unresolved: JsArray.Strings;
-        finalizers: JsArray.Type
+        unresolved: Unresolved;
+        finalizers: ARRAY * OF Finalizer
     END;
     PType* = POINTER TO Type;
 
@@ -37,11 +43,6 @@ TYPE
     END;
     PModule = POINTER TO Module;
 
-    Finalizer = POINTER TO RECORD (Object.Type)
-        proc: ScopeBase.FinalizerProc;
-        closure: Object.PType
-    END;
-
 PROCEDURE addSymbolForType*(t: Types.PBasicType; result: JsMap.Type);
 VAR
     name: STRING;
@@ -53,7 +54,6 @@ END addSymbolForType;
 PROCEDURE makeStdSymbols*(): JsMap.Type;
 VAR 
     result: JsMap.Type;
-    proc: Object.PType;
 
     PROCEDURE addSymbol(t: Types.PBasicType);
     BEGIN
@@ -68,9 +68,9 @@ BEGIN
     addSymbol(Types.basic.real);
     addSymbol(Types.basic.set); 
 
-    FOR i <- 0 TO JsArray.len(Procedures.predefined) - 1 DO
-        proc := JsArray.at(Procedures.predefined, i);
-        JsMap.put(result, proc(Symbols.PSymbol).id(), proc);
+    FOR i <- 0 TO LEN(Procedures.predefined) - 1 DO
+        proc <- Procedures.predefined[i];
+        JsMap.put(result, proc.id(), proc);
     END;
     RETURN result
 END makeStdSymbols;
@@ -79,8 +79,6 @@ PROCEDURE init*(VAR scope: Type; stdSymbols: JsMap.Type);
 BEGIN
     scope.stdSymbols := stdSymbols;
     scope.symbols := JsMap.make();
-    scope.unresolved := JsArray.makeStrings();
-    scope.finalizers := JsArray.make();
 END init;
 
 PROCEDURE makeCompiledModule(name: STRING): PCompiledModule;
@@ -107,8 +105,8 @@ END makeModule;
 
 PROCEDURE addUnresolved*(s: Type; id: STRING);
 BEGIN
-    IF ~JsArray.containsString(s.unresolved, id) THEN
-        JsArray.addString(s.unresolved, id);
+    IF s.unresolved.indexOf(id) = -1 THEN
+        s.unresolved.add(id);
     END;
 END addUnresolved;
 
@@ -120,7 +118,7 @@ VAR
     type: Types.PType;
 BEGIN
     id := symbol.id();
-    i := JsArray.stringsIndexOf(s.unresolved, id);
+    i := s.unresolved.indexOf(id);
     IF i # -1 THEN
         info := symbol.info();
         type := info(Types.PTypeId).type();
@@ -130,29 +128,23 @@ BEGIN
                 + id
                 + "' must be of RECORD type because it was used before in the declation of POINTER");
         END;
-        JsArray.removeString(s.unresolved, i);
+        s.unresolved.remove(i);
     END;
 END resolve;
 
-PROCEDURE unresolved*(s: Type): JsArray.Strings;
+PROCEDURE unresolved*(s: Type): Unresolved;
     RETURN s.unresolved
 END unresolved;
 
 PROCEDURE Type.close();
-VAR
-    p: Object.PType;
-    finalizer: Finalizer;
 BEGIN
-    IF SELF.finalizers # NIL THEN
-        FOR i <- 0 TO JsArray.len(SELF.finalizers) - 1 DO
-            p := JsArray.at(SELF.finalizers, i);
-            finalizer := p(Finalizer);
-            finalizer.proc(finalizer.closure);
-        END;
-
-        (* make second close() call safe and free memory *)
-        SELF.finalizers := NIL; 
+    FOR i <- 0 TO LEN(SELF.finalizers) - 1 DO
+        finalizer <- SELF.finalizers[i];
+        finalizer.proc(finalizer.closure);
     END;
+
+    (* make second close() call safe and free memory *)
+    SELF.finalizers.clear(); 
 END Type.close;
 
 PROCEDURE Type.addFinalizer(proc: ScopeBase.FinalizerProc; closure: Object.PType);
@@ -162,10 +154,10 @@ BEGIN
     NEW(f);
     f.proc := proc;
     f.closure := closure;
-    JsArray.add(SELF.finalizers, f);
+    SELF.finalizers.add(f);
 END Type.addFinalizer;
 
-PROCEDURE close*(s: Type): JsArray.Strings;
+PROCEDURE close*(s: Type): Unresolved;
     RETURN s.unresolved
 END close;
 
