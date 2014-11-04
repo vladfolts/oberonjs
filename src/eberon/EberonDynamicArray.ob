@@ -1,5 +1,5 @@
 MODULE EberonDynamicArray;
-IMPORT Code, Context, EberonTypes, Errors, JsArray, LanguageContext, Procedure, Types;
+IMPORT Code, Context, EberonTypes, Errors, JsArray, LanguageContext, Procedure, Operator, Types;
 CONST
     methodNameAdd = "add";
     methodNameClear = "clear";
@@ -171,8 +171,10 @@ BEGIN
     SELF.code := argCode.result();
     
     t <- e.type();
-    IF (t IS Types.PRecord) OR (t IS Types.PArray) THEN
-        SELF.code := SELF.cx.rtl.clone(SELF.code);
+    IF t IS Types.PArray THEN
+        SELF.code := Operator.cloneArray(t^, SELF.code, SELF.cx.rtl^);
+    ELSIF t IS Types.PRecord THEN
+        SELF.code := SELF.cx.rtl.cloneRecord(SELF.code);
     END;
 END AddCallGenerator.handleArgument;
 

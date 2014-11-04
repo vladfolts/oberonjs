@@ -260,12 +260,12 @@ var InPlaceVariableInit = Context.Chained.extend({
         this._symbol = Symbol.makeSymbol(this.__id, v);
         if (type instanceof Type.Record){
             type.initializer(this, false); // checks for abstract etc.
-            this._code += this.language().rtl.clone(e.code());
+            this._code += this.language().rtl.cloneRecord(e.code());
         }
         else if (type instanceof Type.Array){
             if (type instanceof Type.OpenArray)
                 throw new Errors.Error("cannot initialize variable '" + this.__id + "' with open array");
-            this._code += this.language().rtl.clone(e.code());
+            this._code += op.cloneArray(type, e.code(), this.language().rtl);
         }
         else
             this._code += Code.derefExpression(e).code();
@@ -1094,7 +1094,7 @@ var Return = Context.Return.extend({
     handleExpression: function(e){
         var type = e.type();
         if (type instanceof Type.Array)
-            e = Code.makeSimpleExpression(this.language().rtl.clone(e.code()), type);
+            e = Code.makeSimpleExpression(op.cloneArray(type, e.code(), this.language().rtl), type);
         Context.Return.prototype.handleExpression.call(this, e);
     }
 });

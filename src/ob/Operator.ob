@@ -467,6 +467,20 @@ BEGIN
             Types.basic.bool)
 END strCmp;
 
+PROCEDURE cloneArray*(t: Types.Array; code: STRING; rtl: OberonRtl.Type): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF Types.isScalar(Types.arrayElementsType(t)^) THEN
+        result := code + ".slice()";
+    ELSIF Types.isScalar(Types.arrayBaseElementsType(t)^) THEN 
+        result := rtl.cloneArrayOfScalars(code);
+    ELSE
+        result := rtl.cloneArrayOfRecords(code);
+    END;
+    RETURN result
+END cloneArray;
+
 PROCEDURE assign*(left, right: Code.PExpression; cx: LanguageContext.Type): STRING;
 VAR
     designator: Code.PDesignator;
@@ -518,7 +532,11 @@ BEGIN
             Errors.raise("'" + leftCode + "' is open '" + leftType.description() + "' and cannot be assigned");
         END;
         IF (castOperation = NIL) & (isArray OR (rightType IS Types.PRecord)) THEN
-            result := cx.rtl.copy(rightCode, leftCode);
+            IF rightType IS Types.PArray THEN
+                result := leftCode + " = " + cloneArray(rightType^, rightCode, cx.rtl^);
+            ELSE
+                result := cx.rtl.copyRecord(rightCode, leftCode);
+            END;
         ELSE
             IF castOperation # NIL THEN
                 castExp := castOperation.make(cx.rtl, Code.derefExpression(right));

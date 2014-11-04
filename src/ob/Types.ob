@@ -561,6 +561,21 @@ PROCEDURE arrayElementsType*(a: Array): PType;
     RETURN a.elementsType
 END arrayElementsType;
 
+PROCEDURE arrayBaseElementsType*(a: Array): PType;
+VAR
+    result: PType;
+BEGIN
+    result := a.elementsType;
+    WHILE result IS PArray DO
+        result := result(PArray).elementsType;
+    END;
+    RETURN result
+END arrayBaseElementsType;
+
+PROCEDURE isScalar*(VAR t: Type): BOOLEAN;
+    RETURN ~(t IS Array) & ~(t IS Record) 
+END isScalar;
+
 PROCEDURE StaticArray.length(): INTEGER;
     RETURN SELF.len
 END StaticArray.length;

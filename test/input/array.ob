@@ -29,6 +29,22 @@ BEGIN
     p1(a)
 END p2;
 
+PROCEDURE testAssign();
+TYPE
+    T = RECORD
+    END;
+VAR
+    aInts1, aInts2: ARRAY 3 OF INTEGER;
+    aRecords1, aRecords2: ARRAY 3 OF T;
+    aPointers1, aPointers2: ARRAY 3 OF POINTER TO T;
+    arrayOfArray1, arrayOfArray2: ARRAY 3, 5 OF BOOLEAN;
+BEGIN
+    aInts2 := aInts1;
+    aRecords2 := aRecords1;
+    aPointers2 := aPointers1;
+    arrayOfArray2 := arrayOfArray1;
+END testAssign;
+
 BEGIN
     a1[0] := 1;
     a3[1] := TRUE;

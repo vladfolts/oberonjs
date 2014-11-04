@@ -68,9 +68,18 @@ var impl = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
+    __setupCharArrayMethods: function(a){
+        var rtl = this;
+        a.charCodeAt = function(i){return this[i];};
+        a.slice = function(){
+            var result = Array.prototype.slice.apply(this, arguments);
+            rtl.__setupCharArrayMethods(result);
+            return result;
+        };
+    },
     __makeCharArray: function(length){
         var result = new Uint16Array(length);
-        result.charCodeAt = function(i){return this[i];};
+        this.__setupCharArrayMethods(result);
         return result;
     },
     makeCharArray: function(/*dimensions*/){
@@ -95,7 +104,7 @@ var impl = {
             return result;
         }
 
-        forward.push(this.__makeCharArray.bind(undefined, length));
+        forward.push(this.__makeCharArray.bind(this, length));
         return makeArray.apply(undefined, forward);
     },
     makeSet: function(/*...*/){
@@ -148,47 +157,49 @@ var impl = {
         }
         return cmp ? cmp : s1.length - s2.length;
     },
-    copy: function(from, to){
+    cloneArrayOfRecords: function(from){
+        var length = from.length;
+        var result = new Array(length);
+        if (length){
+            var method = from[0] instanceof Array 
+                       ? this.cloneArrayOfRecords // this is array of arrays, go deeper
+                       : this.cloneRecord;
+            for(var i = 0; i < result.length; ++i)
+                result[i] = method.call(this, from[i]);
+        }
+        return result;
+    },
+    cloneArrayOfScalars: function(from){
+        var length = from.length;
+        if (!length)
+            return [];
+        if (!(from[0] instanceof Array))
+            return from.slice();
+
+        // this is array of arrays, go deeper
+        var result = new Array(length);
+        for(var i = 0; i < length; ++i)
+            result[i] = this.cloneArrayOfScalars(from[i]);
+        return result;
+    },
+    copyRecord: function(from, to){
         for(var prop in to){
             if (to.hasOwnProperty(prop)){
                 var v = from[prop];
-                if (v !== null && typeof v == "object")
-                    this.copy(v, to[prop]);
-                else
+                var isScalar = prop[0] != "$";
+                if (isScalar)
                     to[prop] = v;
+                else
+                    to[prop] = v instanceof Array ? this.cloneArrayOfRecords(v)
+                                                  : this.cloneRecord(v);
             }
         }
     },
-    clone: function(from){
-        var to;
-        var len;
-        var i;
+    cloneRecord: function(from){
         var Ctr = from.constructor;
-        if (Ctr == Uint16Array){
-            len = from.length;
-            to = this.__makeCharArray(len);
-            for(i = 0; i < len; ++i)
-                to[i] = from[i];
-        }
-        else {
-            to = new Ctr();
-            if (Ctr == Array)
-                len = from.length;
-                if (len){
-                    if (typeof from[0] != "object")
-                        for(i = 0; i < len; ++i)
-                            to[i] = from[i];
-                    else
-                        for(i = 0; i < len; ++i){
-                            var o = from[i];
-                            if (o !== null)
-                                to[i] = this.clone(o);
-                        }
-                }
-            else
-                this.copy(from, to);
-        }
-        return to;
+        var result = new Ctr();
+        this.copyRecord(from, result);
+        return result;
     },
     assert: function(condition){
         if (!condition)
@@ -198,8 +209,10 @@ var impl = {
 
 exports.Class = Class;
 exports.dependencies = { 
-    "clone": ["copy", "__makeCharArray"] ,
-    "makeCharArray": ["__makeCharArray"]
+    "cloneRecord": ["copyRecord"],
+    "cloneArrayOfRecords": ["cloneRecord"],
+    "makeCharArray": ["__makeCharArray"],
+    "__makeCharArray": ["__setupCharArrayMethods"]
 };
 
 for(var e in impl)

@@ -297,6 +297,15 @@ function castCode(type, context){
     return context.qualifyScope(Type.recordScope(baseType)) + Type.recordConstructor(baseType);
 }
 
+function mangleField(id, type){
+    if (Type.isScalar(type) 
+        || (type instanceof Type.Array 
+            && Type.isScalar(Type.arrayBaseElementsType(type))))
+        return id;
+
+    return "$" + id;
+}
+
 exports.Designator = ChainedContext.extend({
     init: function Context$Designator(context){
         ChainedContext.prototype.init.call(this, context);
@@ -341,14 +350,14 @@ exports.Designator = ChainedContext.extend({
             isReadOnly = false;
         }
         var field = t.denote(id);
-        this.__derefCode = this.__code;
-        this.__propCode = "\"" + id + "\"";
-        this.__info = field.asVar(isReadOnly, this);
         this.__currentType = field.type();
-        var code = this.__currentType instanceof Type.Procedure 
+        this.__derefCode = this.__code;
+        var codeId = this.__currentType instanceof Type.Procedure 
                  ? this.__currentType.designatorCode(id)
-                 : id;
-        this.__code += "." + code;
+                 : mangleField(id, this.__currentType);
+        this.__propCode = "\"" + codeId + "\"";
+        this.__info = field.asVar(isReadOnly, this);
+        this.__code += "." + codeId;
         this.__scope = undefined;
     },
     _makeDerefVar: function(){
@@ -1760,8 +1769,10 @@ exports.RecordDecl = ChainedContext.extend({
         if (baseType)
             gen.write(qualifiedBase + ".prototype.init.call(this);\n");
         var ownFields = Type.recordOwnFields(type);
-        for(var f in ownFields)
-            gen.write("this." + f + " = " + ownFields[f].type().initializer(this) + ";\n");
+        for(var f in ownFields){
+            var fieldType = ownFields[f].type();
+            gen.write("this." + mangleField(f, fieldType) + " = " + fieldType.initializer(this) + ";\n");
+        }
 
         gen.closeScope("");
         gen.closeScope(");\n");

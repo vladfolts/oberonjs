@@ -1,5 +1,5 @@
 MODULE EberonCast;
-IMPORT Cast, Code, EberonString, EberonDynamicArray, OberonRtl, Types;
+IMPORT Cast, Code, EberonString, EberonDynamicArray, OberonRtl, Operator, Types;
 TYPE
     CastOpToDynamicArray = RECORD (Cast.CastOp)
     END;
@@ -8,7 +8,7 @@ VAR
     castOpToDynamicArray: POINTER TO CastOpToDynamicArray;
 
 PROCEDURE CastOpToDynamicArray.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
-    RETURN Code.makeSimpleExpression(rtl.clone(e.code()), NIL)
+    RETURN Code.makeSimpleExpression(Operator.cloneArray(e.type()(Types.PArray)^, e.code(), rtl^), NIL)
 END CastOpToDynamicArray.make;
 
 PROCEDURE isOpenCharArray(type: Types.PType): BOOLEAN;

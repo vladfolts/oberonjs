@@ -21,13 +21,22 @@ var RTL$ = {
             return result;
         }
 
-        forward.push(this.__makeCharArray.bind(undefined, length));
+        forward.push(this.__makeCharArray.bind(this, length));
         return makeArray.apply(undefined, forward);
     },
     __makeCharArray: function (length){
         var result = new Uint16Array(length);
-        result.charCodeAt = function(i){return this[i];};
+        this.__setupCharArrayMethods(result);
         return result;
+    },
+    __setupCharArrayMethods: function (a){
+        var rtl = this;
+        a.charCodeAt = function(i){return this[i];};
+        a.slice = function(){
+            var result = Array.prototype.slice.apply(this, arguments);
+            rtl.__setupCharArrayMethods(result);
+            return result;
+        };
     },
     assignArrayFromString: function (a, s){
         var i;

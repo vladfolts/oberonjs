@@ -31,16 +31,49 @@ var RTL$ = {
         result.extend = extend;
         return result;
     },
-    copy: function (from, to){
+    cloneArrayOfRecords: function (from){
+        var length = from.length;
+        var result = new Array(length);
+        if (length){
+            var method = from[0] instanceof Array 
+                       ? this.cloneArrayOfRecords // this is array of arrays, go deeper
+                       : this.cloneRecord;
+            for(var i = 0; i < result.length; ++i)
+                result[i] = method.call(this, from[i]);
+        }
+        return result;
+    },
+    cloneRecord: function (from){
+        var Ctr = from.constructor;
+        var result = new Ctr();
+        this.copyRecord(from, result);
+        return result;
+    },
+    copyRecord: function (from, to){
         for(var prop in to){
             if (to.hasOwnProperty(prop)){
                 var v = from[prop];
-                if (v !== null && typeof v == "object")
-                    this.copy(v, to[prop]);
-                else
+                var isScalar = prop[0] != "$";
+                if (isScalar)
                     to[prop] = v;
+                else
+                    to[prop] = v instanceof Array ? this.cloneArrayOfRecords(v)
+                                                  : this.cloneRecord(v);
             }
         }
+    },
+    cloneArrayOfScalars: function (from){
+        var length = from.length;
+        if (!length)
+            return [];
+        if (!(from[0] instanceof Array))
+            return from.slice();
+
+        // this is array of arrays, go deeper
+        var result = new Array(length);
+        for(var i = 0; i < length; ++i)
+            result[i] = this.cloneArrayOfScalars(from[i]);
+        return result;
     }
 };
 var m = function (){
@@ -66,11 +99,26 @@ function p1(a/*ARRAY 10 OF INTEGER*/){
 function p2(a/*VAR ARRAY 10 OF INTEGER*/){
 	p1(a);
 }
+
+function testAssign(){
+	var T = RTL$.extend({
+		init: function T(){
+		}
+	});
+	var aInts1 = RTL$.makeArray(3, 0);var aInts2 = RTL$.makeArray(3, 0);
+	var aRecords1 = RTL$.makeArray(3, function(){return new T();});var aRecords2 = RTL$.makeArray(3, function(){return new T();});
+	var aPointers1 = RTL$.makeArray(3, null);var aPointers2 = RTL$.makeArray(3, null);
+	var arrayOfArray1 = RTL$.makeArray(3, 5, false);var arrayOfArray2 = RTL$.makeArray(3, 5, false);
+	aInts2 = aInts1.slice();
+	aRecords2 = RTL$.cloneArrayOfRecords(aRecords1);
+	aPointers2 = aPointers1.slice();
+	arrayOfArray2 = RTL$.cloneArrayOfScalars(arrayOfArray1);
+}
 a1[0] = 1;
 a3[1] = true;
 a4[1][2] = true;
 a4[1][2] = true;
 p1(a1);
 p2(a1);
-RTL$.copy(a11, a1);
+a1 = a11.slice();
 }();

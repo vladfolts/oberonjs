@@ -6,6 +6,11 @@ TYPE
 		proc1: PROCEDURE
 	END;
 
+	MixPointersAndRecords = RECORD
+		r: T1;
+		p: POINTER TO T1
+	END;
+
 VAR
 	a1: ARRAY 3 OF T1;
 	a2: ARRAY 3 OF T1;
@@ -15,6 +20,16 @@ END proc1;
 
 PROCEDURE proc2;
 END proc2;
+
+PROCEDURE testPointerAndRecordFieldsCopy();
+VAR
+	r1, r2: MixPointersAndRecords;
+BEGIN
+	NEW(r1.p);
+	NEW(r2.p);
+	r1 := r2;
+	ASSERT(r1.p = r2.p);
+END testPointerAndRecordFieldsCopy;
 
 BEGIN
 	a1[0].i1 := 123;
@@ -28,5 +43,7 @@ BEGIN
 	a1[0].i1 := 345;
 	a1[0].proc1 := proc2;
 	ASSERT(a2[0].i1 = 123);
-	ASSERT(a2[0].proc1 = proc1)
+	ASSERT(a2[0].proc1 = proc1);
+
+	testPointerAndRecordFieldsCopy();
 END m.

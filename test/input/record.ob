@@ -1,10 +1,22 @@
 MODULE m;
 TYPE
 	Base1 = RECORD END;
-	T1 = RECORD (Base1) END;
+	T1 = RECORD (Base1) 
+        i: INTEGER
+    END;
+    RecordWithInnerRecord = RECORD
+        r: T1
+    END;
+    RecordWithInnerArray = RECORD
+        aInts: ARRAY 3 OF INTEGER;
+        aRecords: ARRAY 3 OF T1;
+        aPointers: ARRAY 3 OF POINTER TO T1
+    END;
 VAR
 	b1: Base1;
 	r1: T1;
+    recordWithInnerRecord: RecordWithInnerRecord;
+    recordWithInnerArray: RecordWithInnerArray;
 
 PROCEDURE p1(r: T1);
 END p1;
@@ -14,8 +26,20 @@ BEGIN
     p1(r)
 END p2;
 
+PROCEDURE byRef(VAR i: INTEGER);
+END byRef;
+
 BEGIN
 	b1 := r1;
     p1(r1);
-    p2(r1)
+    p2(r1);
+
+    recordWithInnerRecord.r.i := 123;
+    p1(recordWithInnerRecord.r);
+    p2(recordWithInnerRecord.r);
+    byRef(recordWithInnerRecord.r.i);
+
+    recordWithInnerArray.aInts[0] := 123;
+    recordWithInnerArray.aRecords[0].i := 123;
+    recordWithInnerArray.aPointers[0].i := 123;
 END m.

@@ -1,11 +1,13 @@
 MODULE m;
-
+TYPE
+    T = RECORD
+    END;
 VAR
-    a1: ARRAY 5, 10 OF INTEGER;
+    aIntsX2: ARRAY 5, 10 OF INTEGER;
 
 BEGIN
-    a1[0, 1] := 1;
-    ASSERT(a1[0, 1] = 1);
-    a1[1, 0] := a1[0, 1];
-    ASSERT(a1[1, 0] = 1);
+    aIntsX2[0, 1] := 1;
+    ASSERT(aIntsX2[0, 1] = 1);
+    aIntsX2[1, 0] := aIntsX2[0, 1];
+    ASSERT(aIntsX2[1, 0] = 1);
 END m.

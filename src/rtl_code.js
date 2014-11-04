@@ -49,21 +49,20 @@ exports.RTL = Rtl.Class.extend({
         
         return result;
     },
+    __putEntry: function(name){
+        if (!this.__entries[name])
+            this.__entries[name] = Rtl[name];
+        
+        var dependencies = Rtl.dependencies[name];
+        if (dependencies)
+            for(var i = 0; i < dependencies.length; ++i)
+                this.__putEntry(dependencies[i]);
+    },
     __makeIdOnDemand: function(name){
         return function(){
             if (this.__demandedCallback)
                 this.__demandedCallback();
-            if (!this.__entries[name])
-                this.__entries[name] = Rtl[name];
-            
-            var dependencies = Rtl.dependencies[name];
-            if (dependencies)
-                for(var i = 0; i < dependencies.length; ++i){
-                    var d = dependencies[i];
-                    if (!this.__entries[d])
-                        this.__entries[d] = Rtl[d];
-                }
-
+            this.__putEntry(name);
             return this.name() + "." + name;
         };
     },
