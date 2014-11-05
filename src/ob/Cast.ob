@@ -1,5 +1,5 @@
 MODULE Cast;
-IMPORT Code, OberonRtl, JsArray, Object, String, Types;
+IMPORT Code, OberonRtl, Object, String, Types;
 CONST
     errNo* = 0;
     err* = 1;
@@ -61,10 +61,7 @@ PROCEDURE areTypesMatch*(t1: Types.PType; t2: Types.PType): BOOLEAN;
             OR ((t2 = Types.nil) & (matchesToNIL(t1^))))
 END areTypesMatch;
 
-PROCEDURE areArgsMatch(oa1, oa2: Object.PType; p1, p2: Types.PDefinedProcedure): BOOLEAN;
-BEGIN
-    a1 <- oa1(Types.PProcedureArgument);
-    a2 <- oa2(Types.PProcedureArgument);
+PROCEDURE areArgsMatch(a1, a2: Types.PProcedureArgument; p1, p2: Types.PDefinedProcedure): BOOLEAN;
     RETURN (a1.isVar = a2.isVar)
         & (    ((a1.type = p1) & (a2.type = p2))
             OR areTypesExactlyMatch(a1.type, a2.type))
@@ -76,11 +73,11 @@ VAR
 BEGIN
     args1 <- p1.args();
     args2 <- p2.args();
-    argsLen <- JsArray.len(args1);
-    IF JsArray.len(args2) = argsLen THEN
+    argsLen <- LEN(args1);
+    IF LEN(args2) = argsLen THEN
         i <- 0;
         WHILE (i < argsLen) 
-            & areArgsMatch(JsArray.at(args1, i), JsArray.at(args2, i), p1, p2) DO
+            & areArgsMatch(args1[i], args2[i], p1, p2) DO
             INC(i);
         END;
         IF i = argsLen THEN

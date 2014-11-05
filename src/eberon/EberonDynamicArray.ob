@@ -1,5 +1,5 @@
 MODULE EberonDynamicArray;
-IMPORT Code, Context, EberonTypes, Errors, JsArray, LanguageContext, Procedure, Operator, Types;
+IMPORT Code, Context, EberonTypes, Errors, LanguageContext, Procedure, Operator, Types;
 CONST
     methodNameAdd = "add";
     methodNameClear = "clear";
@@ -210,13 +210,13 @@ PROCEDURE MethodClear.designatorCode(id: STRING): STRING;
     RETURN "splice"
 END MethodClear.designatorCode;
 
-PROCEDURE MethodCallClear.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE MethodCallClear.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
     Procedure.processArguments(args, SELF.args, NIL, cx.types);
     RETURN Code.makeSimpleExpression("(0, Number.MAX_VALUE)", NIL)
 END MethodCallClear.make;
 
-PROCEDURE MethodCallRemove.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE MethodCallRemove.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
     arg <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
@@ -227,7 +227,7 @@ BEGIN
     RETURN Code.makeSimpleExpression("(" + argCode.result() + ", 1)", NIL)
 END MethodCallRemove.make;
 
-PROCEDURE MethodCallIndexOf.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE MethodCallIndexOf.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
     argType <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode).type();
@@ -264,7 +264,7 @@ BEGIN
 
     NEW(a);
     a.type := Types.basic.integer;
-    JsArray.add(call.args, a);
+    call.args.add(a);
     RETURN Procedure.makeCallGenerator(call, cx)
 END MethodRemove.callGenerator;
 
@@ -278,7 +278,7 @@ BEGIN
 
     NEW(a);
     a.type := SELF.elementsType;
-    JsArray.add(call.args, a);
+    call.args.add(a);
     RETURN Procedure.makeCallGenerator(call, cx)
 END MethodIndexOf.callGenerator;
 

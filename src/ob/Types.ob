@@ -1,6 +1,6 @@
 MODULE Types;
 IMPORT
-    Context, Errors, JS, JsArray, JsMap, Object, ScopeBase, Str := String;
+    Context, Errors, JS, JsMap, Object, ScopeBase, Str := String;
 
 TYPE
     Id* = RECORD(Object.Type)
@@ -125,12 +125,6 @@ TYPE
     END;
     PProcedure* = POINTER TO Procedure;
 
-    DefinedProcedure* = RECORD(Procedure)
-        PROCEDURE args*(): JsArray.Type;
-        PROCEDURE result*(): PType
-    END;
-    PDefinedProcedure* = POINTER TO DefinedProcedure;
-
     ProcedureArgument* = RECORD (Object.Type)
         PROCEDURE description(): STRING;
 
@@ -139,6 +133,13 @@ TYPE
     END;
 
     PProcedureArgument* = POINTER TO ProcedureArgument;
+    ProcedureArguments* = ARRAY * OF PProcedureArgument;
+
+    DefinedProcedure* = RECORD(Procedure)
+        PROCEDURE args*(): ProcedureArguments;
+        PROCEDURE result*(): PType
+    END;
+    PDefinedProcedure* = POINTER TO DefinedProcedure;
 
     BasicType* = RECORD(NamedType)
         mInitializer: STRING

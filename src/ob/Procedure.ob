@@ -4,7 +4,6 @@ IMPORT
     Code, 
     Context, 
     Errors, 
-    JsArray, 
     Language,
     LanguageContext,
     OberonRtl,
@@ -16,12 +15,12 @@ IMPORT
     Types;
 TYPE
     Call* = RECORD
-        PROCEDURE make*(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression
+        PROCEDURE make*(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression
     END;
     PCall = POINTER TO Call;
 
     StdCall* = RECORD(Call)
-        args*: JsArray.Type
+        args*: Types.ProcedureArguments
     END;
     PStdCall = POINTER TO StdCall;
 
@@ -34,7 +33,7 @@ TYPE
         PROCEDURE handleArgument*(e: Code.PExpression);
         PROCEDURE end*(): Code.PExpression;
 
-        args: JsArray.Type;
+        args: ARRAY * OF Code.PExpression;
         cx: LanguageContext.PType;
         call: PCall
     END;
@@ -42,9 +41,9 @@ TYPE
 
     Type* = RECORD(Types.DefinedProcedure)
         PROCEDURE callGenerator(cx: LanguageContext.PType): PCallGenerator;
-        PROCEDURE define(args: JsArray.Type; result: Types.PType);
+        PROCEDURE define(args: ARRAY OF Types.PProcedureArgument; result: Types.PType);
 
-        mArgs: JsArray.Type;
+        mArgs: Types.ProcedureArguments;
         mResult: Types.PType
     END;
     PType = POINTER TO Type;
@@ -122,23 +121,14 @@ BEGIN
 END checkArgument;
 
 PROCEDURE checkArgumentsType(
-    actual: JsArray.Type; 
-    expected: JsArray.Type; 
+    actual: ARRAY OF Code.PExpression;
+    expected: ARRAY OF Types.PProcedureArgument; 
     code: PArgumentsCode;
     types: Language.PTypes
     );
-VAR
-    actualLen: INTEGER;
-    i: INTEGER;
-    actualExp: Object.PType;
-    expectedArg: Object.PType;
 BEGIN
-    actualLen := JsArray.len(actual);
-    WHILE i < actualLen DO
-        actualExp := JsArray.at(actual, i);
-        expectedArg := JsArray.at(expected, i);
-        checkArgument(actualExp(Code.PExpression), expectedArg(Types.PProcedureArgument), i, code, types);
-        INC(i);
+    FOR i <- 0 TO LEN(actual) - 1 DO
+        checkArgument(actual[i], expected[i], i, code, types);
     END;
 END checkArgumentsType;
 
@@ -152,17 +142,17 @@ BEGIN
 END checkArgumentsCount;
 
 PROCEDURE processArguments*(
-    actual: JsArray.Type; 
-    expected: JsArray.Type; 
+    actual: ARRAY OF Code.PExpression;
+    expected: ARRAY OF Types.PProcedureArgument; 
     code: PArgumentsCode;
     types: Language.PTypes
     );
 BEGIN
-    checkArgumentsCount(JsArray.len(actual), JsArray.len(expected));
+    checkArgumentsCount(LEN(actual), LEN(expected));
     checkArgumentsType(actual, expected, code, types);
 END processArguments;
 
-PROCEDURE checkArguments(actual: JsArray.Type; expected: JsArray.Type; types: Language.PTypes);
+PROCEDURE checkArguments(actual: ARRAY OF Code.PExpression; expected: ARRAY OF Types.PProcedureArgument; types: Language.PTypes);
 BEGIN
     processArguments(actual, expected, NIL, types);
 END checkArguments;
@@ -184,7 +174,7 @@ END makeStd;
 
 PROCEDURE CallGenerator.handleArgument(e: Code.PExpression);
 BEGIN
-    JsArray.add(SELF.args, e);
+    SELF.args.add(e);
 END CallGenerator.handleArgument;
 
 PROCEDURE CallGenerator.end(): Code.PExpression;
@@ -197,7 +187,6 @@ VAR
 BEGIN
     ASSERT(cx # NIL);
     NEW(result);
-    result.args := JsArray.make();
     result.cx := cx;
     result.call := call;
     RETURN result
@@ -235,14 +224,14 @@ PROCEDURE makeProcCallGeneratorWithCustomArgs*(
     ) : PCallGenerator;
 TYPE
     CallImpl = RECORD(Call)
-        args: JsArray.Type;
+        args: Types.ProcedureArguments;
         result: Types.PType;
         argumentsCode: PArgumentsCode
     END;
 VAR
     call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     BEGIN
         processArguments(args, SELF.args, SELF.argumentsCode, cx.types);
         RETURN Code.makeSimpleExpression(
@@ -290,17 +279,8 @@ PROCEDURE makeSymbol*(p: Types.PProcedure): Symbols.PSymbol;
     RETURN Symbols.makeSymbol(p.name, Types.makeProcedure(p))
 END makeSymbol;
 
-PROCEDURE nthArgument(args: JsArray.Type; i: INTEGER): Code.PExpression;
-VAR
-    arg: Object.PType;
-BEGIN
-    arg := JsArray.at(args, i);
-    RETURN arg(Code.PExpression)
-END nthArgument;
-
 PROCEDURE initStdCall*(call: PStdCall);
 BEGIN
-    call.args := JsArray.make();
 END initStdCall;
 
 PROCEDURE hasArgument(call: PStdCall; type: Types.PType);
@@ -309,7 +289,7 @@ VAR
 BEGIN
     NEW(a);
     a.type := type;
-    JsArray.add(call.args, a);
+    call.args.add(a);
 END hasArgument;
 
 PROCEDURE hasVarArgument(call: PStdCall; type: Types.PType);
@@ -319,7 +299,7 @@ BEGIN
     NEW(a);
     a.isVar := TRUE;
     a.type := type;
-    JsArray.add(call.args, a);
+    call.args.add(a);
 END hasVarArgument;
 
 PROCEDURE hasArgumentWithCustomType*(call: PStdCall);
@@ -327,7 +307,7 @@ VAR
     a: Types.PProcedureArgument;
 BEGIN
     NEW(a);
-    JsArray.add(call.args, a);
+    call.args.add(a);
 END hasArgumentWithCustomType;
 
 PROCEDURE hasVarArgumnetWithCustomType(call: PStdCall);
@@ -336,20 +316,20 @@ VAR
 BEGIN
     NEW(a);
     a.isVar := TRUE;
-    JsArray.add(call.args, a);
+    call.args.add(a);
 END hasVarArgumnetWithCustomType;
 
 PROCEDURE checkSingleArgument*(
-    actual: JsArray.Type; 
+    actual: ARRAY OF Code.PExpression; 
     call: StdCall; 
     types: Language.PTypes; 
     code: PArgumentsCode
     ): Code.PExpression;
 BEGIN
-    ASSERT(JsArray.len(call.args) = 1);
+    ASSERT(LEN(call.args) = 1);
     processArguments(actual, call.args, code, types);
-    ASSERT(JsArray.len(actual) = 1);
-    RETURN nthArgument(actual, 0)
+    ASSERT(LEN(actual) = 1);
+    RETURN actual[0]
 END checkSingleArgument;
 
 PROCEDURE makeNew(): Symbols.PSymbol;
@@ -359,7 +339,7 @@ PROCEDURE makeNew(): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         arg: Code.PExpression;
         argType: Types.PType;
@@ -390,7 +370,7 @@ PROCEDURE lenArgumentCheck*(argType: Types.PType): BOOLEAN;
     RETURN (argType IS Types.PArray) OR (argType IS Types.PString)
 END lenArgumentCheck;
 
-PROCEDURE CallLen.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE CallLen.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 VAR
     arg: Code.PExpression;
     argType: Types.PType;
@@ -424,7 +404,7 @@ PROCEDURE makeOdd(): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         arg: Code.PExpression;
         code: STRING;
@@ -460,7 +440,7 @@ PROCEDURE makeAssert(): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         arg: Code.PExpression;
     BEGIN
@@ -485,7 +465,7 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         x, y: Code.PExpression;
         yValue: INTEGER;
@@ -495,9 +475,9 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
         comment: STRING;
     BEGIN
         checkArguments(args, SELF.args, cx.types);
-        ASSERT(JsArray.len(args) = 2);
-        x := nthArgument(args, 0);
-        y := nthArgument(args, 1);
+        ASSERT(LEN(args) = 2);
+        x := args[0];
+        y := args[1];
         value := y.constValue();
         IF value = NIL THEN
             valueCodeExp := Operator.lsl(
@@ -539,11 +519,9 @@ BEGIN
     RETURN makeSymbol(makeStd(call.name, call))
 END setBitImpl;
 
-PROCEDURE checkVariableArgumentsCount(min, max: INTEGER; actual: JsArray.Type);
-VAR
-    len: INTEGER;
+PROCEDURE checkVariableArgumentsCount(min, max: INTEGER; actual: ARRAY OF Code.PExpression);
 BEGIN
-    len := JsArray.len(actual);
+    len <- LEN(actual);
     IF len < min THEN
         Errors.raise("at least " + String.fromInt(min) + " argument expected, got " 
                      + String.fromInt(len));
@@ -563,7 +541,7 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr): Symbols.PSym
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         x, y: Code.PExpression;
         code: STRING;
@@ -572,11 +550,11 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr): Symbols.PSym
     BEGIN
         checkVariableArgumentsCount(1, 2, args);
         checkArgumentsType(args, SELF.args, NIL, cx.types);
-        x := nthArgument(args, 0);
-        IF JsArray.len(args) = 1 THEN
+        x := args[0];
+        IF LEN(args) = 1 THEN
             code := SELF.unary + x.code();
         ELSE
-            y := nthArgument(args, 1);
+            y := args[1];
             value := y.constValue();
             IF value = NIL THEN
                 valueCode := y.code();
@@ -624,7 +602,7 @@ PROCEDURE makeAbs(): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         arg: Code.PExpression;
         argType: Types.PType;
@@ -651,7 +629,7 @@ PROCEDURE makeFloor(): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         arg: Code.PExpression;
     BEGIN
@@ -674,7 +652,7 @@ PROCEDURE makeFlt(): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         arg: Code.PExpression;
         value: Code.PConst;
@@ -707,15 +685,11 @@ PROCEDURE bitShiftImpl(name: STRING; op: BinaryOp): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
-    VAR
-        x, y: Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     BEGIN
         checkArguments(args, SELF.args, cx.types);
-        ASSERT(JsArray.len(args) = 2);
-        x := nthArgument(args, 0);
-        y := nthArgument(args, 1);
-        RETURN SELF.op(x, y, cx.rtl)
+        ASSERT(LEN(args) = 2);
+        RETURN SELF.op(args[0], args[1], cx.rtl)
     END CallImpl.make;
 BEGIN
     NEW(call);
@@ -734,7 +708,7 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         arg: Code.PExpression;
         argType: Types.PType;
@@ -788,7 +762,7 @@ PROCEDURE makeChr(): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         arg: Code.PExpression;
     BEGIN
@@ -809,13 +783,13 @@ PROCEDURE makePack(): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         x, y: Code.PExpression;
     BEGIN
         checkArguments(args, SELF.args, cx.types);
-        x := nthArgument(args, 0);
-        y := nthArgument(args, 1);
+        x := args[0];
+        y := args[1];
         RETURN Code.makeSimpleExpression(
             Operator.mulInplace(x, Operator.pow2(y), cx^),
             NIL)
@@ -835,13 +809,13 @@ PROCEDURE makeUnpk(): Symbols.PSymbol;
     VAR
         call: POINTER TO CallImpl;
 
-    PROCEDURE CallImpl.make(args: JsArray.Type; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         x, y: Code.PExpression;
     BEGIN
         checkArguments(args, SELF.args, cx.types);
-        x := nthArgument(args, 0);
-        y := nthArgument(args, 1);
+        x := args[0];
+        y := args[1];
         RETURN Code.makeSimpleExpression(
                 Operator.assign(y, Operator.log2(x), cx^) 
                 + "; "
@@ -859,10 +833,8 @@ END makeUnpk;
 PROCEDURE dumpProcArgs(proc: Type): STRING;
 VAR
     result: STRING;
-    len: INTEGER;
-    arg: Object.PType;
 BEGIN
-    len := JsArray.len(proc.mArgs);
+    len <- LEN(proc.mArgs);
     IF len = 0 THEN
         IF proc.mResult # NIL THEN
             result := "()";
@@ -873,8 +845,9 @@ BEGIN
             IF i # 0 THEN
                 result := result + ", ";
             END;
-            arg := JsArray.at(proc.mArgs, i);
-            result := result + arg(Types.PProcedureArgument).type.description();
+            arg <- proc.mArgs[i];
+            ASSERT(arg.type # NIL);
+            result := result + arg.type.description();
         END;
         result := result + ")";
     END;
@@ -899,13 +872,19 @@ PROCEDURE Type.callGenerator(cx: LanguageContext.PType): PCallGenerator;
     RETURN makeProcCallGenerator(cx, SELF)
 END Type.callGenerator;
 
-PROCEDURE Type.define(args: JsArray.Type; result: Types.PType);
+PROCEDURE Type.define(args: ARRAY OF Types.PProcedureArgument; result: Types.PType);
 BEGIN
+    FOR i <- 0 TO LEN(args) - 1 DO
+        ASSERT(args[i].type # NIL);
+    END;
     SELF.mArgs := args;
+    FOR i <- 0 TO LEN(SELF.mArgs) - 1 DO
+        ASSERT(SELF.mArgs[i].type # NIL);
+    END;
     SELF.mResult := result;
 END Type.define;
 
-PROCEDURE Type.args(): JsArray.Type;
+PROCEDURE Type.args(): Types.ProcedureArguments;
     RETURN SELF.mArgs
 END Type.args;
 

@@ -1,12 +1,12 @@
 MODULE EberonTypes;
-IMPORT JsArray, LanguageContext, Procedure, Types;
+IMPORT LanguageContext, Procedure, Types;
 
 TYPE
     CallGenerator = PROCEDURE(cx: LanguageContext.PType; type: Types.DefinedProcedure): Procedure.PCallGenerator;
 
     MethodType* = RECORD(Procedure.Std)
         PROCEDURE procType(): Types.PProcedure;
-        PROCEDURE args(): JsArray.Type;
+        PROCEDURE args(): Types.ProcedureArguments;
         PROCEDURE result(): Types.PType;
         PROCEDURE procDescription(): STRING;
 
@@ -26,7 +26,7 @@ PROCEDURE MethodType.procType(): Types.PProcedure;
     RETURN SELF.type
 END MethodType.procType;
 
-PROCEDURE MethodType.args(): JsArray.Type;
+PROCEDURE MethodType.args(): Types.ProcedureArguments;
     RETURN SELF.type.args()
 END MethodType.args;
 
