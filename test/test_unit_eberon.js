@@ -906,15 +906,38 @@ exports.suite = {
             fail(["PROCEDURE p(): ARRAY OF INTEGER; RETURN a; END p;", "not parsed"],
                  ["PROCEDURE p(): A; RETURN b; END p;", "RETURN 'ARRAY * OF INTEGER' expected, got 'ARRAY * OF BOOLEAN'"])
         ),
+        "pass as non-VAR argument": testWithContext(
+            context(grammar.statement, 
+                    "TYPE Int3 = ARRAY 3 OF INTEGER;"
+                    + "VAR dInt: ARRAY * OF INTEGER;"
+                    + "dIntInt: ARRAY *,* OF INTEGER;"
+                    + "PROCEDURE pOpenInt(a: ARRAY OF INTEGER); END pOpenInt;"
+                    + "PROCEDURE pOpenIntOfInt(a: ARRAY OF ARRAY OF INTEGER); END pOpenIntOfInt;"
+                    + "PROCEDURE pInt3(a: Int3); END pInt3;"),
+            pass("pOpenInt(dInt)",
+                 "pOpenIntOfInt(dIntInt)"),
+            fail(["pInt3(dInt)", "type mismatch for argument 1: 'ARRAY * OF INTEGER' cannot be converted to 'ARRAY 3 OF INTEGER'"])
+        ),
         "pass as VAR argument": testWithContext(
             context(grammar.statement, 
                     "TYPE A = ARRAY * OF INTEGER; B = ARRAY * OF BOOLEAN;"
                     + "VAR a: A; b: B; aStatic: ARRAY 3 OF INTEGER;"
+                    + "aIntInt: ARRAY * OF ARRAY * OF INTEGER;"
+                    + "aInt3Int: ARRAY * OF ARRAY 3 OF INTEGER;"
                     + "PROCEDURE paVar(VAR a: A); END paVar;"
-                    + "PROCEDURE paVarOpen(VAR a: ARRAY OF INTEGER); END paVarOpen;"),
+                    + "PROCEDURE paVarOpen(VAR a: ARRAY OF INTEGER); END paVarOpen;"
+                    + "PROCEDURE pDynamicIntOfInt(VAR a: ARRAY * OF ARRAY * OF INTEGER); END pDynamicIntOfInt;"
+                    + "PROCEDURE pDynamicIntOfOpenInt(VAR a: ARRAY * OF ARRAY OF INTEGER); END pDynamicIntOfOpenInt;"
+                    ),
             pass("paVar(a)",
-                 "paVarOpen(a)"),
-            fail(["paVar(aStatic)", "type mismatch for argument 1: cannot pass 'ARRAY 3 OF INTEGER' as VAR parameter of type 'ARRAY * OF INTEGER'"])
+                 "paVarOpen(a)",
+                 "pDynamicIntOfInt(aIntInt)",
+                 "pDynamicIntOfOpenInt(aIntInt)",
+                 "pDynamicIntOfOpenInt(aInt3Int)"
+                 ),
+            fail(["paVar(aStatic)", "type mismatch for argument 1: cannot pass 'ARRAY 3 OF INTEGER' as VAR parameter of type 'ARRAY * OF INTEGER'"],
+                 ["pDynamicIntOfInt(aInt3Int)", "type mismatch for argument 1: 'ARRAY *, 3 OF INTEGER' cannot be converted to 'ARRAY *, * OF INTEGER'"]
+                 )
         ),
         "assign": testWithContext(
             context(grammar.statement, 

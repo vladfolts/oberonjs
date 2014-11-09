@@ -101,7 +101,7 @@ VAR
 BEGIN
     IF t1 = t2 THEN
         result := TRUE;
-    ELSIF (t1 IS Types.POpenArray) & (t2 IS Types.POpenArray) THEN
+    ELSIF (t1 IS Types.PArray) & (t2 IS Types.POpenArray) THEN
         result := areTypesMatch(Types.arrayElementsType(t1^), 
                                 Types.arrayElementsType(t2^));
     ELSIF (t1 IS Types.PStaticArray) & (t2 IS Types.PStaticArray) THEN

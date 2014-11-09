@@ -34,18 +34,18 @@ PROCEDURE isOpenCharArray(type: Types.PType): BOOLEAN;
          & (Types.arrayElementsType(type^) = Types.basic.ch)
 END isOpenCharArray;
 
-PROCEDURE areTypesExactlyMatch(t1: Types.PType; t2: Types.PType): BOOLEAN;
+PROCEDURE dynamicArrayElementsMatch(t1: Types.PType; t2: Types.PType): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN
     IF (t1 IS EberonDynamicArray.PDynamicArray) & (t2 IS EberonDynamicArray.PDynamicArray) THEN
-        result := areTypesExactlyMatch(Types.arrayElementsType(t1^), 
-                                       Types.arrayElementsType(t2^));
+        result := dynamicArrayElementsMatch(Types.arrayElementsType(t1^), 
+                                            Types.arrayElementsType(t2^));
     ELSE
         result := Cast.areTypesExactlyMatch(t1, t2);
     END;
     RETURN result
-END areTypesExactlyMatch;
+END dynamicArrayElementsMatch;
 
 PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Cast.Operations; VAR op: Cast.PCastOp): INTEGER;
 VAR
@@ -60,8 +60,8 @@ BEGIN
             result := Cast.errNo;
         END;
     ELSIF (from IS Types.PArray) & (to IS EberonDynamicArray.PDynamicArray)
-        & areTypesExactlyMatch(Types.arrayElementsType(from^), 
-                               Types.arrayElementsType(to^)) THEN
+        & dynamicArrayElementsMatch(Types.arrayElementsType(from^), 
+                                    Types.arrayElementsType(to^)) THEN
         IF toVar THEN
             IF ~(from IS EberonDynamicArray.PDynamicArray) THEN
                 result := Cast.errVarParameter;
