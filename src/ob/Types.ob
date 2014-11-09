@@ -76,7 +76,7 @@ TYPE
     PProcedureId* = POINTER TO ProcedureId;
 
     String* = RECORD(Type)
-        s: STRING
+        s-: STRING
     END;
 
     PString* = POINTER TO String;

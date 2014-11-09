@@ -65,7 +65,8 @@ function checkTypeMatch(from, to){
 }
 
 function checkImplicitCast(types, from, to){
-    if (types.implicitCast(from, to, false, castOperations, {set: function(){}}))
+    var op;
+    if (types.implicitCast(from, to, false, castOperations, {set: function(v){op = v;}, get:function(){return op;}}))
         throwTypeMismatch(from, to);
 }
 
@@ -634,7 +635,8 @@ exports.ProcDecl = ChainedContext.extend({
         var result = this.__type.result();
         if (!result)
             throw new Errors.Error("unexpected RETURN in PROCEDURE declared with no result type");
-        if (this.language().types.implicitCast(type, result, false, castOperations, {set: function(){}}))
+        var op;
+        if (this.language().types.implicitCast(type, result, false, castOperations, {set: function(v){op = v;}, get:function(){return op;}}))
             throw new Errors.Error(
                 "RETURN '" + result.description() + "' expected, got '"
                 + type.description() + "'");

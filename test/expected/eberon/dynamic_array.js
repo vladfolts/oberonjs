@@ -31,6 +31,30 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
+    copyArrayOfRecords: function (from, to){
+        to.splice(0, to.length);
+        var length = from.length;
+        if (!length)
+            return;
+
+        var method = from[0] instanceof Array 
+                   ? this.cloneArrayOfRecords // this is array of arrays, go deeper
+                   : this.cloneRecord;
+        for(var i = 0; i < length; ++i)
+            to.push(method.call(this, from[i]));
+    },
+    cloneArrayOfRecords: function (from){
+        var length = from.length;
+        var result = new Array(length);
+        if (length){
+            var method = from[0] instanceof Array 
+                       ? this.cloneArrayOfRecords // this is array of arrays, go deeper
+                       : this.cloneRecord;
+            for(var i = 0; i < result.length; ++i)
+                result[i] = method.call(this, from[i]);
+        }
+        return result;
+    },
     cloneRecord: function (from){
         var Ctr = from.constructor;
         var result = new Ctr();
@@ -49,6 +73,24 @@ var RTL$ = {
                                                   : this.cloneRecord(v);
             }
         }
+    },
+    copyArrayOfScalars: function (from, to){
+        to.splice(0, to.length);
+        for(var i = 0; i < from.length; ++i)
+            to.push(this.cloneArrayOfScalars(from[i]));
+    },
+    cloneArrayOfScalars: function (from){
+        var length = from.length;
+        if (!length)
+            return [];
+        if (!(from[0] instanceof Array))
+            return from.slice();
+
+        // this is array of arrays, go deeper
+        var result = new Array(length);
+        for(var i = 0; i < length; ++i)
+            result[i] = this.cloneArrayOfScalars(from[i]);
+        return result;
     },
     assert: function (condition){
         if (!condition)
@@ -76,11 +118,29 @@ var byte = 0;
 function assignDynamicArrayFromStatic(){
 	var static$ = RTL$.makeArray(3, 0);
 	var dynamic = [];
-	dynamic = static$.slice();
+	Array.prototype.splice.apply(dynamic, [0, Number.MAX_VALUE].concat(static$));
 }
 
 function returnOuterArray(){
 	return a.slice();
+}
+
+function passArrayBeRef(a/*VAR ARRAY * OF INTEGER*/){
+	var static$ = RTL$.makeArray(3, 0);
+	a[0] = 1;
+	a[0] = a[1];
+	Array.prototype.splice.apply(a, [0, Number.MAX_VALUE].concat(static$));
+	Array.prototype.splice.apply(a, [0, Number.MAX_VALUE].concat(dynamicInt));
+}
+
+function passArrayOfRecordsByRef(a/*VAR ARRAY * OF T*/){
+	var result = [];
+	RTL$.copyArrayOfRecords(result, a);
+}
+
+function passArrayOfArraysByRef(a/*VAR ARRAY *, 3 OF INTEGER*/){
+	var result = [];
+	RTL$.copyArrayOfScalars(result, a);
 }
 dynamicInt.push(3);
 dynamicInt.push(i);
@@ -97,4 +157,7 @@ RTL$.assert(dynamicInt.indexOf(i) != -1);
 RTL$.assert(dynamicChar.indexOf(34) != -1);
 dynamicInt.splice(i, 1);
 dynamicInt.splice(0, Number.MAX_VALUE);
+passArrayBeRef(dynamicInt);
+passArrayOfRecordsByRef(dynamicRecord);
+passArrayOfArraysByRef(dynamicArrayOfStaticArrayInt);
 }();

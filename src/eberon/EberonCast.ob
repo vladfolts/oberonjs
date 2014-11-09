@@ -1,5 +1,5 @@
 MODULE EberonCast;
-IMPORT Cast, Code, EberonString, EberonDynamicArray, OberonRtl, Operator, Types;
+IMPORT Cast, Code, EberonString, EberonDynamicArray, OberonRtl, Types;
 TYPE
     CastOpToDynamicArray = RECORD (Cast.CastOp)
     END;
@@ -8,13 +8,44 @@ VAR
     castOpToDynamicArray: POINTER TO CastOpToDynamicArray;
 
 PROCEDURE CastOpToDynamicArray.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
-    RETURN Code.makeSimpleExpression(Operator.cloneArray(e.type()(Types.PArray)^, e.code(), rtl^), NIL)
+    RETURN Code.makeSimpleExpression(Cast.cloneArray(e.type()(Types.PArray)^, e.code(), rtl^), NIL)
 END CastOpToDynamicArray.make;
+
+PROCEDURE copyArray(t: Types.Array; leftCode, rightCode: STRING; rtl: OberonRtl.Type): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF Types.isScalar(Types.arrayElementsType(t)^) THEN
+        result := "Array.prototype.splice.apply(" + leftCode + ", [0, Number.MAX_VALUE].concat(" + rightCode + "))";
+    ELSIF Types.isScalar(Types.arrayBaseElementsType(t)^) THEN 
+        result := rtl.copyArrayOfScalars(rightCode, leftCode);
+    ELSE
+        result := rtl.copyArrayOfRecords(rightCode, leftCode);
+    END;
+    RETURN result
+END copyArray;
+
+PROCEDURE CastOpToDynamicArray.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+    RETURN copyArray(left.type()(Types.PArray)^, left.code(), right.code(), rtl^)
+END CastOpToDynamicArray.assign;
 
 PROCEDURE isOpenCharArray(type: Types.PType): BOOLEAN;
     RETURN (type IS Types.POpenArray) 
          & (Types.arrayElementsType(type^) = Types.basic.ch)
 END isOpenCharArray;
+
+PROCEDURE areTypesExactlyMatch(t1: Types.PType; t2: Types.PType): BOOLEAN;
+VAR
+    result: BOOLEAN;
+BEGIN
+    IF (t1 IS EberonDynamicArray.PDynamicArray) & (t2 IS EberonDynamicArray.PDynamicArray) THEN
+        result := areTypesExactlyMatch(Types.arrayElementsType(t1^), 
+                                       Types.arrayElementsType(t2^));
+    ELSE
+        result := Cast.areTypesExactlyMatch(t1, t2);
+    END;
+    RETURN result
+END areTypesExactlyMatch;
 
 PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Cast.Operations; VAR op: Cast.PCastOp): INTEGER;
 VAR
@@ -25,13 +56,19 @@ BEGIN
         IF toVar THEN 
             result := Cast.errVarParameter;
         ELSE
+            op := Cast.doNothing;
             result := Cast.errNo;
         END;
     ELSIF (from IS Types.PArray) & (to IS EberonDynamicArray.PDynamicArray)
-        & Cast.areTypesExactlyMatch(Types.arrayElementsType(from^), 
-                                    Types.arrayElementsType(to^)) THEN
-        IF toVar & ~(from IS EberonDynamicArray.PDynamicArray) THEN
-            result := Cast.errVarParameter;
+        & areTypesExactlyMatch(Types.arrayElementsType(from^), 
+                               Types.arrayElementsType(to^)) THEN
+        IF toVar THEN
+            IF ~(from IS EberonDynamicArray.PDynamicArray) THEN
+                result := Cast.errVarParameter;
+            ELSE
+                op := Cast.doNothing;
+                result := Cast.errNo;
+            END
         ELSE
             op := castOpToDynamicArray;
             result := Cast.errNo;

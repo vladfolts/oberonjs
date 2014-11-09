@@ -114,6 +114,9 @@ function testAssign(){
 	aPointers2 = aPointers1.slice();
 	arrayOfArray2 = RTL$.cloneArrayOfScalars(arrayOfArray1);
 }
+
+function testPassOpenArray(a/*ARRAY OF INTEGER*/){
+}
 a1[0] = 1;
 a3[1] = true;
 a4[1][2] = true;
@@ -121,4 +124,5 @@ a4[1][2] = true;
 p1(a1);
 p2(a1);
 a1 = a11.slice();
+testPassOpenArray(a1);
 }();

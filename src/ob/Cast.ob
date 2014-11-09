@@ -1,21 +1,27 @@
 MODULE Cast;
-IMPORT Code, OberonRtl, Object, String, Types;
+IMPORT Code, OberonRtl, String, Types;
 CONST
     errNo* = 0;
     err* = 1;
     errVarParameter* = 2;
 TYPE
-    CastOp* = RECORD(Object.Type)
-        PROCEDURE make*(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression
+    CastOp* = RECORD
+        PROCEDURE make*(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
+        PROCEDURE assign*(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING
     END;
 
     PCastOp* = POINTER TO CastOp;
-(*
-    CastOpDoNothing = RECORD (CastOp)
+
+    CastOpDoNothing* = RECORD (CastOp)
     END;
-*)
-    CastOpStrToChar = RECORD (CastOp)
-        c: CHAR
+
+    CastOpArray = RECORD (CastOpDoNothing)
+    END;
+
+    CastOpRecord = RECORD (CastOpDoNothing)
+    END;
+
+    CastOpStrToChar = RECORD (CastOpDoNothing)
     END;
 
     Operations* = RECORD
@@ -25,12 +31,12 @@ TYPE
 VAR
     (*workaround recursive usage*)
     areTypesExactlyMatch*: PROCEDURE (t1: Types.PType; t2: Types.PType): BOOLEAN;
+
     doNothing*: POINTER TO CastOpDoNothing;
-(*
-PROCEDURE CastOpDoNothing.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
-    RETURN e
-END CastOpDoNothing.make;
-*)
+    castOpStrToChar: POINTER TO CastOpStrToChar;
+    castOpArray: POINTER TO CastOpArray;
+    castOpRecord: POINTER TO CastOpRecord;
+
 PROCEDURE findBaseType(base: Types.PRecord; type: Types.PRecord): Types.PRecord;
 BEGIN
     result <- type;
@@ -111,27 +117,65 @@ BEGIN
     RETURN result
 END areTypesExactlyMatchImpl;
 
-PROCEDURE CastOpStrToChar.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
-    RETURN Code.makeSimpleExpression(String.fromInt(ORD(SELF.c)), Types.basic.ch)
-END CastOpStrToChar.make;
+PROCEDURE CastOpDoNothing.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
+    RETURN e
+END CastOpDoNothing.make;
 
-PROCEDURE makeCastOpStrToChar(c: CHAR): PCastOp;
-VAR
-    result: POINTER TO CastOpStrToChar;
+PROCEDURE CastOpDoNothing.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
 BEGIN
-    NEW(result);
-    result.c := c;
+    rightCode <- SELF.make(rtl, Code.derefExpression(right)).code();
+    info <- left.designator().info();
+    IF (info IS Types.PVariable) & info.isReference() THEN
+        rightCode := ".set(" + rightCode + ")";
+    ELSE
+        rightCode := " = " + rightCode;
+    END;
+    RETURN left.lval() + rightCode
+END CastOpDoNothing.assign;
+
+PROCEDURE cloneArray*(t: Types.Array; code: STRING; rtl: OberonRtl.Type): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF Types.isScalar(Types.arrayElementsType(t)^) THEN
+        result := code + ".slice()";
+    ELSIF Types.isScalar(Types.arrayBaseElementsType(t)^) THEN 
+        result := rtl.cloneArrayOfScalars(code);
+    ELSE
+        result := rtl.cloneArrayOfRecords(code);
+    END;
     RETURN result
-END makeCastOpStrToChar;
+END cloneArray;
+
+PROCEDURE CastOpArray.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+    RETURN left.code() + " = " + cloneArray(right.type()(Types.PArray)^, right.code(), rtl^)
+END CastOpArray.assign;
+
+PROCEDURE CastOpRecord.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+    RETURN rtl.copyRecord(right.code(), left.code())
+END CastOpRecord.assign;
+
+PROCEDURE CastOpStrToChar.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
+BEGIN
+    s <- e.type()(Types.PString);
+    ASSERT(LEN(s.s) = 1);
+    c <- s.s[0];
+    code <- String.fromInt(ORD(c))
+    RETURN Code.makeSimpleExpression(code, Types.basic.ch)
+END CastOpStrToChar.make;
 
 PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Operations; VAR op: PCastOp): INTEGER;
 VAR
-    c: CHAR;
     ignore: BOOLEAN;
 BEGIN
     result <- err;
     op := NIL;
     IF from = to THEN
+        IF from IS Types.PRecord THEN
+            op := castOpRecord;
+        ELSIF from IS Types.PArray THEN
+            op := castOpArray;
+        END;
         result := errNo;
     ELSIF (from = Types.basic.uint8) & (to = Types.basic.integer) THEN
         IF toVar THEN
@@ -148,8 +192,8 @@ BEGIN
         END;
     ELSIF from IS Types.PString THEN
         IF to = Types.basic.ch THEN
-            IF Types.stringAsChar(from^, c) THEN
-                op := makeCastOpStrToChar(c);
+            IF LEN(from.s) = 1 THEN
+                op := castOpStrToChar;
                 result := errNo;
             END;
         ELSIF Types.isString(to) THEN
@@ -163,6 +207,7 @@ BEGIN
         & (from.length() = to.length())
         & areTypesExactlyMatch(Types.arrayElementsType(from^), 
                                Types.arrayElementsType(to^)) THEN
+            op := castOpArray;
             result := errNo;
     ELSIF (from IS Types.PPointer) & (to IS Types.PPointer) THEN
         IF ~toVar THEN
@@ -176,6 +221,7 @@ BEGIN
         END;
     ELSIF (from IS Types.PRecord) & (to IS Types.PRecord) THEN
         IF findBaseType(to, from) # NIL THEN
+            op := castOpRecord;
             result := errNo;
         END;
     ELSIF (from = Types.nil) & matchesToNIL(to^) THEN
@@ -185,10 +231,17 @@ BEGIN
             result := errNo;
         END
     END;
+
+    IF (result = errNo) & (op = NIL) THEN
+        op := doNothing;
+    END;
     RETURN result
 END implicit;
 
 BEGIN
     areTypesExactlyMatch := areTypesExactlyMatchImpl;
-(*)    NEW(doNothing);*)
+    NEW(doNothing);
+    NEW(castOpArray);
+    NEW(castOpRecord);
+    NEW(castOpStrToChar);
 END Cast.

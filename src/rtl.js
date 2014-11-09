@@ -182,6 +182,23 @@ var impl = {
             result[i] = this.cloneArrayOfScalars(from[i]);
         return result;
     },
+    copyArrayOfRecords: function(from, to){
+        to.splice(0, to.length);
+        var length = from.length;
+        if (!length)
+            return;
+
+        var method = from[0] instanceof Array 
+                   ? this.cloneArrayOfRecords // this is array of arrays, go deeper
+                   : this.cloneRecord;
+        for(var i = 0; i < length; ++i)
+            to.push(method.call(this, from[i]));
+    },
+    copyArrayOfScalars: function(from, to){
+        to.splice(0, to.length);
+        for(var i = 0; i < from.length; ++i)
+            to.push(this.cloneArrayOfScalars(from[i]));
+    },
     copyRecord: function(from, to){
         for(var prop in to){
             if (to.hasOwnProperty(prop)){
@@ -211,6 +228,8 @@ exports.Class = Class;
 exports.dependencies = { 
     "cloneRecord": ["copyRecord"],
     "cloneArrayOfRecords": ["cloneRecord"],
+    "copyArrayOfRecords": ["cloneArrayOfRecords", "cloneRecord"],
+    "copyArrayOfScalars": ["cloneArrayOfScalars"],
     "makeCharArray": ["__makeCharArray"],
     "__makeCharArray": ["__setupCharArrayMethods"]
 };

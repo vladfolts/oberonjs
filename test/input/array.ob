@@ -45,6 +45,9 @@ BEGIN
     arrayOfArray2 := arrayOfArray1;
 END testAssign;
 
+PROCEDURE testPassOpenArray(a: ARRAY OF INTEGER);
+END testPassOpenArray;
+
 BEGIN
     a1[0] := 1;
     a3[1] := TRUE;
@@ -54,5 +57,7 @@ BEGIN
     p1(a1);
     p2(a1);
 
-    a1 := a11
+    a1 := a11;
+
+    testPassOpenArray(a1);
 END m.

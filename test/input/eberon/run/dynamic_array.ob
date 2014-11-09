@@ -48,6 +48,61 @@ BEGIN
     ASSERT(a[2] = 3);
 END testArrayReturn;
 
+PROCEDURE testCopyByVarArrayOfRecords();
+TYPE
+    T = RECORD
+        i: INTEGER
+    END;
+VAR
+    a: ARRAY * OF T;
+    r: T;
+
+    PROCEDURE test(VAR aRef: ARRAY * OF T);
+    VAR
+        local: ARRAY * OF T;
+    BEGIN
+        r.i := 123;
+        local.add(r);
+        aRef := local;
+    END test;
+
+BEGIN
+    ASSERT(LEN(a) = 0);
+    test(a);
+    ASSERT(LEN(a) = 1);
+    ASSERT(a[0].i = 123);
+    r.i := 345;
+    ASSERT(a[0].i = 123);
+END testCopyByVarArrayOfRecords;
+
+PROCEDURE testCopyByVarArrayOfArrays();
+VAR
+    a: ARRAY *,* OF INTEGER;
+    aInt: ARRAY * OF INTEGER;
+
+    PROCEDURE test(VAR aRef: ARRAY * OF ARRAY * OF INTEGER);
+    VAR
+        local: ARRAY *,* OF INTEGER;
+    BEGIN
+        local.add(aInt);
+        local[0].add(123);
+        aRef := local;
+    END test;
+
+BEGIN
+    ASSERT(LEN(a) = 0);
+    test(a);
+    ASSERT(LEN(a) = 1);
+    ASSERT(LEN(a[0]) = 1);
+    ASSERT(a[0][0] = 123);
+    ASSERT(LEN(aInt) = 0);
+END testCopyByVarArrayOfArrays;
+
+PROCEDURE testCopyByVar(a: ARRAY OF INTEGER; VAR result: ARRAY * OF INTEGER);
+BEGIN
+    result := a;
+END testCopyByVar;
+
 BEGIN
     static[0] := 1;
     static[1] := 2;
@@ -62,4 +117,15 @@ BEGIN
 
     testAddRemove();
     testArrayReturn();
+
+    dynamic.clear();
+    ASSERT(LEN(dynamic) = 0);
+    testCopyByVar(static, dynamic);
+    ASSERT(LEN(dynamic) = 3);
+    ASSERT(dynamic[0] = 1);
+    ASSERT(dynamic[1] = 2);
+    ASSERT(dynamic[2] = 3);
+
+    testCopyByVarArrayOfRecords();
+    testCopyByVarArrayOfArrays();
 END m.

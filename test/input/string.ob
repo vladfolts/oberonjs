@@ -22,6 +22,11 @@ END p1;
 PROCEDURE p2(c: CHAR);
 END p2;
 
+PROCEDURE charByRef(VAR c: CHAR);
+BEGIN
+	c := "a";
+END charByRef;
+
 BEGIN
     ch1 := s1;
 	a1 := s1;

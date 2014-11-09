@@ -31,6 +31,31 @@ PROCEDURE returnOuterArray(): DynamicInt;
     RETURN a
 END returnOuterArray;
 
+PROCEDURE passArrayBeRef(VAR a: ARRAY * OF INTEGER);
+VAR 
+    static: ARRAY 3 OF INTEGER;
+BEGIN
+    a[0] := 1;
+    a[0] := a[1];
+
+    a := static;
+    a := dynamicInt;
+END passArrayBeRef;
+
+PROCEDURE passArrayOfRecordsByRef(VAR a: ARRAY * OF T);
+VAR 
+    result: ARRAY * OF T;
+BEGIN
+    a := result;
+END passArrayOfRecordsByRef;
+
+PROCEDURE passArrayOfArraysByRef(VAR a: ARRAY * OF A);
+VAR 
+    result: ARRAY * OF A;
+BEGIN
+    a := result;
+END passArrayOfArraysByRef;
+
 BEGIN
     dynamicInt.add(3);
     dynamicInt.add(i);
@@ -54,4 +79,8 @@ BEGIN
 
     dynamicInt.remove(i);
     dynamicInt.clear();
+
+    passArrayBeRef(dynamicInt);
+    passArrayOfRecordsByRef(dynamicRecord);
+    passArrayOfArraysByRef(dynamicArrayOfStaticArrayInt);
 END m.

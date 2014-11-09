@@ -79,6 +79,10 @@ function p1(s/*ARRAY OF CHAR*/){
 
 function p2(c/*CHAR*/){
 }
+
+function charByRef(c/*VAR CHAR*/){
+	c.set(97);
+}
 ch1 = 34;
 RTL$.assignArrayFromString(a1, s1);
 RTL$.assignArrayFromString(a2, s2);

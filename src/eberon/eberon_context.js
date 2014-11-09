@@ -265,7 +265,7 @@ var InPlaceVariableInit = Context.Chained.extend({
         else if (type instanceof Type.Array){
             if (type instanceof Type.OpenArray)
                 throw new Errors.Error("cannot initialize variable '" + this.__id + "' with open array");
-            this._code += op.cloneArray(type, e.code(), this.language().rtl);
+            this._code += Cast.cloneArray(type, e.code(), this.language().rtl);
         }
         else
             this._code += Code.derefExpression(e).code();
@@ -1094,7 +1094,7 @@ var Return = Context.Return.extend({
     handleExpression: function(e){
         var type = e.type();
         if (type instanceof Type.Array)
-            e = Code.makeSimpleExpression(op.cloneArray(type, e.code(), this.language().rtl), type);
+            e = Code.makeSimpleExpression(Cast.cloneArray(type, e.code(), this.language().rtl), type);
         Context.Return.prototype.handleExpression.call(this, e);
     }
 });

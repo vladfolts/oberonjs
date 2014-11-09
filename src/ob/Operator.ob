@@ -33,7 +33,7 @@ TYPE
         pred: CodePredicate
     END;
 
-    CastToUint8 = RECORD (Cast.CastOp)
+    CastToUint8 = RECORD (Cast.CastOpDoNothing)
     END;
 
 VAR
@@ -467,20 +467,6 @@ BEGIN
             Types.basic.bool)
 END strCmp;
 
-PROCEDURE cloneArray*(t: Types.Array; code: STRING; rtl: OberonRtl.Type): STRING;
-VAR
-    result: STRING;
-BEGIN
-    IF Types.isScalar(Types.arrayElementsType(t)^) THEN
-        result := code + ".slice()";
-    ELSIF Types.isScalar(Types.arrayBaseElementsType(t)^) THEN 
-        result := rtl.cloneArrayOfScalars(code);
-    ELSE
-        result := rtl.cloneArrayOfRecords(code);
-    END;
-    RETURN result
-END cloneArray;
-
 PROCEDURE assign*(left, right: Code.PExpression; cx: LanguageContext.Type): STRING;
 VAR
     designator: Code.PDesignator;
@@ -488,7 +474,6 @@ VAR
     leftCode, rightCode: STRING;
     isArray: BOOLEAN;
     castOperation: Cast.PCastOp;
-    castExp: Code.PExpression;
     ignored: BOOLEAN;
     result: STRING;
 
@@ -531,26 +516,8 @@ BEGIN
         IF (leftType IS Types.POpenArray) & (rightType IS Types.PArray) THEN
             Errors.raise("'" + leftCode + "' is open '" + leftType.description() + "' and cannot be assigned");
         END;
-        IF (castOperation = NIL) & (isArray OR (rightType IS Types.PRecord)) THEN
-            IF rightType IS Types.PArray THEN
-                result := leftCode + " = " + cloneArray(rightType^, rightCode, cx.rtl^);
-            ELSE
-                result := cx.rtl.copyRecord(rightCode, leftCode);
-            END;
-        ELSE
-            IF castOperation # NIL THEN
-                castExp := castOperation.make(cx.rtl, Code.derefExpression(right));
-            ELSE
-                castExp := Code.derefExpression(right);
-            END;
-            rightCode := castExp.code();
-            IF (info IS Types.PVariable) & info(Types.PVariable).isReference() THEN
-                rightCode := ".set(" + rightCode + ")";
-            ELSE
-                rightCode := " = " + rightCode;
-            END;
-            result := leftCode + rightCode;
-        END;
+            
+        result := castOperation.assign(cx.rtl, left, right);
     END;
     RETURN result
 END assign;
