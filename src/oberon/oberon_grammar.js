@@ -6,6 +6,7 @@ var Grammar = require("grammar.js");
 var ObContext = require("oberon/oberon_context.js");
 var Parser = require("parser.js");
 var Symbols = require("js/OberonSymbols.js");
+var Types = require("js/Types.js");
 
 var and = Parser.and;
 var context = Parser.context;
@@ -101,7 +102,8 @@ exports.language = {
         ),
     stdSymbols: Symbols.makeStd(),
     types: {
-        implicitCast: Cast.implicit
+        implicitCast: Cast.implicit,
+        makeStaticArray: Types.makeStaticArray
     }
 };
 

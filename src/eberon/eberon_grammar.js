@@ -2,6 +2,7 @@
 
 var Cast = require("js/EberonCast.js");
 var Context = require("context.js");
+var EbArray = require("js/EberonArray.js");
 var EbContext = require("eberon/eberon_context.js");
 var Grammar = require("grammar.js");
 var Parser = require("parser.js");
@@ -121,6 +122,7 @@ exports.language = {
         ),
     stdSymbols: Symbols.makeStd(),
     types: {
-        implicitCast: Cast.implicit
+        implicitCast: Cast.implicit,
+        makeStaticArray: EbArray.makeStaticArray
     }
 };

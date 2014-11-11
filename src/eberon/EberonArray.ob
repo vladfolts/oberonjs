@@ -1,0 +1,120 @@
+MODULE EberonArray;
+IMPORT Code, EberonTypes, Errors, LanguageContext, Procedure, Types;
+CONST
+    methodNameIndexOf = "indexOf";
+TYPE
+    Method* = RECORD(Procedure.Std)
+    END;
+    PMethod* = POINTER TO Method;
+
+    MethodField* = RECORD(Types.Field)
+        method*: PMethod
+    END;
+
+    MethodIndexOf = RECORD(Method)
+        elementsType: Types.PType
+    END;
+
+    MethodCallIndexOf = RECORD(Procedure.StdCall)
+    END;
+
+    StaticArray = RECORD(Types.StaticArray)
+    END;
+
+PROCEDURE Method.description(): STRING;
+    RETURN "array method '" + SELF.name + "'"
+END Method.description;
+
+PROCEDURE MethodField.id(): STRING;
+    RETURN "add"
+END MethodField.id;
+
+PROCEDURE MethodField.exported(): BOOLEAN;
+    RETURN FALSE
+END MethodField.exported;
+
+PROCEDURE MethodField.type(): Types.PType;
+    RETURN SELF.method
+END MethodField.type;
+
+PROCEDURE MethodField.asVar(): Types.PId;
+    RETURN EberonTypes.makeMethod(SELF.method)
+END MethodField.asVar;
+
+PROCEDURE makeIndexOfMethod(elementsType: Types.PType): PMethod;
+VAR
+    result: POINTER TO MethodIndexOf;
+BEGIN
+    NEW(result);
+    result.name := methodNameIndexOf;
+    result.elementsType := elementsType;
+    RETURN result
+END makeIndexOfMethod;
+
+PROCEDURE MethodIndexOf.designatorCode(id: STRING): STRING;
+    RETURN "indexOf"
+END MethodIndexOf.designatorCode;
+
+PROCEDURE MethodIndexOf.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+VAR
+    a: Types.PProcedureArgument;
+    call: POINTER TO MethodCallIndexOf;
+BEGIN
+    NEW(call);
+    Procedure.initStdCall(call);
+
+    NEW(a);
+    a.type := SELF.elementsType;
+    call.args.add(a);
+    RETURN Procedure.makeCallGenerator(call, cx)
+END MethodIndexOf.callGenerator;
+
+PROCEDURE MethodCallIndexOf.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+BEGIN
+    argCode <- Procedure.makeArgumentsCode(cx);
+    argType <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode).type();
+    RETURN Code.makeSimpleExpression("(" + argCode.result() + ")", Types.basic.integer)
+END MethodCallIndexOf.make;
+
+PROCEDURE denoteMethod*(id: STRING; elementsType: Types.PType): PMethod;
+VAR
+    result: PMethod;
+BEGIN
+    IF id = methodNameIndexOf THEN
+        result := makeIndexOfMethod(elementsType);
+    END;
+    RETURN result
+END denoteMethod;
+
+PROCEDURE StaticArray.denote(id: STRING): Types.PField;
+VAR
+    field: POINTER TO MethodField;
+    result: Types.PField;
+BEGIN
+    IF id = methodNameIndexOf THEN
+        IF (SELF.elementsType IS Types.PRecord) OR (SELF.elementsType IS Types.PArray) THEN
+            Errors.raise("'" + methodNameIndexOf + "' is not defined for array of '" + SELF.elementsType.description() + "'");
+        END;
+        NEW(field);
+        field.method := makeIndexOfMethod(SELF.elementsType);
+        result := field;
+    ELSE
+        result := SUPER(id);
+    END;
+    RETURN result
+END StaticArray.denote;
+
+PROCEDURE makeStaticArray*(
+    initializer: STRING;
+    elementsType: Types.PType;
+    len: INTEGER
+    ): Types.PArray;
+VAR
+    result: POINTER TO StaticArray;
+BEGIN
+    NEW(result);
+    Types.initStaticArray(initializer, elementsType, len, result^);
+    RETURN result
+END makeStaticArray;
+
+END EberonArray.

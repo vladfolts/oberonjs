@@ -1,27 +1,21 @@
 MODULE EberonDynamicArray;
-IMPORT Cast, Code, Context, EberonTypes, Errors, LanguageContext, Procedure, Types;
+IMPORT Cast, Code, Context, EberonArray, Errors, LanguageContext, Procedure, Types;
 CONST
     methodNameAdd = "add";
     methodNameClear = "clear";
-    methodNameIndexOf = "indexOf";
     methodNameRemove = "remove";
 TYPE
     DynamicArray* = RECORD(Types.Array)
     END;
     PDynamicArray* = POINTER TO DynamicArray;
 
-    Method = RECORD(Procedure.Std)
-    END;
-    PMethod = POINTER TO Method;
-
-    MethodField = RECORD(Types.Field)
-        method: PMethod
-    END;
-
     AddCallGenerator = RECORD(Procedure.CallGenerator)
         cx: LanguageContext.PType;
         elementsType: Types.PType;
         code: STRING
+    END;
+
+    Method = RECORD(EberonArray.Method)
     END;
 
     MethodAdd = RECORD(Method)
@@ -31,10 +25,6 @@ TYPE
     MethodClear = RECORD(Method)
     END;
 
-    MethodIndexOf = RECORD(Method)
-        elementsType: Types.PType
-    END;
-
     MethodRemove = RECORD(Method)
     END;
 
@@ -42,9 +32,6 @@ TYPE
     END;
 
     MethodCallRemove = RECORD(Procedure.StdCall)
-    END;
-
-    MethodCallIndexOf = RECORD(Procedure.StdCall)
     END;
 
 PROCEDURE arrayDimensionDescription(VAR a: Types.Array): STRING;
@@ -67,7 +54,7 @@ PROCEDURE DynamicArray.description(): STRING;
     RETURN Types.arrayDescription(SELF, arrayDimensionDescription)
 END DynamicArray.description;
 
-PROCEDURE makeAddField(elementsType: Types.PType): PMethod;
+PROCEDURE makeAddField(elementsType: Types.PType): EberonArray.PMethod;
 VAR
     result: POINTER TO MethodAdd;
 BEGIN
@@ -77,7 +64,7 @@ BEGIN
     RETURN result
 END makeAddField;
 
-PROCEDURE makeClearMethod(): PMethod;
+PROCEDURE makeClearMethod(): EberonArray.PMethod;
 VAR
     result: POINTER TO MethodClear;
 BEGIN
@@ -86,17 +73,7 @@ BEGIN
     RETURN result
 END makeClearMethod;
 
-PROCEDURE makeIndexOfMethod(elementsType: Types.PType): PMethod;
-VAR
-    result: POINTER TO MethodIndexOf;
-BEGIN
-    NEW(result);
-    result.name := methodNameIndexOf;
-    result.elementsType := elementsType;
-    RETURN result
-END makeIndexOfMethod;
-
-PROCEDURE makeRemoveMethod(): PMethod;
+PROCEDURE makeRemoveMethod(): EberonArray.PMethod;
 VAR
     result: POINTER TO MethodRemove;
 BEGIN
@@ -107,18 +84,18 @@ END makeRemoveMethod;
 
 PROCEDURE DynamicArray.denote(id: STRING): Types.PField;
 VAR
-    field: POINTER TO MethodField;
-    method: PMethod;
+    field: POINTER TO EberonArray.MethodField;
+    method: EberonArray.PMethod;
     result: Types.PField;
 BEGIN
     IF      id = methodNameAdd THEN
         method := makeAddField(SELF.elementsType);
     ELSIF   id = methodNameClear THEN
         method := makeClearMethod();
-    ELSIF   id = methodNameIndexOf THEN
-        method := makeIndexOfMethod(SELF.elementsType);
     ELSIF   id = methodNameRemove THEN
         method := makeRemoveMethod();
+    ELSE
+        method := EberonArray.denoteMethod(id, SELF.elementsType);
     END;
     IF method # NIL THEN
         NEW(field);
@@ -138,22 +115,6 @@ BEGIN
     Types.initArray(elementsType, result^);
     RETURN result
 END makeDynamicArray;
-
-PROCEDURE MethodField.id(): STRING;
-    RETURN "add"
-END MethodField.id;
-
-PROCEDURE MethodField.exported(): BOOLEAN;
-    RETURN FALSE
-END MethodField.exported;
-
-PROCEDURE MethodField.type(): Types.PType;
-    RETURN SELF.method
-END MethodField.type;
-
-PROCEDURE MethodField.asVar(): Types.PId;
-    RETURN EberonTypes.makeMethod(SELF.method)
-END MethodField.asVar;
 
 PROCEDURE AddCallGenerator.handleArgument(e: Code.PExpression);
 BEGIN
@@ -227,23 +188,9 @@ BEGIN
     RETURN Code.makeSimpleExpression("(" + argCode.result() + ", 1)", NIL)
 END MethodCallRemove.make;
 
-PROCEDURE MethodCallIndexOf.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
-BEGIN
-    argCode <- Procedure.makeArgumentsCode(cx);
-    argType <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode).type();
-    IF (argType IS Types.PRecord) OR (argType IS Types.PArray) THEN
-        Errors.raise("cannot search for element of type '" + argType.description() + "'");
-    END;
-    RETURN Code.makeSimpleExpression("(" + argCode.result() + ")", Types.basic.integer)
-END MethodCallIndexOf.make;
-
 PROCEDURE MethodRemove.designatorCode(id: STRING): STRING;
     RETURN "splice"
 END MethodRemove.designatorCode;
-
-PROCEDURE MethodIndexOf.designatorCode(id: STRING): STRING;
-    RETURN "indexOf"
-END MethodIndexOf.designatorCode;
 
 PROCEDURE MethodClear.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
 VAR
@@ -267,19 +214,5 @@ BEGIN
     call.args.add(a);
     RETURN Procedure.makeCallGenerator(call, cx)
 END MethodRemove.callGenerator;
-
-PROCEDURE MethodIndexOf.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
-VAR
-    a: Types.PProcedureArgument;
-    call: POINTER TO MethodCallIndexOf;
-BEGIN
-    NEW(call);
-    Procedure.initStdCall(call);
-
-    NEW(a);
-    a.type := SELF.elementsType;
-    call.args.add(a);
-    RETURN Procedure.makeCallGenerator(call, cx)
-END MethodIndexOf.callGenerator;
 
 END EberonDynamicArray.

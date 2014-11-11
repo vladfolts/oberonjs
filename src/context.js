@@ -768,7 +768,7 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
         return rtl.makeArray(dimensions + ", " + initializer);
     },
     _makeType: function(elementsType, init, length){
-        return Type.makeStaticArray(init, elementsType, length);
+        return this.language().types.makeStaticArray(init, elementsType, length);
     }
 });
 

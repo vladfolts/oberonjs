@@ -1143,7 +1143,7 @@ var ArrayDecl = Context.ArrayDecl.extend({
     _makeType: function(elementsType, init, length){
         return length == dynamicArrayLength
             ? EberonDynamicArray.makeDynamicArray(elementsType)
-            : Type.makeStaticArray(init, elementsType, length);
+            : Context.ArrayDecl.prototype._makeType.call(this, elementsType, init, length);
     }
 });
 

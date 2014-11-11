@@ -870,150 +870,153 @@ exports.suite = {
               "cannot assign to non-VAR formal parameter"]
             )
     ),
-    "dynamic ARRAY": {
-        "declaration": testWithContext(
-            context(grammar.declarationSequence, 
-                    "TYPE DA = ARRAY * OF INTEGER;"),
-            pass("TYPE A = ARRAY * OF INTEGER;",
-                 "TYPE A = ARRAY * OF ARRAY * OF INTEGER;",
-                 "TYPE A = ARRAY *, * OF INTEGER;",
-                 "TYPE A = ARRAY 3, * OF INTEGER;",
-                 "TYPE A = ARRAY *, 3 OF INTEGER;",
-                 "TYPE P = PROCEDURE(): DA;",
-                 "TYPE P = PROCEDURE(VAR a: DA): DA;",
-                 "TYPE P = PROCEDURE(VAR a: ARRAY * OF INTEGER): DA;",
-                 "VAR a: ARRAY * OF INTEGER;",
-                 "PROCEDURE p(VAR a: ARRAY * OF INTEGER);END p;",
-                 "PROCEDURE p(VAR a: ARRAY * OF ARRAY * OF INTEGER);END p;",
-                 "PROCEDURE p(VAR a: ARRAY OF ARRAY * OF INTEGER);END p;"
-                 ),
-            fail(["TYPE A = ARRAY OF INTEGER;", "not parsed"],
-                 ["TYPE P = PROCEDURE(): ARRAY OF INTEGER;", "';' expected"],
-                 ["TYPE P = PROCEDURE(a: DA);", "dynamic array has no use as non-VAR argument 'a'"],
-                 ["TYPE P = PROCEDURE(a: ARRAY * OF INTEGER);", "dynamic array has no use as non-VAR argument 'a'"],
-                 ["PROCEDURE p(a: DA);END p;", "dynamic array has no use as non-VAR argument 'a'"],
-                 ["PROCEDURE p(a: ARRAY * OF INTEGER);END p;", "dynamic array has no use as non-VAR argument 'a'"],
-                 ["PROCEDURE p(a: ARRAY OF ARRAY * OF INTEGER);END p;", "dynamic array has no use as non-VAR argument 'a'"],
-                 ["PROCEDURE p(a: ARRAY * OF ARRAY OF INTEGER);END p;", "dynamic array has no use as non-VAR argument 'a'"]
-                 )
-        ),
-        "return": testWithContext(
-            context(grammar.declarationSequence, 
-                    "TYPE A = ARRAY * OF INTEGER; B = ARRAY * OF BOOLEAN;"
-                    + "VAR a: A; b: B;"),
-            pass("PROCEDURE p(): A; RETURN a END p;",
-                 "PROCEDURE p(): A; VAR static: ARRAY 3 OF INTEGER; RETURN static END p;"),
-            fail(["PROCEDURE p(): ARRAY OF INTEGER; RETURN a; END p;", "not parsed"],
-                 ["PROCEDURE p(): A; RETURN b; END p;", "RETURN 'ARRAY * OF INTEGER' expected, got 'ARRAY * OF BOOLEAN'"])
-        ),
-        "pass as non-VAR argument": testWithContext(
-            context(grammar.statement, 
-                    "TYPE Int3 = ARRAY 3 OF INTEGER;"
-                    + "VAR dInt: ARRAY * OF INTEGER;"
-                    + "dIntInt: ARRAY *,* OF INTEGER;"
-                    + "PROCEDURE pOpenInt(a: ARRAY OF INTEGER); END pOpenInt;"
-                    + "PROCEDURE pOpenIntOfInt(a: ARRAY OF ARRAY OF INTEGER); END pOpenIntOfInt;"
-                    + "PROCEDURE pInt3(a: Int3); END pInt3;"),
-            pass("pOpenInt(dInt)",
-                 "pOpenIntOfInt(dIntInt)"),
-            fail(["pInt3(dInt)", "type mismatch for argument 1: 'ARRAY * OF INTEGER' cannot be converted to 'ARRAY 3 OF INTEGER'"])
-        ),
-        "pass as VAR argument": testWithContext(
-            context(grammar.statement, 
-                    "TYPE A = ARRAY * OF INTEGER; B = ARRAY * OF BOOLEAN;"
-                    + "VAR a: A; b: B; aStatic: ARRAY 3 OF INTEGER;"
-                    + "aIntInt: ARRAY * OF ARRAY * OF INTEGER;"
-                    + "aInt3Int: ARRAY * OF ARRAY 3 OF INTEGER;"
-                    + "PROCEDURE paVar(VAR a: A); END paVar;"
-                    + "PROCEDURE paVarOpen(VAR a: ARRAY OF INTEGER); END paVarOpen;"
-                    + "PROCEDURE pDynamicIntOfInt(VAR a: ARRAY * OF ARRAY * OF INTEGER); END pDynamicIntOfInt;"
-                    + "PROCEDURE pDynamicIntOfOpenInt(VAR a: ARRAY * OF ARRAY OF INTEGER); END pDynamicIntOfOpenInt;"
+    "array": {
+            "indexOf": testWithContext(
+                context(grammar.expression, 
+                        "TYPE "
+                        + "T = RECORD END;"
+                        + "VAR "
+                        + "r: T;"
+                        + "intArray: ARRAY 3 OF INTEGER;"
+                        + "boolDynArray: ARRAY * OF BOOLEAN;"
+                        + "recordArray: ARRAY 3 OF T;"
+                        + "arrayOfArray: ARRAY 3, 4 OF INTEGER;"
+                        ),
+                pass("intArray.indexOf(0)",
+                     "boolDynArray.indexOf(FALSE) = -1"
                     ),
-            pass("paVar(a)",
-                 "paVarOpen(a)",
-                 "pDynamicIntOfInt(aIntInt)",
-                 "pDynamicIntOfOpenInt(aIntInt)",
-                 "pDynamicIntOfOpenInt(aInt3Int)"
-                 ),
-            fail(["paVar(aStatic)", "type mismatch for argument 1: cannot pass 'ARRAY 3 OF INTEGER' as VAR parameter of type 'ARRAY * OF INTEGER'"],
-                 ["pDynamicIntOfInt(aInt3Int)", "type mismatch for argument 1: 'ARRAY *, 3 OF INTEGER' cannot be converted to 'ARRAY *, * OF INTEGER'"]
-                 )
-        ),
-        "assign": testWithContext(
-            context(grammar.statement, 
-                    "VAR stat: ARRAY 3 OF INTEGER; dynamic: ARRAY * OF INTEGER;"),
-            pass("dynamic := stat"),
-            fail(["stat := dynamic", "type mismatch: 'stat' is 'ARRAY 3 OF INTEGER' and cannot be assigned to 'ARRAY * OF INTEGER' expression"],
-                 ["dynamic := NIL", "type mismatch: 'dynamic' is 'ARRAY * OF INTEGER' and cannot be assigned to 'NIL' expression"])
-        ),
-        "indexing": testWithContext(
-            context(grammar.expression, 
-                    "VAR a: ARRAY * OF INTEGER;"),
-            pass("a[0]", "a[1]"),
-            fail(["a[-1]", "index is negative: -1"], 
-                 ["a[-2]", "index is negative: -2"])
-        ),
-        "add": testWithContext(
-            context(grammar.statement, 
-                    "VAR a: ARRAY * OF INTEGER;"
-                     + "a2: ARRAY * OF ARRAY * OF INTEGER;"
-                     + "aStatic: ARRAY 3 OF INTEGER;"
-                     + "byte: BYTE;"),
-            pass("a.add(123)",
-                 "a.add(byte)",
-                 "a2.add(a)",
-                 "a2.add(aStatic)"
-                 ),
-            fail(["a.add := NIL", "cannot assign to method"],
-                 ["v <- a.add", "dynamic array method 'add' cannot be referenced"],                
-                 ["a.add()", "method 'add' expects one argument, got nothing"],
-                 ["a.add(1, 2)", "method 'add' expects one argument, got many"],                
-                 ["a.add(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"]                
-                )
-        ),
-        "add open array to dynamic array of static arrays": testWithContext(
-            context(grammar.declarationSequence, 
-                    "VAR a: ARRAY * OF ARRAY 3 OF INTEGER;"),
-            pass(),
-            fail(["PROCEDURE p(paramA: ARRAY OF INTEGER); BEGIN a.add(paramA); END p", 
-                  "type mismatch for argument 1: 'ARRAY OF INTEGER' cannot be converted to 'ARRAY 3 OF INTEGER'"]                
-                )
-        ),
-        "remove": testWithContext(
-            context(grammar.statement, 
-                    "VAR a: ARRAY * OF INTEGER;"),
-            pass("a.remove(0)"),
-            fail(["a.remove(-1)", "index is negative: -1"],
-                 ["a.remove()", "1 argument(s) expected, got 0"],
-                 ["a.remove(0, 1)", "1 argument(s) expected, got 2"],
-                 ["a.remove(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
-                 ["a.Remove(0)", "selector '.Remove' cannot be applied to 'ARRAY * OF INTEGER'"]
-                )
-        ),
-        "indexOf": testWithContext(
-            context(grammar.expression, 
-                    "TYPE "
-                    + "T = RECORD END;"
-                    + "VAR "
-                    + "r: T;"
-                    + "intArray: ARRAY * OF INTEGER;"
-                    + "boolArray: ARRAY * OF BOOLEAN;"
-                    + "recordArray: ARRAY * OF T;"
-                    + "arrayOfArray: ARRAY *,* OF INTEGER;"
-                    ),
-            pass("intArray.indexOf(0)",
-                 "boolArray.indexOf(FALSE) = -1"
-                ),
-            fail(["intArray.indexOf(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
-                 ["recordArray.indexOf(r)", "cannot search for element of type 'T'"],
-                 ["arrayOfArray.indexOf(intArray)", "cannot search for element of type 'ARRAY * OF INTEGER'"]
-                )
-        ),
-        "clear": testWithContext(
-            context(grammar.statement, 
-                    "VAR a: ARRAY * OF INTEGER;"),
-            pass("a.clear()"),
-            fail(["a.clear(0)", "0 argument(s) expected, got 1"])
-        )
+                fail(["intArray.indexOf(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
+                     ["recordArray.indexOf(r)", "'indexOf' is not defined for array of 'T'"],
+                     ["arrayOfArray.indexOf(intArray)", "'indexOf' is not defined for array of 'ARRAY 4 OF INTEGER'"],
+                     ["intArray.indexOf", "array method 'indexOf' cannot be referenced"]                
+                    )
+            ),
+        "dynamic": {
+            "declaration": testWithContext(
+                context(grammar.declarationSequence, 
+                        "TYPE DA = ARRAY * OF INTEGER;"),
+                pass("TYPE A = ARRAY * OF INTEGER;",
+                     "TYPE A = ARRAY * OF ARRAY * OF INTEGER;",
+                     "TYPE A = ARRAY *, * OF INTEGER;",
+                     "TYPE A = ARRAY 3, * OF INTEGER;",
+                     "TYPE A = ARRAY *, 3 OF INTEGER;",
+                     "TYPE P = PROCEDURE(): DA;",
+                     "TYPE P = PROCEDURE(VAR a: DA): DA;",
+                     "TYPE P = PROCEDURE(VAR a: ARRAY * OF INTEGER): DA;",
+                     "VAR a: ARRAY * OF INTEGER;",
+                     "PROCEDURE p(VAR a: ARRAY * OF INTEGER);END p;",
+                     "PROCEDURE p(VAR a: ARRAY * OF ARRAY * OF INTEGER);END p;",
+                     "PROCEDURE p(VAR a: ARRAY OF ARRAY * OF INTEGER);END p;"
+                     ),
+                fail(["TYPE A = ARRAY OF INTEGER;", "not parsed"],
+                     ["TYPE P = PROCEDURE(): ARRAY OF INTEGER;", "';' expected"],
+                     ["TYPE P = PROCEDURE(a: DA);", "dynamic array has no use as non-VAR argument 'a'"],
+                     ["TYPE P = PROCEDURE(a: ARRAY * OF INTEGER);", "dynamic array has no use as non-VAR argument 'a'"],
+                     ["PROCEDURE p(a: DA);END p;", "dynamic array has no use as non-VAR argument 'a'"],
+                     ["PROCEDURE p(a: ARRAY * OF INTEGER);END p;", "dynamic array has no use as non-VAR argument 'a'"],
+                     ["PROCEDURE p(a: ARRAY OF ARRAY * OF INTEGER);END p;", "dynamic array has no use as non-VAR argument 'a'"],
+                     ["PROCEDURE p(a: ARRAY * OF ARRAY OF INTEGER);END p;", "dynamic array has no use as non-VAR argument 'a'"]
+                     )
+            ),
+            "return": testWithContext(
+                context(grammar.declarationSequence, 
+                        "TYPE A = ARRAY * OF INTEGER; B = ARRAY * OF BOOLEAN;"
+                        + "VAR a: A; b: B;"),
+                pass("PROCEDURE p(): A; RETURN a END p;",
+                     "PROCEDURE p(): A; VAR static: ARRAY 3 OF INTEGER; RETURN static END p;"),
+                fail(["PROCEDURE p(): ARRAY OF INTEGER; RETURN a; END p;", "not parsed"],
+                     ["PROCEDURE p(): A; RETURN b; END p;", "RETURN 'ARRAY * OF INTEGER' expected, got 'ARRAY * OF BOOLEAN'"])
+            ),
+            "pass as non-VAR argument": testWithContext(
+                context(grammar.statement, 
+                        "TYPE Int3 = ARRAY 3 OF INTEGER;"
+                        + "VAR dInt: ARRAY * OF INTEGER;"
+                        + "dIntInt: ARRAY *,* OF INTEGER;"
+                        + "PROCEDURE pOpenInt(a: ARRAY OF INTEGER); END pOpenInt;"
+                        + "PROCEDURE pOpenIntOfInt(a: ARRAY OF ARRAY OF INTEGER); END pOpenIntOfInt;"
+                        + "PROCEDURE pInt3(a: Int3); END pInt3;"),
+                pass("pOpenInt(dInt)",
+                     "pOpenIntOfInt(dIntInt)"),
+                fail(["pInt3(dInt)", "type mismatch for argument 1: 'ARRAY * OF INTEGER' cannot be converted to 'ARRAY 3 OF INTEGER'"])
+            ),
+            "pass as VAR argument": testWithContext(
+                context(grammar.statement, 
+                        "TYPE A = ARRAY * OF INTEGER; B = ARRAY * OF BOOLEAN;"
+                        + "VAR a: A; b: B; aStatic: ARRAY 3 OF INTEGER;"
+                        + "aIntInt: ARRAY * OF ARRAY * OF INTEGER;"
+                        + "aInt3Int: ARRAY * OF ARRAY 3 OF INTEGER;"
+                        + "PROCEDURE paVar(VAR a: A); END paVar;"
+                        + "PROCEDURE paVarOpen(VAR a: ARRAY OF INTEGER); END paVarOpen;"
+                        + "PROCEDURE pDynamicIntOfInt(VAR a: ARRAY * OF ARRAY * OF INTEGER); END pDynamicIntOfInt;"
+                        + "PROCEDURE pDynamicIntOfOpenInt(VAR a: ARRAY * OF ARRAY OF INTEGER); END pDynamicIntOfOpenInt;"
+                        ),
+                pass("paVar(a)",
+                     "paVarOpen(a)",
+                     "pDynamicIntOfInt(aIntInt)",
+                     "pDynamicIntOfOpenInt(aIntInt)",
+                     "pDynamicIntOfOpenInt(aInt3Int)"
+                     ),
+                fail(["paVar(aStatic)", "type mismatch for argument 1: cannot pass 'ARRAY 3 OF INTEGER' as VAR parameter of type 'ARRAY * OF INTEGER'"],
+                     ["pDynamicIntOfInt(aInt3Int)", "type mismatch for argument 1: 'ARRAY *, 3 OF INTEGER' cannot be converted to 'ARRAY *, * OF INTEGER'"]
+                     )
+            ),
+            "assign": testWithContext(
+                context(grammar.statement, 
+                        "VAR stat: ARRAY 3 OF INTEGER; dynamic: ARRAY * OF INTEGER;"),
+                pass("dynamic := stat"),
+                fail(["stat := dynamic", "type mismatch: 'stat' is 'ARRAY 3 OF INTEGER' and cannot be assigned to 'ARRAY * OF INTEGER' expression"],
+                     ["dynamic := NIL", "type mismatch: 'dynamic' is 'ARRAY * OF INTEGER' and cannot be assigned to 'NIL' expression"])
+            ),
+            "indexing": testWithContext(
+                context(grammar.expression, 
+                        "VAR a: ARRAY * OF INTEGER;"),
+                pass("a[0]", "a[1]"),
+                fail(["a[-1]", "index is negative: -1"], 
+                     ["a[-2]", "index is negative: -2"])
+            ),
+            "add": testWithContext(
+                context(grammar.statement, 
+                        "VAR a: ARRAY * OF INTEGER;"
+                         + "a2: ARRAY * OF ARRAY * OF INTEGER;"
+                         + "aStatic: ARRAY 3 OF INTEGER;"
+                         + "byte: BYTE;"),
+                pass("a.add(123)",
+                     "a.add(byte)",
+                     "a2.add(a)",
+                     "a2.add(aStatic)"
+                     ),
+                fail(["a.add := NIL", "cannot assign to method"],
+                     ["v <- a.add", "dynamic array method 'add' cannot be referenced"],                
+                     ["a.add()", "method 'add' expects one argument, got nothing"],
+                     ["a.add(1, 2)", "method 'add' expects one argument, got many"],                
+                     ["a.add(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"]                
+                    )
+            ),
+            "add open array to dynamic array of static arrays": testWithContext(
+                context(grammar.declarationSequence, 
+                        "VAR a: ARRAY * OF ARRAY 3 OF INTEGER;"),
+                pass(),
+                fail(["PROCEDURE p(paramA: ARRAY OF INTEGER); BEGIN a.add(paramA); END p", 
+                      "type mismatch for argument 1: 'ARRAY OF INTEGER' cannot be converted to 'ARRAY 3 OF INTEGER'"]                
+                    )
+            ),
+            "remove": testWithContext(
+                context(grammar.statement, 
+                        "VAR a: ARRAY * OF INTEGER;"),
+                pass("a.remove(0)"),
+                fail(["a.remove(-1)", "index is negative: -1"],
+                     ["a.remove()", "1 argument(s) expected, got 0"],
+                     ["a.remove(0, 1)", "1 argument(s) expected, got 2"],
+                     ["a.remove(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
+                     ["a.Remove(0)", "selector '.Remove' cannot be applied to 'ARRAY * OF INTEGER'"]
+                    )
+            ),
+            "clear": testWithContext(
+                context(grammar.statement, 
+                        "VAR a: ARRAY * OF INTEGER;"),
+                pass("a.clear()"),
+                fail(["a.clear(0)", "0 argument(s) expected, got 1"])
+            )
+        }
     }
 };
