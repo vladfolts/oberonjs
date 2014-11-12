@@ -1186,7 +1186,7 @@ var FormalType = Context.HandleSymbolAsType.extend({
         for(var i = this.__arrayDimensions.length; i--;){
             type = this.__arrayDimensions[i] 
                 ? EberonDynamicArray.makeDynamicArray(type)
-                : Type.makeOpenArray(type);
+                : this.language().types.makeOpenArray(type);
         }
         this.parent().setType(type);
     },

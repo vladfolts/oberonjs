@@ -7,8 +7,8 @@ TYPE
     END;
     PMethod* = POINTER TO Method;
 
-    MethodField* = RECORD(Types.Field)
-        method*: PMethod
+    MethodField = RECORD(Types.Field)
+        method: PMethod
     END;
 
     MethodIndexOf = RECORD(Method)
@@ -21,12 +21,15 @@ TYPE
     StaticArray = RECORD(Types.StaticArray)
     END;
 
+    OpenArray = RECORD(Types.OpenArray)
+    END;
+
 PROCEDURE Method.description(): STRING;
     RETURN "array method '" + SELF.name + "'"
 END Method.description;
 
 PROCEDURE MethodField.id(): STRING;
-    RETURN "add"
+    RETURN SELF.method.name
 END MethodField.id;
 
 PROCEDURE MethodField.exported(): BOOLEAN;
@@ -86,23 +89,45 @@ BEGIN
     RETURN result
 END denoteMethod;
 
-PROCEDURE StaticArray.denote(id: STRING): Types.PField;
+PROCEDURE makeMethodField*(method: PMethod): Types.PField;
 VAR
-    field: POINTER TO MethodField;
+    result: POINTER TO MethodField;
+BEGIN
+    NEW(result);
+    result.method := method;
+    RETURN result
+END makeMethodField;
+
+PROCEDURE denote(id: STRING; a: Types.Array): Types.PField;
+VAR
     result: Types.PField;
 BEGIN
     IF id = methodNameIndexOf THEN
-        IF (SELF.elementsType IS Types.PRecord) OR (SELF.elementsType IS Types.PArray) THEN
-            Errors.raise("'" + methodNameIndexOf + "' is not defined for array of '" + SELF.elementsType.description() + "'");
+        IF (a.elementsType IS Types.PRecord) OR (a.elementsType IS Types.PArray) THEN
+            Errors.raise("'" + methodNameIndexOf + "' is not defined for array of '" + a.elementsType.description() + "'");
         END;
-        NEW(field);
-        field.method := makeIndexOfMethod(SELF.elementsType);
-        result := field;
-    ELSE
+        result := makeMethodField(makeIndexOfMethod(a.elementsType));
+    END;
+    RETURN result
+END denote;
+
+PROCEDURE StaticArray.denote(id: STRING): Types.PField;
+BEGIN
+    result <- denote(id, SELF);
+    IF result = NIL THEN
         result := SUPER(id);
     END;
     RETURN result
 END StaticArray.denote;
+
+PROCEDURE OpenArray.denote(id: STRING): Types.PField;
+BEGIN
+    result <- denote(id, SELF);
+    IF result = NIL THEN
+        result := SUPER(id);
+    END;
+    RETURN result
+END OpenArray.denote;
 
 PROCEDURE makeStaticArray*(
     initializer: STRING;
@@ -116,5 +141,14 @@ BEGIN
     Types.initStaticArray(initializer, elementsType, len, result^);
     RETURN result
 END makeStaticArray;
+
+PROCEDURE makeOpenArray*(elementsType: Types.PType): Types.PArray;
+VAR
+    result: POINTER TO OpenArray;
+BEGIN
+    NEW(result);
+    Types.initArray(elementsType, result^);
+    RETURN result
+END makeOpenArray;
 
 END EberonArray.

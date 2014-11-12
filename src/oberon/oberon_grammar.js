@@ -103,7 +103,8 @@ exports.language = {
     stdSymbols: Symbols.makeStd(),
     types: {
         implicitCast: Cast.implicit,
-        makeStaticArray: Types.makeStaticArray
+        makeStaticArray: Types.makeStaticArray,
+        makeOpenArray: Types.makeOpenArray
     }
 };
 

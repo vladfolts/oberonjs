@@ -489,7 +489,7 @@ exports.FormalType = HandleSymbolAsType.extend({
     },
     setType: function(type){           
         for(var i = 0; i < this.__arrayDimension; ++i)
-            type = Type.makeOpenArray(type);
+            type = this.language().types.makeOpenArray(type);
         this.parent().setType(type);
 
     },

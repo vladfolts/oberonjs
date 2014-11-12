@@ -84,7 +84,6 @@ END makeRemoveMethod;
 
 PROCEDURE DynamicArray.denote(id: STRING): Types.PField;
 VAR
-    field: POINTER TO EberonArray.MethodField;
     method: EberonArray.PMethod;
     result: Types.PField;
 BEGIN
@@ -98,9 +97,7 @@ BEGIN
         method := EberonArray.denoteMethod(id, SELF.elementsType);
     END;
     IF method # NIL THEN
-        NEW(field);
-        field.method := method;
-        result := field;
+        result := EberonArray.makeMethodField(method);
     ELSE
         result := SUPER(id);
     END;

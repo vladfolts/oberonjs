@@ -123,6 +123,7 @@ exports.language = {
     stdSymbols: Symbols.makeStd(),
     types: {
         implicitCast: Cast.implicit,
-        makeStaticArray: EbArray.makeStaticArray
+        makeStaticArray: EbArray.makeStaticArray,
+        makeOpenArray: EbArray.makeOpenArray
     }
 };

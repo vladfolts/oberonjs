@@ -871,7 +871,7 @@ exports.suite = {
             )
     ),
     "array": {
-            "indexOf": testWithContext(
+            "static array indexOf": testWithContext(
                 context(grammar.expression, 
                         "TYPE "
                         + "T = RECORD END;"
@@ -889,6 +889,11 @@ exports.suite = {
                      ["recordArray.indexOf(r)", "'indexOf' is not defined for array of 'T'"],
                      ["arrayOfArray.indexOf(intArray)", "'indexOf' is not defined for array of 'ARRAY 4 OF INTEGER'"],
                      ["intArray.indexOf", "array method 'indexOf' cannot be referenced"]                
+                    )
+            ),
+            "open array indexOf": testWithGrammar(
+                grammar.declarationSequence,
+                pass("PROCEDURE p(a: ARRAY OF INTEGER): INTEGER; RETURN a.indexOf(123) END p;"
                     )
             ),
         "dynamic": {
@@ -973,6 +978,13 @@ exports.suite = {
                 pass("a[0]", "a[1]"),
                 fail(["a[-1]", "index is negative: -1"], 
                      ["a[-2]", "index is negative: -2"])
+            ),
+            "indexOf": testWithContext(
+                context(grammar.expression, 
+                        "VAR intArray: ARRAY * OF INTEGER;"
+                        ),
+                pass("intArray.indexOf(0)"),
+                fail()
             ),
             "add": testWithContext(
                 context(grammar.statement, 

@@ -43,6 +43,12 @@ exports.suite = {
     pass(),
     fail(["s: STRING", "undeclared identifier: 'STRING'"])
     ),
+"array does not have indexOf() method": testWithContext(
+    context(grammar.expression,
+            "VAR a: ARRAY 3 OF INTEGER;"),
+    pass(),
+    fail(["a.indexOf(123)", "selector '.indexOf' cannot be applied to 'ARRAY 3 OF INTEGER'"])
+    ),
 "cannot designate call result in expression": testWithContext(
     context(grammar.expression,
             "TYPE PT = POINTER TO RECORD field: INTEGER END;"
