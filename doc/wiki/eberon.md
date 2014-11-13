@@ -7,6 +7,7 @@ Eberon basically extends original Oberon (excluding additional [restrictions](#r
 * [[Strings|eberon-strings]]
 * [[In Place Variables|eberon-in-place-variables]]
 * [[Implicit Type Narrowing|eberon-implicit-type-narrowing]]
+* [[Dynamic Arrays|eberon-dynamic-arrays]]
 * [[Array indexOf() method|eberon-array-methods]]
 * [[Record fields read-only export|eberon-record-fields-read-only-export]]
 * [[Procedure call result can be denoted|eberon-procedure-call-result]]
