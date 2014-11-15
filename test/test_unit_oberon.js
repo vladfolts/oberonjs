@@ -101,4 +101,9 @@ exports.suite = {
     pass(),
     fail(["PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "cannot assign to read-only variable"])
     ),
+"procedure": testWithGrammar(
+    grammar.procedureDeclaration,
+    pass(),
+    fail(["PROCEDURE p; END", "not parsed"])
+    )
 };

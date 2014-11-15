@@ -1030,5 +1030,9 @@ exports.suite = {
                 fail(["a.clear(0)", "0 argument(s) expected, got 1"])
             )
         }
-    }
+    },
+"syntax relaxation": testWithGrammar(
+    grammar.declarationSequence, 
+    pass("PROCEDURE p; END;")
+    )
 };

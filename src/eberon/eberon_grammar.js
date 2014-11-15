@@ -52,7 +52,7 @@ function makeDesignator(ident, qualident, selector, actualParameters){
 function makeProcedureDeclaration(ident, procedureHeading, procedureBody){
     return context(and(procedureHeading, ";",
                        procedureBody,
-                       and(ident, optional(and(".", ident)))),
+                       optional(and(ident, optional(and(".", ident))))),
                    EbContext.ProcOrMethodDecl);
 }
 
