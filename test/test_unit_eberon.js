@@ -1034,6 +1034,10 @@ exports.suite = {
 "syntax relaxation": testWithGrammar(
     grammar.declarationSequence, 
     pass("PROCEDURE p; END;",
-         "TYPE T = RECORD field: INTEGER; END;")
+         "TYPE T = RECORD field: INTEGER; END;",
+         "TYPE T = RECORD PROCEDURE method(); END;",
+         "TYPE T = RECORD PROCEDURE method(); END; PROCEDURE T.method(); END;",
+         "PROCEDURE p(): INTEGER; RETURN 0; END;"
+         )
     )
 };

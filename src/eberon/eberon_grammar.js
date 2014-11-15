@@ -90,6 +90,10 @@ function makeFormalArray(){
     return and("ARRAY", optional("*"), "OF");
 }
 
+function makeReturn(base){
+    return and(base, optional(";"));
+}
+
 exports.language = {
     grammar: Grammar.make(
         makeIdentdef,
@@ -101,6 +105,7 @@ exports.language = {
         makeForInit,
         makeArrayDimensions,
         makeFormalArray,
+        makeReturn,
         { 
             constDeclaration:   EbContext.ConstDecl, 
             typeDeclaration:    EbContext.TypeDeclaration,

@@ -70,6 +70,8 @@ function makeFormalArray(){
     return and("ARRAY", "OF");
 }
 
+function makeReturn(base){return base;}
+
 exports.language = {
     grammar: Grammar.make(
         makeIdentdef,
@@ -81,6 +83,7 @@ exports.language = {
         makeForInit,
         makeArrayDimensions,
         makeFormalArray,
+        makeReturn,
         {
             constDeclaration:   Context.ConstDecl, 
             typeDeclaration:    Context.TypeDeclaration,

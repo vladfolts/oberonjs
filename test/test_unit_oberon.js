@@ -109,6 +109,7 @@ exports.suite = {
 "syntax strictness": testWithGrammar(
     grammar.procedureDeclaration,
     pass(),
-    fail(["TYPE T = RECORD field: INTEGER; END;", "not parsed"])
+    fail(["TYPE T = RECORD field: INTEGER; END;", "not parsed"],
+         ["PROCEDURE p(): INTEGER; RETURN 0; END;", "END expected (PROCEDURE)"])
     )
 };
