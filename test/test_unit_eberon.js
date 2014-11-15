@@ -1033,6 +1033,7 @@ exports.suite = {
     },
 "syntax relaxation": testWithGrammar(
     grammar.declarationSequence, 
-    pass("PROCEDURE p; END;")
+    pass("PROCEDURE p; END;",
+         "TYPE T = RECORD field: INTEGER; END;")
     )
 };

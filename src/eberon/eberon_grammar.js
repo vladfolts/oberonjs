@@ -67,8 +67,12 @@ function makeMethodHeading(identdef, formalParameters){
 function makeFieldList(identdef, identList, type, formalParameters){
     return context(
         or(makeMethodHeading(identdef, formalParameters),
-           and(identList, ":", type)),
+               and(identList, ":", type)),
         Context.FieldListDeclaration);
+}
+
+function makeFieldListSequence(base){
+    return and(base, optional(";"));
 }
 
 function makeForInit(ident, expression, assignment){
@@ -93,6 +97,7 @@ exports.language = {
         makeProcedureHeading,
         makeProcedureDeclaration,
         makeFieldList, 
+        makeFieldListSequence,
         makeForInit,
         makeArrayDimensions,
         makeFormalArray,

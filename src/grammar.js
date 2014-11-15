@@ -27,6 +27,7 @@ function make(makeIdentdef,
               makeProcedureHeading, 
               makeProcedureDeclaration,
               makeFieldList,
+              makeFieldListSequence,
               makeForInit,
               makeArrayDimensions,
               makeFormalArray,
@@ -157,7 +158,7 @@ var fieldList = makeFieldList(
         type,
         function(stream, context){return formalParameters(stream, context);}
         );
-var fieldListSequence = and(fieldList, repeat(and(";", fieldList)));
+var fieldListSequence = makeFieldListSequence(and(fieldList, repeat(and(";", fieldList))));
 
 var arrayType = and("ARRAY", 
                     context(and(makeArrayDimensions(constExpression), "OF", type), 

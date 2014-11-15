@@ -53,6 +53,10 @@ function makeFieldList(identdef, identList, type){
     return context(and(identList, ":", type), Context.FieldListDeclaration);
 }
 
+function makeFieldListSequence(base){
+    return base;
+}
+
 function makeForInit(ident, expression, assignment){
     return and(ident, assignment);
 }
@@ -73,6 +77,7 @@ exports.language = {
         makeProcedureHeading,
         makeProcedureDeclaration,
         makeFieldList,
+        makeFieldListSequence,
         makeForInit,
         makeArrayDimensions,
         makeFormalArray,
