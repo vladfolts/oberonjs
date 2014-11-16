@@ -687,6 +687,10 @@ exports.ProcParams = HandleSymbolAsType.extend({
     }
 });
 
+function ForwardTypeMsg(id){
+    this.id = id;
+}
+
 exports.PointerDecl = ChainedContext.extend({
     init: function Context$PointerDecl(context){
         ChainedContext.prototype.init.call(this, context);
@@ -697,16 +701,8 @@ exports.PointerDecl = ChainedContext.extend({
               ? getQIdSymbolAndScope(this, q)
               : this.findSymbol(id);
         
-        var info;
-        if (s)
-            info = s.symbol().info();
-        else {
-            var scope = this.currentScope();
-            Scope.addUnresolved(scope, id);
-            var resolve = function(){return getSymbol(this, id).info().type();}.bind(this);
-
-            info = Type.makeForwardTypeId(resolve);
-        }
+        var info = s ? s.symbol().info()
+                     : this.parent().handleMessage(new ForwardTypeMsg(id));
         var typeId = unwrapTypeId(info);
         this.__setTypeId(typeId);
     },
@@ -1627,6 +1623,11 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
     typeName: function(){return undefined;},
     isAnonymousDeclaration: function(){return true;},
     checkExport: function(){},
+    handleMessage: function(msg){
+        if (msg instanceof ForwardTypeMsg)
+            throw new Errors.Error("type '" + msg.id + "' was not declared");
+        return HandleSymbolAsType.prototype.handleMessage.call(this, msg);
+    },
     endParse: function(){
         var v = Type.makeVariable(this.__type, false);
         var idents = this.__idents;
@@ -1815,6 +1816,16 @@ exports.TypeDeclaration = ChainedContext.extend({
 exports.TypeSection = ChainedContext.extend({
     init: function TypeSection(context){
         ChainedContext.prototype.init.call(this, context);
+    },
+    handleMessage: function(msg){
+        if (msg instanceof ForwardTypeMsg){
+            var scope = this.currentScope();
+            Scope.addUnresolved(scope, msg.id);
+            var resolve = function(){return getSymbol(this, msg.id).info().type();}.bind(this);
+
+            return Type.makeForwardTypeId(resolve);
+        }
+        return ChainedContext.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
         var unresolved = Scope.unresolved(this.currentScope());

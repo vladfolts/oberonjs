@@ -120,7 +120,8 @@ return {
     grammar.variableDeclaration,
     pass("i: INTEGER",
          "i, j: INTEGER"),
-    fail(["i: T", "undeclared identifier: 'T'"])
+    fail(["i: T", "undeclared identifier: 'T'"],
+         ["p: POINTER TO T", "type 'T' was not declared"])
     ),
 "record declaration": testWithGrammar(
     grammar.typeDeclaration,
