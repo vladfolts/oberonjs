@@ -19,7 +19,7 @@ Example:
 
 Declared methods may be defined later using the same syntax as for ordinary procedures but having type name as a prefix to method name:
 
-    ProcedureDeclaration = ProcedureHeading ";" ProcedureBody ident ["." ident].
+    ProcedureDeclaration = ProcedureHeading ";" ProcedureBody [ident ["." ident]].
     ProcedureHeading = PROCEDURE [ident "."] identdef [FormalParameters].
 
 Example:

@@ -11,6 +11,7 @@ Eberon basically extends original Oberon (excluding additional [restrictions](#r
 * [[Array indexOf() method|eberon-array-methods]]
 * [[Record fields read-only export|eberon-record-fields-read-only-export]]
 * [[Procedure call result can be denoted|eberon-procedure-call-result]]
+* [[Syntax relaxations|eberon-syntax-relaxations]]
 * Non-scalar variables (arrays and records) can be exported (forbidden in oberon for some unknown reason).
 
 ### Restrictions
