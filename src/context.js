@@ -588,8 +588,6 @@ exports.ProcDecl = ChainedContext.extend({
         if (this.__id.id() != id)
             throw new Errors.Error("mismatched procedure names: '" + this.__id.id()
                                  + "' at the begining and '" + id + "' at the end");
-        this.codeGenerator().closeScope("");
-        this.parent().popScope();
     },
     _prolog: function(){return "\nfunction " + this.__id.id() + "(";},
     typeName: function(){return undefined;},
@@ -643,6 +641,9 @@ exports.ProcDecl = ChainedContext.extend({
         this.__returnParsed = true;
     },
     endParse: function(){
+        this.codeGenerator().closeScope("");
+        this.parent().popScope();
+
         var result = this.__type.result();
         if (result && !this.__returnParsed)
             throw new Errors.Error("RETURN expected at the end of PROCEDURE declared with '"

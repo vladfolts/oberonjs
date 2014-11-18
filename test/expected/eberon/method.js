@@ -21,6 +21,8 @@ T.prototype.p = function(){
 T.prototype.p2 = function(i/*INTEGER*/){
 	return i;
 }
+T.prototype.methodDefinedWithoutEndingIdent = function(){
+}
 
 function acceptPointer(p/*PT*/){
 }

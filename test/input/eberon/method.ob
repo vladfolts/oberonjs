@@ -4,6 +4,7 @@ TYPE
         PROCEDURE p();
         PROCEDURE p2(i: INTEGER): INTEGER;
         PROCEDURE useSelfAsPointer();
+        PROCEDURE methodDefinedWithoutEndingIdent();
 		i: INTEGER
 	END;
     PT = POINTER TO T;
@@ -19,6 +20,9 @@ END T.p;
 PROCEDURE T.p2(i: INTEGER): INTEGER;
     RETURN i
 END T.p2;
+
+PROCEDURE T.methodDefinedWithoutEndingIdent();
+END;
 
 PROCEDURE acceptPointer(p: PT);
 END acceptPointer;
