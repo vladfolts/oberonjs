@@ -1,17 +1,9 @@
 var RTL$ = {
-    extend: function extend(methods){
-        function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
-        }
-        Type.prototype = this.prototype;
-
-        var result = methods.init;
-        result.prototype = new Type(); // inherit this.prototype
-        result.prototype.constructor = result; // to see constructor name in diagnostic
-        
-        result.extend = extend;
-        return result;
+    extend: function (cons, base){
+        function Type(){}
+        Type.prototype = base.prototype;
+        cons.prototype = new Type();
+        cons.prototype.constructor = cons;
     },
     makeArray: function (/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
@@ -56,16 +48,13 @@ var RTL$ = {
     }
 };
 var m = function (){
-var Base = RTL$.extend({
-	init: function Base(){
-	}
-});
-var Derived = Base.extend({
-	init: function Derived(){
-		Base.prototype.init.call(this);
-		this.derivedField = 0;
-	}
-});
+function Base(){
+}
+RTL$.extend(Derived, Base);
+function Derived(){
+	Base.call(this);
+	this.derivedField = 0;
+}
 var r = new Derived();
 var pbVar = null;
 var pdVar = null;

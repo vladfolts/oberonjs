@@ -1,25 +1,18 @@
 var RTL$ = require("rtl.js");
 var ci = 123;
-var Base = RTL$.extend({
-	init: function Base(){
-		this.i = 0;
-	}
-});
-var T = Base.extend({
-	init: function T(){
-		Base.prototype.init.call(this);
-	}
-});
-var TPA = RTL$.extend({
-	init: function TPA(){
-	}
-});
+function Base(){
+	this.i = 0;
+}
+RTL$.extend(T, Base);
+function T(){
+	Base.call(this);
+}
+function TPA(){
+}
 var i = 0;
-var anonymous$1 = RTL$.extend({
-	init: function anonymous$1(){
-		this.i = 0;
-	}
-});
+function anonymous$1(){
+	this.i = 0;
+}
 var pr = null;
 var pr2 = null;
 

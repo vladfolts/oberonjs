@@ -197,15 +197,19 @@ def build_html(options):
         with open(build_version_path, 'w') as f:
             f.write(version)
 
-def pre_commit_check(options):
-    bin = os.path.join(root, 'bin')
-    run_tests(bin)
+def recompile_with_replace(bin, skip_tests = False):
     recompiled = recompile(bin)
-    run_tests(recompiled)
+    if not skip_tests:
+        run_tests(recompiled)
     
     print('%s -> %s' % (recompiled, bin))
     cleanup(bin)
     os.rename(recompiled, bin)
+
+def pre_commit_check(options):
+    bin = os.path.join(root, 'bin')
+    run_tests(bin)
+    recompile_with_replace(bin)
     
     print('packaging compiled js to %s...' % package.root)
     package.pack()
@@ -227,11 +231,11 @@ class self_recompile_target(object):
 
     @staticmethod
     def setup_options(parser):
-        pass
+        parser.add_option('--skip-tests', help='do not run test after recompile')
 
     def __init__(self, options):
         bin = os.path.join(root, 'bin')
-        recompile(bin)
+        recompile_with_replace(bin, options.skip_tests)
 
 class html_target(object):
     name = 'html'

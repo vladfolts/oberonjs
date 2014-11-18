@@ -1,17 +1,9 @@
 var RTL$ = {
-    extend: function extend(methods){
-        function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
-        }
-        Type.prototype = this.prototype;
-
-        var result = methods.init;
-        result.prototype = new Type(); // inherit this.prototype
-        result.prototype.constructor = result; // to see constructor name in diagnostic
-        
-        result.extend = extend;
-        return result;
+    extend: function (cons, base){
+        function Type(){}
+        Type.prototype = base.prototype;
+        cons.prototype = new Type();
+        cons.prototype.constructor = cons;
     },
     typeGuard: function (from, to){
         if (!from)
@@ -62,31 +54,23 @@ var RTL$ = {
 };
 var m1 = function (){
 var ci = 123;
-var Base = RTL$.extend({
-	init: function Base(){
-		this.i = 0;
-	}
-});
-var T = Base.extend({
-	init: function T(){
-		Base.prototype.init.call(this);
-	}
-});
-var TPA = RTL$.extend({
-	init: function TPA(){
-	}
-});
-var TPB = Base.extend({
-	init: function TPB(){
-		Base.prototype.init.call(this);
-	}
-});
+function Base(){
+	this.i = 0;
+}
+RTL$.extend(T, Base);
+function T(){
+	Base.call(this);
+}
+function TPA(){
+}
+RTL$.extend(TPB, Base);
+function TPB(){
+	Base.call(this);
+}
 var i = 0;
-var anonymous$1 = RTL$.extend({
-	init: function anonymous$1(){
-		this.i = 0;
-	}
-});
+function anonymous$1(){
+	this.i = 0;
+}
 var pr = null;
 var pr2 = null;
 
@@ -120,12 +104,11 @@ return {
 }
 }();
 var m2 = function (m1){
-var T = m1.T.extend({
-	init: function T(){
-		m1.T.prototype.init.call(this);
-		this.i2 = 0;
-	}
-});
+RTL$.extend(T, m1.T);
+function T(){
+	m1.T.call(this);
+	this.i2 = 0;
+}
 var r = new m1.T();
 var r2 = new T();
 var pb = null;
@@ -151,11 +134,10 @@ p(m1.ci);
 ref(RTL$.makeRef(m1.pr2(), "i"));
 }(m1);
 var m3 = function (m1, m2){
-var T = m2.T.extend({
-	init: function T(){
-		m2.T.prototype.init.call(this);
-	}
-});
+RTL$.extend(T, m2.T);
+function T(){
+	m2.T.call(this);
+}
 var r = new m2.T();
 var r2 = new T();
 var a = RTL$.makeArray(3, function(){return new m2.Base();});

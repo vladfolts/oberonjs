@@ -2,12 +2,13 @@ MODULE m;
 TYPE
     T = RECORD 
     	PROCEDURE p();
-    	PROCEDURE pSuper(i: INTEGER)
+    	PROCEDURE pSuper(i: INTEGER);
     END;
 	TD = RECORD(T) END;
 
     Base = RECORD
-        PROCEDURE method(): STRING
+        PROCEDURE method(): STRING;
+        PROCEDURE baseOnly();
     END;
 
     Derived1 = RECORD(Base)
@@ -35,6 +36,9 @@ BEGIN
 	pSuperCalled := i;
 END T.pSuper;
 
+PROCEDURE Base.baseOnly();
+END Base.baseOnly;
+
 PROCEDURE TD.p();
 BEGIN
 	pDerivedCalled := TRUE;
@@ -60,6 +64,9 @@ BEGIN
 END copyRecord;
 
 BEGIN
+    d1.baseOnly();
+    d2.baseOnly();
+
 	ASSERT(~pCalled);
 	ASSERT(~pDerivedCalled);
 	r.p();

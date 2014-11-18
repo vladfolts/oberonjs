@@ -83,7 +83,7 @@ function getMethodSelf(){}
 function getSelfAsPointerMsg(){}
 function getMethodSuper(){}
 
-var ResultVariable = Type.Variable.extend({
+var ResultVariable = Class.extend.call(Type.Variable, {
     init: function(e){
         this.__e = e;
     },
@@ -93,7 +93,7 @@ var ResultVariable = Type.Variable.extend({
     idType: function(){return "procedure call " + (this.type() ? "result" : "statement");}
 });
 
-var TypeNarrowVariableBase = Type.Variable.extend({
+var TypeNarrowVariableBase = Class.extend.call(Type.Variable, {
     init: function TypeNarrowVariableBase(){
     }    
 });
@@ -371,9 +371,9 @@ var RecordFieldAsMethod = Context.RecordField.extend({
         return EberonTypes.makeMethod(this.type()); 
     }
 });
-var RecordType = Type.Record.extend({
+var RecordType = Class.extend.call(Type.Record, {
     init: function EberonContext$RecordType(name, cons, scope){
-        Type.Record.prototype.init.call(this);
+        Type.Record.call(this);
         Type.initRecord(this, name, cons, scope);
         this.__finalized = false;
         this.__declaredMethods = {};

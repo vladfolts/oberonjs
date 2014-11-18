@@ -1,17 +1,9 @@
 var RTL$ = {
-    extend: function extend(methods){
-        function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
-        }
-        Type.prototype = this.prototype;
-
-        var result = methods.init;
-        result.prototype = new Type(); // inherit this.prototype
-        result.prototype.constructor = result; // to see constructor name in diagnostic
-        
-        result.extend = extend;
-        return result;
+    extend: function (cons, base){
+        function Type(){}
+        Type.prototype = base.prototype;
+        cons.prototype = new Type();
+        cons.prototype.constructor = cons;
     },
     typeGuard: function (from, to){
         if (!from)
@@ -39,28 +31,23 @@ var RTL$ = {
     }
 };
 var m = function (){
-var Base = RTL$.extend({
-	init: function Base(){
-	}
-});
-var Derived1 = Base.extend({
-	init: function Derived1(){
-		Base.prototype.init.call(this);
-		this.field1 = 0;
-	}
-});
-var Derived2 = Derived1.extend({
-	init: function Derived2(){
-		Derived1.prototype.init.call(this);
-		this.field2 = 0;
-	}
-});
-var PAnonymousDerived = Base.extend({
-	init: function PAnonymousDerived(){
-		Base.prototype.init.call(this);
-		this.field3 = 0;
-	}
-});
+function Base(){
+}
+RTL$.extend(Derived1, Base);
+function Derived1(){
+	Base.call(this);
+	this.field1 = 0;
+}
+RTL$.extend(Derived2, Derived1);
+function Derived2(){
+	Derived1.call(this);
+	this.field2 = 0;
+}
+RTL$.extend(PAnonymousDerived, Base);
+function PAnonymousDerived(){
+	Base.call(this);
+	this.field3 = 0;
+}
 var pb = null;
 var pd1 = null;
 var pd2 = null;

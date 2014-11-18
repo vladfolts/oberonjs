@@ -1,31 +1,13 @@
-var RTL$ = {
-    extend: function extend(methods){
-        function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
-        }
-        Type.prototype = this.prototype;
-
-        var result = methods.init;
-        result.prototype = new Type(); // inherit this.prototype
-        result.prototype.constructor = result; // to see constructor name in diagnostic
-        
-        result.extend = extend;
-        return result;
-    }
-};
 var test = function (JS){
-var State = RTL$.extend({
-	init: function State(){
-		this.f = null;
-		this.k = 0;
-		this.x1 = null;
-		this.x2 = null;
-		this.x3 = null;
-		this.x4 = null;
-		this.x5 = null;
-	}
-});
+function State(){
+	this.f = null;
+	this.k = 0;
+	this.x1 = null;
+	this.x2 = null;
+	this.x3 = null;
+	this.x4 = null;
+	this.x5 = null;
+}
 var pB = null;
 
 function call(s/*PState*/){

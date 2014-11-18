@@ -17,34 +17,18 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-    extend: function extend(methods){
-        function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
-        }
-        Type.prototype = this.prototype;
-
-        var result = methods.init;
-        result.prototype = new Type(); // inherit this.prototype
-        result.prototype.constructor = result; // to see constructor name in diagnostic
-        
-        result.extend = extend;
-        return result;
-    },
     makeRef: function (obj, prop){
         return {set: function(v){ obj[prop] = v; },
                 get: function(){ return obj[prop]; }};
     }
 };
 var m = function (){
-var R = RTL$.extend({
-	init: function R(){
-		this.i = 0;
-		this.byte = 0;
-		this.a = RTL$.makeArray(3, 0);
-		this.p = null;
-	}
-});
+function R(){
+	this.i = 0;
+	this.byte = 0;
+	this.a = RTL$.makeArray(3, 0);
+	this.p = null;
+}
 var i = 0;
 var byte = 0;
 var b = false;

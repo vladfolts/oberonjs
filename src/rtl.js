@@ -25,7 +25,12 @@ Class.extend = function extend(methods){
     };
 
 var impl = {
-    extend: Class.extend,
+    extend: function(cons, base){
+        function Type(){}
+        Type.prototype = base.prototype;
+        cons.prototype = new Type();
+        cons.prototype.constructor = cons;
+    },
     typeGuard: function(from, to){
         if (!from)
             return from;

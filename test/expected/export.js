@@ -1,18 +1,4 @@
 var RTL$ = {
-    extend: function extend(methods){
-        function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
-        }
-        Type.prototype = this.prototype;
-
-        var result = methods.init;
-        result.prototype = new Type(); // inherit this.prototype
-        result.prototype.constructor = result; // to see constructor name in diagnostic
-        
-        result.extend = extend;
-        return result;
-    },
     makeArray: function (/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
         var result = new Array(forward.shift());
@@ -34,14 +20,10 @@ var RTL$ = {
 };
 var m = function (){
 var ci = 123;
-var T1 = RTL$.extend({
-	init: function T1(){
-	}
-});
-var NotExportedRecord = RTL$.extend({
-	init: function NotExportedRecord(){
-	}
-});
+function T1(){
+}
+function NotExportedRecord(){
+}
 var pr1 = null;
 var p2 = null;
 var vi = 0;

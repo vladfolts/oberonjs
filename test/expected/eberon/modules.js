@@ -1,24 +1,14 @@
 var RTL$ = {
-    extend: function extend(methods){
-        function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
-        }
-        Type.prototype = this.prototype;
-
-        var result = methods.init;
-        result.prototype = new Type(); // inherit this.prototype
-        result.prototype.constructor = result; // to see constructor name in diagnostic
-        
-        result.extend = extend;
-        return result;
+    extend: function (cons, base){
+        function Type(){}
+        Type.prototype = base.prototype;
+        cons.prototype = new Type();
+        cons.prototype.constructor = cons;
     }
 };
 var m1 = function (){
-var Base = RTL$.extend({
-	init: function Base(){
-	}
-});
+function Base(){
+}
 Base.prototype.p = function(){
 }
 return {
@@ -26,11 +16,10 @@ return {
 }
 }();
 var m2 = function (m1){
-var T = m1.Base.extend({
-	init: function T(){
-		m1.Base.prototype.init.call(this);
-	}
-});
+RTL$.extend(T, m1.Base);
+function T(){
+	m1.Base.call(this);
+}
 T.prototype.p = function(){
 	m1.Base.prototype.p.call(this);
 }

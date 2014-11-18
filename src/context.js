@@ -1714,7 +1714,7 @@ function isTypeRecursive(type, base){
     return false;
 }
 
-var RecordField = Type.Field.extend({
+var RecordField = Class.extend.call(Type.Field, {
     init: function Context$RecordField(identdef, type){
         this.__identdef = identdef;
         this.__type = type;
@@ -1732,11 +1732,10 @@ exports.RecordDecl = ChainedContext.extend({
     init: function RecordDeclContext(context, makeRecord){
         ChainedContext.prototype.init.call(this, context);
         var parent = this.parent();
-        var cons = parent.genTypeName();
-        var name = parent.isAnonymousDeclaration() ? "" : cons;
-        this.__type = makeRecord(name, cons, context.currentScope());
+        this.__cons = parent.genTypeName();
+        var name = parent.isAnonymousDeclaration() ? "" : this.__cons;
+        this.__type = makeRecord(name, this.__cons, context.currentScope());
         parent.setType(this.__type);
-        parent.codeGenerator().write("var " + cons + " = ");
     },
     type: function(){return this.__type;},
     addField: function(field, type){
@@ -1756,6 +1755,11 @@ exports.RecordDecl = ChainedContext.extend({
         if (isTypeRecursive(type, this.__type))
             throw new Errors.Error("recursive inheritance: '"
                 + Type.typeName(this.__type) + "'");
+
+        var gen = this.codeGenerator();
+        var qualifiedBase = this.qualifyScope(Type.recordScope(type)) + Type.typeName(type); 
+        gen.write(this.language().rtl.extend(this.__cons, qualifiedBase) + ";\n");
+
         Type.setRecordBase(this.__type, type);
     },
     endParse: function(){
@@ -1763,14 +1767,10 @@ exports.RecordDecl = ChainedContext.extend({
         var baseType = Type.recordBase(type);
         var gen = this.codeGenerator();
         var qualifiedBase = baseType ? this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType) : undefined; 
-        gen.write((baseType ? qualifiedBase + ".extend" 
-                            : this.language().rtl.extendId())
-                + "(");
-        gen.openScope();
-        gen.write("init: function " + Type.recordConstructor(this.__type) + "()");
+        gen.write("function " + this.__cons + "()");
         gen.openScope();
         if (baseType)
-            gen.write(qualifiedBase + ".prototype.init.call(this);\n");
+            gen.write(qualifiedBase + ".call(this);\n");
         var ownFields = Type.recordOwnFields(type);
         for(var f in ownFields){
             var fieldType = ownFields[f].type();
@@ -1778,7 +1778,6 @@ exports.RecordDecl = ChainedContext.extend({
         }
 
         gen.closeScope("");
-        gen.closeScope(");\n");
     },
     _makeField: function(field, type){
         return new RecordField(field, type);

@@ -1,17 +1,9 @@
 var RTL$ = {
-    extend: function extend(methods){
-        function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
-        }
-        Type.prototype = this.prototype;
-
-        var result = methods.init;
-        result.prototype = new Type(); // inherit this.prototype
-        result.prototype.constructor = result; // to see constructor name in diagnostic
-        
-        result.extend = extend;
-        return result;
+    extend: function (cons, base){
+        function Type(){}
+        Type.prototype = base.prototype;
+        cons.prototype = new Type();
+        cons.prototype.constructor = cons;
     },
     makeArray: function (/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
@@ -50,28 +42,21 @@ var RTL$ = {
     }
 };
 var m = function (){
-var Base1 = RTL$.extend({
-	init: function Base1(){
-	}
-});
-var T1 = Base1.extend({
-	init: function T1(){
-		Base1.prototype.init.call(this);
-		this.i = 0;
-	}
-});
-var RecordWithInnerRecord = RTL$.extend({
-	init: function RecordWithInnerRecord(){
-		this.$r = new T1();
-	}
-});
-var RecordWithInnerArray = RTL$.extend({
-	init: function RecordWithInnerArray(){
-		this.aInts = RTL$.makeArray(3, 0);
-		this.$aRecords = RTL$.makeArray(3, function(){return new T1();});
-		this.aPointers = RTL$.makeArray(3, null);
-	}
-});
+function Base1(){
+}
+RTL$.extend(T1, Base1);
+function T1(){
+	Base1.call(this);
+	this.i = 0;
+}
+function RecordWithInnerRecord(){
+	this.$r = new T1();
+}
+function RecordWithInnerArray(){
+	this.aInts = RTL$.makeArray(3, 0);
+	this.$aRecords = RTL$.makeArray(3, function(){return new T1();});
+	this.aPointers = RTL$.makeArray(3, null);
+}
 var b1 = new Base1();
 var r1 = new T1();
 var recordWithInnerRecord = new RecordWithInnerRecord();

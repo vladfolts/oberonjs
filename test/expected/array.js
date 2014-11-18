@@ -17,20 +17,6 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-    extend: function extend(methods){
-        function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
-        }
-        Type.prototype = this.prototype;
-
-        var result = methods.init;
-        result.prototype = new Type(); // inherit this.prototype
-        result.prototype.constructor = result; // to see constructor name in diagnostic
-        
-        result.extend = extend;
-        return result;
-    },
     cloneArrayOfRecords: function (from){
         var length = from.length;
         var result = new Array(length);
@@ -82,10 +68,8 @@ var a1 = RTL$.makeArray(10, 0);var a11 = RTL$.makeArray(10, 0);
 var a2 = RTL$.makeArray(5, function(){return RTL$.makeArray(10, 0);});
 var a3 = RTL$.makeArray(5, false);
 var a4 = RTL$.makeArray(3, 4, false);
-var anonymous$1 = RTL$.extend({
-	init: function anonymous$1(){
-	}
-});
+function anonymous$1(){
+}
 var a5 = RTL$.makeArray(3, function(){return new anonymous$1();});
 
 function p(){
@@ -101,10 +85,8 @@ function p2(a/*VAR ARRAY 10 OF INTEGER*/){
 }
 
 function testAssign(){
-	var T = RTL$.extend({
-		init: function T(){
-		}
-	});
+	function T(){
+	}
 	var aInts1 = RTL$.makeArray(3, 0);var aInts2 = RTL$.makeArray(3, 0);
 	var aRecords1 = RTL$.makeArray(3, function(){return new T();});var aRecords2 = RTL$.makeArray(3, function(){return new T();});
 	var aPointers1 = RTL$.makeArray(3, null);var aPointers2 = RTL$.makeArray(3, null);
