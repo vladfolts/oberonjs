@@ -28,9 +28,10 @@ function superMethodCallGenerator(context, type){
     return Procedure.makeProcCallGeneratorWithCustomArgs(context, type, args);
 }
 
-function MethodOrProcMsg(id, type){
+function MethodOrProcMsg(id, type, isConstructor){
     this.id = id;
     this.type = type;
+    this.isConstructor = isConstructor;
 }
 
 var ProcOrMethodId = Context.Chained.extend({
@@ -58,7 +59,23 @@ var ProcOrMethodId = Context.Chained.extend({
         if (this.__type && id.exported())
             throw new Errors.Error("method implementation cannot be exported: " + id.id());
         checkOrdinaryExport(id, "procedure");
-        this.handleMessage(new MethodOrProcMsg(id, this.__type));
+
+        var isConstructor = false;
+        if (!this.__type){
+            var s = this.currentScope().findSymbol(id.id());
+            if (s){
+                var info = s.symbol().info();
+                if (info instanceof Type.TypeId){
+                    var boundType = info.type();
+                    if (boundType instanceof Type.Record){
+                        this.__type = boundType;
+                        isConstructor = true;
+                    }
+                }
+            }
+        }
+
+        this.handleMessage(new MethodOrProcMsg(id, this.__type, isConstructor));
     }
 });
 
@@ -375,6 +392,7 @@ var RecordType = Class.extend.call(Type.Record, {
     init: function EberonContext$RecordType(name, cons, scope){
         Type.Record.call(this);
         Type.initRecord(this, name, cons, scope);
+        this.__customConstructor = undefined;
         this.__finalized = false;
         this.__declaredMethods = {};
         this.__definedMethods = [];
@@ -427,9 +445,21 @@ var RecordType = Class.extend.call(Type.Record, {
         if (!methodId.exported())
             this.__nonExportedMethods.push(id);
     },
+    defineConstructor: function(type){
+        if (this.__customConstructor)
+            throw new Errors.Error("constructor '" + Type.typeName(this) + "' already defined");
+        if (type.result())
+            throw new Errors.Error("constructor '" + Type.typeName(this) + "' cannot have result type specified");
+        this.__customConstructor = type;
+    },
     defineMethod: function(methodId, type){
         var base = Type.recordBase(this);
         var id = methodId.id();
+
+        if (this.__definedMethods.indexOf(id) != -1)
+            throw new Errors.Error(
+                  "method '" + Type.typeName(this) + "." + id + "' already defined");
+
         var existingField = this.findSymbol(id);
         if (!existingField || !(existingField.type() instanceof EberonTypes.MethodType)){
             throw new Errors.Error(
@@ -635,6 +665,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         this.__methodType = undefined;
         this.__boundType = undefined;
         this.__endingId = undefined;
+        this.__isConstructor = false;
     },
     handleMessage: function(msg){
         if (msg == getMethodSelf){
@@ -656,15 +687,11 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             if (type){
                 this.__methodId = id;
                 this.__boundType = type;
+                this.__isConstructor = msg.isConstructor;
             }
 
-            Context.ProcDecl.prototype.handleIdentdef.call(
-                this,
-                type ? new Context.IdentdefInfo(Type.typeName(type) + "." + id.id(),
-                                                id.exported()) 
-                     : id
-                );
-            return undefined;
+            Context.ProcDecl.prototype.handleIdentdef.call(this, id);
+            return;
         }
 
         if (handleTypePromotionMadeInSeparateStatement(msg))
@@ -687,29 +714,49 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         return Context.ProcDecl.prototype._makeArgumentVariable.call(this, arg);
     },
     setType: function(type){
-        Context.ProcDecl.prototype.setType.call(this, type);
-        if (this.__methodId)
+        if (this.__methodId){
             this.__methodType = EberonTypes.makeMethodType(this.__methodId.id(), type, Procedure.makeProcCallGenerator);
+            this.__type = type;
+            }            
+        else
+            Context.ProcDecl.prototype.setType.call(this, type);
     },
     handleIdent: function(id){
-        if (this.__boundType){
-            if (!this.__endingId)
-                this.__endingId = id + ".";
-            else {
-                Context.ProcDecl.prototype.handleIdent.call(this, this.__endingId + id);
-                this.__endingId = undefined;
-            }
-        }
-        else
+        if (!this.__boundType)
             Context.ProcDecl.prototype.handleIdent.call(this, id);
+        /*else if (!this.__endingId){
+            if (!this.__isConstructor || id != Type.typeName(this.__boundType))
+                this.__endingId = id;
+        }
+        else if (this.__endingId == Type.typeName(this.__boundType)
+                && id == this.__id.id())
+            this.__endingId = undefined;
+        */
+        else if (this.__endingId)
+            this.__endingId = this.__endingId + "." + id;
+        else
+            this.__endingId = id;
     },
     endParse: function(){
         if (this.__boundType){
-            if (this.__endingId)
-                // should throw
-                Context.ProcDecl.prototype.handleIdent.call(this, this.__endingId);
+            if (this.__endingId){
+                var expected 
+                    = (this.__isConstructor 
+                             ? ""
+                             : (Type.typeName(this.__boundType) + "."))
+                    + this.__id.id();
+                if (this.__endingId != expected)
+                    throw new Errors.Error(
+                          "mismatched method names: expected '" 
+                        + expected
+                        + "' at the end (or nothing), got '" 
+                        + this.__endingId + "'");
+            }
 
-            this.__boundType.defineMethod(this.__methodId, this.__methodType);
+            if (this.__isConstructor)
+                this.__boundType.defineConstructor(this.__methodType);
+            else
+                this.__boundType.defineMethod(this.__methodId, this.__methodType);
         }
         Context.ProcDecl.prototype.endParse.call(this);
     },

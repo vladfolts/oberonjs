@@ -20,7 +20,7 @@ function testWithModule(src, pass, fail){
     return TestUnitCommon.testWithModule(src, language, pass, fail);
 }
 
-function testWithGrammar(parser, pass, faile){
+function testWithGrammar(parser, pass, fail){
     return TestUnitCommon.testWithGrammar(parser, language, pass, fail);
 }
 
@@ -86,7 +86,7 @@ exports.suite = {
     pass(),
     fail(["SELF: INTEGER", "not parsed"],
          ["SUPER: INTEGER", "not parsed"],
-         ["STRING: INTEGER", "not parsed"]
+         ["STRING: INTEGER", "'STRING' already declared"]
          )
     ),
 "abstract method declaration": testWithContext(
@@ -122,15 +122,15 @@ exports.suite = {
           "RECORD type expected in method declaration, got 'ARRAY 1 OF INTEGER'"],
          ["PROCEDURE T.p(), NEW; END;", "not parsed"],
          ["PROCEDURE T.p(); END p;",
-          "mismatched procedure names: 'T.p' at the begining and 'p.' at the end"],
+          "mismatched method names: expected 'T.p' at the end (or nothing), got 'p'"],
          ["PROCEDURE T.p(); END T2.p;",
-          "mismatched procedure names: 'T.p' at the begining and 'T2.p' at the end"],
+          "mismatched method names: expected 'T.p' at the end (or nothing), got 'T2.p'"],
          ["PROCEDURE T.p(); END T.p2;",
-          "mismatched procedure names: 'T.p' at the begining and 'T.p2' at the end"],
+          "mismatched method names: expected 'T.p' at the end (or nothing), got 'T.p2'"],
          ["PROCEDURE T.intField(); END T.intField;",
           "'T' has no declaration for method 'intField'"],
-         ["PROCEDURE T.p(); END T.p; PROCEDURE T.p(), NEW; END T.p;",
-          "'T.p' already declared"],
+         ["PROCEDURE T.p(); END T.p; PROCEDURE T.p(); END T.p;",
+          "method 'T.p' already defined"],
          ["PROCEDURE p(); TYPE T = RECORD PROCEDURE m(); PROCEDURE m() END; END p;",
           "cannot declare a new method 'm': method already was declared"],
          ["PROCEDURE p(); TYPE T = RECORD m: INTEGER; PROCEDURE m() END; END p;",
@@ -149,7 +149,7 @@ exports.suite = {
          ["PROCEDURE proc(); TYPE T = RECORD (Base) PROCEDURE p() END; END proc;",
           "cannot declare a new method 'p': method already was declared"],
          ["PROCEDURE T.p(); END T.p; PROCEDURE T.p(); END T.p;",
-          "'T.p' already declared"],
+          "method 'T.p' already defined"],
          ["PROCEDURE T.p(a: INTEGER); END T.p;",
           "overridden method 'p' signature mismatch: should be 'PROCEDURE', got 'PROCEDURE(INTEGER)'"],
          ["PROCEDURE p(); PROCEDURE T.p(); END T.p; END p;",
@@ -1038,6 +1038,22 @@ exports.suite = {
          "TYPE T = RECORD PROCEDURE method(); END;",
          "TYPE T = RECORD PROCEDURE method(); END; PROCEDURE T.method(); END;",
          "PROCEDURE p(): INTEGER; RETURN 0; END;"
+         )
+    ),
+"constructor": testWithGrammar(
+    grammar.declarationSequence, 
+    pass("TYPE T = RECORD END; PROCEDURE T(); END;",
+         "TYPE T = RECORD i: INTEGER; END; PROCEDURE T(); BEGIN SELF.i := 0; END;",
+         "TYPE T = RECORD END; PROCEDURE T(); END T;",
+         "TYPE T = RECORD END; PROCEDURE p(); PROCEDURE T(); END; BEGIN T(); END;" /* local procedure name may match type name from outer scope*/
+         ),
+    fail(["TYPE T = RECORD END; PROCEDURE T(); END; PROCEDURE T(); END;", "constructor 'T' already defined"],
+         ["TYPE T = RECORD END; PROCEDURE T(): INTEGER; RETURN 0; END;", "constructor 'T' cannot have result type specified"],
+         ["TYPE T = ARRAY 3 OF INTEGER; PROCEDURE T(); END;", "'T' already declared"],
+         ["TYPE T = RECORD END; PROCEDURE T(); END T.T;", "mismatched method names: expected 'T' at the end (or nothing), got 'T.T'"],
+         ["TYPE T = RECORD END; PROCEDURE T.T(); END;", "'T' has no declaration for method 'T'"],
+         ["TYPE T = RECORD END; PROCEDURE T(); END T2;", "mismatched method names: expected 'T' at the end (or nothing), got 'T2'"],
+         ["TYPE T = RECORD END; PROCEDURE T(); END T.T;", "mismatched method names: expected 'T' at the end (or nothing), got 'T.T'"]
          )
     )
 };
