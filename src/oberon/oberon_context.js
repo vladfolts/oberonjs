@@ -1,6 +1,7 @@
 "use strict";
 
 var Code = require("js/Code.js");
+var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var op = require("js/Operator.js");
@@ -29,7 +30,7 @@ var ProcedureCall = Context.Chained.extend({
         this.__type = undefined;
         this.__id = undefined;
         this.__procCall = undefined;
-        this.__code = Code.makeSimpleGenerator();
+        this.__code = CodeGenerator.makeSimpleGenerator();
     },
     setDesignator: function(d){
         this.__type = d.type();
@@ -99,7 +100,7 @@ var Assignment = Context.Chained.extend({
         Context.Chained.prototype.init.call(this, context);
         this.__left = undefined;
     },
-    codeGenerator: function(){return Code.nullGenerator();},
+    codeGenerator: function(){return CodeGenerator.nullGenerator();},
     setDesignator: function(d){
         this.__left = Code.makeExpression(d.code(), d.type(), d);
     },

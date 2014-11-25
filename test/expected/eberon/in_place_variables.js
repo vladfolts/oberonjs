@@ -50,11 +50,11 @@ var RTL$ = {
 var m = function (){
 function Base(){
 }
-RTL$.extend(Derived, Base);
 function Derived(){
 	Base.call(this);
 	this.derivedField = 0;
 }
+RTL$.extend(Derived, Base);
 var r = new Derived();
 var pbVar = null;
 var pdVar = null;

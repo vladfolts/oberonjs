@@ -10,10 +10,10 @@ var m = function (){
 function T(){
 	this.i = 0;
 }
-RTL$.extend(D, T);
 function D(){
 	T.call(this);
 }
+RTL$.extend(D, T);
 var dp = null;
 T.prototype.p = function(){
 	this.i = 123;

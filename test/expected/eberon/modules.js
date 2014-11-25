@@ -16,10 +16,10 @@ return {
 }
 }();
 var m2 = function (m1){
-RTL$.extend(T, m1.Base);
 function T(){
 	m1.Base.call(this);
 }
+RTL$.extend(T, m1.Base);
 T.prototype.p = function(){
 	m1.Base.prototype.p.call(this);
 }

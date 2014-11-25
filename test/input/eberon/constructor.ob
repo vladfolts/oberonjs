@@ -1,0 +1,15 @@
+MODULE m;
+TYPE
+    T = RECORD
+    END;
+
+    Derived = RECORD(T)
+    END;
+
+PROCEDURE T();
+END;
+
+PROCEDURE Derived();
+END;
+
+END m.

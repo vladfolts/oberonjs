@@ -13,16 +13,16 @@ var RTL$ = {
 var m = function (){
 function Message(){
 }
-RTL$.extend(Derived1, Message);
 function Derived1(){
 	Message.call(this);
 	this.derivedField1 = false;
 }
-RTL$.extend(Derived2, Message);
+RTL$.extend(Derived1, Message);
 function Derived2(){
 	Message.call(this);
 	this.derivedField2 = false;
 }
+RTL$.extend(Derived2, Message);
 var d1 = new Derived1();
 var d2 = new Derived2();
 

@@ -138,7 +138,7 @@ END unresolved;
 
 PROCEDURE Type.close();
 BEGIN
-    FOR i <- 0 TO LEN(SELF.finalizers) - 1 DO
+    FOR i <- LEN(SELF.finalizers) - 1 TO 0 BY -1 DO
         finalizer <- SELF.finalizers[i];
         finalizer.proc(finalizer.closure);
     END;

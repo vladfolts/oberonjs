@@ -2,6 +2,7 @@
 
 var assert = require("rtl.js").assert;
 var Class = require("rtl.js").Class;
+var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var Grammar = require("grammar.js");
 var Test = require("test.js");
@@ -1431,13 +1432,46 @@ return {
     };
 }
 
+function makeCodeSuite(){
+    return {
+        "insertion": pass(
+            function(){
+                var g = CodeGenerator.makeGenerator();
+                g.write("a");
+                var i = g.makeInsertion();
+                g.write("b");
+                g.insert(i, "c");
+                assert(g.result() == "acb");
+            },
+            function(){
+                var g = CodeGenerator.makeGenerator();
+                g.write("ab");
+                var i1 = g.makeInsertion();
+                var i2 = g.makeInsertion();
+                g.write("cd");
+                g.insert(i1, "123");
+                g.insert(i2, "345");
+                assert(g.result() == "ab123345cd");
+            },
+            function(){
+                var g = CodeGenerator.makeGenerator();
+                g.write("ab");
+                var i = g.makeInsertion();
+                g.write("cd");
+                assert(g.result() == "abcd");
+            }
+        )
+    };
+}
+
 var result = Test.run({
     "common": {
         "oberon": makeSuiteForGrammar(oberon),
         "eberon": makeSuiteForGrammar(eberon)
     },
     "eberon": TestUnitEberon.suite,
-    "oberon": TestUnitOberon.suite
+    "oberon": TestUnitOberon.suite,
+    "code":   makeCodeSuite()
 });
 if (typeof process != "undefined")
     process.exit(result ? 0 : -1);

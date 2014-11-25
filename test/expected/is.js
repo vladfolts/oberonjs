@@ -9,16 +9,16 @@ var RTL$ = {
 var m = function (){
 function Base(){
 }
-RTL$.extend(Derived1, Base);
 function Derived1(){
 	Base.call(this);
 	this.field1 = 0;
 }
-RTL$.extend(Derived2, Derived1);
+RTL$.extend(Derived1, Base);
 function Derived2(){
 	Derived1.call(this);
 	this.field2 = 0;
 }
+RTL$.extend(Derived2, Derived1);
 var pb = null;
 var pd1 = null;
 var pd2 = null;

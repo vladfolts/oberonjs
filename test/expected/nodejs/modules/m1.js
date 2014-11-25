@@ -3,10 +3,10 @@ var ci = 123;
 function Base(){
 	this.i = 0;
 }
-RTL$.extend(T, Base);
 function T(){
 	Base.call(this);
 }
+RTL$.extend(T, Base);
 function TPA(){
 }
 var i = 0;

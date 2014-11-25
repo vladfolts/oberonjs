@@ -14,11 +14,11 @@ function p1(arg1/*INTEGER*/){
 	function T1(){
 		this.field1 = 0;
 	}
-	RTL$.extend(T2, T1);
 	function T2(){
 		T1.call(this);
 		this.field2 = false;
 	}
+	RTL$.extend(T2, T1);
 	var i = 0;var j = 0;
 	var b = false;
 	var t1 = new T1();

@@ -1,5 +1,6 @@
 MODULE Code;
 IMPORT 
+    CodeGenerator,
     JsMap, 
     Errors,
     Object, 
@@ -9,30 +10,8 @@ IMPORT
     Precedence := CodePrecedence, 
     String, 
     Types;
-CONST
-    kTab = 09X;
 
 TYPE
-    IGenerator = RECORD
-        PROCEDURE write(s: STRING);
-        PROCEDURE openScope();
-        PROCEDURE closeScope(ending: STRING);
-        PROCEDURE result(): STRING
-    END;
-
-    PIGenerator = POINTER TO IGenerator;
-
-    NullGenerator = RECORD(IGenerator)
-    END;
-
-    SimpleGenerator = RECORD(NullGenerator)
-        mResult: STRING
-    END;
-
-    Generator = RECORD(SimpleGenerator)
-        indent: INTEGER
-    END;
-
     RefCodeProc = PROCEDURE(s: STRING): STRING;
 
     Designator* = RECORD
@@ -104,75 +83,6 @@ TYPE
     Closure = RECORD(Object.Type)
         result: STRING
     END;
-
-VAR
-    nullGenerator*: NullGenerator;
-
-PROCEDURE NullGenerator.write(s: STRING);
-END NullGenerator.write;
-
-PROCEDURE NullGenerator.openScope();
-END NullGenerator.openScope;
-
-PROCEDURE NullGenerator.closeScope(ending: STRING);
-END NullGenerator.closeScope;
-
-PROCEDURE NullGenerator.result(): STRING;
-    RETURN ""
-END NullGenerator.result;
-
-PROCEDURE SimpleGenerator.write(s: STRING);
-BEGIN
-    SELF.mResult := SELF.mResult + s;
-END SimpleGenerator.write;
-
-PROCEDURE SimpleGenerator.result(): STRING;
-    RETURN SELF.mResult
-END SimpleGenerator.result;
-
-PROCEDURE putIndent(s: STRING; indent: INTEGER): STRING;
-BEGIN
-    result <- s;
-    FOR i <- 0 TO indent - 1 DO
-        result := result + kTab;
-    END;
-    RETURN result
-END putIndent;
-
-PROCEDURE Generator.write(s: STRING);
-VAR
-    pos: INTEGER;
-    index: INTEGER;
-BEGIN
-    index := String.indexOf(s, Stream.kCR);
-    WHILE index # -1 DO
-        INC(index);
-        SELF.mResult := SELF.mResult + String.substr(s, pos, index - pos);
-        SELF.mResult := putIndent(SELF.mResult, SELF.indent);
-        pos := index;
-        index := String.indexOfFrom(s, Stream.kCR, pos);
-    END;
-    SELF.mResult := SELF.mResult + String.substr(s, pos, LEN(s) - pos);
-END Generator.write;
-
-PROCEDURE Generator.openScope();
-BEGIN
-    INC(SELF.indent);
-    SELF.mResult := SELF.mResult + "{" + Stream.kCR;
-    SELF.mResult := putIndent(SELF.mResult, SELF.indent);
-END Generator.openScope;
-
-PROCEDURE Generator.closeScope(ending: STRING);
-BEGIN
-    DEC(SELF.indent);
-    SELF.mResult := String.substr(SELF.mResult, 0, LEN(SELF.mResult) - 1) + "}";
-    IF LEN(ending) # 0 THEN
-        SELF.write(ending);
-    ELSE
-        SELF.mResult := SELF.mResult + Stream.kCR;
-        SELF.mResult := putIndent(SELF.mResult, SELF.indent);
-    END;
-END Generator.closeScope;
 
 PROCEDURE Expression.code(): STRING;
     RETURN SELF.mCode
@@ -429,7 +339,7 @@ BEGIN
         IF LEN(closure.result) # 0 THEN
             closure.result := closure.result + "," + Stream.kCR;
         END;
-        closure.result := closure.result + kTab + s.id() + ": " + code;
+        closure.result := closure.result + CodeGenerator.kTab + s.id() + ": " + code;
     END;
 END genExports;
 
@@ -460,22 +370,6 @@ BEGIN
     result := result + closure.result + ");" + Stream.kCR;
     RETURN result
 END ModuleGenerator.epilog;
-
-PROCEDURE makeSimpleGenerator*(): PIGenerator;
-VAR
-    result: POINTER TO SimpleGenerator;
-BEGIN
-    NEW(result);
-    RETURN result
-END makeSimpleGenerator;
-
-PROCEDURE makeGenerator*(): PIGenerator;
-VAR
-    result: POINTER TO Generator;
-BEGIN
-    NEW(result);
-    RETURN result
-END makeGenerator;
 
 PROCEDURE makeModuleGenerator*(name: STRING; imports: JsMap.Strings): PModuleGenerator;
 VAR

@@ -3,6 +3,7 @@
 var Cast = require("js/Cast.js");
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
+var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var EberonDynamicArray= require("js/EberonDynamicArray.js");
 var EberonScope = require("js/EberonScope.js");
@@ -260,7 +261,7 @@ var InPlaceVariableInit = Context.Chained.extend({
         this._symbol = undefined;
         this._code = undefined;
     },
-    codeGenerator: function(){return Code.nullGenerator();},
+    codeGenerator: function(){return CodeGenerator.nullGenerator();},
     handleIdent: function(id){
         this.__id = id;
     },
@@ -337,7 +338,7 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
     handleExpression: function(e){
         this.__right = e;
     },
-    codeGenerator: function(){return Code.nullGenerator();},
+    codeGenerator: function(){return CodeGenerator.nullGenerator();},
     endParse: function(){
         var d = this.__left;
         var type = d.type();
@@ -402,6 +403,7 @@ var RecordType = Class.extend.call(Type.Record, {
         this.__declaredAsVariable = false;
         this.__lazyDefinitions = {};
         this.__nonExportedMethods = [];
+        this.__inheritanceCode = undefined;
     },
     initializer: function(context, forNew){
         if (this.__finalized){
@@ -417,6 +419,7 @@ var RecordType = Class.extend.call(Type.Record, {
 
         return Type.Record.prototype.initializer.call(this, context);
     },
+    customConstructor: function(){return this.__customConstructor;},
     findSymbol: function(id){
         var result = this.__hasMethodDeclaration(id);
         if (!result)
@@ -445,12 +448,16 @@ var RecordType = Class.extend.call(Type.Record, {
         if (!methodId.exported())
             this.__nonExportedMethods.push(id);
     },
+    setInheritanceCode: function(code){
+        this.__inheritanceCode = code;
+    },
     defineConstructor: function(type){
         if (this.__customConstructor)
             throw new Errors.Error("constructor '" + Type.typeName(this) + "' already defined");
         if (type.result())
             throw new Errors.Error("constructor '" + Type.typeName(this) + "' cannot have result type specified");
         this.__customConstructor = type;
+        return this.__inheritanceCode;
     },
     defineMethod: function(methodId, type){
         var base = Type.recordBase(this);
@@ -636,6 +643,17 @@ var RecordDecl = Context.RecordDecl.extend({
     },
     _makeField: function(field, type){
         return new RecordField(field, type, this.__type);
+    },
+    endParse: function(){
+        var gen = this.codeGenerator();
+        var pos = gen.makeInsertion();
+        var type = this.type();
+        var inheritanceCode = this._generateInheritance();
+        type.setInheritanceCode(inheritanceCode);
+        this.currentScope().addFinalizer(function(){
+            if (!this.__type.customConstructor())
+                gen.insert(pos, this._generateConstructor() + inheritanceCode);
+        }.bind(this));
     }
 });
 
@@ -701,7 +719,8 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     },
     _prolog: function(){
         return this.__boundType
-            ? Type.typeName(this.__boundType) + ".prototype." + this.__methodId.id() + " = function("
+            ? this.__isConstructor ? "function " + Type.typeName(this.__boundType) + "("
+                                   : Type.typeName(this.__boundType) + ".prototype." + this.__methodId.id() + " = function("
             : Context.ProcDecl.prototype._prolog.call(this);
     },
     _makeArgumentVariable: function(arg){
@@ -738,6 +757,8 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             this.__endingId = id;
     },
     endParse: function(){
+        Context.ProcDecl.prototype.endParse.call(this);
+
         if (this.__boundType){
             if (this.__endingId){
                 var expected 
@@ -754,11 +775,11 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             }
 
             if (this.__isConstructor)
-                this.__boundType.defineConstructor(this.__methodType);
+                this.codeGenerator().write(
+                    this.__boundType.defineConstructor(this.__methodType));
             else
                 this.__boundType.defineMethod(this.__methodId, this.__methodType);
         }
-        Context.ProcDecl.prototype.endParse.call(this);
     },
     __handleSuperCall: function(){
         if (!this.__methodId)

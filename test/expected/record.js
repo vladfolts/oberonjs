@@ -44,11 +44,11 @@ var RTL$ = {
 var m = function (){
 function Base1(){
 }
-RTL$.extend(T1, Base1);
 function T1(){
 	Base1.call(this);
 	this.i = 0;
 }
+RTL$.extend(T1, Base1);
 function RecordWithInnerRecord(){
 	this.$r = new T1();
 }

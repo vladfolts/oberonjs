@@ -57,16 +57,16 @@ var ci = 123;
 function Base(){
 	this.i = 0;
 }
-RTL$.extend(T, Base);
 function T(){
 	Base.call(this);
 }
+RTL$.extend(T, Base);
 function TPA(){
 }
-RTL$.extend(TPB, Base);
 function TPB(){
 	Base.call(this);
 }
+RTL$.extend(TPB, Base);
 var i = 0;
 function anonymous$1(){
 	this.i = 0;
@@ -104,11 +104,11 @@ return {
 }
 }();
 var m2 = function (m1){
-RTL$.extend(T, m1.T);
 function T(){
 	m1.T.call(this);
 	this.i2 = 0;
 }
+RTL$.extend(T, m1.T);
 var r = new m1.T();
 var r2 = new T();
 var pb = null;
@@ -134,10 +134,10 @@ p(m1.ci);
 ref(RTL$.makeRef(m1.pr2(), "i"));
 }(m1);
 var m3 = function (m1, m2){
-RTL$.extend(T, m2.T);
 function T(){
 	m2.T.call(this);
 }
+RTL$.extend(T, m2.T);
 var r = new m2.T();
 var r2 = new T();
 var a = RTL$.makeArray(3, function(){return new m2.Base();});

@@ -1,0 +1,164 @@
+MODULE CodeGenerator;
+IMPORT
+    Stream, String;
+CONST
+    kTab* = 09X;
+TYPE
+    IGenerator = RECORD
+        PROCEDURE write(s: STRING);
+        PROCEDURE openScope();
+        PROCEDURE closeScope(ending: STRING);
+        PROCEDURE result(): STRING;
+
+        PROCEDURE makeInsertion(): INTEGER;
+        PROCEDURE insert(insertion: INTEGER; code: STRING);
+    END;
+
+    PIGenerator = POINTER TO IGenerator;
+
+    NullGenerator = RECORD(IGenerator)
+    END;
+
+    SimpleGenerator = RECORD(NullGenerator)
+        mResult: STRING
+    END;
+
+    Insertion = RECORD
+        pos: INTEGER;
+        indent: INTEGER;
+        code: STRING;
+    END;
+
+    Generator = RECORD(SimpleGenerator)
+        indent: INTEGER;
+        insertions: ARRAY * OF Insertion;
+    END;
+
+VAR
+    nullGenerator*: NullGenerator;
+
+PROCEDURE NullGenerator.write(s: STRING);
+END NullGenerator.write;
+
+PROCEDURE NullGenerator.openScope();
+END NullGenerator.openScope;
+
+PROCEDURE NullGenerator.closeScope(ending: STRING);
+END NullGenerator.closeScope;
+
+PROCEDURE NullGenerator.makeInsertion(): INTEGER;
+    RETURN 0;
+END;
+
+PROCEDURE NullGenerator.insert(insertion: INTEGER; code: STRING);
+END;
+
+PROCEDURE NullGenerator.result(): STRING;
+    RETURN "";
+END NullGenerator.result;
+
+PROCEDURE SimpleGenerator.write(s: STRING);
+BEGIN
+    SELF.mResult := SELF.mResult + s;
+END SimpleGenerator.write;
+
+PROCEDURE SimpleGenerator.result(): STRING;
+    RETURN SELF.mResult
+END SimpleGenerator.result;
+
+PROCEDURE makeIndent(count: INTEGER): STRING;
+VAR
+    result: STRING;
+BEGIN
+    FOR i <- 0 TO count - 1 DO
+        result := result + kTab;
+    END;
+    RETURN result
+END;
+
+PROCEDURE indentText(s: STRING; indent: INTEGER): STRING;
+VAR
+    result: STRING;
+BEGIN
+    index <- String.indexOf(s, Stream.kCR);
+    pos <- 0;
+    WHILE index # -1 DO
+        INC(index);
+        result := result + String.substr(s, pos, index - pos) + makeIndent(indent);
+        pos := index;
+        index := String.indexOfFrom(s, Stream.kCR, pos);
+    END;
+    RETURN result + String.substr(s, pos, LEN(s) - pos);
+END;
+
+PROCEDURE Generator.write(s: STRING);
+BEGIN
+    SELF.mResult := SELF.mResult + indentText(s, SELF.indent);
+END;
+
+PROCEDURE Generator.openScope();
+BEGIN
+    INC(SELF.indent);
+    SELF.mResult := SELF.mResult + "{" + Stream.kCR + makeIndent(SELF.indent);
+END Generator.openScope;
+
+PROCEDURE Generator.closeScope(ending: STRING);
+BEGIN
+    DEC(SELF.indent);
+    SELF.mResult := String.substr(SELF.mResult, 0, LEN(SELF.mResult) - 1) + "}";
+    IF LEN(ending) # 0 THEN
+        SELF.write(ending);
+    ELSE
+        SELF.mResult := SELF.mResult + Stream.kCR + makeIndent(SELF.indent);
+    END;
+END Generator.closeScope;
+
+PROCEDURE Generator.makeInsertion(): INTEGER;
+VAR
+    insertion: Insertion;
+BEGIN
+    insertion.pos := LEN(SELF.mResult);
+    insertion.indent := SELF.indent;
+    result <- LEN(SELF.insertions);
+    SELF.insertions.add(insertion);
+    RETURN result;
+END;
+
+PROCEDURE Generator.insert(insertion: INTEGER; code: STRING);
+BEGIN
+    SELF.insertions[insertion].code := code;
+END;
+
+PROCEDURE Generator.result(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    pos <- 0;
+    FOR i <- 0 TO LEN(SELF.insertions) - 1 DO
+        nextPos <- SELF.insertions[i].pos;
+        result := result 
+                + String.substr(SELF.mResult, pos, nextPos - pos) 
+                + indentText(SELF.insertions[i].code, SELF.insertions[i].indent);
+        pos := nextPos;
+    END;
+    result := result + String.substr(SELF.mResult, pos, LEN(SELF.mResult) - pos);
+    RETURN result
+END Generator.result;
+
+PROCEDURE makeSimpleGenerator*(): PIGenerator;
+VAR
+    result: POINTER TO SimpleGenerator;
+BEGIN
+    NEW(result);
+    RETURN result
+END makeSimpleGenerator;
+
+PROCEDURE makeGenerator*(): PIGenerator;
+VAR
+    result: POINTER TO Generator;
+BEGIN
+    NEW(result);
+    RETURN result
+END makeGenerator;
+
+END CodeGenerator.

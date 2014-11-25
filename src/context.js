@@ -2,6 +2,7 @@
 
 var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
+var CodeGenerator = require("js/CodeGenerator.js");
 var Errors = require("js/Errors.js");
 var Module = require("js/Module.js");
 var op = require("js/Operator.js");
@@ -13,7 +14,7 @@ var Symbol = require("js/Symbols.js");
 var Type = require("js/Types.js");
 
 var basicTypes = Type.basic();
-var nullCodeGenerator = Code.nullGenerator();
+var nullCodeGenerator = CodeGenerator.nullGenerator();
 var nilType = Type.nil();
 
 var castOperations = op.castOperations();
@@ -1167,7 +1168,7 @@ exports.SetElement = ChainedContext.extend({
         this.__fromValue = undefined;
         this.__to = undefined;
         this.__toValue = undefined;
-        this.__expr = Code.makeSimpleGenerator();
+        this.__expr = CodeGenerator.makeSimpleGenerator();
     },
     codeGenerator: function(){return this.__expr;},
     handleExpression: function(e){
@@ -1176,7 +1177,7 @@ exports.SetElement = ChainedContext.extend({
             {
             this.__from = this.__expr.result();
             this.__fromValue = value;
-            this.__expr = Code.makeSimpleGenerator();
+            this.__expr = CodeGenerator.makeSimpleGenerator();
             }
         else{
             this.__to = this.__expr.result();
@@ -1491,7 +1492,7 @@ exports.For = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.__var = undefined;
         this.__initExprParsed = false;
-        this.__toExpr = Code.makeSimpleGenerator();
+        this.__toExpr = CodeGenerator.makeSimpleGenerator();
         this.__toParsed = false;
         this.__by_parsed = false;
         this.__by = undefined;
@@ -1757,16 +1758,19 @@ exports.RecordDecl = ChainedContext.extend({
             throw new Errors.Error("recursive inheritance: '"
                 + Type.typeName(this.__type) + "'");
 
-        var gen = this.codeGenerator();
-        var qualifiedBase = this.qualifyScope(Type.recordScope(type)) + Type.typeName(type); 
-        gen.write(this.language().rtl.extend(this.__cons, qualifiedBase) + ";\n");
-
         Type.setRecordBase(this.__type, type);
     },
     endParse: function(){
+        var gen = this.codeGenerator();
+        this.codeGenerator().write(
+              this._generateConstructor()
+            + this._generateInheritance()
+            );
+    },
+    _generateConstructor: function(){
         var type = this.__type;
         var baseType = Type.recordBase(type);
-        var gen = this.codeGenerator();
+        var gen = CodeGenerator.makeGenerator();
         var qualifiedBase = baseType ? this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType) : undefined; 
         gen.write("function " + this.__cons + "()");
         gen.openScope();
@@ -1777,8 +1781,15 @@ exports.RecordDecl = ChainedContext.extend({
             var fieldType = ownFields[f].type();
             gen.write("this." + mangleField(f, fieldType) + " = " + fieldType.initializer(this) + ";\n");
         }
-
         gen.closeScope("");
+        return gen.result();
+    },
+    _generateInheritance: function(){
+        var base = Type.recordBase(this.__type);
+        if (!base)
+            return "";
+        var qualifiedBase = this.qualifyScope(Type.recordScope(base)) + Type.typeName(base); 
+        return this.language().rtl.extend(this.__cons, qualifiedBase) + ";\n";
     },
     _makeField: function(field, type){
         return new RecordField(field, type);

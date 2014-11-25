@@ -2,6 +2,7 @@
 
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
+var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var oc = require("oc.js");
@@ -30,7 +31,7 @@ var TestContext = Context.Context.extend({
     init: function TestContext(language){
         Context.Context.prototype.init.call(
                 this,
-                { codeGenerator: Code.nullGenerator(),
+                { codeGenerator: CodeGenerator.nullGenerator(),
                   moduleGenerator: function(){return new TestModuleGenerator();},
                   rtl: new RTL(),
                   types: language.types,
