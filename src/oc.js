@@ -2,7 +2,6 @@
 
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
-var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var Lexer = require("js/Lexer.js");
@@ -129,7 +128,7 @@ function compile(text, language, handleErrors){
             language.grammar,
             function(moduleResolver){
                 return new Context.Context(
-                    { codeGenerator: CodeGenerator.makeGenerator(),
+                    { codeGenerator: language.codeGenerator.make(),
                       moduleGenerator: moduleCode,
                       rtl: rtl,
                       types: language.types,

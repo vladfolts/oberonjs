@@ -1,6 +1,7 @@
 "use strict";
 
 var Cast = require("js/Cast.js");
+var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var Grammar = require("grammar.js");
 var ObContext = require("oberon/oberon_context.js");
@@ -113,6 +114,10 @@ exports.language = {
         implicitCast: Cast.implicit,
         makeStaticArray: Types.makeStaticArray,
         makeOpenArray: Types.makeOpenArray
+    },
+    codeGenerator: {
+        make: CodeGenerator.makeGenerator,
+        nil: CodeGenerator.nullGenerator()
     }
 };
 

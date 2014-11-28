@@ -4,14 +4,11 @@ IMPORT
 CONST
     kTab* = 09X;
 TYPE
-    IGenerator = RECORD
-        PROCEDURE write(s: STRING);
-        PROCEDURE openScope();
-        PROCEDURE closeScope(ending: STRING);
-        PROCEDURE result(): STRING;
-
-        PROCEDURE makeInsertion(): INTEGER;
-        PROCEDURE insert(insertion: INTEGER; code: STRING);
+    IGenerator* = RECORD
+        PROCEDURE write*(s: STRING);
+        PROCEDURE openScope*();
+        PROCEDURE closeScope*(ending: STRING);
+        PROCEDURE result*(): STRING;
     END;
 
     PIGenerator = POINTER TO IGenerator;
@@ -23,48 +20,36 @@ TYPE
         mResult: STRING
     END;
 
-    Insertion = RECORD
-        pos: INTEGER;
-        indent: INTEGER;
-        code: STRING;
+    Indent* = RECORD
+        indent*: INTEGER;
+        result*: STRING;
     END;
 
-    Generator = RECORD(SimpleGenerator)
-        indent: INTEGER;
-        insertions: ARRAY * OF Insertion;
+    Generator = RECORD(IGenerator)
+        indent: Indent;
     END;
 
 VAR
     nullGenerator*: NullGenerator;
 
-PROCEDURE NullGenerator.write(s: STRING);
-END NullGenerator.write;
+PROCEDURE NullGenerator.write(s: STRING); END;
 
-PROCEDURE NullGenerator.openScope();
-END NullGenerator.openScope;
+PROCEDURE NullGenerator.openScope(); END;
 
-PROCEDURE NullGenerator.closeScope(ending: STRING);
-END NullGenerator.closeScope;
-
-PROCEDURE NullGenerator.makeInsertion(): INTEGER;
-    RETURN 0;
-END;
-
-PROCEDURE NullGenerator.insert(insertion: INTEGER; code: STRING);
-END;
+PROCEDURE NullGenerator.closeScope(ending: STRING); END;
 
 PROCEDURE NullGenerator.result(): STRING;
     RETURN "";
-END NullGenerator.result;
+END;
 
 PROCEDURE SimpleGenerator.write(s: STRING);
 BEGIN
     SELF.mResult := SELF.mResult + s;
-END SimpleGenerator.write;
+END;
 
 PROCEDURE SimpleGenerator.result(): STRING;
     RETURN SELF.mResult
-END SimpleGenerator.result;
+END;
 
 PROCEDURE makeIndent(count: INTEGER): STRING;
 VAR
@@ -76,7 +61,7 @@ BEGIN
     RETURN result
 END;
 
-PROCEDURE indentText(s: STRING; indent: INTEGER): STRING;
+PROCEDURE indentText*(s: STRING; indent: INTEGER): STRING;
 VAR
     result: STRING;
 BEGIN
@@ -91,59 +76,46 @@ BEGIN
     RETURN result + String.substr(s, pos, LEN(s) - pos);
 END;
 
+PROCEDURE addIndentedText*(s: STRING; VAR indent: Indent);
+BEGIN
+    indent.result := indent.result + indentText(s, indent.indent);
+END;
+
+PROCEDURE openScope*(VAR indent: Indent);
+BEGIN
+    INC(indent.indent);
+    indent.result := indent.result + "{" + Stream.kCR + makeIndent(indent.indent);
+END;
+
+PROCEDURE closeScope*(ending: STRING; VAR indent: Indent);
+BEGIN
+    DEC(indent.indent);
+    indent.result := String.substr(indent.result, 0, LEN(indent.result) - 1) + "}";
+    IF LEN(ending) # 0 THEN
+        addIndentedText(ending, indent);
+    ELSE
+        indent.result := indent.result + Stream.kCR + makeIndent(indent.indent);
+    END;
+END;
+
 PROCEDURE Generator.write(s: STRING);
 BEGIN
-    SELF.mResult := SELF.mResult + indentText(s, SELF.indent);
+    addIndentedText(s, SELF.indent);
 END;
 
 PROCEDURE Generator.openScope();
 BEGIN
-    INC(SELF.indent);
-    SELF.mResult := SELF.mResult + "{" + Stream.kCR + makeIndent(SELF.indent);
-END Generator.openScope;
+    openScope(SELF.indent);
+END;
 
 PROCEDURE Generator.closeScope(ending: STRING);
 BEGIN
-    DEC(SELF.indent);
-    SELF.mResult := String.substr(SELF.mResult, 0, LEN(SELF.mResult) - 1) + "}";
-    IF LEN(ending) # 0 THEN
-        SELF.write(ending);
-    ELSE
-        SELF.mResult := SELF.mResult + Stream.kCR + makeIndent(SELF.indent);
-    END;
-END Generator.closeScope;
-
-PROCEDURE Generator.makeInsertion(): INTEGER;
-VAR
-    insertion: Insertion;
-BEGIN
-    insertion.pos := LEN(SELF.mResult);
-    insertion.indent := SELF.indent;
-    result <- LEN(SELF.insertions);
-    SELF.insertions.add(insertion);
-    RETURN result;
-END;
-
-PROCEDURE Generator.insert(insertion: INTEGER; code: STRING);
-BEGIN
-    SELF.insertions[insertion].code := code;
+    closeScope(ending, SELF.indent);
 END;
 
 PROCEDURE Generator.result(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    pos <- 0;
-    FOR i <- 0 TO LEN(SELF.insertions) - 1 DO
-        nextPos <- SELF.insertions[i].pos;
-        result := result 
-                + String.substr(SELF.mResult, pos, nextPos - pos) 
-                + indentText(SELF.insertions[i].code, SELF.insertions[i].indent);
-        pos := nextPos;
-    END;
-    result := result + String.substr(SELF.mResult, pos, LEN(SELF.mResult) - pos);
-    RETURN result
-END Generator.result;
+    RETURN SELF.indent.result
+END;
 
 PROCEDURE makeSimpleGenerator*(): PIGenerator;
 VAR
@@ -159,6 +131,6 @@ VAR
 BEGIN
     NEW(result);
     RETURN result
-END makeGenerator;
+END;
 
 END CodeGenerator.

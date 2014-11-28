@@ -3,6 +3,7 @@
 var Cast = require("js/EberonCast.js");
 var Context = require("context.js");
 var EbArray = require("js/EberonArray.js");
+var EbCodeGenerator = require("js/EberonCodeGenerator.js");
 var EbContext = require("eberon/eberon_context.js");
 var Grammar = require("grammar.js");
 var Parser = require("parser.js");
@@ -135,5 +136,9 @@ exports.language = {
         implicitCast: Cast.implicit,
         makeStaticArray: EbArray.makeStaticArray,
         makeOpenArray: EbArray.makeOpenArray
+    },
+    codeGenerator: {
+        make: EbCodeGenerator.makeGenerator,
+        nil: EbCodeGenerator.nullGenerator()
     }
 };

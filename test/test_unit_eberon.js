@@ -1,6 +1,7 @@
 "use strict";
 
 var Class = require("rtl.js").Class;
+var EberonCodeGenerator = require("js/EberonCodeGenerator.js");
 var language = require("eberon/eberon_grammar.js").language;
 var TestUnitCommon = require("test_unit_common.js");
 var TypePromotion = require("eberon/eberon_type_promotion.js");
@@ -75,7 +76,40 @@ var TestVar = Class.extend({
     setType: function(type){this.__type = type;}
 });
 
+function makeCodeSuite(){
+    return {
+        "insertion": pass(
+            function(){
+                var g = EberonCodeGenerator.makeGenerator();
+                g.write("a");
+                var i = g.makeInsertion();
+                g.write("b");
+                g.insert(i, "c");
+                assert(g.result() == "acb");
+            },
+            function(){
+                var g = EberonCodeGenerator.makeGenerator();
+                g.write("ab");
+                var i1 = g.makeInsertion();
+                var i2 = g.makeInsertion();
+                g.write("cd");
+                g.insert(i1, "123");
+                g.insert(i2, "345");
+                assert(g.result() == "ab123345cd");
+            },
+            function(){
+                var g = EberonCodeGenerator.makeGenerator();
+                g.write("ab");
+                var i = g.makeInsertion();
+                g.write("cd");
+                assert(g.result() == "abcd");
+            }
+        )
+    };
+}
+
 exports.suite = {
+"code": makeCodeSuite(),
 "arithmetic operators": testWithContext(
     context(grammar.statement, "VAR b1: BOOLEAN;"),
     pass(),
