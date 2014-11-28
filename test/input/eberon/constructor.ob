@@ -6,10 +6,23 @@ TYPE
     Derived = RECORD(T)
     END;
 
+    RecordWithField = RECORD
+        i: INTEGER;
+    END;
+
+    RecordWithFieldDerived = RECORD(T)
+    END;
+
 PROCEDURE T();
 END;
 
 PROCEDURE Derived();
+END;
+
+PROCEDURE RecordWithField();
+END;
+
+PROCEDURE RecordWithFieldDerived();
 END;
 
 END m.

@@ -10,6 +10,14 @@ var m = function (){
 function T(){
 }
 function Derived(){
+	T.call(this);
 }
 RTL$.extend(Derived, T);
+function RecordWithField(){
+	this.i = 0;
+}
+function RecordWithFieldDerived(){
+	T.call(this);
+}
+RTL$.extend(RecordWithFieldDerived, T);
 }();

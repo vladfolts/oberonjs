@@ -448,9 +448,11 @@ var RecordType = Class.extend.call(Type.Record, {
         if (!methodId.exported())
             this.__nonExportedMethods.push(id);
     },
-    setInheritanceCode: function(code){
-        this.__inheritanceCode = code;
+    setRecordInitializationCode: function(fieldsInitializationCode, inheritanceCode){
+        this.__fieldsInitializationCode = fieldsInitializationCode;
+        this.__inheritanceCode = inheritanceCode;
     },
+    fieldsInitializationCode: function(){return this.__fieldsInitializationCode;},
     defineConstructor: function(type){
         if (this.__customConstructor)
             throw new Errors.Error("constructor '" + Type.typeName(this) + "' already defined");
@@ -649,7 +651,9 @@ var RecordDecl = Context.RecordDecl.extend({
         var pos = gen.makeInsertion();
         var type = this.type();
         var inheritanceCode = this._generateInheritance();
-        type.setInheritanceCode(inheritanceCode);
+        type.setRecordInitializationCode(
+            this._generateFieldsInitializationCode(), 
+            inheritanceCode);
         this.currentScope().addFinalizer(function(){
             if (!this.__type.customConstructor())
                 gen.insert(pos, this._generateConstructor() + inheritanceCode);
@@ -723,6 +727,11 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                                    : Type.typeName(this.__boundType) + ".prototype." + this.__methodId.id() + " = function("
             : Context.ProcDecl.prototype._prolog.call(this);
     },
+    _beginBody: function(){
+        Context.ProcDecl.prototype._beginBody.call(this);
+        if (this.__isConstructor)
+            this.codeGenerator().write(this.__boundType.fieldsInitializationCode());
+    },
     _makeArgumentVariable: function(arg){
         if (!arg.isVar)
             return new TypeNarrowVariable(arg.type, false, true);
@@ -743,14 +752,6 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     handleIdent: function(id){
         if (!this.__boundType)
             Context.ProcDecl.prototype.handleIdent.call(this, id);
-        /*else if (!this.__endingId){
-            if (!this.__isConstructor || id != Type.typeName(this.__boundType))
-                this.__endingId = id;
-        }
-        else if (this.__endingId == Type.typeName(this.__boundType)
-                && id == this.__id.id())
-            this.__endingId = undefined;
-        */
         else if (this.__endingId)
             this.__endingId = this.__endingId + "." + id;
         else

@@ -590,7 +590,12 @@ exports.ProcDecl = ChainedContext.extend({
             throw new Errors.Error("mismatched procedure names: '" + this.__id.id()
                                  + "' at the begining and '" + id + "' at the end");
     },
-    _prolog: function(){return "\nfunction " + this.__id.id() + "(";},
+    _prolog: function(){
+        return "\nfunction " + this.__id.id() + "(";
+    },
+    _beginBody: function(){
+        this.codeGenerator().openScope();
+    },
     typeName: function(){return undefined;},
     setType: function(type){
         var procSymbol = Symbol.makeSymbol(
@@ -621,10 +626,9 @@ exports.ProcDecl = ChainedContext.extend({
     },
     handleMessage: function(msg){
         if (msg == endParametersMsg){
-            var code = this.codeGenerator();
-            code.write(")");
-            code.openScope();
-            return undefined;
+            this.codeGenerator().write(")");
+            this._beginBody();
+            return;
         }
         if (msg instanceof AddArgumentMsg)
             return this.__addArgument(msg.name, msg.arg);
@@ -1768,21 +1772,26 @@ exports.RecordDecl = ChainedContext.extend({
             );
     },
     _generateConstructor: function(){
-        var type = this.__type;
-        var baseType = Type.recordBase(type);
         var gen = CodeGenerator.makeGenerator();
-        var qualifiedBase = baseType ? this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType) : undefined; 
         gen.write("function " + this.__cons + "()");
         gen.openScope();
+        gen.write(this._generateFieldsInitializationCode());
+        gen.closeScope("");
+        return gen.result();
+    },
+    _generateFieldsInitializationCode: function(){
+        var type = this.__type;
+        var baseType = Type.recordBase(type);
+        var qualifiedBase = baseType ? this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType) : undefined; 
+        var result = "";
         if (baseType)
-            gen.write(qualifiedBase + ".call(this);\n");
+            result += qualifiedBase + ".call(this);\n";
         var ownFields = Type.recordOwnFields(type);
         for(var f in ownFields){
             var fieldType = ownFields[f].type();
-            gen.write("this." + mangleField(f, fieldType) + " = " + fieldType.initializer(this) + ";\n");
+            result += "this." + mangleField(f, fieldType) + " = " + fieldType.initializer(this) + ";\n";
         }
-        gen.closeScope("");
-        return gen.result();
+        return result;
     },
     _generateInheritance: function(){
         var base = Type.recordBase(this.__type);
