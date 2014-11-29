@@ -213,6 +213,8 @@ return {
     fail(["i^", "POINTER TO type expected, got 'INTEGER'"],
          ["r^", "POINTER TO type expected, got 'anonymous RECORD'"],
          ["p.unknown := 0", "type 'anonymous RECORD' has no 'unknown' field"],
+         ["pt.constructor := 0", "type 'PT' has no 'constructor' field"], // "constructor" is JS predefined property
+         ["pt.prototype := 0", "type 'PT' has no 'prototype' field"], // "prototype" is JS predefined property
          ["pt.unknown := 0", "type 'PT' has no 'unknown' field"])
     ),
 "POINTER assignment": testWithContext(

@@ -12,11 +12,17 @@ TYPE
         aRecords: ARRAY 3 OF T1;
         aPointers: ARRAY 3 OF POINTER TO T1
     END;
+
+    RecordWithMangledFields = RECORD
+        constructor: INTEGER;
+        prototype: BOOLEAN
+    END;
 VAR
 	b1: Base1;
 	r1: T1;
     recordWithInnerRecord: RecordWithInnerRecord;
     recordWithInnerArray: RecordWithInnerArray;
+    recordWithMangledFields: RecordWithMangledFields;
 
 PROCEDURE p1(r: T1);
 END p1;
@@ -42,4 +48,7 @@ BEGIN
     recordWithInnerArray.aInts[0] := 123;
     recordWithInnerArray.aRecords[0].i := 123;
     recordWithInnerArray.aPointers[0].i := 123;
+
+    ASSERT(recordWithMangledFields.constructor = 0);
+    ASSERT(~recordWithMangledFields.prototype);
 END m.

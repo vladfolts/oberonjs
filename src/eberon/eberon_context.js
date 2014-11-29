@@ -599,10 +599,9 @@ var RecordType = Class.extend.call(Type.Record, {
     },
     __hasMethodDeclaration: function(id){
         var type = this;
-        var result;
-        while (type && !(result = type.__declaredMethods[id]))
+        while (type && !type.__declaredMethods.hasOwnProperty(id))
             type = Type.recordBase(type);
-        return result;
+        return type && type.__declaredMethods[id];
     },
     __hasMethodDefinition: function(id){
         var type = this;

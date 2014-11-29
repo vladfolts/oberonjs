@@ -39,6 +39,10 @@ var RTL$ = {
     makeRef: function (obj, prop){
         return {set: function(v){ obj[prop] = v; },
                 get: function(){ return obj[prop]; }};
+    },
+    assert: function (condition){
+        if (!condition)
+            throw new Error("assertion failed");
     }
 };
 var m = function (){
@@ -57,10 +61,15 @@ function RecordWithInnerArray(){
 	this.$aRecords = RTL$.makeArray(3, function(){return new T1();});
 	this.aPointers = RTL$.makeArray(3, null);
 }
+function RecordWithMangledFields(){
+	this.constructor$ = 0;
+	this.prototype$ = false;
+}
 var b1 = new Base1();
 var r1 = new T1();
 var recordWithInnerRecord = new RecordWithInnerRecord();
 var recordWithInnerArray = new RecordWithInnerArray();
+var recordWithMangledFields = new RecordWithMangledFields();
 
 function p1(r/*T1*/){
 }
@@ -81,4 +90,6 @@ byRef(RTL$.makeRef(recordWithInnerRecord.$r, "i"));
 recordWithInnerArray.aInts[0] = 123;
 recordWithInnerArray.$aRecords[0].i = 123;
 recordWithInnerArray.aPointers[0].i = 123;
+RTL$.assert(recordWithMangledFields.constructor$ == 0);
+RTL$.assert(!recordWithMangledFields.prototype$);
 }();

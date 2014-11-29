@@ -27,7 +27,7 @@ PROCEDURE find*(m: Type; s: STRING; VAR r: Object.PType): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN
-    JS.do("var value = m[s]; if (value !== undefined){result = true; r.set(value);}");
+    JS.do("if (m.hasOwnProperty(s)){result = true; r.set(m[s]);}");
     RETURN result
 END find;
 

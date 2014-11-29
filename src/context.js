@@ -302,8 +302,11 @@ function castCode(type, context){
 function mangleField(id, type){
     if (Type.isScalar(type) 
         || (type instanceof Type.Array 
-            && Type.isScalar(Type.arrayBaseElementsType(type))))
+            && Type.isScalar(Type.arrayBaseElementsType(type)))){
+        if (id == "constructor" || id == "prototype")
+            return id + "$";
         return id;
+    }
 
     return "$" + id;
 }
