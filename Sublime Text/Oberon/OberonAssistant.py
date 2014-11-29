@@ -4,7 +4,7 @@ class OberonAssistant(sublime_plugin.EventListener):
 	rs = {}
 	inProcess = False
 
-	keywords = ['ARRAY', 'IMPORT', 'THEN', 'BEGIN', 'IN', 'TO', 'BY', 'IS', 'TRUE', 'CASE', 'MOD', 'TYPE', 'CONST', 'MODULE', 'UNTIL', 'DIV', 'NIL', 'VAR', 'DO', 'OF', 'WHILE', 'ELSE', 'OR', 'ELSIF', 'POINTER', 'END', 'PROCEDURE', 'FALSE', 'RECORD', 'FOR', 'REPEAT', 'IF', 'RETURN', 'ABS', 'ASR', 'ASSERT', 'BOOLEAN', 'BYTE', 'CHAR', 'CHR', 'DEC', 'EXCL', 'FLOOR', 'FLT', 'INC', 'INCL', 'INTEGER', 'LEN', 'LSL', 'NEW', 'ODD', 'ORD', 'PACK', 'REAL', 'ROR', 'SET', 'UNPK']
+	keywords = ['ARRAY', 'IMPORT', 'THEN', 'BEGIN', 'IN', 'TO', 'BY', 'IS', 'TRUE', 'CASE', 'MOD', 'TYPE', 'CONST', 'MODULE', 'UNTIL', 'DIV', 'NIL', 'VAR', 'DO', 'OF', 'WHILE', 'ELSE', 'OR', 'ELSIF', 'POINTER', 'END', 'PROCEDURE', 'FALSE', 'RECORD', 'FOR', 'REPEAT', 'IF', 'RETURN', 'ABS', 'ASR', 'ASSERT', 'BOOLEAN', 'BYTE', 'CHAR', 'CHR', 'DEC', 'EXCL', 'FLOOR', 'FLT', 'INC', 'INCL', 'INTEGER', 'LEN', 'LSL', 'NEW', 'ODD', 'ORD', 'PACK', 'REAL', 'ROR', 'SELF', 'SET', 'STRING', 'SUPER', 'UNPK']
 
 	def on_modified(self,view):
 		if len(view.sel())==1 and not self.inProcess:

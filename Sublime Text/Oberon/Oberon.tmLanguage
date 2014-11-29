@@ -27,7 +27,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>\b(IMPORT|BEGIN|TYPE|CONST|MODULE|VAR|PROCEDURE|END)\b</string>
+			<string>\b(IMPORT|BEGIN|TYPE|CONST|MODULE|VAR|PROCEDURE|SELF|SUPER|END)\b</string>
 			<key>name</key>
 			<string>keyword.other.oberon</string>
 		</dict>
@@ -51,7 +51,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>\b(CHAR|REAL|BYTE|INTEGER|SET|BOOLEAN)\b</string>
+			<string>\b(CHAR|REAL|BYTE|INTEGER|SET|STRING|BOOLEAN)\b</string>
 			<key>name</key>
 			<string>support.type.oberon</string>
 		</dict>
