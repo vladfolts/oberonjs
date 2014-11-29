@@ -20,4 +20,10 @@ function RecordWithFieldDerived(){
 	T.call(this);
 }
 RTL$.extend(RecordWithFieldDerived, T);
+
+function passAsArgument(o/*T*/){
+}
+passAsArgument(new T());
+var r = new T();
+var i = new RecordWithField().i;
 }();

@@ -5,6 +5,7 @@ var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var EberonConstructor= require("js/EberonConstructor.js");
 var EberonDynamicArray= require("js/EberonDynamicArray.js");
 var EberonScope = require("js/EberonScope.js");
 var EberonString = require("js/EberonString.js");
@@ -188,6 +189,16 @@ var Identdef = Context.Identdef.extend({
     }
 });
 
+function makeConstructorCall(context, type){
+    var l = context.language();
+    var cx = {
+        types: l.types, 
+        rtl: l.rtl, 
+        qualifyScope: context.qualifyScope.bind(context)
+        };
+    return EberonConstructor.makeConstructorCall(type, cx);
+    }
+
 var Designator = Context.Designator.extend({
     init: function EberonContext$Designator(parent){
         Context.Designator.prototype.init.call(this, parent);
@@ -245,7 +256,13 @@ var Designator = Context.Designator.extend({
             Context.Designator.prototype.handleLiteral.call(this, s);
     },
     __beginCall: function(){
-        this.__procCall = Context.makeProcCall(this, this.__currentType, this.__info);
+        var type = this._currentType();
+        if (type instanceof Type.TypeId && type.type() instanceof Type.Record){
+            this.__procCall = makeConstructorCall(this, type.type());
+            this._discardCode();
+        }
+        else
+            this.__procCall = Context.makeProcCall(this, type, this._currentInfo());
     },
     __endCall: function(){
         var e = this.__procCall.end();
@@ -278,7 +295,10 @@ var InPlaceVariableInit = Context.Chained.extend({
         this._symbol = Symbol.makeSymbol(this.__id, v);
         if (type instanceof Type.Record){
             type.initializer(this, false); // checks for abstract etc.
-            this._code += this.language().rtl.cloneRecord(e.code());
+            if (e.designator())
+                this._code += this.language().rtl.cloneRecord(e.code());
+            else // do not clone if it is temporary, e.g. constructor call
+                this._code += e.code();
         }
         else if (type instanceof Type.Array){
             if (type instanceof Type.OpenArray)

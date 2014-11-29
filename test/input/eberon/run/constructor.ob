@@ -1,0 +1,14 @@
+MODULE m;
+TYPE
+    T = RECORD
+        i: INTEGER;
+    END;
+
+PROCEDURE T();
+BEGIN
+    SELF.i := 3;
+END;
+
+BEGIN
+    ASSERT(T().i = 3);
+END m.

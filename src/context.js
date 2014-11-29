@@ -362,6 +362,9 @@ exports.Designator = ChainedContext.extend({
         this.__code += "." + codeId;
         this.__scope = undefined;
     },
+    _currentType: function(){return this.__currentType;},
+    _currentInfo: function(){return this.__info;},
+    _discardCode: function(){this.__code = "";},
     _makeDerefVar: function(){
         return Type.makeVariableRef(this.__currentType, false);
     },

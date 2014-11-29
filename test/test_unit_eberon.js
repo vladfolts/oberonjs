@@ -1074,20 +1074,42 @@ exports.suite = {
          "PROCEDURE p(): INTEGER; RETURN 0; END;"
          )
     ),
-"constructor": testWithGrammar(
-    grammar.declarationSequence, 
-    pass("TYPE T = RECORD END; PROCEDURE T(); END;",
-         "TYPE T = RECORD i: INTEGER; END; PROCEDURE T(); BEGIN SELF.i := 0; END;",
-         "TYPE T = RECORD END; PROCEDURE T(); END T;",
-         "TYPE T = RECORD END; PROCEDURE p(); PROCEDURE T(); END; BEGIN T(); END;" /* local procedure name may match type name from outer scope*/
-         ),
-    fail(["TYPE T = RECORD END; PROCEDURE T(); END; PROCEDURE T(); END;", "constructor 'T' already defined"],
-         ["TYPE T = RECORD END; PROCEDURE T(): INTEGER; RETURN 0; END;", "constructor 'T' cannot have result type specified"],
-         ["TYPE T = ARRAY 3 OF INTEGER; PROCEDURE T(); END;", "'T' already declared"],
-         ["TYPE T = RECORD END; PROCEDURE T(); END T.T;", "mismatched method names: expected 'T' at the end (or nothing), got 'T.T'"],
-         ["TYPE T = RECORD END; PROCEDURE T.T(); END;", "'T' has no declaration for method 'T'"],
-         ["TYPE T = RECORD END; PROCEDURE T(); END T2;", "mismatched method names: expected 'T' at the end (or nothing), got 'T2'"],
-         ["TYPE T = RECORD END; PROCEDURE T(); END T.T;", "mismatched method names: expected 'T' at the end (or nothing), got 'T.T'"]
-         )
-    )
+"constructor": {
+    "declaration": testWithGrammar(
+        grammar.declarationSequence, 
+        pass("TYPE T = RECORD END; PROCEDURE T(); END;",
+             "TYPE T = RECORD i: INTEGER; END; PROCEDURE T(); BEGIN SELF.i := 0; END;",
+             "TYPE T = RECORD END; PROCEDURE T(); END T;",
+             "TYPE T = RECORD END; PROCEDURE p(); PROCEDURE T(); END; BEGIN T(); END;" /* local procedure name may match type name from outer scope*/
+             ),
+        fail(["TYPE T = RECORD END; PROCEDURE T(); END; PROCEDURE T(); END;", "constructor 'T' already defined"],
+             ["TYPE T = RECORD END; PROCEDURE T(): INTEGER; RETURN 0; END;", "constructor 'T' cannot have result type specified"],
+             ["TYPE T = ARRAY 3 OF INTEGER; PROCEDURE T(); END;", "'T' already declared"],
+             ["TYPE T = RECORD END; PROCEDURE T(); END T.T;", "mismatched method names: expected 'T' at the end (or nothing), got 'T.T'"],
+             ["TYPE T = RECORD END; PROCEDURE T.T(); END;", "'T' has no declaration for method 'T'"],
+             ["TYPE T = RECORD END; PROCEDURE T(); END T2;", "mismatched method names: expected 'T' at the end (or nothing), got 'T2'"],
+             ["TYPE T = RECORD END; PROCEDURE T(); END T.T;", "mismatched method names: expected 'T' at the end (or nothing), got 'T.T'"]
+             )
+        ),
+    "as expression": testWithContext(
+        context(grammar.expression,
+                "TYPE T = RECORD i: INTEGER; END; PT = POINTER TO T;"
+                + "PROCEDURE byVar(VAR a: T): INTEGER; RETURN 0; END;"
+                + "PROCEDURE byNonVar(a: T): INTEGER; RETURN 0; END;"
+                ),
+        pass("T()",
+             "byNonVar(T())",
+             "T().i"
+             ),
+        fail(["PT()", "PROCEDURE expected, got 'type PT'"],
+             ["byVar(T())", "expression cannot be used as VAR parameter"]
+            )
+        ),
+    "initialize in place variable": testWithContext(
+        context(grammar.statement,
+                "TYPE T = RECORD END;"),
+        pass("r <- T()"),
+        fail()
+        )
+    }
 };

@@ -198,7 +198,8 @@ BEGIN
     RETURN Procedure.makeCallGenerator(call, cx)
 END MethodClear.callGenerator;
 
-PROCEDURE MethodRemove.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+PROCEDURE MethodRemove.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator
+;
 VAR
     a: Types.PProcedureArgument;
     call: POINTER TO MethodCallRemove;

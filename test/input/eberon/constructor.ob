@@ -25,4 +25,11 @@ END;
 PROCEDURE RecordWithFieldDerived();
 END;
 
+PROCEDURE passAsArgument(o: T);
+END;
+
+BEGIN
+    passAsArgument(T());
+    r <- T();
+    i <- RecordWithField().i;
 END m.
