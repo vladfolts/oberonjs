@@ -1434,13 +1434,15 @@ return {
     };
 }
 
-var result = Test.run({
-    "common": {
-        "oberon": makeSuiteForGrammar(oberon),
-        "eberon": makeSuiteForGrammar(eberon)
-    },
-    "eberon": TestUnitEberon.suite,
-    "oberon": TestUnitOberon.suite
-});
-if (typeof process != "undefined")
-    process.exit(result ? 0 : -1);
+function run(){
+    return Test.run({
+        "common": {
+            "oberon": makeSuiteForGrammar(oberon),
+            "eberon": makeSuiteForGrammar(eberon)
+        },
+        "eberon": TestUnitEberon.suite,
+        "oberon": TestUnitOberon.suite
+    });
+}
+
+exports.run = run;

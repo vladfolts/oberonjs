@@ -13,6 +13,9 @@ TYPE
     RecordWithFieldDerived = RECORD(T)
     END;
 
+    RecordWithParamConstructor = RECORD
+    END;
+
 PROCEDURE T();
 END;
 
@@ -28,8 +31,13 @@ END;
 PROCEDURE passAsArgument(o: T);
 END;
 
+PROCEDURE RecordWithParamConstructor(a: INTEGER);
+END;
+
 BEGIN
     passAsArgument(T());
     r <- T();
     i <- RecordWithField().i;
+
+    rParam <- RecordWithParamConstructor(123);
 END m.

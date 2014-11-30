@@ -2,6 +2,7 @@ MODULE JsMap;
 IMPORT JS, Object;
 TYPE
     Type* = POINTER TO RECORD END;
+    Keys = ARRAY * OF STRING;
     ForEachProc = PROCEDURE(key: STRING; value: Object.PType; VAR closure: Object.Type);
     
     Strings* = POINTER TO RECORD END;
@@ -40,6 +41,14 @@ PROCEDURE erase*(m: Type; s: STRING);
 BEGIN
     JS.do("delete m[s]");
 END erase;
+
+PROCEDURE keys*(m: Type): Keys;
+VAR
+    result: ARRAY * OF STRING;
+BEGIN
+    JS.do("result = JS.Object.keys(m);");
+    RETURN result;
+END;
 
 PROCEDURE forEach*(m: Type; p: ForEachProc; VAR closure: Object.Type);
 BEGIN

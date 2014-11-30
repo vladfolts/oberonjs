@@ -5,15 +5,12 @@ TYPE
     CallGenerator = PROCEDURE(cx: LanguageContext.PType; type: Types.DefinedProcedure): Procedure.PCallGenerator;
 
     MethodType* = RECORD(Procedure.Std)
-        PROCEDURE procType(): Types.PProcedure;
-        PROCEDURE args(): Types.ProcedureArguments;
-        PROCEDURE result(): Types.PType;
-        PROCEDURE procDescription(): STRING;
+        PROCEDURE procType*(): Types.PDefinedProcedure;
 
         type: Types.PDefinedProcedure;
         call: CallGenerator
     END;
-    PMethodType = POINTER TO MethodType;
+    PMethodType* = POINTER TO MethodType;
 
     MethodVariable* = RECORD(Types.ProcedureId)
     END;
@@ -22,25 +19,13 @@ PROCEDURE MethodType.designatorCode(id: STRING): STRING;
     RETURN id
 END MethodType.designatorCode;
 
-PROCEDURE MethodType.procType(): Types.PProcedure;
+PROCEDURE MethodType.procType(): Types.PDefinedProcedure;
     RETURN SELF.type
 END MethodType.procType;
-
-PROCEDURE MethodType.args(): Types.ProcedureArguments;
-    RETURN SELF.type.args()
-END MethodType.args;
-
-PROCEDURE MethodType.result(): Types.PType;
-    RETURN SELF.type.result()
-END MethodType.result;
 
 PROCEDURE MethodType.description(): STRING;
     RETURN "method '" + SELF.name + "'"
 END MethodType.description;
-
-PROCEDURE MethodType.procDescription(): STRING;
-    RETURN SELF.type.description()
-END MethodType.procDescription;
 
 PROCEDURE MethodType.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
     RETURN SELF.call(cx, SELF.type^)

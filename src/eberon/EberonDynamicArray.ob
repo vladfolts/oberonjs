@@ -46,7 +46,7 @@ BEGIN
     RETURN result
 END arrayDimensionDescription;
 
-PROCEDURE DynamicArray.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+PROCEDURE DynamicArray.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
     RETURN "[]"
 END DynamicArray.initializer;
 

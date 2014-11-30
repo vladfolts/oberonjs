@@ -23,7 +23,10 @@ RTL$.extend(RecordWithFieldDerived, T);
 
 function passAsArgument(o/*T*/){
 }
+function RecordWithParamConstructor(a/*INTEGER*/){
+}
 passAsArgument(new T());
 var r = new T();
 var i = new RecordWithField().i;
+var rParam = new RecordWithParamConstructor(123);
 }();

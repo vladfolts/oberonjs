@@ -1080,8 +1080,9 @@ exports.suite = {
         pass("TYPE T = RECORD END; PROCEDURE T(); END;",
              "TYPE T = RECORD i: INTEGER; END; PROCEDURE T(); BEGIN SELF.i := 0; END;",
              "TYPE T = RECORD END; PROCEDURE T(); END T;",
-             "TYPE T = RECORD END; PROCEDURE p(); PROCEDURE T(); END; BEGIN T(); END;" /* local procedure name may match type name from outer scope*/
-             ),
+             "TYPE T = RECORD END; PROCEDURE p(); PROCEDURE T(); END; BEGIN T(); END;", /* local procedure name may match type name from outer scope*/
+             "TYPE T = RECORD END; PROCEDURE T(a: INTEGER); END T;"
+        ),
         fail(["TYPE T = RECORD END; PROCEDURE T(); END; PROCEDURE T(); END;", "constructor 'T' already defined"],
              ["TYPE T = RECORD END; PROCEDURE T(): INTEGER; RETURN 0; END;", "constructor 'T' cannot have result type specified"],
              ["TYPE T = ARRAY 3 OF INTEGER; PROCEDURE T(); END;", "'T' already declared"],
@@ -1094,15 +1095,21 @@ exports.suite = {
     "as expression": testWithContext(
         context(grammar.expression,
                 "TYPE T = RECORD i: INTEGER; END; PT = POINTER TO T;"
+                + "ConsWithArguments = RECORD END;"
+                + "PROCEDURE ConsWithArguments(a: INTEGER); END;"
                 + "PROCEDURE byVar(VAR a: T): INTEGER; RETURN 0; END;"
                 + "PROCEDURE byNonVar(a: T): INTEGER; RETURN 0; END;"
                 ),
         pass("T()",
              "byNonVar(T())",
-             "T().i"
+             "T().i",
+             "ConsWithArguments(123)"
              ),
         fail(["PT()", "PROCEDURE expected, got 'type PT'"],
-             ["byVar(T())", "expression cannot be used as VAR parameter"]
+             ["byVar(T())", "expression cannot be used as VAR parameter"],
+             ["T(0)", "0 argument(s) expected, got 1"],
+             ["ConsWithArguments()", "1 argument(s) expected, got 0"],
+             ["ConsWithArguments(FALSE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"]
             )
         ),
     "initialize in place variable": testWithContext(

@@ -110,7 +110,7 @@ def run_tests(bin, unit_test=None, code_test=None):
         code_test = '*'
 
     if unit_test:
-        unit_tests = os.path.join(root, 'test', 'test_unit.js')
+        unit_tests = os.path.join(root, 'test', 'test_unit_run.js')
         args = [unit_tests]
         if unit_test != '*':
             args += [unit_test]
@@ -176,15 +176,16 @@ def build_html(options):
         print("current html is up to date, do nothing")
         return
 
-    print('unpacking compiled js to %s...' % package.root)
-    package.unpack()
+    if not options.do_not_unpack_compiled:
+        print('unpacking compiled js to %s...' % package.root)
+        package.unpack()
 
     if not os.path.exists(out):
         os.mkdir(out)
 
-    link(['oc.js', 'oberon/oberon_grammar.js', 'eberon/eberon_grammar.js'],
+    link(['oc.js', 'oberon/oberon_grammar.js', 'eberon/eberon_grammar.js', 'test_unit.js'],
          os.path.join(out, 'oc.js'),
-         ['src', 'bin'],
+         ['src', 'bin', 'test'],
          version)
     copy('browser/oberonjs.html', out)
     for d in ['codemirror', 'jslibs']:
@@ -245,6 +246,7 @@ class html_target(object):
     def setup_options(parser):
         parser.add_option('--out', help='output directory, default: "_out"', default='_out')
         parser.add_option('--set-version', action="store_true", help='include version in built html')
+        parser.add_option('--do-not-unpack-compiled', action="store_true", help='do unpack already compiled "binaries", use current')
 
     def __init__(self, options):
         build_html(options)

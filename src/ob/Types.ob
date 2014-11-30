@@ -15,7 +15,7 @@ TYPE
     PType* = POINTER TO Type;
 
     StorageType* = RECORD(Type)    
-        PROCEDURE initializer*(cx: Context.Type; forNew: BOOLEAN): STRING
+        PROCEDURE initializer*(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING
     END;
 
     TypeId* = RECORD(Id)
@@ -85,9 +85,17 @@ TYPE
         PROCEDURE id*(): STRING;
         PROCEDURE exported*(): BOOLEAN;
         PROCEDURE type*(): PType;
-        PROCEDURE asVar*(): PId 
+        PROCEDURE asVar*(isReadOnly: BOOLEAN; cx: Context.Type): PId;
     END;
     PField* = POINTER TO Field;
+
+    RecordField* = RECORD(Field)
+        PROCEDURE identdef*(): Context.PIdentdefInfo;
+
+        mIdentdef: Context.PIdentdefInfo;
+        mType: PType;
+    END;
+    PRecordField* = POINTER TO RecordField;
 
     NamedType* = RECORD(StorageType)
         PROCEDURE denote*(id: STRING): PField;
@@ -148,12 +156,12 @@ TYPE
     PBasicType* = POINTER TO BasicType;
 
     Record* = RECORD(NamedType)
-        PROCEDURE addField(f: PField);
-        PROCEDURE findSymbol(id: STRING): PField;
-        PROCEDURE finalize();
+        PROCEDURE addField*(f: PField);
+        PROCEDURE findSymbol*(id: STRING): PField;
+        PROCEDURE finalize*();
 
         fields: JsMap.Type;
-        base:   PRecord;
+        base-:   PRecord;
         cons:   STRING;
         scope:  ScopeBase.PType;
         notExported: ARRAY * OF STRING
@@ -351,7 +359,7 @@ PROCEDURE BasicType.description(): STRING;
     RETURN SELF.name
 END BasicType.description;
 
-PROCEDURE BasicType.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+PROCEDURE BasicType.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
     RETURN SELF.mInitializer
 END BasicType.initializer;
 
@@ -398,8 +406,8 @@ BEGIN
     RETURN result
 END Record.description;
 
-PROCEDURE Record.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
-    RETURN "new " + cx.qualifyScope(SELF.scope) + SELF.cons + "()"
+PROCEDURE Record.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
+    RETURN "new " + cx.qualifyScope(SELF.scope) + SELF.cons + "(" + code + ")"
 END Record.initializer;
 
 PROCEDURE Record.addField(f: PField);
@@ -483,7 +491,7 @@ BEGIN
     RETURN result
 END Pointer.description;
 
-PROCEDURE Pointer.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+PROCEDURE Pointer.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
     RETURN "null"
 END Pointer.initializer;
 
@@ -550,11 +558,11 @@ BEGIN
     RETURN NIL
 END NamedType.denote;
 
-PROCEDURE OpenArray.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+PROCEDURE OpenArray.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
     RETURN ""
 END OpenArray.initializer;
 
-PROCEDURE StaticArray.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+PROCEDURE StaticArray.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
     RETURN SELF.mInitializer
 END StaticArray.initializer;
 
@@ -581,7 +589,7 @@ PROCEDURE StaticArray.length(): INTEGER;
     RETURN SELF.len
 END StaticArray.length;
 
-PROCEDURE Procedure.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+PROCEDURE Procedure.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
     RETURN "null"
 END Procedure.initializer;
 
@@ -777,6 +785,41 @@ PROCEDURE initModule*(VAR m: Module; name: STRING);
 BEGIN
     m.name := name;
 END initModule;
+
+PROCEDURE RecordField.id(): STRING;
+    RETURN SELF.mIdentdef.id();
+END;
+
+PROCEDURE RecordField.exported(): BOOLEAN;
+    RETURN SELF.mIdentdef.exported();
+END;
+
+PROCEDURE RecordField.identdef(): Context.PIdentdefInfo;
+    RETURN SELF.mIdentdef;
+END;
+
+PROCEDURE RecordField.type(): PType;
+    RETURN SELF.mType;
+END;
+
+PROCEDURE RecordField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): PId;
+    RETURN makeVariable(SELF.mType, isReadOnly);
+END;
+
+PROCEDURE initRecordField*(identdef: Context.PIdentdefInfo; type: PType; VAR result: RecordField);
+BEGIN
+    result.mIdentdef := identdef;
+    result.mType := type;
+END;
+
+PROCEDURE makeRecordField*(identdef: Context.PIdentdefInfo; type: PType): PRecordField;
+VAR
+    result: PRecordField;
+BEGIN
+    NEW(result);
+    initRecordField(identdef, type, result^);
+    RETURN result;
+END;
 
 BEGIN
     basic.bool := makeBasic("BOOLEAN", "false");

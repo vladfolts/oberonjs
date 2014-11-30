@@ -6,7 +6,9 @@ var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var EberonConstructor= require("js/EberonConstructor.js");
+var EberonContext= require("js/EberonContext.js");
 var EberonDynamicArray= require("js/EberonDynamicArray.js");
+var EberonRecord = require("js/EberonRecord.js");
 var EberonScope = require("js/EberonScope.js");
 var EberonString = require("js/EberonString.js");
 var EberonTypes = require("js/EberonTypes.js");
@@ -166,14 +168,6 @@ var InPlaceStringLiteral = TypeNarrowVariable.extend({
     idType: function(){return "string literal";}
 });
 
-var IdentdefInfo = Context.IdentdefInfo.extend({
-    init: function(id, exported, ro){
-        Context.IdentdefInfo.prototype.init.call(this, id, exported);
-        this.__ro = ro;
-    },
-    isReadOnly: function(){return this.__ro;}
-});
-
 var Identdef = Context.Identdef.extend({
     init: function(parent){
         Context.Identdef.prototype.init.call(this, parent);
@@ -185,7 +179,7 @@ var Identdef = Context.Identdef.extend({
         Context.Identdef.prototype.handleLiteral.call(this, l);
     },
     _makeIdendef: function(){
-        return new IdentdefInfo(this._id, this._export, this.__ro);
+        return EberonContext.makeIdentdefInfo(this._id, this._export, this.__ro);
     }
 });
 
@@ -389,228 +383,6 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
     }
 });
 
-var RecordField = Context.RecordField.extend({
-    init: function EberonContext$RecordField(field, type, recordType){
-        Context.RecordField.prototype.init.call(this, field, type);
-        this.__recordType = recordType;
-    },
-    asVar: function(isReadOnly, context){ 
-        if (!isReadOnly && context.qualifyScope(Type.recordScope(this.__recordType)))
-            isReadOnly = this.identdef().isReadOnly();
-        return Context.RecordField.prototype.asVar.call(this, isReadOnly); 
-    }
-});
-
-var RecordFieldAsMethod = Context.RecordField.extend({
-    init: function EberonContext$RecordFieldAsMethod(field, type){
-        Context.RecordField.prototype.init.call(this, field, type);
-    },
-    asVar: function(){ 
-        return EberonTypes.makeMethod(this.type()); 
-    }
-});
-var RecordType = Class.extend.call(Type.Record, {
-    init: function EberonContext$RecordType(name, cons, scope){
-        Type.Record.call(this);
-        Type.initRecord(this, name, cons, scope);
-        this.__customConstructor = undefined;
-        this.__finalized = false;
-        this.__declaredMethods = {};
-        this.__definedMethods = [];
-        this.__abstractMethods = [];
-        this.__instantiated = false;
-        this.__createByNewOnly = false;
-        this.__declaredAsVariable = false;
-        this.__lazyDefinitions = {};
-        this.__nonExportedMethods = [];
-        this.__inheritanceCode = undefined;
-    },
-    initializer: function(context, forNew){
-        if (this.__finalized){
-            this.__ensureNonAbstract();
-            if (!forNew)
-                this.__ensureVariableCanBeDeclared();
-        }
-        else {
-            this.__instantiated = true;
-            if (!forNew)
-                this.__declaredAsVariable = true;
-        }
-
-        return Type.Record.prototype.initializer.call(this, context);
-    },
-    customConstructor: function(){return this.__customConstructor;},
-    findSymbol: function(id){
-        var result = this.__hasMethodDeclaration(id);
-        if (!result)
-            result = Type.Record.prototype.findSymbol.call(this, id);
-        return result;
-    },
-    addField: function(field, type){
-        var id = field.id();
-        if (this.__hasMethodDeclaration(id))
-            throw new Errors.Error(
-                "cannot declare field, record already has method '" + id +"'");
-        return Type.Record.prototype.addField.call(this, field, type);
-    },
-    addMethod: function(methodId, type){
-        var id = methodId.id();
-        var existingField = this.findSymbol(id);
-        if (existingField)
-            throw new Errors.Error(
-                  existingField.type() instanceof EberonTypes.MethodType
-                ?   "cannot declare a new method '" + id 
-                  + "': method already was declared"
-                : "cannot declare method, record already has field '" + id + "'");
-
-        this.__declaredMethods[id] = new RecordFieldAsMethod(methodId, type);
-
-        if (!methodId.exported())
-            this.__nonExportedMethods.push(id);
-    },
-    setRecordInitializationCode: function(fieldsInitializationCode, inheritanceCode){
-        this.__fieldsInitializationCode = fieldsInitializationCode;
-        this.__inheritanceCode = inheritanceCode;
-    },
-    fieldsInitializationCode: function(){return this.__fieldsInitializationCode;},
-    defineConstructor: function(type){
-        if (this.__customConstructor)
-            throw new Errors.Error("constructor '" + Type.typeName(this) + "' already defined");
-        if (type.result())
-            throw new Errors.Error("constructor '" + Type.typeName(this) + "' cannot have result type specified");
-        this.__customConstructor = type;
-        return this.__inheritanceCode;
-    },
-    defineMethod: function(methodId, type){
-        var base = Type.recordBase(this);
-        var id = methodId.id();
-
-        if (this.__definedMethods.indexOf(id) != -1)
-            throw new Errors.Error(
-                  "method '" + Type.typeName(this) + "." + id + "' already defined");
-
-        var existingField = this.findSymbol(id);
-        if (!existingField || !(existingField.type() instanceof EberonTypes.MethodType)){
-            throw new Errors.Error(
-                  "'" + Type.typeName(this) + "' has no declaration for method '" + id 
-                + "'");
-        }
-        var existing = existingField.type();
-        if (!Cast.areProceduresMatch(existing, type))
-            throw new Errors.Error(
-                  "overridden method '" + id + "' signature mismatch: should be '"
-                + existing.procDescription() + "', got '" 
-                + type.procDescription() + "'");
-        
-        this.__definedMethods.push(id);
-    },
-    requireMethodDefinition: function(id, reason){
-        if (!this.__hasMethodDeclaration(id))
-            throw new Errors.Error(
-                "there is no method '" + id + "' in base type(s)");
-        if (this.__finalized)
-            this.__ensureMethodDefinitions({reason: [id]});
-        else {
-            var ids = this.__lazyDefinitions[reason];
-            if (!ids){
-                ids = [id];
-                this.__lazyDefinitions[reason] = ids;
-            }
-            else if (ids.indexOf(id) == -1)
-                ids.push(id);
-            }
-    },
-    requireNewOnly: function(){this.__createByNewOnly = true;},
-    abstractMethods: function(){return this.__abstractMethods;},
-    __collectAbstractMethods: function(){
-        var selfMethods = Object.keys(this.__declaredMethods);
-        var baseType = Type.recordBase(this);
-        var methods = baseType ? baseType.abstractMethods().concat(selfMethods)
-                               : selfMethods;
-        for(var i = 0; i < methods.length; ++i){
-            var m = methods[i];
-            if (this.__definedMethods.indexOf(m) == -1)
-                this.__abstractMethods.push(m);
-        }
-    },
-    finalize: function(){
-        this.__finalized = true;
-        this.__collectAbstractMethods();
-        if (this.__instantiated)
-            this.__ensureNonAbstract();
-        if (this.__declaredAsVariable)
-            this.__ensureVariableCanBeDeclared();
-        this.__ensureMethodDefinitions(this.__lazyDefinitions);
-
-        for(var i = 0; i < this.__nonExportedMethods.length; ++i)
-            delete this.__declaredMethods[this.__nonExportedMethods[i]];
-        delete this.__nonExportedMethods;
-
-        Type.Record.prototype.finalize.call(this);
-    },
-    __ensureMethodDefinitions: function(reasons){
-        var result = [];
-        for(var reason in reasons){
-            var ids = reasons[reason];
-            var report = [];
-            for(var i = 0; i < ids.length; ++i){
-                var m = ids[i];
-                if (!this.__hasMethodDefinition(m))
-                    report.push(m);
-            }
-            if (report.length)
-                result.push(reason + ": " + report.join(", "));
-        }
-        if (result.length)
-            throw new Errors.Error(result.join("; "));
-    },
-    __ensureNonAbstract: function(){
-        function errMsg(self){
-            return "cannot instantiate '" 
-                 + Type.typeName(self) 
-                 + "' because it has abstract method(s)";
-        }
-
-        var am = this.abstractMethods();
-        if (am.length)
-            throw new Errors.Error(errMsg(this) + ": " + am.join(", ")
-                );
-
-        var baseType = Type.recordBase(this);
-        while (baseType){
-            if (!baseType.__finalized)
-                for(var id in baseType.__declaredMethods){
-                    if (!this.__hasMethodDefinition(id))
-                        baseType.requireMethodDefinition(id, errMsg(this));
-                }
-            baseType = Type.recordBase(baseType);
-        }
-    },
-    __ensureVariableCanBeDeclared: function(){
-        var type = this;
-        while (type){
-            if (type.__createByNewOnly)
-                throw new Errors.Error(
-                    "cannot declare a variable of type '" 
-                  + Type.typeName(type) + "' (and derived types) "
-                  + "because SELF(POINTER) was used in its method(s)");
-            type = Type.recordBase(type);
-        }
-    },
-    __hasMethodDeclaration: function(id){
-        var type = this;
-        while (type && !type.__declaredMethods.hasOwnProperty(id))
-            type = Type.recordBase(type);
-        return type && type.__declaredMethods[id];
-    },
-    __hasMethodDefinition: function(id){
-        var type = this;
-        while (type && type.__definedMethods.indexOf(id) == -1)
-            type = Type.recordBase(type);
-        return type;
-    }
-});
-
 function checkOrdinaryExport(id, hint){
     if (id.isReadOnly())
         throw new Errors.Error(hint + " cannot be exported as read-only using '-' mark (did you mean '*'?)");
@@ -648,8 +420,7 @@ var TypeDeclaration = Context.TypeDeclaration.extend({
 
 var RecordDecl = Context.RecordDecl.extend({
     init: function EberonContext$RecordDecl(context){
-        var makeRecord = function(name, cons, scope){return new RecordType(name, cons, scope);};
-        Context.RecordDecl.prototype.init.call(this, context, makeRecord);
+        Context.RecordDecl.prototype.init.call(this, context, EberonRecord.makeRecord);
     },
     handleMessage: function(msg){
         if (msg instanceof MethodOrProcMsg)
@@ -663,7 +434,7 @@ var RecordDecl = Context.RecordDecl.extend({
         return Context.RecordDecl.prototype.handleMessage.call(this, msg);
     },
     _makeField: function(field, type){
-        return new RecordField(field, type, this.__type);
+        return EberonRecord.makeRecordField(field, type, this.__type);
     },
     endParse: function(){
         var gen = this.codeGenerator();
@@ -674,7 +445,7 @@ var RecordDecl = Context.RecordDecl.extend({
             this._generateFieldsInitializationCode(), 
             inheritanceCode);
         this.currentScope().addFinalizer(function(){
-            if (!this.__type.customConstructor())
+            if (!this.__type.customConstructor)
                 gen.insert(pos, this._generateConstructor() + inheritanceCode);
         }.bind(this));
     }
@@ -749,7 +520,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     _beginBody: function(){
         Context.ProcDecl.prototype._beginBody.call(this);
         if (this.__isConstructor)
-            this.codeGenerator().write(this.__boundType.fieldsInitializationCode());
+            this.codeGenerator().write(this.__boundType.fieldsInitializationCode);
     },
     _makeArgumentVariable: function(arg){
         if (!arg.isVar)
@@ -796,7 +567,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
 
             if (this.__isConstructor)
                 this.codeGenerator().write(
-                    this.__boundType.defineConstructor(this.__methodType));
+                    this.__boundType.defineConstructor(this.__methodType.procType()));
             else
                 this.__boundType.defineMethod(this.__methodId, this.__methodType);
         }
@@ -812,7 +583,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 + "' has no base type - SUPER cannot be used");
 
         var id = this.__methodId.id();
-        baseType.requireMethodDefinition(id, "cannot use abstract method(s) in SUPER calls");
+        EberonRecord.requireMethodDefinition(baseType, id, "cannot use abstract method(s) in SUPER calls");
         return {
             info: Type.makeProcedure(EberonTypes.makeMethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
             code: this.qualifyScope(Type.recordScope(baseType))

@@ -6,6 +6,7 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var Errors = require("js/Errors.js");
 var Module = require("js/Module.js");
 var op = require("js/Operator.js");
+var ObContext = require("js/Context.js");
 var Parser = require("parser.js");
 var Procedure = require("js/Procedure.js");
 var Class = require("rtl.js").Class;
@@ -269,15 +270,6 @@ exports.QualifiedIdentificator = ChainedContext.extend({
     }
 });
 
-var IdentdefInfo = Class.extend({
-    init: function Context$Identdef(id, exported){
-        this.__id = id;
-        this.__exported = exported;
-    },
-    id: function(){return this.__id;},
-    exported: function(){return this.__exported;}
-});
-
 exports.Identdef = ChainedContext.extend({
     init: function IdentdefContext(context){
         ChainedContext.prototype.init.call(this, context);
@@ -290,7 +282,7 @@ exports.Identdef = ChainedContext.extend({
         this.parent().handleIdentdef(this._makeIdendef());
     },
     _makeIdendef: function(){
-        return new IdentdefInfo(this._id, this._export);
+        return ObContext.makeIdentdefInfo(this._id, this._export);
     }
 });
 
@@ -771,8 +763,8 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
             return rtl.makeCharArray(dimensions);
 
         var initializer = type instanceof Type.Array || type instanceof Type.Record
-            ? "function(){return " + type.initializer(this) + ";}"
-            : type.initializer(this);
+            ? "function(){return " + type.initializer(this, false, "") + ";}"
+            : type.initializer(this, false, "");
         return rtl.makeArray(dimensions + ", " + initializer);
     },
     _makeType: function(elementsType, init, length){
@@ -1651,7 +1643,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
                 this.checkExport(varName);
             this.currentScope().addSymbol(Symbol.makeSymbol(varName, v), id.exported());
             var t = v.type();
-            gen.write("var " + varName + " = " + t.initializer(this) + ";");
+            gen.write("var " + varName + " = " + t.initializer(this, false, "") + ";");
         }
 
         gen.write("\n");
@@ -1726,20 +1718,6 @@ function isTypeRecursive(type, base){
     return false;
 }
 
-var RecordField = Class.extend.call(Type.Field, {
-    init: function Context$RecordField(identdef, type){
-        this.__identdef = identdef;
-        this.__type = type;
-    },
-    id: function(){return this.__identdef.id();},
-    exported: function(){return this.__identdef.exported();},
-    identdef: function(){return this.__identdef;},
-    type: function(){return this.__type;},
-    asVar: function(isReadOnly){ 
-        return Type.makeVariable(this.__type, isReadOnly); 
-    }
-});
-
 exports.RecordDecl = ChainedContext.extend({
     init: function RecordDeclContext(context, makeRecord){
         ChainedContext.prototype.init.call(this, context);
@@ -1795,7 +1773,7 @@ exports.RecordDecl = ChainedContext.extend({
         var ownFields = Type.recordOwnFields(type);
         for(var f in ownFields){
             var fieldType = ownFields[f].type();
-            result += "this." + mangleField(f, fieldType) + " = " + fieldType.initializer(this) + ";\n";
+            result += "this." + mangleField(f, fieldType) + " = " + fieldType.initializer(this, false, "") + ";\n";
         }
         return result;
     },
@@ -1807,7 +1785,7 @@ exports.RecordDecl = ChainedContext.extend({
         return this.language().rtl.extend(this.__cons, qualifiedBase) + ";\n";
     },
     _makeField: function(field, type){
-        return new RecordField(field, type);
+        return Type.makeRecordField(field, type);
     }
 });
 
@@ -2059,10 +2037,7 @@ exports.endCallMsg = endCallMsg;
 exports.Chained = ChainedContext;
 exports.endParametersMsg = endParametersMsg;
 exports.getSymbolAndScope = getSymbolAndScope;
-exports.IdentdefInfo = IdentdefInfo;
 exports.makeProcCall = makeProcCall;
 exports.unwrapType = unwrapType;
-exports.IdentdefInfo = IdentdefInfo;
-exports.RecordField = RecordField;
 exports.RelationOps = RelationOps;
 exports.HandleSymbolAsType = HandleSymbolAsType;

@@ -41,4 +41,12 @@ BEGIN
     RETURN result
 END substr;
 
+PROCEDURE join*(a: ARRAY OF STRING; separator: STRING): STRING;
+VAR 
+    result: STRING;
+BEGIN
+    JS.do("result = a.join(separator)")
+    RETURN result
+END;
+
 END String.

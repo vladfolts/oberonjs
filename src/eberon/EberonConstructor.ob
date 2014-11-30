@@ -1,23 +1,30 @@
 MODULE EberonConstructor;
-IMPORT Code, LanguageContext, Procedure, Types;
+IMPORT Code, EberonRecord, LanguageContext, Procedure, Types;
 TYPE
     ConstructorCall = RECORD(Procedure.StdCall)
-        recordType: Types.PRecord;
+        recordType: EberonRecord.PRecord;
     END;
 
 PROCEDURE ConstructorCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
-    Procedure.processArguments(args, SELF.args, NIL, NIL);
-    RETURN Code.makeSimpleExpression(SELF.recordType.initializer(cx^, FALSE), SELF.recordType);
+    argCode <- Procedure.makeArgumentsCode(cx);
+    Procedure.processArguments(args, SELF.args, argCode, cx.types);
+    RETURN Code.makeSimpleExpression(SELF.recordType.initializer(cx^, FALSE, argCode.result()), SELF.recordType);
 END;
 
-PROCEDURE makeConstructorCall*(type: Types.PRecord; cx: LanguageContext.PType): Procedure.PCallGenerator;
+PROCEDURE makeConstructorCall*(
+    type: EberonRecord.PRecord; 
+    cx: LanguageContext.PType
+    ): Procedure.PCallGenerator;
 VAR
     call: POINTER TO ConstructorCall;
 BEGIN
     NEW(call);
     Procedure.initStdCall(call);
     call.recordType := type; 
+    IF type.customConstructor # NIL THEN
+        call.args := type.customConstructor.args();
+    END;
     RETURN Procedure.makeCallGenerator(call, cx)
 END;
 

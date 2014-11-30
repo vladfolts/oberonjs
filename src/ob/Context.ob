@@ -13,4 +13,37 @@ TYPE
     END;
     PType* = POINTER TO Type;
 
+    IdentdefInfo* = RECORD
+        PROCEDURE id*(): STRING;
+        PROCEDURE exported*(): BOOLEAN;
+
+        mId: STRING;
+        mExported: BOOLEAN;
+    END;
+
+    PIdentdefInfo* = POINTER TO IdentdefInfo;
+
+PROCEDURE IdentdefInfo.id(): STRING;
+    RETURN SELF.mId;
+END;
+
+PROCEDURE IdentdefInfo.exported(): BOOLEAN;
+    RETURN SELF.mExported;
+END;
+
+PROCEDURE initIdentdefInfo*(id: STRING; exported: BOOLEAN; VAR result: IdentdefInfo);
+BEGIN
+    result.mId := id;
+    result.mExported := exported;
+END;
+
+PROCEDURE makeIdentdefInfo*(id: STRING; exported: BOOLEAN): PIdentdefInfo;
+VAR
+    result: PIdentdefInfo;
+BEGIN
+    NEW(result);
+    initIdentdefInfo(id, exported, result^);
+    RETURN result;
+END;
+
 END Context.

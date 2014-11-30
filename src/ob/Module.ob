@@ -35,7 +35,7 @@ PROCEDURE AnyType.description(): STRING;
     RETURN "JS.var"
 END AnyType.description;
 
-PROCEDURE AnyType.initializer(cx: Context.Type; forNew: BOOLEAN): STRING;
+PROCEDURE AnyType.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
     RETURN "undefined"
 END AnyType.initializer;
 
@@ -71,7 +71,7 @@ PROCEDURE AnyField.type(): Types.PType;
     RETURN any
 END AnyField.type;
 
-PROCEDURE AnyField.asVar(): Types.PId;
+PROCEDURE AnyField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
     RETURN any.asVar
 END AnyField.asVar;
 

@@ -1,0 +1,25 @@
+MODULE EberonContext;
+IMPORT Context;
+TYPE
+    IdentdefInfo* = RECORD(Context.IdentdefInfo)
+        PROCEDURE isReadOnly*(): BOOLEAN;
+        
+        ro: BOOLEAN;
+    END;
+    PIdentdefInfo* = POINTER TO IdentdefInfo;
+
+PROCEDURE IdentdefInfo.isReadOnly(): BOOLEAN;
+    RETURN SELF.ro;
+END;
+
+PROCEDURE makeIdentdefInfo*(id: STRING; exported: BOOLEAN; ro: BOOLEAN): PIdentdefInfo;
+VAR
+    result: PIdentdefInfo;
+BEGIN
+    NEW(result);
+    Context.initIdentdefInfo(id, exported, result^);
+    result.ro := ro;
+    RETURN result;
+END;
+
+END EberonContext.

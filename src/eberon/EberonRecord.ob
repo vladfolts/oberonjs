@@ -1,0 +1,391 @@
+MODULE EberonRecord;
+IMPORT 
+    Cast, Context, EberonContext, EberonTypes, Errors, JS, JsMap, ScopeBase, Object, String, Types;
+TYPE
+    Record* = RECORD(Types.Record)
+        PROCEDURE defineConstructor(type: Types.PDefinedProcedure): STRING;
+        PROCEDURE addMethod(methodId: Context.PIdentdefInfo; type: Types.PProcedure);
+        PROCEDURE defineMethod(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
+        PROCEDURE requireNewOnly();
+        PROCEDURE setRecordInitializationCode(fieldsInitializationCode, inheritanceCode: STRING);
+
+        customConstructor-: Types.PDefinedProcedure;
+        finalized: BOOLEAN;
+        declaredMethods: JsMap.Type;
+        definedMethods: ARRAY * OF STRING;
+        abstractMethods: ARRAY * OF STRING;
+        instantiated: BOOLEAN;
+        createByNewOnly: BOOLEAN;
+        declaredAsVariable: BOOLEAN;
+        lazyDefinitions: JsMap.Type;
+        nonExportedMethods: ARRAY * OF STRING;
+        inheritanceCode, fieldsInitializationCode-: STRING;
+    END;
+    PRecord* = POINTER TO Record;
+
+    RecordField = RECORD(Types.RecordField)
+        record: PRecord;
+    END;
+
+    RecordFieldAsMethod = RECORD(Types.RecordField)
+    END;
+    PRecordFieldAsMethod = POINTER TO RecordFieldAsMethod;
+
+    MethodIds = POINTER TO RECORD(Object.Type)
+        ids: ARRAY * OF STRING;
+    END;
+
+    EnsureMethodDefinitionsClosure = RECORD(Object.Type)
+        record: PRecord;
+        result: ARRAY * OF STRING;
+    END;
+
+    RequireMethodDefinitionClosure = RECORD(Object.Type)
+        record: PRecord;
+        base: PRecord;
+    END;
+
+PROCEDURE cannotInstantiateErrMsg(r: Types.Record): STRING;
+    RETURN "cannot instantiate '" 
+         + r.name 
+         + "' because it has abstract method(s)";
+END;
+
+PROCEDURE hasMethodDefinition(r: PRecord; id: STRING): BOOLEAN;
+BEGIN
+    type <- r;
+    WHILE (type # NIL) & (type.definedMethods.indexOf(id) = -1) DO
+        type := type.base(PRecord);
+    END;
+    RETURN type # NIL;
+END;
+
+PROCEDURE findMethodDeclaration(r: PRecord; id: STRING): Types.PField;
+VAR
+    result: Object.PType;
+BEGIN
+    type <- r;
+    WHILE (type # NIL) & ~JsMap.find(type.declaredMethods, id, result) DO
+        type := type.base(PRecord);
+    END;
+    RETURN result(Types.PField);
+END;
+
+PROCEDURE ensureMethodDefinitionsForEach(key: STRING; value: Object.PType; VAR closure: Object.Type);
+    PROCEDURE do(ids: ARRAY OF STRING; closure: EnsureMethodDefinitionsClosure);
+    VAR
+        report: ARRAY * OF STRING;
+    BEGIN
+        FOR i <- 0 TO LEN(ids) - 1 DO
+            m <- ids[i];
+            IF ~hasMethodDefinition(closure.record, m) THEN
+                report.add(m);
+            END;
+        END;
+
+        IF LEN(report) # 0 THEN
+            closure.result.add(key + ": " + String.join(report, ", "));
+        END;
+    END;
+BEGIN
+    do(value(MethodIds).ids, closure(EnsureMethodDefinitionsClosure));
+END;
+
+PROCEDURE ensureMethodDefinitions(r: PRecord; reasons: JsMap.Type);
+VAR
+    closure: EnsureMethodDefinitionsClosure;
+BEGIN
+    closure.record := r;
+    JsMap.forEach(reasons, ensureMethodDefinitionsForEach, closure);
+    IF LEN(closure.result) # 0 THEN
+        Errors.raise(String.join(closure.result, "; "));
+    END;
+END;
+
+PROCEDURE makeMethodIds(): MethodIds;
+VAR
+    result: MethodIds;
+BEGIN
+    NEW(result);
+    RETURN result;
+END;
+
+PROCEDURE requireMethodDefinition*(r: PRecord; id: STRING; reason: STRING);
+VAR
+    existingIds: Object.PType;
+
+    PROCEDURE makeIds(): MethodIds;
+    BEGIN
+        result <- makeMethodIds();
+        result.ids.add(id);
+        RETURN result;
+    END;
+
+    PROCEDURE addIfNotThere(VAR ids: ARRAY * OF STRING);
+    BEGIN
+        IF ids.indexOf(id) = -1 THEN
+            ids.add(id);
+        END;
+    END;
+
+BEGIN
+    IF findMethodDeclaration(r, id) = NIL THEN
+        Errors.raise("there is no method '" + id + "' in base type(s)");
+    END;
+
+    IF r.finalized THEN
+        reasons <- JsMap.make();
+        JsMap.put(reasons, reason, makeIds());
+        ensureMethodDefinitions(r, reasons);
+    ELSE
+        IF ~JsMap.find(r.lazyDefinitions, reason, existingIds) THEN
+            JsMap.put(r.lazyDefinitions, reason, makeIds());
+        ELSE
+            addIfNotThere(existingIds(MethodIds).ids);
+        END;
+    END;
+END;
+
+PROCEDURE requireMethodDefinitionForEach(key: STRING; value: Object.PType; VAR closure: Object.Type);
+    PROCEDURE do(closure: RequireMethodDefinitionClosure);
+    BEGIN
+        IF ~hasMethodDefinition(closure.record, key) THEN
+            requireMethodDefinition(closure.base, key, cannotInstantiateErrMsg(closure.record^));
+        END;
+    END;
+BEGIN
+    do(closure(RequireMethodDefinitionClosure));
+END;
+
+PROCEDURE ensureNonAbstract(r: PRecord);
+VAR
+    closure: RequireMethodDefinitionClosure;
+BEGIN
+    IF LEN(r.abstractMethods) # 0 THEN
+        Errors.raise(cannotInstantiateErrMsg(r^) + ": " + String.join(r.abstractMethods, ", "));
+    END;
+
+    baseType <- r.base(PRecord);
+    closure.record := r;
+    WHILE baseType # NIL DO
+        IF ~baseType.finalized THEN
+            closure.base := baseType;
+            JsMap.forEach(baseType.declaredMethods, requireMethodDefinitionForEach, closure);
+        END;
+        baseType := baseType.base(PRecord);
+    END;
+END;
+
+PROCEDURE ensureVariableCanBeDeclared(r: PRecord);
+BEGIN
+    type <- r;
+    WHILE type # NIL DO
+        IF type.createByNewOnly THEN
+            Errors.raise(
+                    "cannot declare a variable of type '" 
+                  + type.name + "' (and derived types) "
+                  + "because SELF(POINTER) was used in its method(s)");
+        END;
+        type := type.base(PRecord);
+    END;
+END;
+
+PROCEDURE RecordFieldAsMethod.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
+    RETURN EberonTypes.makeMethod(SELF.type()); 
+END;
+
+PROCEDURE makeRecordFieldAsMethod(identdef: Context.PIdentdefInfo; type: Types.PType): PRecordFieldAsMethod;
+VAR
+    result: PRecordFieldAsMethod;
+BEGIN
+    NEW(result);
+    Types.initRecordField(identdef, type, result^);
+    RETURN result; 
+END;
+
+PROCEDURE Record.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
+BEGIN
+    IF SELF.finalized THEN
+        ensureNonAbstract(SELF(POINTER));
+        IF ~forNew THEN
+            ensureVariableCanBeDeclared(SELF(POINTER));
+        END;
+    ELSE
+        SELF.instantiated := TRUE;
+        IF ~forNew THEN
+            SELF.declaredAsVariable := TRUE;
+        END;
+    END;
+
+    RETURN SUPER(cx, forNew, code);
+END;
+
+PROCEDURE Record.findSymbol(id: STRING): Types.PField;
+BEGIN
+    result <- findMethodDeclaration(SELF(POINTER), id);
+    IF result = NIL THEN
+        result := SUPER(id);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Record.addField(f: Types.PField);
+BEGIN
+    id <- f.id();
+    IF findMethodDeclaration(SELF(POINTER), id) # NIL THEN
+        Errors.raise(
+            "cannot declare field, record already has method '" + id +"'");
+    END;
+    SUPER(f);
+END;
+
+PROCEDURE Record.addMethod(methodId: Context.PIdentdefInfo; type: Types.PProcedure);
+VAR
+    msg: STRING;
+BEGIN
+    id <- methodId.id();
+    existingField <- SELF.findSymbol(id);
+    IF existingField # NIL THEN
+        IF existingField.type()^ IS EberonTypes.MethodType THEN
+            msg := "cannot declare a new method '" 
+                 + id 
+                 + "': method already was declared";
+        ELSE
+            msg := "cannot declare method, record already has field '" + id + "'";
+        END;
+        Errors.raise(msg);
+    END;
+
+    JsMap.put(SELF.declaredMethods, id, makeRecordFieldAsMethod(methodId, type));
+    IF ~methodId.exported() THEN
+        SELF.nonExportedMethods.add(id);
+    END;
+END;
+
+PROCEDURE Record.defineMethod(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
+VAR 
+    existingType: Types.PDefinedProcedure;
+BEGIN
+    id <- methodId.id();
+    IF SELF.definedMethods.indexOf(id) # -1 THEN
+        Errors.raise("method '" + SELF.name + "." + id + "' already defined");
+    END;
+
+    existingField <- SELF.findSymbol(id);
+    IF existingField # NIL THEN
+        t <- existingField.type();
+        IF t^ IS EberonTypes.MethodType THEN
+            existingType := t.procType();
+        END;
+    END;
+    IF existingType = NIL THEN
+        Errors.raise("'" + SELF.name + "' has no declaration for method '" + id + "'");
+    END;
+
+    addType <- type.procType();
+    IF ~Cast.areProceduresMatch(existingType, addType) THEN
+        Errors.raise("overridden method '" + id + "' signature mismatch: should be '"
+                   + existingType.description() + "', got '" 
+                   + addType.description() + "'");
+    END;
+    
+    SELF.definedMethods.add(id);
+END;
+
+PROCEDURE Record.requireNewOnly();
+BEGIN
+    SELF.createByNewOnly := TRUE;
+END;
+
+PROCEDURE Record.setRecordInitializationCode(fieldsInitializationCode, inheritanceCode: STRING);
+BEGIN
+    SELF.fieldsInitializationCode := fieldsInitializationCode;
+    SELF.inheritanceCode := inheritanceCode;
+END;
+
+PROCEDURE Record.defineConstructor(type: Types.PDefinedProcedure): STRING;
+BEGIN
+    IF SELF.customConstructor # NIL THEN
+        Errors.raise("constructor '" + SELF.name + "' already defined");
+    END;
+    IF type.result() # NIL THEN
+        Errors.raise("constructor '" + SELF.name + "' cannot have result type specified");
+    END;
+
+    SELF.customConstructor := type;
+    RETURN SELF.inheritanceCode;
+END;
+
+PROCEDURE collectAbstractMethods(r: Record);
+VAR
+    methods: ARRAY * OF STRING;
+BEGIN
+    selfMethods <- JsMap.keys(r.declaredMethods);
+    baseType <- r.base(PRecord);
+    IF baseType # NIL THEN
+        JS.do("methods = baseType.abstractMethods.concat(selfMethods);");
+    ELSE
+        methods := selfMethods;
+    END;
+
+    FOR i <- 0 TO LEN(methods) - 1 DO
+        m <- methods[i];
+        IF r.definedMethods.indexOf(m) = -1 THEN
+            r.abstractMethods.add(m);
+        END;
+    END;
+END;
+
+PROCEDURE Record.finalize();
+BEGIN
+    SELF.finalized := TRUE;
+    collectAbstractMethods(SELF);
+    IF SELF.instantiated THEN
+        ensureNonAbstract(SELF(POINTER));
+    END;
+    
+    IF SELF.declaredAsVariable THEN
+        ensureVariableCanBeDeclared(SELF(POINTER));
+    END;
+    
+    ensureMethodDefinitions(SELF(POINTER), SELF.lazyDefinitions);
+
+    FOR i <- 0 TO LEN(SELF.nonExportedMethods) - 1 DO
+        JsMap.erase(SELF.declaredMethods, SELF.nonExportedMethods[i]);
+    END;
+    SELF.nonExportedMethods.clear();
+
+    SUPER();
+END;
+
+PROCEDURE RecordField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
+BEGIN
+    actualReadOnly <- isReadOnly;
+    IF ~actualReadOnly & (LEN(cx.qualifyScope(Types.recordScope(SELF.record^))) # 0) THEN
+        actualReadOnly := SELF.identdef()(EberonContext.PIdentdefInfo).isReadOnly();
+    END;
+    RETURN SUPER(actualReadOnly, cx); 
+END;
+
+PROCEDURE makeRecord*(name: STRING; cons: STRING; scope: ScopeBase.PType): Types.PRecord;
+VAR
+    result: PRecord;
+BEGIN
+    NEW(result);
+    Types.initRecord(result, name, cons, scope);
+    result.declaredMethods := JsMap.make();
+    result.lazyDefinitions := JsMap.make();
+    RETURN result;
+END;
+
+PROCEDURE makeRecordField*(identdef: Context.PIdentdefInfo; type: Types.PType; record: PRecord): Types.PRecordField;
+VAR
+    result: POINTER TO RecordField;
+BEGIN
+    NEW(result);
+    Types.initRecordField(identdef, type, result^);
+    result.record := record;
+    RETURN result;
+END;
+
+END EberonRecord.

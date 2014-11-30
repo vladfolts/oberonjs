@@ -58,12 +58,11 @@ END test.
 <textarea id="result" rows="10" cols="80">
 </textarea>
 </div>
-
-    <p>
-        <button onclick="run()">Run</button>
-    </p>
+    <p><button onclick="run()">Run</button></p>
+    <p><button onclick="run_tests()">Run Tests</button></p>
 <p id="runErrors" style="color:red"></p>
 <p id="runTime"></p>
+<p id="testsResult"></p>
 <p id="version"></p>
 
 <script src="oc.js"></script>
@@ -107,20 +106,36 @@ END test.
         document.getElementById("compileTime").textContent = "compile time (seconds): " + compileTime;
             }
 
-            function run(){
-        var errElement = document.getElementById("runErrors");
-        errElement.textContent = "";
-        var start = new Date();
-        try{
-            eval(javascriptEditor.getValue());
+        function timed_run(action){
+            var start = new Date();
+            var result = action();
+            var runTime = (new Date() - start) / 1000;
+            document.getElementById("runTime").textContent = "run time (seconds): " + runTime;
+            return result;
         }
-        catch (e){
-            var errors = "" + e;
-            errElement.textContent = errors;
+
+        function run(){
+            var errElement = document.getElementById("runErrors");
+            errElement.textContent = "";
+            timed_run(function(){
+                try{
+                    eval(javascriptEditor.getValue());
+                }
+                catch (e){
+                    var errors = "" + e;
+                    errElement.textContent = errors;
+                }
+            });
         }
-        var runTime = (new Date() - start) / 1000;
-        document.getElementById("runTime").textContent = "run time (seconds): " + runTime;
-    }
+
+        function run_tests(){
+            var resultsElement = document.getElementById("testsResult");
+            resultsElement.textContent = "running...";
+            var result = timed_run(function(){
+                return require("test_unit.js").run();
+            });
+            resultsElement.textContent = result ? "Tests OK" : "Tests failed";
+        }
 </script>
 
 </body>
