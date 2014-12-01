@@ -1117,6 +1117,27 @@ exports.suite = {
                 "TYPE T = RECORD END;"),
         pass("r <- T()"),
         fail()
+        ),
+    "call base": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE T = RECORD END; RecordWthoutConstructor = RECORD END;"
+                + "Derived = RECORD(T) END;"
+                + "DerivedWthoutConstructor = RECORD(RecordWthoutConstructor) END;"
+                + "RecordWthConstructorNoParameters = RECORD END;"
+                + "DerivedWthConstructorNoParameters = RECORD(RecordWthConstructorNoParameters) END;"
+                + "PROCEDURE T(a: INTEGER); END;"
+                + "PROCEDURE RecordWthConstructorNoParameters(); END;"
+               ),
+        pass("PROCEDURE Derived() | SUPER(0); END;"),
+        fail(["PROCEDURE Derived(); END;", "base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)"],
+             ["PROCEDURE Derived() | SUPER(1, 2); END;", "1 argument(s) expected, got 2"],
+             ["PROCEDURE Derived() | SUPER(FALSE); END;", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
+             ["PROCEDURE Derived() | SUPER(); END;", "1 argument(s) expected, got 0"],
+             ["PROCEDURE Derived(); BEGIN SUPER(0); END;", "cannot call base constructor from procedure body (use '| SUPER' to pass parameters to base constructor)"],
+             ["PROCEDURE RecordWthoutConstructor() | SUPER(0); END;", "'RecordWthoutConstructor' has no base type - SUPER cannot be used"],
+             ["PROCEDURE DerivedWthoutConstructor() | SUPER(); END;", "base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)"],
+             ["PROCEDURE DerivedWthConstructorNoParameters() | SUPER(); END;", "base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)"]
+            )
         )
     }
 };

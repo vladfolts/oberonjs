@@ -183,14 +183,14 @@ var Identdef = Context.Identdef.extend({
     }
 });
 
-function makeConstructorCall(context, type){
+function makeConstructorCall(context, type, call){
     var l = context.language();
     var cx = {
         types: l.types, 
         rtl: l.rtl, 
         qualifyScope: context.qualifyScope.bind(context)
         };
-    return EberonConstructor.makeConstructorCall(type, cx);
+    return call(type, cx);
     }
 
 var Designator = Context.Designator.extend({
@@ -252,7 +252,7 @@ var Designator = Context.Designator.extend({
     __beginCall: function(){
         var type = this._currentType();
         if (type instanceof Type.TypeId && type.type() instanceof Type.Record){
-            this.__procCall = makeConstructorCall(this, type.type());
+            this.__procCall = makeConstructorCall(this, type.type(), EberonConstructor.makeConstructorCall);
             this._discardCode();
         }
         else
@@ -442,6 +442,7 @@ var RecordDecl = Context.RecordDecl.extend({
         var type = this.type();
         var inheritanceCode = this._generateInheritance();
         type.setRecordInitializationCode(
+            this._generateBaseConstructorCallCode(),
             this._generateFieldsInitializationCode(), 
             inheritanceCode);
         this.currentScope().addFinalizer(function(){
@@ -470,6 +471,37 @@ function handleTypePromotionMadeInSeparateStatement(msg){
     return false;
 }
 
+function getConstructorSuperMsg(){}
+
+var BaseInit = Context.Chained.extend({
+    init: function EberonContext$BaseInit(parent){
+        Context.Chained.prototype.init.call(this, parent);
+        this.__type = undefined;
+        this.__baseConstructorCall = undefined;
+    },
+    codeGenerator: function(){return CodeGenerator.nullGenerator();},
+    handleMessage: function(msg){
+        if (msg == Context.beginCallMsg)
+            return;
+        if (msg == Context.endCallMsg){
+            var e = this.__baseConstructorCall.end();
+            this.__type.setBaseConstructorCallCode(e.code());
+            return;
+        }
+        return Context.Chained.prototype.handleMessage.call(this, msg);
+    },
+    handleExpression: function(e){
+        this.__baseConstructorCall.handleArgument(e);
+    },
+    handleLiteral: function(s){
+        if (s == "SUPER"){
+            var ms = this.handleMessage(getConstructorSuperMsg);
+            this.__type = ms.type;
+            this.__baseConstructorCall = makeConstructorCall(this, Type.recordBase(this.__type), EberonConstructor.makeBaseConstructorCall);
+        }
+    }
+});
+
 var ProcOrMethodDecl = Context.ProcDecl.extend({
     init: function EberonContext$ProcOrMethodDecl(parent, stdSymbols){
         Context.ProcDecl.prototype.init.call(this, parent, stdSymbols);
@@ -478,6 +510,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         this.__boundType = undefined;
         this.__endingId = undefined;
         this.__isConstructor = false;
+        this.__baseConstructorWasCalled = false;
     },
     handleMessage: function(msg){
         if (msg == getMethodSelf){
@@ -490,8 +523,16 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             return this.__boundType;
         }
 
-        if (msg == getMethodSuper)
+        if (msg == getConstructorSuperMsg){
+            this.__baseConstructorWasCalled = true;
             return this.__handleSuperCall();
+        }
+
+        if (msg == getMethodSuper){
+            if (this.__isConstructor)
+                throw new Errors.Error("cannot call base constructor from procedure body (use '| SUPER' to pass parameters to base constructor)");
+            return this.__handleSuperCall();
+        }
 
         if (msg instanceof MethodOrProcMsg){
             var id = msg.id;
@@ -520,7 +561,9 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     _beginBody: function(){
         Context.ProcDecl.prototype._beginBody.call(this);
         if (this.__isConstructor)
-            this.codeGenerator().write(this.__boundType.fieldsInitializationCode);
+            this.codeGenerator().write(
+                this.__boundType.baseConstructorCallCode
+              + this.__boundType.fieldsInitializationCode);
     },
     _makeArgumentVariable: function(arg){
         if (!arg.isVar)
@@ -565,9 +608,15 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                         + this.__endingId + "'");
             }
 
-            if (this.__isConstructor)
+            if (this.__isConstructor){
+                var base = Type.recordBase(this.__boundType);
+                if (!this.__baseConstructorWasCalled && base && base.customConstructor && base.customConstructor.args().length)
+                    throw new Errors.Error("base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)");
+                if (this.__baseConstructorWasCalled && (!base.customConstructor || !base.customConstructor.args().length))
+                    throw new Errors.Error("base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)");
                 this.codeGenerator().write(
                     this.__boundType.defineConstructor(this.__methodType.procType()));
+            }
             else
                 this.__boundType.defineMethod(this.__methodId, this.__methodType);
         }
@@ -583,9 +632,13 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 + "' has no base type - SUPER cannot be used");
 
         var id = this.__methodId.id();
-        EberonRecord.requireMethodDefinition(baseType, id, "cannot use abstract method(s) in SUPER calls");
+        if (!this.__isConstructor)
+            EberonRecord.requireMethodDefinition(baseType, id, "cannot use abstract method(s) in SUPER calls");
+        
         return {
-            info: Type.makeProcedure(EberonTypes.makeMethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
+            type: this.__boundType,
+            info: this.__isConstructor ? undefined
+                                       : Type.makeProcedure(EberonTypes.makeMethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
             code: this.qualifyScope(Type.recordScope(baseType))
                 + Type.typeName(baseType) + ".prototype." + id + ".call"
         };
@@ -1088,6 +1141,7 @@ var ModuleDeclaration = Context.ModuleDeclaration.extend({
 exports.AddOperator = AddOperator;
 exports.ArrayDecl = ArrayDecl;
 exports.ArrayDimensions = ArrayDimensions;
+exports.BaseInit = BaseInit;
 exports.CaseLabel = CaseLabel;
 exports.ConstDecl = ConstDecl;
 exports.Designator = Designator;

@@ -7,7 +7,8 @@ TYPE
         PROCEDURE addMethod(methodId: Context.PIdentdefInfo; type: Types.PProcedure);
         PROCEDURE defineMethod(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
         PROCEDURE requireNewOnly();
-        PROCEDURE setRecordInitializationCode(fieldsInitializationCode, inheritanceCode: STRING);
+        PROCEDURE setBaseConstructorCallCode(code: STRING);
+        PROCEDURE setRecordInitializationCode(baseConstructorCallCode, fieldsInitializationCode, inheritanceCode: STRING);
 
         customConstructor-: Types.PDefinedProcedure;
         finalized: BOOLEAN;
@@ -19,7 +20,7 @@ TYPE
         declaredAsVariable: BOOLEAN;
         lazyDefinitions: JsMap.Type;
         nonExportedMethods: ARRAY * OF STRING;
-        inheritanceCode, fieldsInitializationCode-: STRING;
+        inheritanceCode, baseConstructorCallCode-, fieldsInitializationCode-: STRING;
     END;
     PRecord* = POINTER TO Record;
 
@@ -297,8 +298,14 @@ BEGIN
     SELF.createByNewOnly := TRUE;
 END;
 
-PROCEDURE Record.setRecordInitializationCode(fieldsInitializationCode, inheritanceCode: STRING);
+PROCEDURE Record.setBaseConstructorCallCode(code: STRING);
 BEGIN
+    SELF.baseConstructorCallCode := code;
+END;
+
+PROCEDURE Record.setRecordInitializationCode(baseConstructorCallCode, fieldsInitializationCode, inheritanceCode: STRING);
+BEGIN
+    SELF.baseConstructorCallCode := baseConstructorCallCode;
     SELF.fieldsInitializationCode := fieldsInitializationCode;
     SELF.inheritanceCode := inheritanceCode;
 END;

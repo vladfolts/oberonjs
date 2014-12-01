@@ -31,6 +31,7 @@ function make(makeIdentdef,
               makeForInit,
               makeArrayDimensions,
               makeFormalArray,
+              makeFormalResult,
               makeReturn,
               contexts,
               reservedWords
@@ -177,7 +178,7 @@ var formalParameters = and(
           "("
         , optional(context(and(fpSection, repeat(and(";", fpSection))), Context.ProcParams))
         , required( ")" )
-        , optional(and(":", qualident)));
+        , optional(makeFormalResult(and(":", qualident), actualParameters)));
 
 var procedureType = and("PROCEDURE"
                       , context(optional(formalParameters), contexts.FormalParameters)

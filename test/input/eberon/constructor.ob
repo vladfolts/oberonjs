@@ -16,6 +16,9 @@ TYPE
     RecordWithParamConstructor = RECORD
     END;
 
+    DerivedRecordWithParamConstructor = RECORD(RecordWithParamConstructor)
+    END;
+
 PROCEDURE T();
 END;
 
@@ -32,6 +35,10 @@ PROCEDURE passAsArgument(o: T);
 END;
 
 PROCEDURE RecordWithParamConstructor(a: INTEGER);
+END;
+
+PROCEDURE DerivedRecordWithParamConstructor()
+    | SUPER(123);
 END;
 
 BEGIN

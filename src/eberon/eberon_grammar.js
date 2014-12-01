@@ -91,6 +91,11 @@ function makeFormalArray(){
     return and("ARRAY", optional("*"), "OF");
 }
 
+function makeFormalResult(base, actualParameters){
+    return or(base, 
+              context(and("|", "SUPER", actualParameters), EbContext.BaseInit));
+}
+
 function makeReturn(base){
     return and(base, optional(";"));
 }
@@ -106,6 +111,7 @@ exports.language = {
         makeForInit,
         makeArrayDimensions,
         makeFormalArray,
+        makeFormalResult,
         makeReturn,
         { 
             constDeclaration:   EbContext.ConstDecl, 

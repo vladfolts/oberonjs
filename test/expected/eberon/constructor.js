@@ -25,6 +25,10 @@ function passAsArgument(o/*T*/){
 }
 function RecordWithParamConstructor(a/*INTEGER*/){
 }
+function DerivedRecordWithParamConstructor(){
+	RecordWithParamConstructor.call(this, 123);
+}
+RTL$.extend(DerivedRecordWithParamConstructor, RecordWithParamConstructor);
 passAsArgument(new T());
 var r = new T();
 var i = new RecordWithField().i;

@@ -1759,18 +1759,22 @@ exports.RecordDecl = ChainedContext.extend({
         var gen = CodeGenerator.makeGenerator();
         gen.write("function " + this.__cons + "()");
         gen.openScope();
-        gen.write(this._generateFieldsInitializationCode());
+        gen.write(this._generateBaseConstructorCallCode() 
+                + this._generateFieldsInitializationCode());
         gen.closeScope("");
         return gen.result();
     },
-    _generateFieldsInitializationCode: function(){
-        var type = this.__type;
-        var baseType = Type.recordBase(type);
+    _generateBaseConstructorCallCode: function(){
+        var baseType = Type.recordBase(this.__type);
         var qualifiedBase = baseType ? this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType) : undefined; 
         var result = "";
         if (baseType)
             result += qualifiedBase + ".call(this);\n";
-        var ownFields = Type.recordOwnFields(type);
+        return result;
+    },
+    _generateFieldsInitializationCode: function(){
+        var result = "";
+        var ownFields = Type.recordOwnFields(this.__type);
         for(var f in ownFields){
             var fieldType = ownFields[f].type();
             result += "this." + mangleField(f, fieldType) + " = " + fieldType.initializer(this, false, "") + ";\n";

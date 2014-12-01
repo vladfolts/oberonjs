@@ -71,6 +71,10 @@ function makeFormalArray(){
     return and("ARRAY", "OF");
 }
 
+function makeFormalResult(base){
+    return base;
+}
+
 function makeReturn(base){return base;}
 
 exports.language = {
@@ -84,6 +88,7 @@ exports.language = {
         makeForInit,
         makeArrayDimensions,
         makeFormalArray,
+        makeFormalResult,
         makeReturn,
         {
             constDeclaration:   Context.ConstDecl, 

@@ -1,15 +1,46 @@
 MODULE EberonConstructor;
-IMPORT Code, EberonRecord, LanguageContext, Procedure, Types;
+IMPORT Code, EberonRecord, LanguageContext, Procedure, Stream, Types;
 TYPE
     ConstructorCall = RECORD(Procedure.StdCall)
         recordType: EberonRecord.PRecord;
     END;
+    PConstructorCall = POINTER TO ConstructorCall;
+
+    BaseConstructorCall = RECORD(ConstructorCall)
+    END;
+
+PROCEDURE checkArgs(call: ConstructorCall; args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): STRING;
+BEGIN
+    argCode <- Procedure.makeArgumentsCode(cx);
+    Procedure.processArguments(args, call.args, argCode, cx.types);
+    RETURN argCode.result();
+END;
 
 PROCEDURE ConstructorCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
-    argCode <- Procedure.makeArgumentsCode(cx);
-    Procedure.processArguments(args, SELF.args, argCode, cx.types);
-    RETURN Code.makeSimpleExpression(SELF.recordType.initializer(cx^, FALSE, argCode.result()), SELF.recordType);
+    argCode <- checkArgs(SELF, args, cx);
+    RETURN Code.makeSimpleExpression(SELF.recordType.initializer(cx^, FALSE, argCode), SELF.recordType);
+END;
+
+PROCEDURE BaseConstructorCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+BEGIN
+    argCode <- checkArgs(SELF, args, cx);
+    code <- cx.qualifyScope(SELF.recordType.scope) + SELF.recordType.cons + ".call(this, " + argCode + ");" + Stream.kCR;
+    RETURN Code.makeSimpleExpression(code, NIL);
+END;
+
+PROCEDURE makeCallGenerator(
+    type: EberonRecord.PRecord; 
+    cx: LanguageContext.PType;
+    call: PConstructorCall
+    ): Procedure.PCallGenerator;
+BEGIN
+    Procedure.initStdCall(call);
+    call.recordType := type; 
+    IF type.customConstructor # NIL THEN
+        call.args := type.customConstructor.args();
+    END;
+    RETURN Procedure.makeCallGenerator(call, cx)
 END;
 
 PROCEDURE makeConstructorCall*(
@@ -17,15 +48,21 @@ PROCEDURE makeConstructorCall*(
     cx: LanguageContext.PType
     ): Procedure.PCallGenerator;
 VAR
-    call: POINTER TO ConstructorCall;
+    call: PConstructorCall;
 BEGIN
     NEW(call);
-    Procedure.initStdCall(call);
-    call.recordType := type; 
-    IF type.customConstructor # NIL THEN
-        call.args := type.customConstructor.args();
-    END;
-    RETURN Procedure.makeCallGenerator(call, cx)
+    RETURN makeCallGenerator(type, cx, call);
+END;
+
+PROCEDURE makeBaseConstructorCall*(
+    type: EberonRecord.PRecord; 
+    cx: LanguageContext.PType
+    ): Procedure.PCallGenerator;
+VAR
+    call: POINTER TO BaseConstructorCall;
+BEGIN
+    NEW(call);
+    RETURN makeCallGenerator(type, cx, call);
 END;
 
 END EberonConstructor.

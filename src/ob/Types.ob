@@ -161,9 +161,9 @@ TYPE
         PROCEDURE finalize*();
 
         fields: JsMap.Type;
-        base-:   PRecord;
-        cons:   STRING;
-        scope:  ScopeBase.PType;
+        base-:  PRecord;
+        cons-:  STRING;
+        scope-: ScopeBase.PType;
         notExported: ARRAY * OF STRING
     END;
     
