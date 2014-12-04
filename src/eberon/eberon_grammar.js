@@ -91,9 +91,13 @@ function makeFormalArray(){
     return and("ARRAY", optional("*"), "OF");
 }
 
-function makeFormalResult(base, actualParameters){
+function makeFormalResult(base, ident, actualParameters){
+    var initField = and(ident, actualParameters);
+    var followingFields = repeat(and(",", initField));
     return or(base, 
-              context(and("|", "SUPER", actualParameters), EbContext.BaseInit));
+              context(and("|", or(and("SUPER", actualParameters, followingFields),
+                                  and(initField, followingFields))), 
+                      EbContext.BaseInit));
 }
 
 function makeReturn(base){

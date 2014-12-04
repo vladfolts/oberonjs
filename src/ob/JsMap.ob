@@ -16,6 +16,14 @@ BEGIN
     RETURN result    
 END make;
 
+PROCEDURE makeStrings*(): Strings;
+VAR
+    result: Strings;
+BEGIN
+    JS.do("result = {}");
+    RETURN result    
+END;
+
 PROCEDURE has*(m: Type; s: STRING): BOOLEAN;
 VAR
     result: BOOLEAN;
@@ -36,6 +44,11 @@ PROCEDURE put*(m: Type; s: STRING; o: Object.PType);
 BEGIN
     JS.do("m[s] = o");
 END put;
+
+PROCEDURE putString*(m: Strings; s: STRING; v: STRING);
+BEGIN
+    JS.do("m[s] = v");
+END;
 
 PROCEDURE erase*(m: Type; s: STRING);
 BEGIN

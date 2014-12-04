@@ -472,32 +472,49 @@ function handleTypePromotionMadeInSeparateStatement(msg){
 }
 
 function getConstructorSuperMsg(){}
+function getConstructorBoundType(){}
+
+function InitFieldMsg(id){
+    this.id = id;
+}
 
 var BaseInit = Context.Chained.extend({
     init: function EberonContext$BaseInit(parent){
         Context.Chained.prototype.init.call(this, parent);
         this.__type = undefined;
-        this.__baseConstructorCall = undefined;
+        this.__initCall = undefined;
+        this.__initField = undefined;
+    },
+    type: function(){
+        if (!this.__type)
+            this.__type = this.handleMessage(getConstructorBoundType);
+        return this.__type;
     },
     codeGenerator: function(){return CodeGenerator.nullGenerator();},
     handleMessage: function(msg){
         if (msg == Context.beginCallMsg)
             return;
         if (msg == Context.endCallMsg){
-            var e = this.__baseConstructorCall.end();
-            this.__type.setBaseConstructorCallCode(e.code());
+            var e = this.__initCall.end();
+            if (this.__initField)
+                this.type().setFieldInitializationCode(this.__initField, e.code());
+            else
+                this.type().setBaseConstructorCallCode(e.code());
             return;
         }
         return Context.Chained.prototype.handleMessage.call(this, msg);
     },
+    handleIdent: function(id){
+        this.__initField = id;
+        this.__initCall = this.handleMessage(new InitFieldMsg(id));
+    },
     handleExpression: function(e){
-        this.__baseConstructorCall.handleArgument(e);
+        this.__initCall.handleArgument(e);
     },
     handleLiteral: function(s){
         if (s == "SUPER"){
             var ms = this.handleMessage(getConstructorSuperMsg);
-            this.__type = ms.type;
-            this.__baseConstructorCall = makeConstructorCall(this, Type.recordBase(this.__type), EberonConstructor.makeBaseConstructorCall);
+            this.__initCall = makeConstructorCall(this, Type.recordBase(this.type()), EberonConstructor.makeBaseConstructorCall);
         }
     }
 });
@@ -511,6 +528,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         this.__endingId = undefined;
         this.__isConstructor = false;
         this.__baseConstructorWasCalled = false;
+        this.__initedFields = [];
     },
     handleMessage: function(msg){
         if (msg == getMethodSelf){
@@ -523,6 +541,9 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             return this.__boundType;
         }
 
+        if (msg == getConstructorBoundType)
+            return this.__boundType;
+
         if (msg == getConstructorSuperMsg){
             this.__baseConstructorWasCalled = true;
             return this.__handleSuperCall();
@@ -533,6 +554,9 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 throw new Errors.Error("cannot call base constructor from procedure body (use '| SUPER' to pass parameters to base constructor)");
             return this.__handleSuperCall();
         }
+
+        if (msg instanceof InitFieldMsg)
+            return this.__handleFieldInit(msg.id);
 
         if (msg instanceof MethodOrProcMsg){
             var id = msg.id;
@@ -614,6 +638,16 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                     throw new Errors.Error("base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)");
                 if (this.__baseConstructorWasCalled && (!base.customConstructor || !base.customConstructor.args().length))
                     throw new Errors.Error("base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)");
+                
+                var fieldsWereNotInited = [];
+                for(var i = 0; i < this.__boundType.customInitedfields.length; ++i){
+                    var f = this.__boundType.customInitedfields[i];
+                    if (this.__initedFields.indexOf(f) == -1)
+                        fieldsWereNotInited.push(f);
+                }
+                if (fieldsWereNotInited.length)
+                    throw new Errors.Error("constructor '" + Type.typeName(this.__boundType) + "' must initialize fields: " + fieldsWereNotInited);
+
                 this.codeGenerator().write(
                     this.__boundType.defineConstructor(this.__methodType.procType()));
             }
@@ -636,12 +670,26 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             EberonRecord.requireMethodDefinition(baseType, id, "cannot use abstract method(s) in SUPER calls");
         
         return {
-            type: this.__boundType,
             info: this.__isConstructor ? undefined
                                        : Type.makeProcedure(EberonTypes.makeMethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
             code: this.qualifyScope(Type.recordScope(baseType))
                 + Type.typeName(baseType) + ".prototype." + id + ".call"
         };
+    },
+    __handleFieldInit: function(id){
+        var fields = Type.recordOwnFields(this.__boundType);
+        if (!fields.hasOwnProperty(id))
+            throw new Errors.Error("'" + id + "' is not record '" + Type.typeName(this.__boundType) + "' own field");
+        
+        if (this.__initedFields.indexOf(id) != -1)
+            throw new Errors.Error("field '" + id + "' is already initialized");
+
+        this.__initedFields.push(id);        
+        var type = fields[id].type();
+        if (!(type instanceof Type.Record))
+            throw new Errors.Error("cannot initialize field '" + id + "', only fields of record types are supported");
+
+        return makeConstructorCall(this, type, EberonConstructor.makeConstructorCall);
     }
 });
 

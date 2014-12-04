@@ -8,9 +8,11 @@ TYPE
         PROCEDURE defineMethod(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
         PROCEDURE requireNewOnly();
         PROCEDURE setBaseConstructorCallCode(code: STRING);
+        PROCEDURE setFieldInitializationCode(field: STRING; code: STRING);
         PROCEDURE setRecordInitializationCode(baseConstructorCallCode, fieldsInitializationCode, inheritanceCode: STRING);
 
         customConstructor-: Types.PDefinedProcedure;
+        customInitedfields-: ARRAY * OF STRING;
         finalized: BOOLEAN;
         declaredMethods: JsMap.Type;
         definedMethods: ARRAY * OF STRING;
@@ -21,6 +23,7 @@ TYPE
         lazyDefinitions: JsMap.Type;
         nonExportedMethods: ARRAY * OF STRING;
         inheritanceCode, baseConstructorCallCode-, fieldsInitializationCode-: STRING;
+        fieldsInit: JsMap.Strings;
     END;
     PRecord* = POINTER TO Record;
 
@@ -237,6 +240,14 @@ BEGIN
         Errors.raise(
             "cannot declare field, record already has method '" + id +"'");
     END;
+
+    type <- f.type();
+    IF (type IS PRecord) 
+        & (type.customConstructor # NIL) 
+        & (LEN(type.customConstructor.args()) # 0) THEN
+        SELF.customInitedfields.add(id);
+    END;
+
     SUPER(f);
 END;
 
@@ -301,6 +312,11 @@ END;
 PROCEDURE Record.setBaseConstructorCallCode(code: STRING);
 BEGIN
     SELF.baseConstructorCallCode := code;
+END;
+
+PROCEDURE Record.setFieldInitializationCode(field: STRING; code: STRING);
+BEGIN
+    JsMap.putString(SELF.fieldsInit, field, code);
 END;
 
 PROCEDURE Record.setRecordInitializationCode(baseConstructorCallCode, fieldsInitializationCode, inheritanceCode: STRING);
@@ -382,6 +398,7 @@ BEGIN
     Types.initRecord(result, name, cons, scope);
     result.declaredMethods := JsMap.make();
     result.lazyDefinitions := JsMap.make();
+    result.fieldsInit := JsMap.makeStrings();
     RETURN result;
 END;
 

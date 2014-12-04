@@ -1138,6 +1138,35 @@ exports.suite = {
              ["PROCEDURE DerivedWthoutConstructor() | SUPER(); END;", "base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)"],
              ["PROCEDURE DerivedWthConstructorNoParameters() | SUPER(); END;", "base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)"]
             )
+        ),
+    "initialize fields": testWithModule(
+            "MODULE m;"
+          + "TYPE Field* = RECORD END;"
+          + "PROCEDURE Field(a: INTEGER); END;"
+          + "END m.",
+        pass("MODULE m2; IMPORT m; TYPE T = RECORD f: m.Field; END; PROCEDURE T() | f(123); END; END m2."),
+        fail(["MODULE m2; IMPORT m; TYPE T = RECORD f: m.Field; END; PROCEDURE T(); END; END m2.", 
+              "constructor 'T' must initialize fields: f"],
+             ["MODULE m2; TYPE T = RECORD END; PROCEDURE T() | unknownField(123); END; END m2.", 
+              "'unknownField' is not record 'T' own field"],
+             ["MODULE m2; IMPORT m; TYPE T = RECORD f: m.Field; END; Derived = RECORD(T) END; PROCEDURE Derived() | f(123); END; END m2.", 
+              "'f' is not record 'Derived' own field"],
+             ["MODULE m2; IMPORT m; TYPE T = RECORD f: m.Field; END; PROCEDURE T() | f(123), f(123); END; END m2.", 
+              "field 'f' is already initialized"],
+             ["MODULE m2; TYPE T = RECORD i: INTEGER; END; PROCEDURE T() | i(); END; END m2.", 
+              "cannot initialize field 'i', only fields of record types are supported"],
+             ["MODULE m2; TYPE T = RECORD i: INTEGER; END; PROCEDURE T() | i(123); END; END m2.", 
+              "cannot initialize field 'i', only fields of record types are supported"]
+             )
+        ),
+    "call base and initialize fields": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE Field = RECORD END; T = RECORD END; Derived = RECORD(T) f: Field; END;"
+              + "PROCEDURE Field(a: INTEGER); END;"
+              + "PROCEDURE T(a: INTEGER); END;"
+              ),
+        pass("PROCEDURE Derived() | SUPER(123), f(456); END;"),
+        fail(["PROCEDURE Derived() | f(456), SUPER(123); END;", "not parsed"])
         )
     }
 };
