@@ -1,43 +1,50 @@
 MODULE m;
 TYPE
     T = RECORD
+        PROCEDURE T();
     END;
 
     Derived = RECORD(T)
+        PROCEDURE Derived();
     END;
 
     RecordWithField = RECORD
+        PROCEDURE RecordWithField();
+
         i: INTEGER;
     END;
 
     RecordWithFieldDerived = RECORD(T)
+        PROCEDURE RecordWithFieldDerived();
     END;
 
     RecordWithParamConstructor = RECORD
+        PROCEDURE RecordWithParamConstructor(a: INTEGER);
     END;
 
     DerivedRecordWithParamConstructor = RECORD(RecordWithParamConstructor)
+        PROCEDURE DerivedRecordWithParamConstructor();
     END;
 
-PROCEDURE T();
+PROCEDURE T.T();
 END;
 
-PROCEDURE Derived();
+PROCEDURE Derived.Derived();
 END;
 
-PROCEDURE RecordWithField();
+PROCEDURE RecordWithField.RecordWithField();
 END;
 
-PROCEDURE RecordWithFieldDerived();
+PROCEDURE RecordWithFieldDerived.RecordWithFieldDerived();
 END;
 
 PROCEDURE passAsArgument(o: T);
 END;
 
-PROCEDURE RecordWithParamConstructor(a: INTEGER);
+PROCEDURE RecordWithParamConstructor.RecordWithParamConstructor(a: INTEGER);
 END;
 
-PROCEDURE DerivedRecordWithParamConstructor()
+PROCEDURE DerivedRecordWithParamConstructor.DerivedRecordWithParamConstructor()
     | SUPER(123);
 END;
 

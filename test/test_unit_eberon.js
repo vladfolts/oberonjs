@@ -1,7 +1,7 @@
 "use strict";
 
 var Class = require("rtl.js").Class;
-var EberonCodeGenerator = require("js/EberonCodeGenerator.js");
+//var EberonCodeGenerator = require("js/EberonCodeGenerator.js");
 var language = require("eberon/eberon_grammar.js").language;
 var TestUnitCommon = require("test_unit_common.js");
 var TypePromotion = require("eberon/eberon_type_promotion.js");
@@ -75,7 +75,7 @@ var TestVar = Class.extend({
     type: function(){return this.__type;},
     setType: function(type){this.__type = type;}
 });
-
+/*
 function makeCodeSuite(){
     return {
         "insertion": pass(
@@ -107,9 +107,9 @@ function makeCodeSuite(){
         )
     };
 }
-
+*/
 exports.suite = {
-"code": makeCodeSuite(),
+//"code": makeCodeSuite(),
 "arithmetic operators": testWithContext(
     context(grammar.statement, "VAR b1: BOOLEAN;"),
     pass(),
@@ -1077,26 +1077,28 @@ exports.suite = {
 "constructor": {
     "declaration": testWithGrammar(
         grammar.declarationSequence, 
-        pass("TYPE T = RECORD END; PROCEDURE T(); END;",
-             "TYPE T = RECORD i: INTEGER; END; PROCEDURE T(); BEGIN SELF.i := 0; END;",
-             "TYPE T = RECORD END; PROCEDURE T(); END T;",
-             "TYPE T = RECORD END; PROCEDURE p(); PROCEDURE T(); END; BEGIN T(); END;", /* local procedure name may match type name from outer scope*/
-             "TYPE T = RECORD END; PROCEDURE T(a: INTEGER); END T;"
+        pass("TYPE T = RECORD PROCEDURE T(); END; PROCEDURE T.T(); END;",
+             "TYPE T = RECORD PROCEDURE T(); i: INTEGER; END; PROCEDURE T.T(); BEGIN SELF.i := 0; END;",
+             "TYPE T = RECORD PROCEDURE T(); END; PROCEDURE T.T(); END T.T;",
+             "TYPE T = RECORD PROCEDURE T(a: INTEGER); END; PROCEDURE T.T(a: INTEGER); END;"
         ),
-        fail(["TYPE T = RECORD END; PROCEDURE T(); END; PROCEDURE T(); END;", "constructor 'T' already defined"],
-             ["TYPE T = RECORD END; PROCEDURE T(): INTEGER; RETURN 0; END;", "constructor 'T' cannot have result type specified"],
-             ["TYPE T = ARRAY 3 OF INTEGER; PROCEDURE T(); END;", "'T' already declared"],
-             ["TYPE T = RECORD END; PROCEDURE T(); END T.T;", "mismatched method names: expected 'T' at the end (or nothing), got 'T.T'"],
-             ["TYPE T = RECORD END; PROCEDURE T.T(); END;", "'T' has no declaration for method 'T'"],
-             ["TYPE T = RECORD END; PROCEDURE T(); END T2;", "mismatched method names: expected 'T' at the end (or nothing), got 'T2'"],
-             ["TYPE T = RECORD END; PROCEDURE T(); END T.T;", "mismatched method names: expected 'T' at the end (or nothing), got 'T.T'"]
+        fail(["TYPE T = RECORD END; PROCEDURE T(); END;", "'T' already declared"],
+             ["TYPE T = RECORD END; PROCEDURE T.T(); END;", "constructor was not declared for 'T'"],
+             ["TYPE T = RECORD PROCEDURE T(); END; PROCEDURE T.T(a: INTEGER); END;", "constructor 'T' signature mismatch: declared as 'PROCEDURE' but defined as 'PROCEDURE(INTEGER)'"],
+             ["TYPE T = RECORD PROCEDURE T(); PROCEDURE T(); END;", "constructor 'T' already declared"],
+             ["TYPE T = RECORD PROCEDURE T(); END; PROCEDURE T.T(); END T;", "mismatched method names: expected 'T.T' at the end (or nothing), got 'T'"],
+             ["TYPE T = RECORD PROCEDURE T(); END; PROCEDURE p(); PROCEDURE T.T(); END; END;", "method should be defined in the same scope as its bound type 'T'"],
+             ["PROCEDURE p(); TYPE T = RECORD PROCEDURE T(); END; END;", "constructor was declared for 'T' but was not defined"],
+             ["TYPE T = RECORD PROCEDURE T(); END; PROCEDURE T.T(); END; PROCEDURE T.T(); END;", "constructor already defined for 'T'"],   
+             ["TYPE T = RECORD PROCEDURE T(): INTEGER; END;", "constructor 'T' cannot have result type specified"],
+             ["TYPE T = ARRAY 3 OF INTEGER; PROCEDURE T(); END;", "'T' already declared"]
              )
         ),
     "as expression": testWithContext(
         context(grammar.expression,
                 "TYPE T = RECORD i: INTEGER; END; PT = POINTER TO T;"
-                + "ConsWithArguments = RECORD END;"
-                + "PROCEDURE ConsWithArguments(a: INTEGER); END;"
+                + "ConsWithArguments = RECORD PROCEDURE ConsWithArguments(a: INTEGER); END;"
+                + "PROCEDURE ConsWithArguments.ConsWithArguments(a: INTEGER); END;"
                 + "PROCEDURE byVar(VAR a: T): INTEGER; RETURN 0; END;"
                 + "PROCEDURE byNonVar(a: T): INTEGER; RETURN 0; END;"
                 ),
@@ -1118,55 +1120,65 @@ exports.suite = {
         pass("r <- T()"),
         fail()
         ),
-    "call base": testWithContext(
+    "call base - correct": testWithContext(
         context(grammar.declarationSequence,
-                "TYPE T = RECORD END; RecordWthoutConstructor = RECORD END;"
-                + "Derived = RECORD(T) END;"
-                + "DerivedWthoutConstructor = RECORD(RecordWthoutConstructor) END;"
-                + "RecordWthConstructorNoParameters = RECORD END;"
-                + "DerivedWthConstructorNoParameters = RECORD(RecordWthConstructorNoParameters) END;"
-                + "PROCEDURE T(a: INTEGER); END;"
-                + "PROCEDURE RecordWthConstructorNoParameters(); END;"
+                "TYPE T = RECORD PROCEDURE T(a: INTEGER); END;"
+                + "Derived = RECORD(T) PROCEDURE Derived(); END;"
+                + "PROCEDURE T.T(a: INTEGER); END;"
                ),
-        pass("PROCEDURE Derived() | SUPER(0); END;"),
-        fail(["PROCEDURE Derived(); END;", "base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)"],
-             ["PROCEDURE Derived() | SUPER(1, 2); END;", "1 argument(s) expected, got 2"],
-             ["PROCEDURE Derived() | SUPER(FALSE); END;", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
-             ["PROCEDURE Derived() | SUPER(); END;", "1 argument(s) expected, got 0"],
-             ["PROCEDURE Derived(); BEGIN SUPER(0); END;", "cannot call base constructor from procedure body (use '| SUPER' to pass parameters to base constructor)"],
-             ["PROCEDURE RecordWthoutConstructor() | SUPER(0); END;", "'RecordWthoutConstructor' has no base type - SUPER cannot be used"],
-             ["PROCEDURE DerivedWthoutConstructor() | SUPER(); END;", "base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)"],
-             ["PROCEDURE DerivedWthConstructorNoParameters() | SUPER(); END;", "base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)"]
+        pass("PROCEDURE Derived.Derived() | SUPER(0); END;")
+        ),
+    "call base - incorrect": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE T = RECORD PROCEDURE T(a: INTEGER); END;"
+                + "RecordWthoutBase = RECORD END;"
+                + "Derived = RECORD(T) PROCEDURE Derived(); END;"
+                + "DerivedWthoutConstructor = RECORD(RecordWthoutBase) PROCEDURE DerivedWthoutConstructor(); END;"
+                + "RecordWthConstructorNoParameters = RECORD PROCEDURE RecordWthConstructorNoParameters(); END;"
+                + "DerivedWthConstructorNoParameters = RECORD(RecordWthConstructorNoParameters) PROCEDURE DerivedWthConstructorNoParameters(); END;"
+                + "PROCEDURE T.T(a: INTEGER); END;"
+                + "PROCEDURE RecordWthConstructorNoParameters.RecordWthConstructorNoParameters(); END;"
+               ),
+        pass(),
+        fail(["PROCEDURE Derived.Derived(); END;", "base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)"],
+             ["PROCEDURE Derived.Derived() | SUPER(1, 2); END;", "1 argument(s) expected, got 2"],
+             ["PROCEDURE Derived.Derived() | SUPER(FALSE); END;", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
+             ["PROCEDURE Derived.Derived() | SUPER(); END;", "1 argument(s) expected, got 0"],
+             ["PROCEDURE Derived.Derived(); BEGIN SUPER(0); END;", "cannot call base constructor from procedure body (use '| SUPER' to pass parameters to base constructor)"],
+             ["PROCEDURE RecordWthoutBase.RecordWthoutBase() | SUPER(0); END;", "'RecordWthoutBase' has no base type - SUPER cannot be used"],
+             ["PROCEDURE DerivedWthoutConstructor.DerivedWthoutConstructor() | SUPER(); END;", "base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)"],
+             ["PROCEDURE DerivedWthConstructorNoParameters.DerivedWthConstructorNoParameters() | SUPER(); END;", "base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)"]
             )
         ),
-    "initialize fields": testWithModule(
-            "MODULE m;"
-          + "TYPE Field* = RECORD END;"
-          + "PROCEDURE Field(a: INTEGER); END;"
-          + "END m.",
-        pass("MODULE m2; IMPORT m; TYPE T = RECORD f: m.Field; END; PROCEDURE T() | f(123); END; END m2."),
-        fail(["MODULE m2; IMPORT m; TYPE T = RECORD f: m.Field; END; PROCEDURE T(); END; END m2.", 
+    "initialize fields": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE Field = RECORD PROCEDURE Field(a: INTEGER); END;"
+              + "PROCEDURE Field.Field(a: INTEGER); END;"),
+        pass("TYPE T = RECORD PROCEDURE T(); f: Field; END; PROCEDURE T.T() | f(123); END;"),
+        fail(["TYPE T = RECORD PROCEDURE T(); f: Field; END; PROCEDURE T.T(); END;", 
               "constructor 'T' must initialize fields: f"],
-             ["MODULE m2; TYPE T = RECORD END; PROCEDURE T() | unknownField(123); END; END m2.", 
+             ["TYPE T = RECORD PROCEDURE T(); END; PROCEDURE T.T() | unknownField(123); END;", 
               "'unknownField' is not record 'T' own field"],
-             ["MODULE m2; IMPORT m; TYPE T = RECORD f: m.Field; END; Derived = RECORD(T) END; PROCEDURE Derived() | f(123); END; END m2.", 
+             ["TYPE T = RECORD f: Field; END; Derived = RECORD(T) PROCEDURE Derived(); END; PROCEDURE Derived.Derived() | f(123); END;", 
               "'f' is not record 'Derived' own field"],
-             ["MODULE m2; IMPORT m; TYPE T = RECORD f: m.Field; END; PROCEDURE T() | f(123), f(123); END; END m2.", 
+             ["TYPE T = RECORD PROCEDURE T(); f: Field; END; PROCEDURE T.T() | f(123), f(123); END;", 
               "field 'f' is already initialized"],
-             ["MODULE m2; TYPE T = RECORD i: INTEGER; END; PROCEDURE T() | i(); END; END m2.", 
+             ["TYPE T = RECORD i: INTEGER; END; PROCEDURE T.T() | i(); END;", 
               "cannot initialize field 'i', only fields of record types are supported"],
-             ["MODULE m2; TYPE T = RECORD i: INTEGER; END; PROCEDURE T() | i(123); END; END m2.", 
+             ["TYPE T = RECORD i: INTEGER; END; PROCEDURE T.T() | i(123); END;", 
               "cannot initialize field 'i', only fields of record types are supported"]
              )
         ),
     "call base and initialize fields": testWithContext(
         context(grammar.declarationSequence,
-                "TYPE Field = RECORD END; T = RECORD END; Derived = RECORD(T) f: Field; END;"
-              + "PROCEDURE Field(a: INTEGER); END;"
-              + "PROCEDURE T(a: INTEGER); END;"
+                "TYPE Field = RECORD PROCEDURE Field(a: INTEGER); END;"
+              + "T = RECORD PROCEDURE T(a: INTEGER); END;"
+              + "Derived = RECORD(T) PROCEDURE Derived(); f: Field; END;"
+              + "PROCEDURE Field.Field(a: INTEGER); END;"
+              + "PROCEDURE T.T(a: INTEGER); END;"
               ),
-        pass("PROCEDURE Derived() | SUPER(123), f(456); END;"),
-        fail(["PROCEDURE Derived() | f(456), SUPER(123); END;", "not parsed"])
+        pass("PROCEDURE Derived.Derived() | SUPER(123), f(456); END;"),
+        fail(["PROCEDURE Derived.Derived() | f(456), SUPER(123); END;", "not parsed"])
         )
     }
 };

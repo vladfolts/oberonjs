@@ -3,8 +3,9 @@ IMPORT
     Cast, Context, EberonContext, EberonTypes, Errors, JS, JsMap, ScopeBase, Object, String, Types;
 TYPE
     Record* = RECORD(Types.Record)
-        PROCEDURE defineConstructor(type: Types.PDefinedProcedure): STRING;
+        PROCEDURE declareConstructor(type: Types.PDefinedProcedure);
         PROCEDURE addMethod(methodId: Context.PIdentdefInfo; type: Types.PProcedure);
+        PROCEDURE defineConstructor(type: Types.PDefinedProcedure);
         PROCEDURE defineMethod(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
         PROCEDURE requireNewOnly();
         PROCEDURE setBaseConstructorCallCode(code: STRING);
@@ -12,6 +13,7 @@ TYPE
         PROCEDURE setRecordInitializationCode(baseConstructorCallCode, fieldsInitializationCode, inheritanceCode: STRING);
 
         customConstructor-: Types.PDefinedProcedure;
+        customConstructorDefined: BOOLEAN;
         customInitedfields-: ARRAY * OF STRING;
         finalized: BOOLEAN;
         declaredMethods: JsMap.Type;
@@ -22,7 +24,7 @@ TYPE
         declaredAsVariable: BOOLEAN;
         lazyDefinitions: JsMap.Type;
         nonExportedMethods: ARRAY * OF STRING;
-        inheritanceCode, baseConstructorCallCode-, fieldsInitializationCode-: STRING;
+        inheritanceCode-, baseConstructorCallCode-, fieldsInitializationCode-: STRING;
         fieldsInit: JsMap.Strings;
     END;
     PRecord* = POINTER TO Record;
@@ -326,17 +328,32 @@ BEGIN
     SELF.inheritanceCode := inheritanceCode;
 END;
 
-PROCEDURE Record.defineConstructor(type: Types.PDefinedProcedure): STRING;
+PROCEDURE Record.declareConstructor(type: Types.PDefinedProcedure);
 BEGIN
     IF SELF.customConstructor # NIL THEN
-        Errors.raise("constructor '" + SELF.name + "' already defined");
+        Errors.raise("constructor '" + SELF.name + "' already declared");
     END;
     IF type.result() # NIL THEN
         Errors.raise("constructor '" + SELF.name + "' cannot have result type specified");
     END;
 
     SELF.customConstructor := type;
-    RETURN SELF.inheritanceCode;
+END;
+
+PROCEDURE Record.defineConstructor(type: Types.PDefinedProcedure);
+BEGIN
+    IF SELF.customConstructor = NIL THEN
+        Errors.raise("constructor was not declared for '" + SELF.name +"'");
+    END;
+    IF SELF.customConstructorDefined THEN
+        Errors.raise("constructor already defined for '" + SELF.name +"'");
+    END;
+    IF ~Cast.areProceduresMatch(SELF.customConstructor, type) THEN
+        Errors.raise("constructor '" + SELF.name + "' signature mismatch: declared as '"
+                   + SELF.customConstructor.description() + "' but defined as '" 
+                   + type.description() + "'");
+    END;
+    SELF.customConstructorDefined := TRUE;
 END;
 
 PROCEDURE collectAbstractMethods(r: Record);
@@ -362,6 +379,11 @@ END;
 PROCEDURE Record.finalize();
 BEGIN
     SELF.finalized := TRUE;
+
+    IF (SELF.customConstructor # NIL) & ~SELF.customConstructorDefined THEN
+        Errors.raise("constructor was declared for '" + SELF.name + "' but was not defined");
+    END;
+
     collectAbstractMethods(SELF);
     IF SELF.instantiated THEN
         ensureNonAbstract(SELF(POINTER));

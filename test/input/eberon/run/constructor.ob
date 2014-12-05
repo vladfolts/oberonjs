@@ -1,10 +1,12 @@
 MODULE m;
 TYPE
     T = RECORD
+        PROCEDURE T();
+
         i: INTEGER;
     END;
 
-PROCEDURE T();
+PROCEDURE T.T();
 BEGIN
     SELF.i := 3;
 END;

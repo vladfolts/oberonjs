@@ -32,10 +32,9 @@ function superMethodCallGenerator(context, type){
     return Procedure.makeProcCallGeneratorWithCustomArgs(context, type, args);
 }
 
-function MethodOrProcMsg(id, type, isConstructor){
+function MethodOrProcMsg(id, type){
     this.id = id;
     this.type = type;
-    this.isConstructor = isConstructor;
 }
 
 var ProcOrMethodId = Context.Chained.extend({
@@ -63,23 +62,7 @@ var ProcOrMethodId = Context.Chained.extend({
         if (this.__type && id.exported())
             throw new Errors.Error("method implementation cannot be exported: " + id.id());
         checkOrdinaryExport(id, "procedure");
-
-        var isConstructor = false;
-        if (!this.__type){
-            var s = this.currentScope().findSymbol(id.id());
-            if (s){
-                var info = s.symbol().info();
-                if (info instanceof Type.TypeId){
-                    var boundType = info.type();
-                    if (boundType instanceof Type.Record){
-                        this.__type = boundType;
-                        isConstructor = true;
-                    }
-                }
-            }
-        }
-
-        this.handleMessage(new MethodOrProcMsg(id, this.__type, isConstructor));
+        this.handleMessage(new MethodOrProcMsg(id, this.__type));
     }
 });
 
@@ -423,10 +406,18 @@ var RecordDecl = Context.RecordDecl.extend({
         Context.RecordDecl.prototype.init.call(this, context, EberonRecord.makeRecord);
     },
     handleMessage: function(msg){
-        if (msg instanceof MethodOrProcMsg)
-            return this.type().addMethod(
-                msg.id,
-                EberonTypes.makeMethodType(msg.id.id(), msg.type, Procedure.makeProcCallGenerator));
+        if (msg instanceof MethodOrProcMsg){
+            var methodType = msg.type;
+            var boundType = this.type();
+            var id = msg.id.id();
+            if (Type.typeName(boundType) == id)
+                boundType.declareConstructor(methodType);
+            else
+                boundType.addMethod(msg.id,
+                                    EberonTypes.makeMethodType(id, methodType, Procedure.makeProcCallGenerator));
+            return;
+        }
+
         if (msg == Context.endParametersMsg) // not used
             return undefined;
         if (msg instanceof Context.AddArgumentMsg) // not used
@@ -437,18 +428,14 @@ var RecordDecl = Context.RecordDecl.extend({
         return EberonRecord.makeRecordField(field, type, this.__type);
     },
     endParse: function(){
-        var gen = this.codeGenerator();
-        var pos = gen.makeInsertion();
         var type = this.type();
-        var inheritanceCode = this._generateInheritance();
-        type.setRecordInitializationCode(
-            this._generateBaseConstructorCallCode(),
-            this._generateFieldsInitializationCode(), 
-            inheritanceCode);
-        this.currentScope().addFinalizer(function(){
-            if (!this.__type.customConstructor)
-                gen.insert(pos, this._generateConstructor() + inheritanceCode);
-        }.bind(this));
+        if (!type.customConstructor)
+            return Context.RecordDecl.prototype.endParse.call(this);
+        else
+            type.setRecordInitializationCode(
+                this._generateBaseConstructorCallCode(),
+                this._generateFieldsInitializationCode(), 
+                this._generateInheritance());
     }
 });
 
@@ -564,7 +551,8 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             if (type){
                 this.__methodId = id;
                 this.__boundType = type;
-                this.__isConstructor = msg.isConstructor;
+                var name = Type.typeName(type);
+                this.__isConstructor = name == id.id();
             }
 
             Context.ProcDecl.prototype.handleIdentdef.call(this, id);
@@ -619,11 +607,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
 
         if (this.__boundType){
             if (this.__endingId){
-                var expected 
-                    = (this.__isConstructor 
-                             ? ""
-                             : (Type.typeName(this.__boundType) + "."))
-                    + this.__id.id();
+                var expected = Type.typeName(this.__boundType) + "." + this.__id.id();
                 if (this.__endingId != expected)
                     throw new Errors.Error(
                           "mismatched method names: expected '" 
@@ -633,6 +617,8 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             }
 
             if (this.__isConstructor){
+                this.__boundType.defineConstructor(this.__methodType.procType());
+
                 var base = Type.recordBase(this.__boundType);
                 if (!this.__baseConstructorWasCalled && base && base.customConstructor && base.customConstructor.args().length)
                     throw new Errors.Error("base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)");
@@ -648,8 +634,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 if (fieldsWereNotInited.length)
                     throw new Errors.Error("constructor '" + Type.typeName(this.__boundType) + "' must initialize fields: " + fieldsWereNotInited);
 
-                this.codeGenerator().write(
-                    this.__boundType.defineConstructor(this.__methodType.procType()));
+                this.codeGenerator().write(this.__boundType.inheritanceCode);
             }
             else
                 this.__boundType.defineMethod(this.__methodId, this.__methodType);
