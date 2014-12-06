@@ -1145,12 +1145,21 @@ exports.suite = {
              ["PROCEDURE Derived.Derived() | SUPER(FALSE); END;", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
              ["PROCEDURE Derived.Derived() | SUPER(); END;", "1 argument(s) expected, got 0"],
              ["PROCEDURE Derived.Derived(); BEGIN SUPER(0); END;", "cannot call base constructor from procedure body (use '| SUPER' to pass parameters to base constructor)"],
-             ["PROCEDURE RecordWthoutBase.RecordWthoutBase() | SUPER(0); END;", "'RecordWthoutBase' has no base type - SUPER cannot be used"],
+             ["PROCEDURE RecordWthoutBase.RecordWthConstructorNoParametersthoutBase() | SUPER(0); END;", "'RecordWthoutBase' has no base type - SUPER cannot be used"],
              ["PROCEDURE DerivedWthoutConstructor.DerivedWthoutConstructor() | SUPER(); END;", "base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)"],
              ["PROCEDURE DerivedWthConstructorNoParameters.DerivedWthConstructorNoParameters() | SUPER(); END;", "base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)"]
             )
         ),
-    "initialize fields": testWithContext(
+    "initialize fields (of non record type)": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE T = RECORD PROCEDURE T(); i: INTEGER; END;"),
+        pass("PROCEDURE T.T() | i(123); END;"),
+        fail(["PROCEDURE T.T() | i(); END;", "single argument expected to initialize field 'i'"],
+             ["PROCEDURE T.T() | i(123, 456); END;", "single argument expected to initialize field 'i'"],
+             ["PROCEDURE T.T() | i(TRUE); END;", "type mismatch: 'i' is 'INTEGER' and cannot be assigned to 'BOOLEAN' expression"]
+            )
+        ),
+    "initialize fields (of record type)": testWithContext(
         context(grammar.declarationSequence,
                 "TYPE Field = RECORD PROCEDURE Field(a: INTEGER); END;"
               + "PROCEDURE Field.Field(a: INTEGER); END;"),
@@ -1162,11 +1171,7 @@ exports.suite = {
              ["TYPE T = RECORD f: Field; END; Derived = RECORD(T) PROCEDURE Derived(); END; PROCEDURE Derived.Derived() | f(123); END;", 
               "'f' is not record 'Derived' own field"],
              ["TYPE T = RECORD PROCEDURE T(); f: Field; END; PROCEDURE T.T() | f(123), f(123); END;", 
-              "field 'f' is already initialized"],
-             ["TYPE T = RECORD i: INTEGER; END; PROCEDURE T.T() | i(); END;", 
-              "cannot initialize field 'i', only fields of record types are supported"],
-             ["TYPE T = RECORD i: INTEGER; END; PROCEDURE T.T() | i(123); END;", 
-              "cannot initialize field 'i', only fields of record types are supported"]
+              "field 'f' is already initialized"]
              )
         ),
     "call base and initialize fields": testWithContext(

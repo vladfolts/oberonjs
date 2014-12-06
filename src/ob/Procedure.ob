@@ -32,12 +32,14 @@ TYPE
     CallGenerator* = RECORD
         PROCEDURE handleArgument*(e: Code.PExpression);
         PROCEDURE end*(): Code.PExpression;
+    END;
+    PCallGenerator* = POINTER TO CallGenerator;
 
+    CallGeneratorImpl = RECORD(CallGenerator)
         args: ARRAY * OF Code.PExpression;
         cx: LanguageContext.PType;
         call: PCall
     END;
-    PCallGenerator* = POINTER TO CallGenerator;
 
     Type* = RECORD(Types.DefinedProcedure)
         PROCEDURE callGenerator(cx: LanguageContext.PType): PCallGenerator;
@@ -172,25 +174,25 @@ BEGIN
     RETURN result
 END makeStd;
 
-PROCEDURE CallGenerator.handleArgument(e: Code.PExpression);
+PROCEDURE CallGeneratorImpl.handleArgument(e: Code.PExpression);
 BEGIN
     SELF.args.add(e);
-END CallGenerator.handleArgument;
+END;
 
-PROCEDURE CallGenerator.end(): Code.PExpression;
+PROCEDURE CallGeneratorImpl.end(): Code.PExpression;
     RETURN SELF.call.make(SELF.args, SELF.cx)
-END CallGenerator.end;
+END;
 
 PROCEDURE makeCallGenerator*(call: PCall; cx: LanguageContext.PType): PCallGenerator;
 VAR
-    result: PCallGenerator;
+    result: POINTER TO CallGeneratorImpl;
 BEGIN
     ASSERT(cx # NIL);
     NEW(result);
     result.cx := cx;
     result.call := call;
     RETURN result
-END makeCallGenerator;
+END;
 
 PROCEDURE GenArgCode.write(actual: Code.PExpression; expected: Types.PProcedureArgument; cast: Cast.PCastOp);
 VAR

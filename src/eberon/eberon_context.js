@@ -671,10 +671,10 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
 
         this.__initedFields.push(id);        
         var type = fields[id].type();
-        if (!(type instanceof Type.Record))
-            throw new Errors.Error("cannot initialize field '" + id + "', only fields of record types are supported");
-
-        return makeConstructorCall(this, type, EberonConstructor.makeConstructorCall);
+        return makeConstructorCall(
+            this, 
+            type, 
+            function(type, cx){return EberonConstructor.makeFieldInitCall(type, cx, id);});
     }
 });
 

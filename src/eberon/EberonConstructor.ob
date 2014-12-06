@@ -1,5 +1,5 @@
 MODULE EberonConstructor;
-IMPORT Code, EberonRecord, LanguageContext, Procedure, Stream, Types;
+IMPORT Code, EberonRecord, Errors, LanguageContext, Operator, Procedure, Stream, Types;
 TYPE
     ConstructorCall = RECORD(Procedure.StdCall)
         recordType: EberonRecord.PRecord;
@@ -7,6 +7,13 @@ TYPE
     PConstructorCall = POINTER TO ConstructorCall;
 
     BaseConstructorCall = RECORD(ConstructorCall)
+    END;
+
+    NonRecordInitCall = RECORD(Procedure.CallGenerator)
+        cx: LanguageContext.PType;
+        type: Types.PType;
+        field: STRING;
+        code: STRING;
     END;
 
 PROCEDURE checkArgs(call: ConstructorCall; args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): STRING;
@@ -43,6 +50,31 @@ BEGIN
     RETURN Procedure.makeCallGenerator(call, cx)
 END;
 
+PROCEDURE raiseSingleArgumentException(c: NonRecordInitCall);
+BEGIN
+    Errors.raise("single argument expected to initialize field '" + c.field + "'");
+END;
+
+PROCEDURE NonRecordInitCall.handleArgument(e: Code.PExpression);
+BEGIN
+    IF LEN(SELF.code) # 0 THEN
+        raiseSingleArgumentException(SELF);
+    END;
+
+    variable <- Types.makeVariable(SELF.type, FALSE);
+    designator <- Code.makeDesignator(SELF.field, SELF.field, NIL, SELF.type, variable, NIL);
+    left <- Code.makeExpression(SELF.field, SELF.type, designator, NIL);
+    SELF.code := Operator.assign(left, e, SELF.cx^);    
+END;
+        
+PROCEDURE NonRecordInitCall.end(): Code.PExpression;
+BEGIN
+    IF LEN(SELF.code) = 0 THEN
+        raiseSingleArgumentException(SELF);
+    END;
+    RETURN Code.makeSimpleExpression(SELF.code, NIL);
+END;
+
 PROCEDURE makeConstructorCall*(
     type: EberonRecord.PRecord; 
     cx: LanguageContext.PType
@@ -52,6 +84,33 @@ VAR
 BEGIN
     NEW(call);
     RETURN makeCallGenerator(type, cx, call);
+END;
+
+PROCEDURE makeFieldInitCall*(
+    type: Types.PType; 
+    cx: LanguageContext.PType;
+    field: STRING
+    ): Procedure.PCallGenerator;
+VAR
+    result: Procedure.PCallGenerator;
+
+    PROCEDURE initNonRecord(): Procedure.PCallGenerator;
+    VAR
+        result: POINTER TO NonRecordInitCall;
+    BEGIN
+        NEW(result);
+        result.cx := cx;
+        result.field := field;
+        result.type := type;
+        RETURN result;
+    END;
+BEGIN
+    IF type IS EberonRecord.PRecord THEN
+        result := makeConstructorCall(type, cx);
+    ELSE
+        result := initNonRecord();
+    END;
+    RETURN result;
 END;
 
 PROCEDURE makeBaseConstructorCall*(
