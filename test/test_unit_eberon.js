@@ -1179,6 +1179,17 @@ exports.suite = {
               ),
         pass("PROCEDURE Derived.Derived() | SUPER(123), f(456); END;"),
         fail(["PROCEDURE Derived.Derived() | f(456), SUPER(123); END;", "not parsed"])
+        ),
+    "fields initialization order": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE Field = RECORD PROCEDURE Field(a: INTEGER); END;"
+              + "T = RECORD PROCEDURE T(); f1: Field; f2, f3: Field; END;"
+              + "PROCEDURE Field.Field(a: INTEGER); END;"
+              ),
+        pass("PROCEDURE T.T() | f1(1), f2(2), f3(3); END;"),
+        fail(["PROCEDURE T.T() | f2(2), f1(1), f3(3); END;", "field 'f1' must be initialized before 'f2'"],
+             ["PROCEDURE T.T() | f1(1), f3(3), f2(2); END;", "field 'f2' must be initialized before 'f3'"]
+            )
         )
     }
 };

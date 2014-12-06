@@ -26,6 +26,8 @@ TYPE
         nonExportedMethods: ARRAY * OF STRING;
         inheritanceCode-, baseConstructorCallCode-, fieldsInitializationCode-: STRING;
         fieldsInit: JsMap.Strings;
+        fieldsInitOrder: ARRAY * OF STRING;
+        lastFieldInit: INTEGER;
     END;
     PRecord* = POINTER TO Record;
 
@@ -249,6 +251,7 @@ BEGIN
         & (LEN(type.customConstructor.args()) # 0) THEN
         SELF.customInitedfields.add(id);
     END;
+    SELF.fieldsInitOrder.add(id);
 
     SUPER(f);
 END;
@@ -318,6 +321,13 @@ END;
 
 PROCEDURE Record.setFieldInitializationCode(field: STRING; code: STRING);
 BEGIN
+    index <- SELF.fieldsInitOrder.indexOf(field);
+    IF index < SELF.lastFieldInit THEN
+        Errors.raise("field '" + field + "' must be initialized before '" 
+                   + SELF.fieldsInitOrder[SELF.lastFieldInit] + "'");
+    ELSE
+        SELF.lastFieldInit := index;
+    END;
     JsMap.putString(SELF.fieldsInit, field, code);
 END;
 
@@ -421,6 +431,7 @@ BEGIN
     result.declaredMethods := JsMap.make();
     result.lazyDefinitions := JsMap.make();
     result.fieldsInit := JsMap.makeStrings();
+    result.lastFieldInit := -1;
     RETURN result;
 END;
 
