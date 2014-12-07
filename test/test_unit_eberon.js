@@ -1159,6 +1159,15 @@ exports.suite = {
              ["PROCEDURE T.T() | i(TRUE); END;", "type mismatch: 'i' is 'INTEGER' and cannot be assigned to 'BOOLEAN' expression"]
             )
         ),
+    "initialize array fields": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE RecordWithArray = RECORD PROCEDURE RecordWithArray(a: ARRAY OF INTEGER); aStatic: ARRAY 3 OF INTEGER; aDynamic: ARRAY * OF INTEGER; END;"
+                ),
+        pass("PROCEDURE RecordWithArray.RecordWithArray(a: ARRAY OF INTEGER) | aDynamic(a); END;"),
+        fail(["PROCEDURE RecordWithArray.RecordWithArray(a: ARRAY OF INTEGER) | aStatic(a); END;", 
+              "type mismatch: 'aStatic' is 'ARRAY 3 OF INTEGER' and cannot be assigned to 'ARRAY OF INTEGER' expression"]
+            )
+        ),
     "initialize fields (of record type)": testWithContext(
         context(grammar.declarationSequence,
                 "TYPE Field = RECORD PROCEDURE Field(a: INTEGER); END;"
