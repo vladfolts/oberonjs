@@ -1183,6 +1183,13 @@ exports.suite = {
               "field 'f' is already initialized"]
              )
         ),
+    "initialize fields using SELF": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE T = RECORD PROCEDURE T(); i1, i2: INTEGER; END;"
+                ),
+        pass("PROCEDURE T.T() | i2(SELF.i1); END;"),
+        fail()
+        ),
     "call base and initialize fields": testWithContext(
         context(grammar.declarationSequence,
                 "TYPE Field = RECORD PROCEDURE Field(a: INTEGER); END;"
