@@ -10,4 +10,10 @@ VAR
 PROCEDURE p1*;
 END p1;
 
+PROCEDURE constructor*();
+END constructor;
+
+PROCEDURE prototype*();
+END prototype;
+
 END m.

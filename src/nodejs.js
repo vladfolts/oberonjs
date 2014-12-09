@@ -34,7 +34,10 @@ var ModuleGenerator = Class.extend({
             var e = exports[access];
             var code = Code.genExport(e);
             if (code){
-                result += "exports." + e.id() + " = " + code + ";\n";
+                var id = e.id();
+                if (id == "constructor" || id == "prototype")
+                    id += "$";
+                result += "exports." + id + " = " + code + ";\n";
             }
         }
         return result;
