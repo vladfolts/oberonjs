@@ -26,6 +26,9 @@ TYPE
         PROCEDURE DerivedRecordWithParamConstructor();
     END;
 
+    DerivedRecordWithParamConstructorWithoutConstructor = RECORD(RecordWithParamConstructor)
+    END;
+
     InitializeField = RECORD
         PROCEDURE InitializeField();
 
@@ -125,4 +128,6 @@ BEGIN
     i <- RecordWithField().i;
 
     rParam <- RecordWithParamConstructor(123);
+
+    derived <- DerivedRecordWithParamConstructorWithoutConstructor(123);
 END m.

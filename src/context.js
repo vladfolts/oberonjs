@@ -1752,13 +1752,17 @@ exports.RecordDecl = ChainedContext.extend({
         gen.closeScope("");
         return gen.result();
     },
+    _qualifiedBaseConstructor: function(){
+        var baseType = Type.recordBase(this.__type);
+        if (!baseType)
+            return "";
+        return this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType);
+    },
     _generateBaseConstructorCallCode: function(){
         var baseType = Type.recordBase(this.__type);
         var qualifiedBase = baseType ? this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType) : undefined; 
-        var result = "";
-        if (baseType)
-            result += qualifiedBase + ".call(this);\n";
-        return result;
+        var result = this._qualifiedBaseConstructor();
+        return result ? result + ".call(this);\n" : "";
     },
     __generateFieldsInitializationCode: function(){
         var result = "";

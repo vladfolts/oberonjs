@@ -6,11 +6,25 @@ TYPE
         i: INTEGER;
     END;
 
+    ConstructorWithParam = RECORD
+        PROCEDURE ConstructorWithParam(i: INTEGER);
+
+        i: INTEGER;
+    END;
+
+    Derived = RECORD(ConstructorWithParam)
+    END;
+
 PROCEDURE T.T();
 BEGIN
     SELF.i := 3;
 END;
 
+PROCEDURE ConstructorWithParam.ConstructorWithParam(i: INTEGER)
+    | i(i);
+END;
+
 BEGIN
     ASSERT(T().i = 3);
+    ASSERT(Derived(123).i = 123);
 END m.

@@ -7,6 +7,10 @@ var RTL$ = {
     }
 };
 var m = function (){
+function DerivedRecordWithParamConstructorWithoutConstructor(){
+	RecordWithParamConstructor.apply(this, arguments);
+}
+RTL$.extend(DerivedRecordWithParamConstructorWithoutConstructor, RecordWithParamConstructor);
 function MixAutoAndManualInitFields(){
 	this.iAuto = 0;
 	this.iManual = 123;
@@ -59,4 +63,5 @@ passAsArgument(new T());
 var r = new T();
 var i = new RecordWithField().i;
 var rParam = new RecordWithParamConstructor(123);
+var derived = new DerivedRecordWithParamConstructorWithoutConstructor(123);
 }();

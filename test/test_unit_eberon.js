@@ -1211,6 +1211,15 @@ exports.suite = {
         fail(["PROCEDURE T.T() | f2(2), f1(1), f3(3); END;", "field 'f1' must be initialized before 'f2'"],
              ["PROCEDURE T.T() | f1(1), f3(3), f2(2); END;", "field 'f2' must be initialized before 'f3'"]
             )
+        ),
+    "inherit constructor parameters": testWithContext(
+        context(grammar.expression,
+                "TYPE Base = RECORD PROCEDURE Base(i: INTEGER); END;"
+              + "Derived = RECORD(Base) END;"
+              + "PROCEDURE Base.Base(a: INTEGER); END;"
+              ),
+        pass("Derived(123)"),
+        fail(["Derived()", "1 argument(s) expected, got 0"])
         )
     }
 };
