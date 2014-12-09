@@ -510,7 +510,7 @@ BEGIN
     ELSE
         IF cx.types.implicitCast(rightType, leftType, FALSE, castOperations, castOperation)
             # Cast.errNo THEN;
-            Errors.raise("type mismatch: '" + leftCode + "' is '" + leftType.description()
+            Errors.raise("type mismatch: '" + left.code() + "' is '" + leftType.description()
                          + "' and cannot be assigned to '" + rightType.description() + "' expression");
         END;
         IF (leftType IS Types.POpenArray) & (rightType IS Types.PArray) THEN

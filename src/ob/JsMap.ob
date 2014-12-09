@@ -40,6 +40,14 @@ BEGIN
     RETURN result
 END find;
 
+PROCEDURE findString*(m: Strings; s: STRING; VAR r: STRING): BOOLEAN;
+VAR
+    result: BOOLEAN;
+BEGIN
+    JS.do("if (m.hasOwnProperty(s)){result = true; r.set(m[s]);}");
+    RETURN result
+END;
+
 PROCEDURE put*(m: Type; s: STRING; o: Object.PType);
 BEGIN
     JS.do("m[s] = o");

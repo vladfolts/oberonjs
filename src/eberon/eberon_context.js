@@ -434,7 +434,6 @@ var RecordDecl = Context.RecordDecl.extend({
         else
             type.setRecordInitializationCode(
                 this._generateBaseConstructorCallCode(),
-                this._generateFieldsInitializationCode(), 
                 this._generateInheritance());
     }
 });
@@ -575,7 +574,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         if (this.__isConstructor)
             this.codeGenerator().write(
                 this.__boundType.baseConstructorCallCode
-              + this.__boundType.fieldsInitializationCode);
+              + EberonRecord.fieldsInitializationCode(this.__boundType, this));
     },
     _makeArgumentVariable: function(arg){
         if (!arg.isVar)

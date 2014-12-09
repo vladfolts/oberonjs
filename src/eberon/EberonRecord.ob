@@ -1,6 +1,6 @@
 MODULE EberonRecord;
 IMPORT 
-    Cast, Context, EberonContext, EberonTypes, Errors, JS, JsMap, ScopeBase, Object, String, Types;
+    Cast, Context, EberonContext, EberonTypes, Errors, JS, JsMap, ScopeBase, Object, Stream, String, Types;
 TYPE
     Record* = RECORD(Types.Record)
         PROCEDURE declareConstructor(type: Types.PDefinedProcedure);
@@ -10,7 +10,7 @@ TYPE
         PROCEDURE requireNewOnly();
         PROCEDURE setBaseConstructorCallCode(code: STRING);
         PROCEDURE setFieldInitializationCode(field: STRING; code: STRING);
-        PROCEDURE setRecordInitializationCode(baseConstructorCallCode, fieldsInitializationCode, inheritanceCode: STRING);
+        PROCEDURE setRecordInitializationCode(baseConstructorCallCode, inheritanceCode: STRING);
 
         customConstructor-: Types.PDefinedProcedure;
         customConstructorDefined: BOOLEAN;
@@ -24,7 +24,7 @@ TYPE
         declaredAsVariable: BOOLEAN;
         lazyDefinitions: JsMap.Type;
         nonExportedMethods: ARRAY * OF STRING;
-        inheritanceCode-, baseConstructorCallCode-, fieldsInitializationCode-: STRING;
+        inheritanceCode-, baseConstructorCallCode-: STRING;
         fieldsInit: JsMap.Strings;
         fieldsInitOrder: ARRAY * OF STRING;
         lastFieldInit: INTEGER;
@@ -51,6 +51,12 @@ TYPE
     RequireMethodDefinitionClosure = RECORD(Object.Type)
         record: PRecord;
         base: PRecord;
+    END;
+
+    GenFieldInitCodeClosure = RECORD(Object.Type)
+        cx: Context.PType;
+        record: PRecord;
+        code: STRING;
     END;
 
 PROCEDURE cannotInstantiateErrMsg(r: Types.Record): STRING;
@@ -331,10 +337,9 @@ BEGIN
     JsMap.putString(SELF.fieldsInit, field, code);
 END;
 
-PROCEDURE Record.setRecordInitializationCode(baseConstructorCallCode, fieldsInitializationCode, inheritanceCode: STRING);
+PROCEDURE Record.setRecordInitializationCode(baseConstructorCallCode, inheritanceCode: STRING);
 BEGIN
     SELF.baseConstructorCallCode := baseConstructorCallCode;
-    SELF.fieldsInitializationCode := fieldsInitializationCode;
     SELF.inheritanceCode := inheritanceCode;
 END;
 
@@ -433,6 +438,35 @@ BEGIN
     result.fieldsInit := JsMap.makeStrings();
     result.lastFieldInit := -1;
     RETURN result;
+END;
+
+PROCEDURE genFieldInitCode(key: STRING; value: Object.PType; VAR closure: Object.Type);
+    PROCEDURE do(f: Types.PField; VAR closure: GenFieldInitCodeClosure);
+    VAR
+        code: STRING;
+        result: STRING;
+    BEGIN
+        type <- f.type()(Types.PStorageType);
+        IF JsMap.findString(closure.record.fieldsInit, key, code) THEN
+            result := code;
+        ELSE
+            result := "this." + Types.mangleField(key, type) 
+                    + " = " + type.initializer(closure.cx^, FALSE, "");
+        END;
+        closure.code := closure.code + result + ";" + Stream.kCR;
+    END;
+BEGIN
+    do(value(Types.PField), closure(GenFieldInitCodeClosure));
+END;
+
+PROCEDURE fieldsInitializationCode*(r: PRecord; cx: Context.PType): STRING;
+VAR
+    closure: GenFieldInitCodeClosure;
+BEGIN
+    closure.cx := cx;
+    closure.record := r;
+    JsMap.forEach(Types.recordOwnFields(r^), genFieldInitCode, closure);
+    RETURN closure.code;
 END;
 
 PROCEDURE makeRecordField*(identdef: Context.PIdentdefInfo; type: Types.PType; record: PRecord): Types.PRecordField;

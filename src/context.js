@@ -291,18 +291,6 @@ function castCode(type, context){
     return context.qualifyScope(Type.recordScope(baseType)) + Type.recordConstructor(baseType);
 }
 
-function mangleField(id, type){
-    if (Type.isScalar(type) 
-        || (type instanceof Type.Array 
-            && Type.isScalar(Type.arrayBaseElementsType(type)))){
-        if (id == "constructor" || id == "prototype")
-            return id + "$";
-        return id;
-    }
-
-    return "$" + id;
-}
-
 exports.Designator = ChainedContext.extend({
     init: function Context$Designator(context){
         ChainedContext.prototype.init.call(this, context);
@@ -351,7 +339,7 @@ exports.Designator = ChainedContext.extend({
         this.__derefCode = this.__code;
         var codeId = this.__currentType instanceof Type.Procedure 
                  ? this.__currentType.designatorCode(id)
-                 : mangleField(id, this.__currentType);
+                 : Type.mangleField(id, this.__currentType);
         this.__propCode = "\"" + codeId + "\"";
         this.__info = field.asVar(isReadOnly, this);
         this.__code += "." + codeId;
@@ -1760,7 +1748,7 @@ exports.RecordDecl = ChainedContext.extend({
         gen.write("function " + this.__cons + "()");
         gen.openScope();
         gen.write(this._generateBaseConstructorCallCode() 
-                + this._generateFieldsInitializationCode());
+                + this.__generateFieldsInitializationCode());
         gen.closeScope("");
         return gen.result();
     },
@@ -1772,12 +1760,12 @@ exports.RecordDecl = ChainedContext.extend({
             result += qualifiedBase + ".call(this);\n";
         return result;
     },
-    _generateFieldsInitializationCode: function(){
+    __generateFieldsInitializationCode: function(){
         var result = "";
         var ownFields = Type.recordOwnFields(this.__type);
         for(var f in ownFields){
             var fieldType = ownFields[f].type();
-            result += "this." + mangleField(f, fieldType) + " = " + fieldType.initializer(this, false, "") + ";\n";
+            result += "this." + Type.mangleField(f, fieldType) + " = " + fieldType.initializer(this, false, "") + ";\n";
         }
         return result;
     },

@@ -9,6 +9,10 @@ TYPE
     BaseConstructorCall = RECORD(ConstructorCall)
     END;
 
+    RecordInitCall = RECORD(ConstructorCall)
+        field: STRING;
+    END;
+
     NonRecordInitCall = RECORD(Procedure.CallGenerator)
         cx: LanguageContext.PType;
         type: Types.PType;
@@ -34,6 +38,17 @@ BEGIN
     argCode <- checkArgs(SELF, args, cx);
     code <- cx.qualifyScope(SELF.recordType.scope) + SELF.recordType.cons + ".call(this, " + argCode + ");" + Stream.kCR;
     RETURN Code.makeSimpleExpression(code, NIL);
+END;
+
+PROCEDURE fieldInitLval(field: STRING; type: Types.PType): STRING;
+    RETURN "this." + Types.mangleField(field, type);
+END;
+
+PROCEDURE RecordInitCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+BEGIN
+    e <- SUPER(args, cx);
+    t <- e.type();
+    RETURN Code.makeSimpleExpression(fieldInitLval(SELF.field, t) + " = " + e.code(), t);
 END;
 
 PROCEDURE makeCallGenerator(
@@ -62,7 +77,8 @@ BEGIN
     END;
 
     variable <- Types.makeVariable(SELF.type, FALSE);
-    designator <- Code.makeDesignator(SELF.field, SELF.field, NIL, SELF.type, variable, NIL);
+    lval <- fieldInitLval(SELF.field, SELF.type);
+    designator <- Code.makeDesignator(SELF.field, lval, NIL, SELF.type, variable, NIL);
     left <- Code.makeExpression(SELF.field, SELF.type, designator, NIL);
     SELF.code := Operator.assign(left, e, SELF.cx^);    
 END;
@@ -94,6 +110,15 @@ PROCEDURE makeFieldInitCall*(
 VAR
     result: Procedure.PCallGenerator;
 
+    PROCEDURE initRecord(type: EberonRecord.PRecord): Procedure.PCallGenerator;
+    VAR
+        call: POINTER TO RecordInitCall;
+    BEGIN
+        NEW(call);
+        call.field := field;
+        RETURN makeCallGenerator(type, cx, call);
+    END;
+
     PROCEDURE initNonRecord(): Procedure.PCallGenerator;
     VAR
         result: POINTER TO NonRecordInitCall;
@@ -106,7 +131,7 @@ VAR
     END;
 BEGIN
     IF type IS EberonRecord.PRecord THEN
-        result := makeConstructorCall(type, cx);
+        result := initRecord(type);
     ELSE
         result := initNonRecord();
     END;

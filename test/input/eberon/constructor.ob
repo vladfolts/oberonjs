@@ -26,6 +26,64 @@ TYPE
         PROCEDURE DerivedRecordWithParamConstructor();
     END;
 
+    InitializeField = RECORD
+        PROCEDURE InitializeField();
+
+        i: INTEGER;
+    END;
+
+    InitializeRecordField = RECORD
+        PROCEDURE InitializeRecordField();
+
+        r: RecordWithParamConstructor;
+    END;
+
+    InitializeMangledField = RECORD
+        PROCEDURE InitializeMangledField();
+
+        constructor: INTEGER;
+        prototype: BOOLEAN;
+    END;
+
+    MixAutoAndManualInitFields = RECORD
+        PROCEDURE MixAutoAndManualInitFields();
+
+        iAuto, iManual: INTEGER;
+        rAuto: T;
+        rManual: RecordWithParamConstructor;
+        setManual: SET;
+        stringAuto: STRING;
+    END;
+
+    UsingSelfInFieldsInit = RECORD
+        PROCEDURE UsingSelfInFieldsInit();
+
+        i1, i2: INTEGER;
+    END;
+
+    FieldInitAndBody = RECORD
+        PROCEDURE FieldInitAndBody();
+
+        i: INTEGER;
+    END;
+
+PROCEDURE MixAutoAndManualInitFields.MixAutoAndManualInitFields()
+    | iManual(123),
+      rManual(345),
+      setManual({3});
+END;
+
+PROCEDURE UsingSelfInFieldsInit.UsingSelfInFieldsInit()
+    | i1(123),
+      i2(SELF.i1);
+END;
+
+PROCEDURE FieldInitAndBody.FieldInitAndBody()
+    | i(1);
+BEGIN
+    SELF.i := 2;
+END;
+
 PROCEDURE T.T();
 END;
 
@@ -46,6 +104,19 @@ END;
 
 PROCEDURE DerivedRecordWithParamConstructor.DerivedRecordWithParamConstructor()
     | SUPER(123);
+END;
+
+PROCEDURE InitializeField.InitializeField()
+    | i(123);
+END;
+
+PROCEDURE InitializeRecordField.InitializeRecordField()
+    | r(123);
+END;
+
+PROCEDURE InitializeMangledField.InitializeMangledField()
+    | constructor(123),
+      prototype(TRUE);
 END;
 
 BEGIN

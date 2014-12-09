@@ -17,6 +17,7 @@ TYPE
     StorageType* = RECORD(Type)    
         PROCEDURE initializer*(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING
     END;
+    PStorageType* = POINTER TO StorageType;
 
     TypeId* = RECORD(Id)
         PROCEDURE type*(): PType;
@@ -818,6 +819,21 @@ VAR
 BEGIN
     NEW(result);
     initRecordField(identdef, type, result^);
+    RETURN result;
+END;
+
+PROCEDURE mangleField*(id: STRING; type: PType): STRING;
+BEGIN
+    result <- id;
+    IF isScalar(type^) 
+        OR ((type IS PArray)
+            & isScalar(arrayBaseElementsType(type^)^)) THEN
+        IF (id = "constructor") OR (id = "prototype") THEN
+            result := result + "$";
+        END;
+    ELSE
+        result := "$" + result;
+    END;
     RETURN result;
 END;
 

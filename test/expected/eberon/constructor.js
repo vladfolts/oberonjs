@@ -7,6 +7,22 @@ var RTL$ = {
     }
 };
 var m = function (){
+function MixAutoAndManualInitFields(){
+	this.iAuto = 0;
+	this.iManual = 123;
+	this.$rAuto = new T();
+	this.$rManual = new RecordWithParamConstructor(345);
+	this.setManual = 8;
+	this.stringAuto = '';
+}
+function UsingSelfInFieldsInit(){
+	this.i1 = 123;
+	this.i2 = this.i1;
+}
+function FieldInitAndBody(){
+	this.i = 1;
+	this.i = 2;
+}
 function T(){
 }
 function Derived(){
@@ -29,6 +45,16 @@ function DerivedRecordWithParamConstructor(){
 	RecordWithParamConstructor.call(this, 123);
 }
 RTL$.extend(DerivedRecordWithParamConstructor, RecordWithParamConstructor);
+function InitializeField(){
+	this.i = 123;
+}
+function InitializeRecordField(){
+	this.$r = new RecordWithParamConstructor(123);
+}
+function InitializeMangledField(){
+	this.constructor$ = 123;
+	this.prototype$ = true;
+}
 passAsArgument(new T());
 var r = new T();
 var i = new RecordWithField().i;
