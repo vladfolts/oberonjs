@@ -479,11 +479,11 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE actualConstructor*(r: Record): Types.PDefinedProcedure;
+PROCEDURE constructor*(r: Record): Types.PDefinedProcedure;
 BEGIN
     result <- r.customConstructor;
     IF (result = NIL) & (r.base # NIL) THEN
-        result := actualConstructor(r.base(PRecord)^);
+        result := constructor(r.base(PRecord)^);
     END;
     RETURN result;
 END;

@@ -59,7 +59,7 @@ PROCEDURE makeCallGenerator(
 BEGIN
     Procedure.initStdCall(call);
     call.recordType := type; 
-    cons <- EberonRecord.actualConstructor(type^);
+    cons <- EberonRecord.constructor(type^);
     IF cons # NIL THEN
         call.args := cons.args();
     END;

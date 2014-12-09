@@ -24,6 +24,12 @@ function makeTPA(){
 	result = new TPA();
 	return result;
 }
+
+function constructor(){
+}
+
+function prototype(){
+}
 pr = new anonymous$1();
 exports.ci = ci;
 exports.Base = Base;
@@ -34,3 +40,5 @@ exports.pr = function(){return pr;};
 exports.pr2 = function(){return pr2;};
 exports.p = p;
 exports.makeTPA = makeTPA;
+exports.constructor$ = constructor;
+exports.prototype$ = prototype;

@@ -428,7 +428,7 @@ var RecordDecl = Context.RecordDecl.extend({
         return EberonRecord.makeRecordField(field, type, this.__type);
     },
     _generateBaseConstructorCallCode: function(){
-        var actualConstructor = EberonRecord.actualConstructor(this.type());
+        var actualConstructor = EberonRecord.constructor$(this.type());
         if (!actualConstructor || !actualConstructor.args().length)
             return Context.RecordDecl.prototype._generateBaseConstructorCallCode.call(this);
         
@@ -627,7 +627,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 this.__boundType.defineConstructor(this.__methodType.procType());
 
                 var base = Type.recordBase(this.__boundType);
-                var baseConstructor = base && EberonRecord.actualConstructor(base);
+                var baseConstructor = base && EberonRecord.constructor$(base);
                 if (!this.__baseConstructorWasCalled && baseConstructor && baseConstructor.args().length)
                     throw new Errors.Error("base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)");
                 if (this.__baseConstructorWasCalled && (!baseConstructor || !baseConstructor.args().length))

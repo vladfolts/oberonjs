@@ -5,6 +5,7 @@ var Code = require("js/Code.js");
 var Context = require("context.js");
 var oc = require("oc.js");
 var RTL = require("rtl_code.js").RTL;
+var Type = require("js/Types.js");
 
 var fs = require("fs");
 var path = require("path");
@@ -34,9 +35,7 @@ var ModuleGenerator = Class.extend({
             var e = exports[access];
             var code = Code.genExport(e);
             if (code){
-                var id = e.id();
-                if (id == "constructor" || id == "prototype")
-                    id += "$";
+                var id = Type.mangleJSProperty(e.id());
                 result += "exports." + id + " = " + code + ";\n";
             }
         }

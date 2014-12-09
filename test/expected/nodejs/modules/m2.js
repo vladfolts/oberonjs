@@ -18,3 +18,5 @@ m1.p();
 p(m1.i());
 p(m1.ci);
 ref(RTL$.makeRef(m1.pr2(), "i"));
+m1.constructor$();
+m1.prototype$();

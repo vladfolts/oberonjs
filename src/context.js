@@ -261,7 +261,7 @@ exports.QualifiedIdentificator = ChainedContext.extend({
         return undefined;
     },
     endParse: function(){
-        var code = this.__code + this.__id;
+        var code = this.__code ? this.__code + Type.mangleJSProperty(this.__id) : this.__id;
         this.parent().handleQIdent({
             module: this.__module,
             id: this.__id,

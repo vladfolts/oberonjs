@@ -21,6 +21,12 @@ BEGIN
     RETURN result
 END makeTPA;
 
+PROCEDURE constructor*();
+END constructor;
+
+PROCEDURE prototype*();
+END prototype;
+
 BEGIN
     NEW(pr);
 END m1.
@@ -51,6 +57,9 @@ BEGIN
     p(m1.i);
     p(m1.ci);
     ref(m1.pr2.i);
+
+    m1.constructor();
+    m1.prototype();
 END m2.
 
 MODULE m3;
