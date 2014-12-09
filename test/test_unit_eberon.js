@@ -143,7 +143,9 @@ exports.suite = {
          ["VAR r: D;",
           "cannot instantiate 'D' because it has abstract method(s): p"],
          ["PROCEDURE p(); VAR p: POINTER TO D; BEGIN NEW(p); END p;",
-          "cannot instantiate 'D' because it has abstract method(s): p"]
+          "cannot instantiate 'D' because it has abstract method(s): p"],
+         ["PROCEDURE p(); TYPE HasAbstractField = RECORD f: T; END; END;",
+          "cannot instantiate 'T' because it has abstract method(s): p"]
         )
     ),
 "new method declaration": testWithContext(
@@ -310,6 +312,15 @@ exports.suite = {
           "type 'T' has no 'mNotExported' field"],
          ["MODULE m; IMPORT test; TYPE T = RECORD(test.T) END; PROCEDURE T.mNotExported(); END T.mNotExported; END m.",
           "'T' has no declaration for method 'mNotExported'"])
+    ),
+"import abstract record": testWithModule(
+      "MODULE test;"
+    + "TYPE T* = RECORD PROCEDURE m*(); END;"
+    + "END test.",
+    pass("MODULE m; IMPORT test; TYPE T = RECORD f: POINTER TO test.T; END; END m."
+        ),
+    fail(["MODULE m; IMPORT test; TYPE T = RECORD f: test.T; END; END m",
+          "cannot instantiate 'T' because it has abstract method(s): m"])
     ),
 "non-scalar variables can be exported": testWithContext(
     context(grammar.declarationSequence, 
