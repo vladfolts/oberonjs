@@ -1249,6 +1249,35 @@ exports.suite = {
         fail(["TYPE T = ARRAY 3 OF WithParams;", "cannot use 'WithParams' as an element of static array because it has constructor with parameters"],
              ["VAR a: ARRAY 3 OF WithParams;", "cannot use 'WithParams' as an element of static array because it has constructor with parameters"]
             )
+        ),
+    "export": testWithModule(
+          "MODULE test;"
+        + "TYPE Exported* = RECORD PROCEDURE Exported*(); END;"
+        + "NotExported* = RECORD PROCEDURE NotExported(); END;"
+        + "DerivedNotExportedWithoutConstructor* = RECORD (NotExported) END;"
+        + "NoConstructor* = RECORD END;"
+        + "PROCEDURE Exported.Exported(); END;"
+        + "PROCEDURE NotExported.NotExported(); END;"
+        + "END test.",
+        pass("MODULE m; IMPORT test; VAR r: test.Exported; p: POINTER TO test.Exported; BEGIN p := NEW test.Exported(); NEW(p); END m.",
+             "MODULE m; IMPORT test; TYPE T = RECORD(test.Exported) END; END m.",
+             "MODULE m; IMPORT test; TYPE T = RECORD(test.NoConstructor) END; END m.",
+             "MODULE m; IMPORT test; TYPE T = RECORD(test.DerivedNotExportedWithoutConstructor) END; END m.",
+             "MODULE m; IMPORT test; PROCEDURE p(r: test.NotExported); BEGIN copy <- r; END; END m."
+            ),
+        fail(["MODULE m; TYPE T = RECORD PROCEDURE T*(); END; END m.",
+              "constructor 'T' cannot be exported because record itslef is not exported"],
+             ["MODULE m; IMPORT test; TYPE T = RECORD(test.NotExported) END; END m.",
+              "cannot extend 'NotExported' - its constructor was not exported"],
+             ["MODULE m; IMPORT test; VAR r: test.NotExported; END m.",
+              "cannot instantiate 'NotExported' - its constructor was not exported"],
+             ["MODULE m; IMPORT test; VAR p: POINTER TO test.NotExported; BEGIN NEW(p); END m.",
+              "cannot instantiate 'NotExported' - its constructor was not exported"],
+             ["MODULE m; IMPORT test; VAR p: POINTER TO test.NotExported; BEGIN p := NEW test.NotExported(); END m.",
+              "cannot instantiate 'NotExported' - its constructor was not exported"],
+             ["MODULE m; IMPORT test; VAR a: ARRAY 3 OF test.NotExported; END m.",
+              "cannot instantiate 'NotExported' - its constructor was not exported"]
+            )
         )
     },
 "operator NEW": testWithContext(

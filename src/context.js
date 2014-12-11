@@ -1736,7 +1736,7 @@ exports.RecordDecl = ChainedContext.extend({
             throw new Errors.Error("recursive inheritance: '"
                 + Type.typeName(this.__type) + "'");
 
-        Type.setRecordBase(this.__type, type);
+        this.__type.setBase(type);
     },
     endParse: function(){
         var gen = this.codeGenerator();
@@ -1807,6 +1807,7 @@ exports.TypeDeclaration = ChainedContext.extend({
         Scope.resolve(this.currentScope(), this.__symbol);
     },
     typeName: function(){return this.__id.id();},
+    id: function(){return this.__id;},
     genTypeName: function(){return this.__id.id();},
     isAnonymousDeclaration: function(){return false;},
     type: function(){return this.parent().type();},

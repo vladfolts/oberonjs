@@ -157,6 +157,7 @@ TYPE
     PBasicType* = POINTER TO BasicType;
 
     Record* = RECORD(NamedType)
+        PROCEDURE setBase*(type: PRecord);
         PROCEDURE addField*(f: PField);
         PROCEDURE findSymbol*(id: STRING): PField;
         PROCEDURE finalize*();
@@ -457,10 +458,10 @@ PROCEDURE recordBase*(r: Record): PRecord;
     RETURN r.base
 END recordBase;
 
-PROCEDURE setRecordBase*(VAR r: Record; type: PRecord);
+PROCEDURE Record.setBase(type: PRecord);
 BEGIN
-    r.base := type;
-END setRecordBase;
+    SELF.base := type;
+END;
 
 PROCEDURE recordScope*(r: Record): ScopeBase.PType;
     RETURN r.scope

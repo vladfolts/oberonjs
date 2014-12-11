@@ -1,9 +1,13 @@
 MODULE EberonRecord;
 IMPORT 
-    Cast, Context, EberonContext, EberonTypes, Errors, JS, JsMap, ScopeBase, Object, Stream, String, Types;
+    Cast, Context, EberonContext, EberonTypes, Errors, JS, JsMap, Scope, ScopeBase, Object, Stream, String, Types;
+CONST
+    instantiateForVar* = 0;    
+    instantiateForNew* = 1;    
+    instantiateForCopy* = 2;    
 TYPE
     Record* = RECORD(Types.Record)
-        PROCEDURE declareConstructor(type: Types.PDefinedProcedure);
+        PROCEDURE declareConstructor(type: Types.PDefinedProcedure; exported: BOOLEAN);
         PROCEDURE addMethod(methodId: Context.PIdentdefInfo; type: Types.PProcedure);
         PROCEDURE defineConstructor(type: Types.PDefinedProcedure);
         PROCEDURE defineMethod(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
@@ -13,6 +17,7 @@ TYPE
         PROCEDURE setRecordInitializationCode(baseConstructorCallCode, inheritanceCode: STRING);
 
         customConstructor-: Types.PDefinedProcedure;
+        customConstructorExported: BOOLEAN;
         customConstructorDefined: BOOLEAN;
         customInitedfields-: ARRAY * OF STRING;
         finalized: BOOLEAN;
@@ -232,30 +237,47 @@ BEGIN
     RETURN (c # NIL) & (LEN(c.args()) # 0);
 END;
 
-PROCEDURE Record.initializer(cx: Context.Type): STRING;
-BEGIN
-    IF SELF.finalized THEN
-        ensureNonAbstract(SELF(POINTER));
-    ELSE
-        SELF.instantiated := TRUE;
-    END;
-
-    RETURN SUPER(cx);
+PROCEDURE canBeCreatedInAnotherModule(r: Record): BOOLEAN;
+    RETURN (r.customConstructor = NIL) OR r.customConstructorExported;
 END;
 
-PROCEDURE ensureCanBeInstantiated*(r: PRecord; forNew: BOOLEAN);
+PROCEDURE canBeCreatedInContext(cx: Context.Type; r: Record): BOOLEAN;
+    RETURN (LEN(cx.qualifyScope(r.scope)) = 0)
+        OR canBeCreatedInAnotherModule(r);
+END;
+
+PROCEDURE Record.setBase(type: Types.PRecord);
+BEGIN
+    IF (type.scope # SELF.scope) & (SELF.scope^ IS Scope.Module) 
+        & ~canBeCreatedInAnotherModule(type(PRecord)^) THEN
+        Errors.raise("cannot extend '" + type.name + "' - its constructor was not exported")
+    END;
+    SUPER(type);
+END;
+
+PROCEDURE ensureCanBeInstantiated*(cx: Context.Type; r: PRecord; type: INTEGER);
 BEGIN
     IF r.finalized THEN
         ensureNonAbstract(r);
-        IF ~forNew THEN
+        IF (type # instantiateForCopy) & ~canBeCreatedInContext(cx, r^) THEN
+            Errors.raise("cannot instantiate '" + r.name + "' - its constructor was not exported");
+        END;
+
+        IF type # instantiateForNew THEN
             ensureVariableCanBeDeclared(r);
         END;
     ELSE
         r.instantiated := TRUE;
-        IF ~forNew THEN
+        IF type # instantiateForNew THEN
             r.declaredAsVariable := TRUE;
         END;
     END;
+END;
+
+PROCEDURE Record.initializer(cx: Context.Type): STRING;
+BEGIN
+    ensureCanBeInstantiated(cx, SELF(POINTER), instantiateForNew);
+    RETURN SUPER(cx);
 END;
 
 PROCEDURE Record.findSymbol(id: STRING): Types.PField;
@@ -367,7 +389,7 @@ BEGIN
     SELF.inheritanceCode := inheritanceCode;
 END;
 
-PROCEDURE Record.declareConstructor(type: Types.PDefinedProcedure);
+PROCEDURE Record.declareConstructor(type: Types.PDefinedProcedure; exported: BOOLEAN);
 BEGIN
     IF SELF.customConstructor # NIL THEN
         Errors.raise("constructor '" + SELF.name + "' already declared");
@@ -377,6 +399,7 @@ BEGIN
     END;
 
     SELF.customConstructor := type;
+    SELF.customConstructorExported := exported;
 END;
 
 PROCEDURE Record.defineConstructor(type: Types.PDefinedProcedure);

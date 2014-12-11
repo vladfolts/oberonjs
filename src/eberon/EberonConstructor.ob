@@ -106,7 +106,13 @@ BEGIN
     NEW(call);
     resultType <- typeId.type();
     recordType <- resultType(EberonRecord.PRecord); 
-    EberonRecord.ensureCanBeInstantiated(recordType, forNew);
+    
+    instType <- EberonRecord.instantiateForVar;
+    IF forNew THEN
+        instType := EberonRecord.instantiateForNew;
+    END;
+    
+    EberonRecord.ensureCanBeInstantiated(cx^, recordType, instType);
     IF forNew THEN
         resultType := Types.makePointer("", typeId);
     END;

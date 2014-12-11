@@ -324,7 +324,7 @@ var InPlaceVariableInit = Context.Chained.extend({
                          : new TypeNarrowVariable(type, false, false);
         this._symbol = Symbol.makeSymbol(this.__id, v);
         if (type instanceof Type.Record){
-            EberonRecord.ensureCanBeInstantiated(type, false);
+            EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForCopy);
             if (e.designator())
                 this._code += this.language().rtl.cloneRecord(e.code());
             else // do not clone if it is temporary, e.g. constructor call
@@ -445,7 +445,7 @@ var VariableDeclaration = Context.VariableDeclaration.extend({
     _initCode: function(){
         var type = this.type();
         if (type instanceof EberonRecord.Record)
-            EberonRecord.ensureCanBeInstantiated(type, false);
+            EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForVar);
         return Context.VariableDeclaration.prototype._initCode.call(this);
     }
 });
@@ -469,8 +469,14 @@ var RecordDecl = Context.RecordDecl.extend({
             var methodType = msg.type;
             var boundType = this.type();
             var id = msg.id.id();
-            if (Type.typeName(boundType) == id)
-                boundType.declareConstructor(methodType);
+            if (Type.typeName(boundType) == id){
+                if (msg.id.exported()){
+                    var typeId = this.parent().id();
+                    if (!typeId.exported())
+                        throw new Errors.Error("constructor '" + id + "' cannot be exported because record itslef is not exported");
+                }
+                boundType.declareConstructor(methodType, msg.id.exported());
+            }
             else
                 boundType.addMethod(msg.id,
                                     EberonTypes.makeMethodType(id, methodType, Procedure.makeProcCallGenerator));
