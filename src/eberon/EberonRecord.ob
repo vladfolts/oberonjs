@@ -274,6 +274,14 @@ BEGIN
     END;
 END;
 
+PROCEDURE Record.codeForNew(cx: Context.Type): STRING;
+BEGIN
+    IF hasParameterizedConstructor(SELF) THEN
+        Errors.raise("cannot use procedure NEW for '" + SELF.name + "' because it has constructor with parameters, use operator NEW instead");
+    END;
+    RETURN SUPER(cx);
+END;
+
 PROCEDURE Record.initializer(cx: Context.Type): STRING;
 BEGIN
     ensureCanBeInstantiated(cx, SELF(POINTER), instantiateForNew);

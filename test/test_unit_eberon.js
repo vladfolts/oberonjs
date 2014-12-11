@@ -1250,6 +1250,18 @@ exports.suite = {
              ["VAR a: ARRAY 3 OF WithParams;", "cannot use 'WithParams' as an element of static array because it has constructor with parameters"]
             )
         ),
+    "NEW": testWithContext(
+        context(grammar.statement,
+                "TYPE WithParams = RECORD PROCEDURE WithParams(i: INTEGER); END;"
+              + "DerivedWithParams = RECORD(WithParams) END;"
+              + "VAR p: POINTER TO WithParams; pd: POINTER TO DerivedWithParams;"
+              + "PROCEDURE WithParams.WithParams(i: INTEGER); END;"
+              ),
+        pass(),
+        fail(["NEW(p)", "cannot use procedure NEW for 'WithParams' because it has constructor with parameters, use operator NEW instead"],
+             ["NEW(pd)", "cannot use procedure NEW for 'DerivedWithParams' because it has constructor with parameters, use operator NEW instead"]
+            )
+        ),
     "export": testWithModule(
           "MODULE test;"
         + "TYPE Exported* = RECORD PROCEDURE Exported*(); END;"

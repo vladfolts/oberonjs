@@ -160,6 +160,7 @@ TYPE
         PROCEDURE setBase*(type: PRecord);
         PROCEDURE addField*(f: PField);
         PROCEDURE findSymbol*(id: STRING): PField;
+        PROCEDURE codeForNew*(cx: Context.Type): STRING;
         PROCEDURE finalize*();
 
         fields: JsMap.Type;
@@ -208,6 +209,10 @@ PROCEDURE finalizeRecord(closure: Object.PType);
 BEGIN
     closure(PRecord).finalize();
 END finalizeRecord;
+
+PROCEDURE Record.codeForNew(cx: Context.Type): STRING;
+    RETURN SELF.initializer(cx);
+END;
 
 PROCEDURE Record.finalize();
 BEGIN
