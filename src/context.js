@@ -2033,6 +2033,7 @@ exports.endCallMsg = endCallMsg;
 exports.Chained = ChainedContext;
 exports.endParametersMsg = endParametersMsg;
 exports.getSymbolAndScope = getSymbolAndScope;
+exports.getQIdSymbolAndScope = getQIdSymbolAndScope;
 exports.makeProcCall = makeProcCall;
 exports.unwrapType = unwrapType;
 exports.RelationOps = RelationOps;

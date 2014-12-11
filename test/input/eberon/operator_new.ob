@@ -1,0 +1,16 @@
+MODULE m;
+TYPE
+    T = RECORD
+    END;
+
+    ConstructorWithParameters = RECORD
+        PROCEDURE ConstructorWithParameters(i: INTEGER);
+    END;
+
+PROCEDURE ConstructorWithParameters.ConstructorWithParameters(i: INTEGER);
+END;
+
+BEGIN
+    t <- NEW T();
+    params <- NEW ConstructorWithParameters(123);
+END m.

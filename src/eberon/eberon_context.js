@@ -176,6 +176,10 @@ function makeConstructorCall(context, type, call){
     return call(type, cx);
     }
 
+function OperatorNewMsg(e){
+    this.expression = e;
+}
+
 var Designator = Context.Designator.extend({
     init: function EberonContext$Designator(parent){
         Context.Designator.prototype.init.call(this, parent);
@@ -201,6 +205,11 @@ var Designator = Context.Designator.extend({
             return this.__beginCall();
         if (msg == Context.endCallMsg)
             return this.__endCall();
+        if (msg instanceof OperatorNewMsg){
+            var e = msg.expression;
+            this._advance(e.type(), new ResultVariable(e), e.code());
+            return;
+        }
 
         // no type promotion after calling functions
         if (breakTypePromotion(msg))
@@ -245,6 +254,48 @@ var Designator = Context.Designator.extend({
         var e = this.__procCall.end();
         this._advance(e.type(), new ResultVariable(e), e.code());
         this.__procCall = undefined;
+    }
+});
+
+var OperatorNew = Context.Chained.extend({
+    init: function EberonContext$OperatorNew(parent){
+        Context.Chained.prototype.init.call(this, parent);
+        this.__info = undefined;
+        this.__call = undefined;
+    },
+    handleQIdent: function(q){
+        var found = Context.getQIdSymbolAndScope(this, q);
+        var s = found.symbol();
+        var info = s.info();
+
+        if (!(info instanceof Type.TypeId))
+            throw new Errors.Error("record type is expected in operator NEW, got '" + info.idType() + "'");
+
+        var type = info.type();
+        if (!(type instanceof Type.Record))
+            throw new Errors.Error("record type is expected in operator NEW, got '" + type.description() + "'");
+        
+        this.__info = info;        
+    },
+    handleExpression: function(e){
+        this.__call.handleArgument(e);
+    },
+    handleMessage: function(msg){
+        if (msg == Context.beginCallMsg){
+            this.__call = makeConstructorCall(this, this.__info.type(), EberonConstructor.makeConstructorCall);
+            return;
+        }
+        if (msg == Context.endCallMsg)
+            return;
+
+        return Context.Chained.prototype.handleMessage.call(this, msg);
+    },
+    endParse: function(){
+        var callExpression = this.__call.end();
+        var e = Code.makeSimpleExpression(
+              callExpression.code()
+            , Type.makePointer("", this.__info));
+        this.handleMessage(new OperatorNewMsg(e));
     }
 });
 
@@ -1207,6 +1258,7 @@ exports.Return = Return;
 exports.SimpleExpression = SimpleExpression;
 exports.InPlaceVariableInit = InPlaceVariableInit;
 exports.InPlaceVariableInitFor = InPlaceVariableInitFor;
+exports.OperatorNew = OperatorNew;
 exports.Term = Term;
 exports.TypeDeclaration = TypeDeclaration;
 exports.VariableDeclaration = VariableDeclaration;

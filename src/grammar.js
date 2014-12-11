@@ -78,12 +78,16 @@ var string = or(context(Lexer.string, Context.String)
               , context(and(digit, repeat(hexDigit), "X"), Context.Char));
 
 var factor = context(
-    or(string, number, "NIL", "TRUE", "FALSE"
-     , function(stream, context){return set(stream, context);} // break recursive declaration of set
-     , designator.factor
-     , and("(", function(stream, context){return expression(stream, context);}
-         , required(")", "no matched ')'"))
-     , and("~", function(stream, context){
+    or(string, 
+       number, 
+       "NIL", 
+       "TRUE", 
+       "FALSE",
+       function(stream, context){return set(stream, context);}, // break recursive declaration of set
+       designator.factor,
+       and("(", function(stream, context){return expression(stream, context);}
+         , required(")", "no matched ')'")),
+       and("~", function(stream, context){
                     return factor(stream, context);}) // break recursive declaration of factor
      )
     , contexts.Factor);

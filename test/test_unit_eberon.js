@@ -1232,5 +1232,27 @@ exports.suite = {
         pass("Derived(123)"),
         fail(["Derived()", "1 argument(s) expected, got 0"])
         )
-    }
+    },
+"operator NEW": testWithContext(
+    context(grammar.expression,
+            "TYPE T = RECORD field: INTEGER; END; Proc = PROCEDURE();"
+            + "ParamCons = RECORD PROCEDURE ParamCons(i: INTEGER); END;"
+            + "Abstract = RECORD PROCEDURE abstract(); END;"
+            + "PROCEDURE ParamCons.ParamCons(i: INTEGER); END;"
+            + "PROCEDURE proc(); END;"
+          ),
+    pass("NEW T()",
+         "NEW ParamCons(123)",
+         "NEW T().field",
+         "NEW T()^"
+         ),
+    fail(["NEW INTEGER()", "record type is expected in operator NEW, got 'INTEGER'"],
+         ["NEW proc()", "record type is expected in operator NEW, got 'procedure'"],
+         ["NEW Proc()", "record type is expected in operator NEW, got 'Proc'"],
+         ["NEW T().unknownField", "type 'T' has no 'unknownField' field"],
+         ["NEW T(123)", "0 argument(s) expected, got 1"],
+         ["NEW Abstract()", "cannot instantiate 'Abstract' because it has abstract method(s): abstract"],
+         ["NEW undeclared()", "undeclared identifier: 'undeclared'"]
+         )
+    )
 };
