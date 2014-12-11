@@ -15,7 +15,7 @@ TYPE
     PType* = POINTER TO Type;
 
     StorageType* = RECORD(Type)    
-        PROCEDURE initializer*(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING
+        PROCEDURE initializer*(cx: Context.Type): STRING
     END;
     PStorageType* = POINTER TO StorageType;
 
@@ -360,7 +360,7 @@ PROCEDURE BasicType.description(): STRING;
     RETURN SELF.name
 END BasicType.description;
 
-PROCEDURE BasicType.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
+PROCEDURE BasicType.initializer(cx: Context.Type): STRING;
     RETURN SELF.mInitializer
 END BasicType.initializer;
 
@@ -407,9 +407,13 @@ BEGIN
     RETURN result
 END Record.description;
 
-PROCEDURE Record.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
-    RETURN "new " + cx.qualifyScope(SELF.scope) + SELF.cons + "(" + code + ")"
-END Record.initializer;
+PROCEDURE recordInitializer*(cx: Context.Type; r: Record; args: STRING): STRING;
+    RETURN "new " + cx.qualifyScope(r.scope) + r.cons + "(" + args + ")";
+END;
+
+PROCEDURE Record.initializer(cx: Context.Type): STRING;
+    RETURN recordInitializer(cx, SELF, "");
+END;
 
 PROCEDURE Record.addField(f: PField);
 BEGIN
@@ -492,7 +496,7 @@ BEGIN
     RETURN result
 END Pointer.description;
 
-PROCEDURE Pointer.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
+PROCEDURE Pointer.initializer(cx: Context.Type): STRING;
     RETURN "null"
 END Pointer.initializer;
 
@@ -559,11 +563,11 @@ BEGIN
     RETURN NIL
 END NamedType.denote;
 
-PROCEDURE OpenArray.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
+PROCEDURE OpenArray.initializer(cx: Context.Type): STRING;
     RETURN ""
 END OpenArray.initializer;
 
-PROCEDURE StaticArray.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
+PROCEDURE StaticArray.initializer(cx: Context.Type): STRING;
     RETURN SELF.mInitializer
 END StaticArray.initializer;
 
@@ -590,7 +594,7 @@ PROCEDURE StaticArray.length(): INTEGER;
     RETURN SELF.len
 END StaticArray.length;
 
-PROCEDURE Procedure.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
+PROCEDURE Procedure.initializer(cx: Context.Type): STRING;
     RETURN "null"
 END Procedure.initializer;
 

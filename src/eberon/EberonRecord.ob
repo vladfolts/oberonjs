@@ -217,21 +217,45 @@ BEGIN
     RETURN result; 
 END;
 
-PROCEDURE Record.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
+PROCEDURE constructor*(r: Record): Types.PDefinedProcedure;
+BEGIN
+    result <- r.customConstructor;
+    IF (result = NIL) & (r.base # NIL) THEN
+        result := constructor(r.base(PRecord)^);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE hasParameterizedConstructor*(r: Record): BOOLEAN;
+BEGIN
+    c <- constructor(r);
+    RETURN (c # NIL) & (LEN(c.args()) # 0);
+END;
+
+PROCEDURE Record.initializer(cx: Context.Type): STRING;
 BEGIN
     IF SELF.finalized THEN
         ensureNonAbstract(SELF(POINTER));
-        IF ~forNew THEN
-            ensureVariableCanBeDeclared(SELF(POINTER));
-        END;
     ELSE
         SELF.instantiated := TRUE;
-        IF ~forNew THEN
-            SELF.declaredAsVariable := TRUE;
-        END;
     END;
 
-    RETURN SUPER(cx, forNew, code);
+    RETURN SUPER(cx);
+END;
+
+PROCEDURE ensureCanBeInstantiated*(r: PRecord; forNew: BOOLEAN);
+BEGIN
+    IF r.finalized THEN
+        ensureNonAbstract(r);
+        IF ~forNew THEN
+            ensureVariableCanBeDeclared(r);
+        END;
+    ELSE
+        r.instantiated := TRUE;
+        IF ~forNew THEN
+            r.declaredAsVariable := TRUE;
+        END;
+    END;
 END;
 
 PROCEDURE Record.findSymbol(id: STRING): Types.PField;
@@ -451,7 +475,7 @@ PROCEDURE genFieldInitCode(key: STRING; value: Object.PType; VAR closure: Object
             result := code;
         ELSE
             result := "this." + Types.mangleField(key, type) 
-                    + " = " + type.initializer(closure.cx^, FALSE, "");
+                    + " = " + type.initializer(closure.cx^);
         END;
         closure.code := closure.code + result + ";" + Stream.kCR;
     END;
@@ -476,15 +500,6 @@ BEGIN
     NEW(result);
     Types.initRecordField(identdef, type, result^);
     result.record := record;
-    RETURN result;
-END;
-
-PROCEDURE constructor*(r: Record): Types.PDefinedProcedure;
-BEGIN
-    result <- r.customConstructor;
-    IF (result = NIL) & (r.base # NIL) THEN
-        result := constructor(r.base(PRecord)^);
-    END;
     RETURN result;
 END;
 

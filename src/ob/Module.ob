@@ -35,9 +35,9 @@ PROCEDURE AnyType.description(): STRING;
     RETURN "JS.var"
 END AnyType.description;
 
-PROCEDURE AnyType.initializer(cx: Context.Type; forNew: BOOLEAN; code: STRING): STRING;
+PROCEDURE AnyType.initializer(cx: Context.Type): STRING;
     RETURN "undefined"
-END AnyType.initializer;
+END;
 
 PROCEDURE makeCallGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
 VAR

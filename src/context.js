@@ -751,8 +751,8 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
             return rtl.makeCharArray(dimensions);
 
         var initializer = type instanceof Type.Array || type instanceof Type.Record
-            ? "function(){return " + type.initializer(this, false, "") + ";}"
-            : type.initializer(this, false, "");
+            ? "function(){return " + type.initializer(this) + ";}"
+            : type.initializer(this);
         return rtl.makeArray(dimensions + ", " + initializer);
     },
     _makeType: function(elementsType, init, length){
@@ -1620,6 +1620,9 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
             throw new Errors.Error("type '" + msg.id + "' was not declared");
         return HandleSymbolAsType.prototype.handleMessage.call(this, msg);
     },
+    _initCode: function(){
+        return this.__type.initializer(this);
+    },
     endParse: function(){
         var v = Type.makeVariable(this.__type, false);
         var idents = this.__idents;
@@ -1630,8 +1633,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
             if (id.exported())
                 this.checkExport(varName);
             this.currentScope().addSymbol(Symbol.makeSymbol(varName, v), id.exported());
-            var t = v.type();
-            gen.write("var " + varName + " = " + t.initializer(this, false, "") + ";");
+            gen.write("var " + varName + " = " + this._initCode() + ";");
         }
 
         gen.write("\n");
@@ -1769,7 +1771,7 @@ exports.RecordDecl = ChainedContext.extend({
         var ownFields = Type.recordOwnFields(this.__type);
         for(var f in ownFields){
             var fieldType = ownFields[f].type();
-            result += "this." + Type.mangleField(f, fieldType) + " = " + fieldType.initializer(this, false, "") + ";\n";
+            result += "this." + Type.mangleField(f, fieldType) + " = " + fieldType.initializer(this) + ";\n";
         }
         return result;
     },

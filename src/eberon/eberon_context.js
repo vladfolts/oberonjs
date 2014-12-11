@@ -166,14 +166,14 @@ var Identdef = Context.Identdef.extend({
     }
 });
 
-function makeConstructorCall(context, type, call){
+function makeContextCall(context, call){
     var l = context.language();
     var cx = {
         types: l.types, 
         rtl: l.rtl, 
         qualifyScope: context.qualifyScope.bind(context)
         };
-    return call(type, cx);
+    return call(cx);
     }
 
 function OperatorNewMsg(e){
@@ -244,7 +244,10 @@ var Designator = Context.Designator.extend({
     __beginCall: function(){
         var type = this._currentType();
         if (type instanceof Type.TypeId && type.type() instanceof Type.Record){
-            this.__procCall = makeConstructorCall(this, type.type(), EberonConstructor.makeConstructorCall);
+            this.__procCall = makeContextCall(
+                this, 
+                function(cx){ return EberonConstructor.makeConstructorCall(type, cx, false); }
+                );
             this._discardCode();
         }
         else
@@ -282,7 +285,10 @@ var OperatorNew = Context.Chained.extend({
     },
     handleMessage: function(msg){
         if (msg == Context.beginCallMsg){
-            this.__call = makeConstructorCall(this, this.__info.type(), EberonConstructor.makeConstructorCall);
+            this.__call = makeContextCall(
+                this,
+                function(cx){ return EberonConstructor.makeConstructorCall(this.__info, cx, true); }.bind(this)
+                );
             return;
         }
         if (msg == Context.endCallMsg)
@@ -291,11 +297,7 @@ var OperatorNew = Context.Chained.extend({
         return Context.Chained.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
-        var callExpression = this.__call.end();
-        var e = Code.makeSimpleExpression(
-              callExpression.code()
-            , Type.makePointer("", this.__info));
-        this.handleMessage(new OperatorNewMsg(e));
+        this.handleMessage(new OperatorNewMsg(this.__call.end()));
     }
 });
 
@@ -322,7 +324,7 @@ var InPlaceVariableInit = Context.Chained.extend({
                          : new TypeNarrowVariable(type, false, false);
         this._symbol = Symbol.makeSymbol(this.__id, v);
         if (type instanceof Type.Record){
-            type.initializer(this, false); // checks for abstract etc.
+            EberonRecord.ensureCanBeInstantiated(type, false);
             if (e.designator())
                 this._code += this.language().rtl.cloneRecord(e.code());
             else // do not clone if it is temporary, e.g. constructor call
@@ -439,6 +441,12 @@ var VariableDeclaration = Context.VariableDeclaration.extend({
     handleIdentdef: function(id){
         checkOrdinaryExport(id, "variable");
         Context.VariableDeclaration.prototype.handleIdentdef.call(this, id);
+    },
+    _initCode: function(){
+        var type = this.type();
+        if (type instanceof EberonRecord.Record)
+            EberonRecord.ensureCanBeInstantiated(type, false);
+        return Context.VariableDeclaration.prototype._initCode.call(this);
     }
 });
 
@@ -559,7 +567,14 @@ var BaseInit = Context.Chained.extend({
     handleLiteral: function(s){
         if (s == "SUPER"){
             var ms = this.handleMessage(getConstructorSuperMsg);
-            this.__initCall = makeConstructorCall(this, Type.recordBase(this.type()), EberonConstructor.makeBaseConstructorCall);
+            this.__initCall = makeContextCall(
+                this,
+                function(cx){ 
+                    return EberonConstructor.makeBaseConstructorCall(
+                        Type.recordBase(this.type()), 
+                        cx);
+                    }.bind(this)
+                );
         }
     }
 });
@@ -730,10 +745,9 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
 
         this.__initedFields.push(id);        
         var type = fields[id].type();
-        return makeConstructorCall(
+        return makeContextCall(
             this, 
-            type, 
-            function(type, cx){return EberonConstructor.makeFieldInitCall(type, cx, id);});
+            function(cx){return EberonConstructor.makeFieldInitCall(type, cx, id);});
     }
 });
 
@@ -1142,6 +1156,10 @@ var ArrayDecl = Context.ArrayDecl.extend({
     _makeInit: function(type, dimensions, length){
         if (length == dynamicArrayLength)
             return '[]';
+
+        if (type instanceof EberonRecord.Record && EberonRecord.hasParameterizedConstructor(type))
+            throw new Errors.Error("cannot use '" + Type.typeName(type) + "' as an element of static array because it has constructor with parameters");
+
         return Context.ArrayDecl.prototype._makeInit.call(this, type, dimensions, length);
     },
     _makeType: function(elementsType, init, length){

@@ -1231,6 +1231,24 @@ exports.suite = {
               ),
         pass("Derived(123)"),
         fail(["Derived()", "1 argument(s) expected, got 0"])
+        ),
+    "ARRAY OF record with constructor": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE NoParams = RECORD PROCEDURE NoParams(); END;"
+              + "WithParams = RECORD PROCEDURE WithParams(i: INTEGER); END;"
+              + "PROCEDURE NoParams.NoParams(); END;"
+              + "PROCEDURE WithParams.WithParams(i: INTEGER); END;"
+              ),
+        pass("TYPE T = ARRAY * OF NoParams;",
+             "TYPE T = ARRAY 3 OF NoParams;",
+             "TYPE T = ARRAY * OF WithParams;",
+             "VAR a: ARRAY 3 OF NoParams;",
+             "VAR a: ARRAY * OF WithParams;",
+             "PROCEDURE p(); VAR a: ARRAY * OF WithParams; BEGIN a.add(WithParams(123)); END;"
+            ),
+        fail(["TYPE T = ARRAY 3 OF WithParams;", "cannot use 'WithParams' as an element of static array because it has constructor with parameters"],
+             ["VAR a: ARRAY 3 OF WithParams;", "cannot use 'WithParams' as an element of static array because it has constructor with parameters"]
+            )
         )
     },
 "operator NEW": testWithContext(
