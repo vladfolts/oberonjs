@@ -4,6 +4,7 @@ Eberon basically extends original Oberon (excluding additional [restrictions](#r
 
 ### Extensions
 * [[Methods|eberon-methods]]
+* [[Record Constructors|eberon-record-constructor]]
 * [[Strings|eberon-strings]]
 * [[In Place Variables|eberon-in-place-variables]]
 * [[Implicit Type Narrowing|eberon-implicit-type-narrowing]]
