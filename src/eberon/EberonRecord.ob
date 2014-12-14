@@ -1,6 +1,6 @@
 MODULE EberonRecord;
 IMPORT 
-    Cast, Context, EberonContext, EberonTypes, Errors, JS, JsMap, Scope, ScopeBase, Object, Stream, String, Types;
+    Cast, Context, EberonContext, EberonTypes, Errors, JS, JsMap, Object, Scope, ScopeBase, Stream, String, Types;
 CONST
     instantiateForVar* = 0;    
     instantiateForNew* = 1;    
@@ -446,6 +446,23 @@ BEGIN
     END;
 END;
 
+PROCEDURE checkIfFieldsInited(r: Record);
+VAR
+    fieldsWereNotInited: ARRAY * OF STRING;
+BEGIN
+    FOR i <- 0 TO LEN(r.customInitedfields) - 1 DO
+        f <- r.customInitedfields[i];
+        IF ~JsMap.hasString(r.fieldsInit, f) THEN
+            fieldsWereNotInited.add(f);
+        END;
+    END;
+
+    IF LEN(fieldsWereNotInited) # 0 THEN
+        Errors.raise("constructor '" + r.name + "' must initialize fields: " 
+                   + String.join(fieldsWereNotInited, ", "));
+    END;
+END;
+
 PROCEDURE Record.finalize();
 BEGIN
     SELF.finalized := TRUE;
@@ -469,6 +486,8 @@ BEGIN
         JsMap.erase(SELF.declaredMethods, SELF.nonExportedMethods[i]);
     END;
     SELF.nonExportedMethods.clear();
+
+    checkIfFieldsInited(SELF);
 
     SUPER();
 END;

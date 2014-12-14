@@ -1223,6 +1223,14 @@ exports.suite = {
              ["PROCEDURE T.T() | f1(1), f3(3), f2(2); END;", "field 'f2' must be initialized before 'f3'"]
             )
         ),
+    "fields with constructor but record without constructor": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE Field = RECORD PROCEDURE Field(a: INTEGER); END;"
+              + "PROCEDURE Field.Field(a: INTEGER); END;"
+              ),
+        pass(),
+        fail(["TYPE T = RECORD f: Field; END;", "constructor 'T' must initialize fields: f"])
+        ),
     "inherit constructor parameters": testWithContext(
         context(grammar.expression,
                 "TYPE Base = RECORD PROCEDURE Base(i: INTEGER); END;"

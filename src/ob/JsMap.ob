@@ -30,7 +30,15 @@ VAR
 BEGIN
     JS.do("result = m.hasOwnProperty(s)");
     RETURN result
-END has;
+END;
+
+PROCEDURE hasString*(m: Strings; s: STRING): BOOLEAN;
+VAR
+    result: BOOLEAN;
+BEGIN
+    JS.do("result = m.hasOwnProperty(s)");
+    RETURN result
+END;
 
 PROCEDURE find*(m: Type; s: STRING; VAR r: Object.PType): BOOLEAN;
 VAR

@@ -705,15 +705,6 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 if (this.__baseConstructorWasCalled && (!baseConstructor || !baseConstructor.args().length))
                     throw new Errors.Error("base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)");
                 
-                var fieldsWereNotInited = [];
-                for(var i = 0; i < this.__boundType.customInitedfields.length; ++i){
-                    var f = this.__boundType.customInitedfields[i];
-                    if (this.__initedFields.indexOf(f) == -1)
-                        fieldsWereNotInited.push(f);
-                }
-                if (fieldsWereNotInited.length)
-                    throw new Errors.Error("constructor '" + Type.typeName(this.__boundType) + "' must initialize fields: " + fieldsWereNotInited);
-
                 this.codeGenerator().write(this.__boundType.inheritanceCode);
             }
             else

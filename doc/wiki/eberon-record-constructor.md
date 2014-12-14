@@ -71,7 +71,6 @@ Constructor 'Derived' has no parameters and 'Base' does have. To pass actual par
 
 Similar thing is for fields having parameterized constructors:
 
-
     Field = RECORD 
         PROCEDURE Field(a: INTEGER);
     END;
@@ -97,7 +96,8 @@ Fields of non-record types also can be referenced in initialization list. In thi
     PROCEDURE T.T() | f1(123), f2(TRUE);
     END;
 
-Fields must be referenced in the initializtion list in the same order as they declared in record. For example above "f2(TRUE), f1(123)" will cause compiler error. Fields of non-record types may be missed in the list - in this case they will be initialized using default values. Record fields having constructor without parameters will be initialized automatically and must be not referenced in initialzation list. All fields are initialized strictly in the same order as they declared in record - no matter if they referenced in the initialization list or initialized automatically. It is possible to use *SELF* in initialization list but be aware of the initialization order - do not use *SELF* to access not initialized field (the compiler does not diagnose that).
+Fields must be referenced in the initialization list in the same order as they declared in record. For example above "f2(TRUE), f1(123)" will cause compiler error.
+Only record's own fields can be referenced (not fields from base record). Fields of non-record types may be missed in the list - in this case they will be initialized using default values. Record fields having constructor without parameters will be initialized automatically and must be not referenced in initialzation list. All fields are initialized strictly in the same order as they declared in record - no matter if they referenced in the initialization list or initialized automatically. It is possible to use *SELF* in initialization list but be aware of the initialization order - do not use *SELF* to access not initialized field (the compiler does not diagnose that).
 
 The order of execution in constructor: 
 * call base constructor (if present), using *SUPER* (with parameters) or automatically (no parameters)
@@ -152,4 +152,4 @@ Constructor can be exported using '*' notation
     END;
 
 If constructor is exported then the record itself must be exported too.
-If constructor is not exported then record cannot be instantiated in other modules.
+If constructor is not exported then record cannot be instantiated or extended in other modules.
