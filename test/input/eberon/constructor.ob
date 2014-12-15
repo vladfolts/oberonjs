@@ -26,6 +26,10 @@ TYPE
         PROCEDURE DerivedRecordWithParamConstructor();
     END;
 
+    DerivedRecordWithParamConstructorBaseWithNoParameters = RECORD(T)
+        PROCEDURE DerivedRecordWithParamConstructorBaseWithNoParameters(a: INTEGER);
+    END;
+
     DerivedRecordWithParamConstructorWithoutConstructor = RECORD(RecordWithParamConstructor)
     END;
 
@@ -107,6 +111,9 @@ END;
 
 PROCEDURE DerivedRecordWithParamConstructor.DerivedRecordWithParamConstructor()
     | SUPER(123);
+END;
+
+PROCEDURE DerivedRecordWithParamConstructorBaseWithNoParameters.DerivedRecordWithParamConstructorBaseWithNoParameters(a: INTEGER);
 END;
 
 PROCEDURE InitializeField.InitializeField()

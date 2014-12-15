@@ -493,21 +493,23 @@ var RecordDecl = Context.RecordDecl.extend({
         return EberonRecord.makeRecordField(field, type, this.__type);
     },
     _generateBaseConstructorCallCode: function(){
-        var actualConstructor = EberonRecord.constructor$(this.type());
-        if (!actualConstructor || !actualConstructor.args().length)
+        var base = Type.recordBase(this.type());
+        if (!base)
+            return "";
+        var baseConstructor = EberonRecord.constructor$(base);
+        if (!baseConstructor || !baseConstructor.args().length)
             return Context.RecordDecl.prototype._generateBaseConstructorCallCode.call(this);
         
-        var result = this._qualifiedBaseConstructor();
-        return result ? result + ".apply(this, arguments);\n" : "";
+        return this._qualifiedBaseConstructor() + ".apply(this, arguments);\n";
     },
     endParse: function(){
         var type = this.type();
         if (!type.customConstructor)
             return Context.RecordDecl.prototype.endParse.call(this);
 
+        this.codeGenerator().write(this._generateInheritance());
         type.setRecordInitializationCode(
-            this._generateBaseConstructorCallCode(),
-            this._generateInheritance());
+            this._generateBaseConstructorCallCode());
     }
 });
 
@@ -704,8 +706,6 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                     throw new Errors.Error("base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)");
                 if (this.__baseConstructorWasCalled && (!baseConstructor || !baseConstructor.args().length))
                     throw new Errors.Error("base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)");
-                
-                this.codeGenerator().write(this.__boundType.inheritanceCode);
             }
             else
                 this.__boundType.defineMethod(this.__methodId, this.__methodType);

@@ -7,6 +7,10 @@ var RTL$ = {
     }
 };
 var m = function (){
+RTL$.extend(Derived, T);
+RTL$.extend(RecordWithFieldDerived, T);
+RTL$.extend(DerivedRecordWithParamConstructor, RecordWithParamConstructor);
+RTL$.extend(DerivedRecordWithParamConstructorBaseWithNoParameters, T);
 function DerivedRecordWithParamConstructorWithoutConstructor(){
 	RecordWithParamConstructor.apply(this, arguments);
 }
@@ -32,14 +36,12 @@ function T(){
 function Derived(){
 	T.call(this);
 }
-RTL$.extend(Derived, T);
 function RecordWithField(){
 	this.i = 0;
 }
 function RecordWithFieldDerived(){
 	T.call(this);
 }
-RTL$.extend(RecordWithFieldDerived, T);
 
 function passAsArgument(o/*T*/){
 }
@@ -48,7 +50,9 @@ function RecordWithParamConstructor(a/*INTEGER*/){
 function DerivedRecordWithParamConstructor(){
 	RecordWithParamConstructor.call(this, 123);
 }
-RTL$.extend(DerivedRecordWithParamConstructor, RecordWithParamConstructor);
+function DerivedRecordWithParamConstructorBaseWithNoParameters(a/*INTEGER*/){
+	T.call(this);
+}
 function InitializeField(){
 	this.i = 123;
 }

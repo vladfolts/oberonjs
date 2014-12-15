@@ -15,6 +15,12 @@ TYPE
     Derived = RECORD(ConstructorWithParam)
     END;
 
+    TypeExtensionShouldBeMadeBeforeAnyMethodDefinition = RECORD(T)
+        PROCEDURE TypeExtensionShouldBeMadeBeforeAnyMethodDefinition();
+
+        PROCEDURE method();
+    END;
+
 PROCEDURE T.T();
 BEGIN
     SELF.i := 3;
@@ -24,7 +30,14 @@ PROCEDURE ConstructorWithParam.ConstructorWithParam(i: INTEGER)
     | i(i);
 END;
 
+PROCEDURE TypeExtensionShouldBeMadeBeforeAnyMethodDefinition.method();
+END;
+
+PROCEDURE TypeExtensionShouldBeMadeBeforeAnyMethodDefinition.TypeExtensionShouldBeMadeBeforeAnyMethodDefinition();
+END;
+
 BEGIN
     ASSERT(T().i = 3);
     ASSERT(Derived(123).i = 123);
+    TypeExtensionShouldBeMadeBeforeAnyMethodDefinition().method();
 END m.
