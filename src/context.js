@@ -219,7 +219,7 @@ exports.String = ChainedContext.extend({
     toStr: function(s){return s;},
     endParse: function(){
         var s = this.toStr(this.__result);
-        this.parent().handleConst(Type.makeString(s), Code.makeStringConst(s), escapeString(s));
+        this.parent().handleConst(new Type.String(s), Code.makeStringConst(s), escapeString(s));
         }
 });
 
@@ -282,7 +282,7 @@ exports.Identdef = ChainedContext.extend({
         this.parent().handleIdentdef(this._makeIdendef());
     },
     _makeIdendef: function(){
-        return ObContext.makeIdentdefInfo(this._id, this._export);
+        return new ObContext.IdentdefInfo(this._id, this._export);
     }
 });
 
@@ -437,7 +437,7 @@ exports.Designator = ChainedContext.extend({
         var self = this;
         var refCode = function(code){return self.__makeRefCode(code);};
         this.parent().setDesignator(
-            Code.makeDesignator(code, this.__lval ? this.__lval : code, refCode, this.__currentType, this.__info, this.__scope));
+            new Code.Designator(code, this.__lval ? this.__lval : code, refCode, this.__currentType, this.__info, this.__scope));
     },
     __makeRefCode: function(code){
         if (   this.__currentType instanceof Type.Array
@@ -476,7 +476,7 @@ exports.FormalType = HandleSymbolAsType.extend({
     },
     setType: function(type){           
         for(var i = 0; i < this.__arrayDimension; ++i)
-            type = this.language().types.makeOpenArray(type);
+            type = new (this.language().types.OpenArray)(type);
         this.parent().setType(type);
 
     },
@@ -511,7 +511,7 @@ exports.FormalParameters = ChainedContext.extend({
         var name = parent.typeName();
         if (name === undefined)
             name = "";
-        this.__type = new Procedure.make(name);
+        this.__type = new Procedure.Type(name);
         parent.setType(this.__type);
     },
     handleMessage: function(msg){
@@ -584,9 +584,9 @@ exports.ProcDecl = ChainedContext.extend({
     },
     typeName: function(){return undefined;},
     setType: function(type){
-        var procSymbol = Symbol.makeSymbol(
+        var procSymbol = new Symbol.Symbol(
             this.__id.id(), 
-            Type.makeProcedure(type));
+            new Type.ProcedureId(type));
         this.__outerScope.addSymbol(procSymbol, this.__id.exported());
         this.__type = type;
     },
@@ -594,7 +594,7 @@ exports.ProcDecl = ChainedContext.extend({
         if (name == this.__id.id())
             throw new Errors.Error("argument '" + name + "' has the same name as procedure");
         var v = this._makeArgumentVariable(arg);
-        var s = Symbol.makeSymbol(name, v);
+        var s = new Symbol.Symbol(name, v);
         this.currentScope().addSymbol(s);
 
         var code = this.codeGenerator();
@@ -672,7 +672,7 @@ exports.ProcParams = HandleSymbolAsType.extend({
         for(var i = 0; i < names.length; ++i){
             var name = names[i];
             this.handleMessage(
-                new AddArgumentMsg(name, Type.makeProcedureArgument(type, this.__isVar)));
+                new AddArgumentMsg(name, new Type.ProcedureArgument(type, this.__isVar)));
         }
         this.__isVar = false;
         this.__argNamesForType = [];
@@ -710,11 +710,11 @@ exports.PointerDecl = ChainedContext.extend({
         var name = parent.isAnonymousDeclaration() 
             ? ""
             : parent.genTypeName();
-        var pointerType = Type.makePointer(name, typeId);
+        var pointerType = new Type.Pointer(name, typeId);
         parent.setType(pointerType);
     },
     setType: function(type){
-        var typeId = Type.makeTypeId(type);
+        var typeId = new Type.TypeId(type);
         this.currentScope().addFinalizer(function(){typeId.strip();});
         this.__setTypeId(typeId);
     },
@@ -756,7 +756,7 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
         return rtl.makeArray(dimensions + ", " + initializer);
     },
     _makeType: function(elementsType, init, length){
-        return this.language().types.makeStaticArray(init, elementsType, length);
+        return new (this.language().types.StaticArray)(init, elementsType, length);
     }
 });
 
@@ -1584,8 +1584,8 @@ exports.ConstDecl = ChainedContext.extend({
         this.__value = value;
     },
     endParse: function(){
-        var c = Type.makeConst(this.__type, this.__value);
-        this.currentScope().addSymbol(Symbol.makeSymbol(this.__id.id(), c), this.__id.exported());
+        var c = new Type.Const(this.__type, this.__value);
+        this.currentScope().addSymbol(new Symbol.Symbol(this.__id.id(), c), this.__id.exported());
         this.codeGenerator().write(";\n");
     }
 });
@@ -1632,7 +1632,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
             var varName = id.id();
             if (id.exported())
                 this.checkExport(varName);
-            this.currentScope().addSymbol(Symbol.makeSymbol(varName, v), id.exported());
+            this.currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
             gen.write("var " + varName + " = " + this._initCode() + ";");
         }
 
@@ -1709,12 +1709,12 @@ function isTypeRecursive(type, base){
 }
 
 exports.RecordDecl = ChainedContext.extend({
-    init: function RecordDeclContext(context, makeRecord){
+    init: function RecordDeclContext(context, RecordCons){
         ChainedContext.prototype.init.call(this, context);
         var parent = this.parent();
         this.__cons = parent.genTypeName();
         var name = parent.isAnonymousDeclaration() ? "" : this.__cons;
-        this.__type = makeRecord(name, this.__cons, context.currentScope());
+        this.__type = new RecordCons(name, this.__cons, context.currentScope());
         parent.setType(this.__type);
     },
     type: function(){return this.__type;},
@@ -1783,7 +1783,7 @@ exports.RecordDecl = ChainedContext.extend({
         return this.language().rtl.extend(this.__cons, qualifiedBase) + ";\n";
     },
     _makeField: function(field, type){
-        return Type.makeRecordField(field, type);
+        return new Type.RecordField(field, type);
     }
 });
 
@@ -1794,8 +1794,8 @@ exports.TypeDeclaration = ChainedContext.extend({
         this.__symbol = undefined;
     },
     handleIdentdef: function(id){
-        var typeId = Type.makeLazyTypeId();
-        var symbol = Symbol.makeSymbol(id.id(), typeId);
+        var typeId = new Type.LazyTypeId();
+        var symbol = new Symbol.Symbol(id.id(), typeId);
         this.currentScope().addSymbol(symbol, id.exported());
         if (!id.exported())
             this.currentScope().addFinalizer(function(){typeId.strip();});
@@ -1826,7 +1826,7 @@ exports.TypeSection = ChainedContext.extend({
             Scope.addUnresolved(scope, msg.id);
             var resolve = function(){return getSymbol(this, msg.id).info().type();}.bind(this);
 
-            return Type.makeForwardTypeId(resolve);
+            return new Type.ForwardTypeId(resolve);
         }
         return ChainedContext.prototype.handleMessage.call(this, msg);
     },
@@ -1870,7 +1870,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
         var parent = this.parent();
         if (this.__name === undefined ) {
             this.__name = id;
-            this.__moduleScope = Scope.makeModule(id, this.__stdSymbols);
+            this.__moduleScope = new Scope.Module(id, this.__stdSymbols);
             parent.pushScope(this.__moduleScope);
         }
         else if (id === this.__name){
@@ -1946,7 +1946,7 @@ var ModuleImport = ChainedContext.extend({
             if (!module)
                 unresolved.push(moduleName);
             else
-                modules.push(Symbol.makeSymbol(alias, module));
+                modules.push(new Symbol.Symbol(alias, module));
         }
         if (unresolved.length)
             throw new Errors.Error("module(s) not found: " + unresolved.join(", "));

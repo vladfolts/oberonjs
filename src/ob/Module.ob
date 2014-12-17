@@ -7,6 +7,8 @@ TYPE
     PType* = POINTER TO Type;
 
     AnyType* = RECORD(Types.StorageType)
+        PROCEDURE AnyType();
+
         PROCEDURE callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
         PROCEDURE denote(id: STRING): Types.PField;
         PROCEDURE designatorCode(id: STRING): STRING;
@@ -40,11 +42,7 @@ PROCEDURE AnyType.initializer(cx: Context.Type): STRING;
 END;
 
 PROCEDURE makeCallGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
-VAR
-    call: POINTER TO AnyProcCall;
-BEGIN
-    NEW(call);
-    RETURN Procedure.makeCallGenerator(call, cx)
+    RETURN Procedure.makeCallGenerator(NEW AnyProcCall(), cx)
 END makeCallGenerator;
 
 PROCEDURE AnyType.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
@@ -97,13 +95,13 @@ BEGIN
     ELSIF id = varTypeId THEN
         result := varTypeSymbol;
     ELSE
-        result := Symbols.makeSymbol(id, Types.makeProcedure(any));
+        result := NEW Symbols.Symbol(id, NEW Types.ProcedureId(any));
     END;
-    RETURN Symbols.makeFound(result, NIL)
+    RETURN NEW Symbols.FoundSymbol(result, NIL)
 END JS.findSymbol;
 
 PROCEDURE makeVarTypeSymbol(): Symbols.PSymbol;
-    RETURN Symbols.makeSymbol(varTypeId, Types.makeTypeId(any))
+    RETURN NEW Symbols.Symbol(varTypeId, NEW Types.TypeId(any))
 END makeVarTypeSymbol;
 
 PROCEDURE makeDoProcSymbol(): Symbols.PSymbol;
@@ -114,8 +112,6 @@ TYPE
     END;
 VAR
     description: STRING;
-    call: POINTER TO Call;
-    proc: POINTER TO Proc;
 
     PROCEDURE Call.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -136,31 +132,26 @@ VAR
     END Proc.description;
 BEGIN
     description := "JS predefined procedure 'do'";
-    NEW(call);
-    Procedure.initStdCall(call);
+    call <- NEW Call();
     Procedure.hasArgumentWithCustomType(call);
 
-    NEW(proc);
-    Procedure.initStd("", call, proc^);
-    RETURN Procedure.makeSymbol(proc)
+    RETURN Procedure.makeSymbol(NEW Procedure.Std("", call))
 END makeDoProcSymbol;
 
 PROCEDURE makeJS*(): PType;
-VAR
-    result: POINTER TO JS;
-BEGIN
-    NEW(result);
-    Types.initModule(result^, "this");
-    RETURN result
-END makeJS;
+    RETURN NEW JS("this");
+END;
+
+PROCEDURE AnyType.AnyType()
+    | asField(NEW AnyField()),
+      asVar(NEW Types.TypeId(SELF(POINTER)));
+END;
 
 BEGIN
     doProcId := "do$";
     varTypeId := "var$";
     
     NEW(any);
-    NEW(any.asField); 
-    any.asVar := Types.makeTypeId(any);
 
     doProcSymbol := makeDoProcSymbol();
     varTypeSymbol := makeVarTypeSymbol();

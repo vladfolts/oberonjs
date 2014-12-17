@@ -51,6 +51,8 @@ TYPE
     PType = POINTER TO Type;
 
     Std* = RECORD(Types.Procedure)
+        PROCEDURE Std*(name: STRING; call: PCall);
+
         PROCEDURE callGenerator*(cx: LanguageContext.PType): PCallGenerator;
 
         call: PCall
@@ -159,20 +161,11 @@ BEGIN
     processArguments(actual, expected, NIL, types);
 END checkArguments;
 
-PROCEDURE initStd*(name: STRING; call: PCall; VAR result: Std);
+PROCEDURE Std.Std(name: STRING; call: PCall)
+    | SUPER(name);
 BEGIN
-    Types.initProcedure(result, name);
-    result.call := call;
-END initStd;
-
-PROCEDURE makeStd*(name: STRING; call: PCall): Types.PProcedure;
-VAR
-    result: POINTER TO Std;
-BEGIN
-    NEW(result);
-    initStd(name, call, result^);
-    RETURN result
-END makeStd;
+    SELF.call := call;
+END;
 
 PROCEDURE CallGeneratorImpl.handleArgument(e: Code.PExpression);
 BEGIN
@@ -184,11 +177,9 @@ PROCEDURE CallGeneratorImpl.end(): Code.PExpression;
 END;
 
 PROCEDURE makeCallGenerator*(call: PCall; cx: LanguageContext.PType): PCallGenerator;
-VAR
-    result: POINTER TO CallGeneratorImpl;
 BEGIN
     ASSERT(cx # NIL);
-    NEW(result);
+    result <- NEW CallGeneratorImpl();
     result.cx := cx;
     result.call := call;
     RETURN result
@@ -230,8 +221,6 @@ TYPE
         result: Types.PType;
         argumentsCode: PArgumentsCode
     END;
-VAR
-    call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     BEGIN
@@ -242,7 +231,7 @@ VAR
                 )
     END CallImpl.make;
 BEGIN
-    NEW(call);
+    call <- NEW CallImpl();
     call.args := type.args();
     call.result := type.result();
     call.argumentsCode := argumentsCode;
@@ -250,13 +239,11 @@ BEGIN
 END makeProcCallGeneratorWithCustomArgs;
 
 PROCEDURE makeArgumentsCode*(cx: Context.PType): PArgumentsCode;
-VAR
-    result: POINTER TO GenArgCode;
 BEGIN
-    NEW(result);
+    result <- NEW GenArgCode();
     result.cx := cx;
     RETURN result
-END makeArgumentsCode;
+END;
 
 PROCEDURE makeProcCallGenerator*(
     cx: LanguageContext.PType; 
@@ -278,47 +265,27 @@ PROCEDURE Std.designatorCode(id: STRING): STRING;
 END Std.designatorCode;
 
 PROCEDURE makeSymbol*(p: Types.PProcedure): Symbols.PSymbol;
-    RETURN Symbols.makeSymbol(p.name, Types.makeProcedure(p))
-END makeSymbol;
-
-PROCEDURE initStdCall*(call: PStdCall);
-BEGIN
-END initStdCall;
+    RETURN NEW Symbols.Symbol(p.name, NEW Types.ProcedureId(p))
+END;
 
 PROCEDURE hasArgument(call: PStdCall; type: Types.PType);
-VAR
-    a: Types.PProcedureArgument;
 BEGIN
-    NEW(a);
-    a.type := type;
-    call.args.add(a);
+    call.args.add(NEW Types.ProcedureArgument(type, FALSE));
 END hasArgument;
 
 PROCEDURE hasVarArgument(call: PStdCall; type: Types.PType);
-VAR
-    a: Types.PProcedureArgument;
 BEGIN
-    NEW(a);
-    a.isVar := TRUE;
-    a.type := type;
-    call.args.add(a);
+    call.args.add(NEW Types.ProcedureArgument(type, TRUE));
 END hasVarArgument;
 
 PROCEDURE hasArgumentWithCustomType*(call: PStdCall);
-VAR
-    a: Types.PProcedureArgument;
 BEGIN
-    NEW(a);
-    call.args.add(a);
+    call.args.add(NEW Types.ProcedureArgument(NIL, FALSE));
 END hasArgumentWithCustomType;
 
 PROCEDURE hasVarArgumnetWithCustomType(call: PStdCall);
-VAR
-    a: Types.PProcedureArgument;
 BEGIN
-    NEW(a);
-    a.isVar := TRUE;
-    call.args.add(a);
+    call.args.add(NEW Types.ProcedureArgument(NIL, TRUE));
 END hasVarArgumnetWithCustomType;
 
 PROCEDURE checkSingleArgument*(
@@ -338,8 +305,6 @@ PROCEDURE makeNew(): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -362,10 +327,9 @@ PROCEDURE makeNew(): Symbols.PSymbol;
                 NIL)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     hasVarArgumnetWithCustomType(call);
-    RETURN makeSymbol(makeStd("NEW", call))
+    RETURN makeSymbol(NEW Std("NEW", call))
 END makeNew;
 
 PROCEDURE lenArgumentCheck*(argType: Types.PType): BOOLEAN;
@@ -389,22 +353,17 @@ BEGIN
 END CallLen.make;
 
 PROCEDURE makeLen*(check: LenArgumentCheck): Symbols.PSymbol;
-VAR
-    call: POINTER TO CallLen;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallLen();
     call.check := check;
     hasArgumentWithCustomType(call);
-    RETURN makeSymbol(makeStd("LEN", call))
+    RETURN makeSymbol(NEW Std("LEN", call))
 END makeLen;
 
 PROCEDURE makeOdd(): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -421,7 +380,7 @@ PROCEDURE makeOdd(): Symbols.PSymbol;
                 ORD(ODD(constValue^(Code.IntConst).value)));
         END;
 
-        RETURN Code.makeExpressionWithPrecedence(
+        RETURN NEW Code.Expression(
             code + " & 1",
             Types.basic.bool,
             NIL,
@@ -429,18 +388,15 @@ PROCEDURE makeOdd(): Symbols.PSymbol;
             Precedence.bitAnd)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(makeStd("ODD", call))
+    RETURN makeSymbol(NEW Std("ODD", call))
 END makeOdd;
 
 PROCEDURE makeAssert(): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -452,10 +408,9 @@ PROCEDURE makeAssert(): Symbols.PSymbol;
                 NIL)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     hasArgument(call, Types.basic.bool);
-    RETURN makeSymbol(makeStd("ASSERT", call))
+    RETURN makeSymbol(NEW Std("ASSERT", call))
 END makeAssert;
 
 PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
@@ -464,8 +419,6 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
             name: STRING;
             bitOp: BinaryOpStr
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -512,13 +465,12 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
             NIL)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     call.name := name;
     call.bitOp := bitOp;
     hasVarArgument(call, Types.basic.set);
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(makeStd(call.name, call))
+    RETURN makeSymbol(NEW Std(call.name, call))
 END setBitImpl;
 
 PROCEDURE checkVariableArgumentsCount(min, max: INTEGER; actual: ARRAY OF Code.PExpression);
@@ -540,8 +492,6 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr): Symbols.PSym
             unary: STRING;
             incOp: BinaryOpStr
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -571,14 +521,13 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr): Symbols.PSym
         RETURN Code.makeSimpleExpression(code, NIL)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     call.name := name;
     call.unary := unary;
     call.incOp := incOp;
     hasVarArgument(call, Types.basic.integer);
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(makeStd(call.name, call))
+    RETURN makeSymbol(NEW Std(call.name, call))
 END incImpl;
 
 PROCEDURE inclOp(x, y: STRING): STRING;
@@ -601,8 +550,6 @@ PROCEDURE makeAbs(): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -618,18 +565,15 @@ PROCEDURE makeAbs(): Symbols.PSymbol;
         RETURN Code.makeSimpleExpression("Math.abs(" + arg.code() + ")", argType)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     hasArgumentWithCustomType(call);
-    RETURN makeSymbol(makeStd("ABS", call))
+    RETURN makeSymbol(NEW Std("ABS", call))
 END makeAbs;
 
 PROCEDURE makeFloor(): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -641,18 +585,15 @@ PROCEDURE makeFloor(): Symbols.PSymbol;
             Types.basic.integer)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     hasArgument(call, Types.basic.real);
-    RETURN makeSymbol(makeStd("FLOOR", call))
+    RETURN makeSymbol(NEW Std("FLOOR", call))
 END makeFloor;
 
 PROCEDURE makeFlt(): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -664,7 +605,7 @@ PROCEDURE makeFlt(): Symbols.PSymbol;
         IF value # NIL THEN
             value := Code.makeRealConst(FLT(value^(Code.IntConst).value));
         END;
-        RETURN Code.makeExpressionWithPrecedence(
+        RETURN NEW Code.Expression(
                 arg.code(), 
                 Types.basic.real,
                 NIL,
@@ -672,10 +613,9 @@ PROCEDURE makeFlt(): Symbols.PSymbol;
                 arg.maxPrecedence())
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(makeStd("FLT", call))
+    RETURN makeSymbol(NEW Std("FLT", call))
 END makeFlt;
 
 PROCEDURE bitShiftImpl(name: STRING; op: BinaryOp): Symbols.PSymbol;
@@ -684,8 +624,6 @@ PROCEDURE bitShiftImpl(name: STRING; op: BinaryOp): Symbols.PSymbol;
             name: STRING;
             op: BinaryOp
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     BEGIN
@@ -694,21 +632,18 @@ PROCEDURE bitShiftImpl(name: STRING; op: BinaryOp): Symbols.PSymbol;
         RETURN SELF.op(args[0], args[1], cx.rtl)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     call.name := name;
     call.op := op;
     hasArgument(call, Types.basic.integer);
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(makeStd(call.name, call))
+    RETURN makeSymbol(NEW Std(call.name, call))
 END bitShiftImpl;
 
 PROCEDURE makeOrd(): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -730,7 +665,7 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
         ELSIF argType = Types.basic.bool THEN
             code := Code.adjustPrecedence(arg, Precedence.conditional) 
                   + " ? 1 : 0";
-            result := Code.makeExpressionWithPrecedence(
+            result := NEW Code.Expression(
                 code, 
                 Types.basic.integer, 
                 NIL, 
@@ -751,18 +686,15 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
         RETURN result
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     hasArgumentWithCustomType(call);
-    RETURN makeSymbol(makeStd("ORD", call))
+    RETURN makeSymbol(NEW Std("ORD", call))
 END makeOrd;
 
 PROCEDURE makeChr(): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -772,18 +704,15 @@ PROCEDURE makeChr(): Symbols.PSymbol;
         RETURN Code.makeSimpleExpression(arg.code(), Types.basic.ch)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(makeStd("CHR", call))
+    RETURN makeSymbol(NEW Std("CHR", call))
 END makeChr;
 
 PROCEDURE makePack(): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -797,19 +726,16 @@ PROCEDURE makePack(): Symbols.PSymbol;
             NIL)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     hasVarArgument(call, Types.basic.real);
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(makeStd("PACK", call))
+    RETURN makeSymbol(NEW Std("PACK", call))
 END makePack;
 
 PROCEDURE makeUnpk(): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
         END;
-    VAR
-        call: POINTER TO CallImpl;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
@@ -825,11 +751,10 @@ PROCEDURE makeUnpk(): Symbols.PSymbol;
             NIL)
     END CallImpl.make;
 BEGIN
-    NEW(call);
-    initStdCall(call);
+    call <- NEW CallImpl();
     hasVarArgument(call, Types.basic.real);
     hasVarArgument(call, Types.basic.integer);
-    RETURN makeSymbol(makeStd("UNPK", call))
+    RETURN makeSymbol(NEW Std("UNPK", call))
 END makeUnpk;
 
 PROCEDURE dumpProcArgs(proc: Type): STRING;
@@ -893,15 +818,6 @@ END Type.args;
 PROCEDURE Type.result(): Types.PType;
     RETURN SELF.mResult
 END Type.result;
-
-PROCEDURE make*(name: STRING): PType;
-VAR
-    result: PType;
-BEGIN
-    NEW(result);
-    result.name := name;
-    RETURN result
-END make;
 
 BEGIN
     predefined.add(makeNew());

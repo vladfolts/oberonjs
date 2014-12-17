@@ -23,6 +23,8 @@ TYPE
     PCodeMaker = POINTER TO CodeMaker;
 
     SimpleCodeMaker = RECORD (CodeMaker)
+        PROCEDURE SimpleCodeMaker(code: STRING);
+
         code: STRING
     END;
 
@@ -30,6 +32,8 @@ TYPE
     END;
 
     PredCodeMaker = RECORD (CodeMaker)
+        PROCEDURE PredCodeMaker(pred: CodePredicate);
+
         pred: CodePredicate
     END;
 
@@ -39,7 +43,6 @@ TYPE
 VAR
     openArrayChar: Types.PType;
     castOperations*: Cast.Operations;
-    castToUint8: POINTER TO CastToUint8;
 
 PROCEDURE binary(
     left, right: Code.PExpression; 
@@ -87,7 +90,7 @@ BEGIN
     ELSE
         resultPrecedence := precedence;
     END;
-    RETURN Code.makeExpressionWithPrecedence(resultCode, resultType, NIL, resultValue, resultPrecedence)
+    RETURN NEW Code.Expression(resultCode, resultType, NIL, resultValue, resultPrecedence)
 END binary;
 
 PROCEDURE SimpleCodeMaker.make(left, right: STRING; rtl: OberonRtl.PType): STRING;
@@ -104,32 +107,13 @@ BEGIN
     RETURN SELF.pred(left, right, rtl)
 END PredCodeMaker.make;
 
-PROCEDURE makeSimpleCodeMaker(code: STRING): PCodeMaker;
-VAR
-    result: POINTER TO SimpleCodeMaker;
-BEGIN
-    NEW(result);
-    result.code := code;
-    RETURN result
-END makeSimpleCodeMaker;
+PROCEDURE SimpleCodeMaker.SimpleCodeMaker(code: STRING)
+    | code(code);
+END;
 
-PROCEDURE makeIntCodeMaker(code: STRING): PCodeMaker;
-VAR
-    result: POINTER TO IntCodeMaker;
-BEGIN
-    NEW(result);
-    result.code := code;
-    RETURN result
-END makeIntCodeMaker;
-
-PROCEDURE makePredCodeMaker(pred: CodePredicate): PCodeMaker;
-VAR
-    result: POINTER TO PredCodeMaker;
-BEGIN
-    NEW(result);
-    result.pred := pred;
-    RETURN result
-END makePredCodeMaker;
+PROCEDURE PredCodeMaker.PredCodeMaker(pred: CodePredicate)
+    | pred(pred);
+END;
 
 PROCEDURE binaryWithCodeEx(
     left, right: Code.PExpression; 
@@ -145,7 +129,7 @@ PROCEDURE binaryWithCodeEx(
         right, 
         rtl, 
         op, 
-        makeSimpleCodeMaker(code), 
+        NEW SimpleCodeMaker(code), 
         precedence, 
         optResultType, 
         optResultPrecedence)
@@ -186,7 +170,7 @@ BEGIN
     IF e.type() # Types.basic.uint8 THEN
         result := e;
     ELSE
-        result := Code.makeExpressionWithPrecedence(
+        result := NEW Code.Expression(
                 e.code(),
                 Types.basic.integer,
                 e.designator(),
@@ -208,7 +192,7 @@ PROCEDURE binaryInt(
         right, 
         rtl, 
         op, 
-        makeIntCodeMaker(code), 
+        NEW IntCodeMaker(code), 
         precedence, 
         NIL, 
         Precedence.bitOr (* see IntCodeMaker.make *)
@@ -226,7 +210,7 @@ PROCEDURE binaryPred(
         right, 
         rtl, 
         op, 
-        makePredCodeMaker(pred), 
+        NEW PredCodeMaker(pred), 
         Precedence.none, 
         Types.basic.bool, 
         Precedence.none
@@ -592,7 +576,7 @@ PROCEDURE setSymmetricDiff*(left, right: Code.PExpression; rtl: OberonRtl.PType)
 END setSymmetricDiff;
 
 PROCEDURE setHasBit*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN Code.makeExpressionWithPrecedence(
+    RETURN NEW Code.Expression(
             "1 << " + Code.adjustPrecedence(Code.derefExpression(left), Precedence.shift) 
             + " & " + Code.adjustPrecedence(Code.derefExpression(right), Precedence.bitAnd),
             Types.basic.bool,
@@ -755,7 +739,7 @@ VAR
     derefExp: Code.PExpression;
 BEGIN
     derefExp := Code.derefExpression(e);
-    RETURN Code.makeExpressionWithPrecedence(
+    RETURN NEW Code.Expression(
             "(Math.log(" + derefExp.code() + ") / Math.LN2) | 0",
             Types.basic.integer,
             NIL,
@@ -782,8 +766,6 @@ PROCEDURE CastToUint8.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExp
 END CastToUint8.make;
 
 BEGIN
-    openArrayChar := Types.makeOpenArray(Types.basic.ch);
-
-    NEW(castToUint8);
-    castOperations.castToUint8 := castToUint8;
+    openArrayChar := NEW Types.OpenArray(Types.basic.ch);
+    castOperations.castToUint8 := NEW CastToUint8();
 END Operator.

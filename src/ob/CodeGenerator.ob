@@ -118,19 +118,11 @@ PROCEDURE Generator.result(): STRING;
 END;
 
 PROCEDURE makeSimpleGenerator*(): PIGenerator;
-VAR
-    result: POINTER TO SimpleGenerator;
-BEGIN
-    NEW(result);
-    RETURN result
-END makeSimpleGenerator;
+    RETURN NEW SimpleGenerator();
+END;
 
 PROCEDURE makeGenerator*(): PIGenerator;
-VAR
-    result: POINTER TO Generator;
-BEGIN
-    NEW(result);
-    RETURN result
+    RETURN NEW Generator();
 END;
 
 END CodeGenerator.

@@ -15,6 +15,8 @@ TYPE
     RefCodeProc = PROCEDURE(s: STRING): STRING;
 
     Designator* = RECORD
+        PROCEDURE Designator*(code: STRING; lval: STRING; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: ScopeBase.PType);
+
         PROCEDURE code(): STRING;
         PROCEDURE lval(): STRING;
         PROCEDURE refCode(): RefCodeProc;
@@ -53,6 +55,13 @@ TYPE
     END;
 
     Expression* = RECORD(Object.Type)
+        PROCEDURE Expression*(
+            code: STRING; 
+            type: Types.PType; 
+            designator: PDesignator; 
+            constValue: PConst; 
+            maxPrecedence: INTEGER);
+
         PROCEDURE code*(): STRING;
         PROCEDURE lval*(): STRING;
         PROCEDURE type*(): Types.PType;
@@ -70,7 +79,9 @@ TYPE
 
     PExpression* = POINTER TO Expression;
 
-    ModuleGenerator = RECORD
+    ModuleGenerator* = RECORD
+        PROCEDURE ModuleGenerator*(name: STRING; imports: JsMap.Strings);
+
         PROCEDURE prolog(): STRING;
         PROCEDURE epilog(exports: JsMap.Type): STRING;
 
@@ -121,58 +132,45 @@ PROCEDURE Expression.isTerm(): BOOLEAN;
 END Expression.isTerm;
 
 PROCEDURE makeIntConst*(n: INTEGER): PConst;
-VAR
-    result: POINTER TO IntConst;
 BEGIN
-    NEW(result);
+    result <- NEW IntConst();
     result.value := n;
     RETURN result
-END makeIntConst;
+END;
 
 PROCEDURE makeRealConst*(n: REAL): PConst;
-VAR
-    result: POINTER TO RealConst;
 BEGIN
-    NEW(result);
+    result <- NEW RealConst();
     result.value := n;
     RETURN result
-END makeRealConst;
+END;
 
 PROCEDURE makeSetConst*(s: SET): PConst;
-VAR
-    result: POINTER TO SetConst;
 BEGIN
-    NEW(result);
+    result <- NEW SetConst();
     result.value := s;
     RETURN result
-END makeSetConst;
+END;
 
 PROCEDURE makeStringConst*(s: STRING): PConst;
-VAR
-    result: POINTER TO StringConst;
 BEGIN
-    NEW(result);
+    result <- NEW StringConst();
     result.value := s;
     RETURN result
-END makeStringConst;
+END;
 
-PROCEDURE makeExpressionWithPrecedence*(
+PROCEDURE Expression.Expression(
     code: STRING; 
     type: Types.PType; 
     designator: PDesignator; 
     constValue: PConst; 
-    maxPrecedence: INTEGER): PExpression;
-VAR
-    result: PExpression;
-BEGIN
-    NEW(result);
-    result.mCode := code;
-    result.mType := type;
-    result.mDesignator := designator;
-    result.mConstValue := constValue;
-    result.mMaxPrecedence := maxPrecedence;
-    RETURN result
-END makeExpressionWithPrecedence;
+    maxPrecedence: INTEGER)
+  | mCode(code),
+    mType(type),
+    mDesignator(designator),
+    mConstValue(constValue),
+    mMaxPrecedence(maxPrecedence);
+END;
 
 PROCEDURE makeExpression*(
     code: STRING; 
@@ -180,7 +178,7 @@ PROCEDURE makeExpression*(
     designator: PDesignator; 
     constValue: PConst)
     : PExpression;
-    RETURN makeExpressionWithPrecedence(code, type, designator, constValue, Precedence.none)
+    RETURN NEW Expression(code, type, designator, constValue, Precedence.none)
 END makeExpression;
 
 PROCEDURE makeSimpleExpression*(
@@ -214,19 +212,14 @@ PROCEDURE Designator.scope(): ScopeBase.PType;
     RETURN SELF.mScope
 END Designator.scope;
 
-PROCEDURE makeDesignator*(code: STRING; lval: STRING; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: ScopeBase.PType): PDesignator;
-VAR
-    result: PDesignator;
-BEGIN
-    NEW(result);
-    result.mCode := code;
-    result.mLval := lval;
-    result.mRefCode := refCode;
-    result.mType := type;
-    result.mInfo := info;
-    result.mScope := scope;
-    RETURN result
-END makeDesignator;
+PROCEDURE Designator.Designator(code: STRING; lval: STRING; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: ScopeBase.PType)
+  | mCode(code),
+    mLval(lval),
+    mRefCode(refCode),
+    mType(type),
+    mInfo(info),
+    mScope(scope);
+END;
 
 PROCEDURE derefExpression*(e: PExpression): PExpression;
 VAR
@@ -371,15 +364,10 @@ BEGIN
     RETURN result
 END ModuleGenerator.epilog;
 
-PROCEDURE makeModuleGenerator*(name: STRING; imports: JsMap.Strings): PModuleGenerator;
-VAR
-    result: PModuleGenerator;
-BEGIN
-    NEW(result);
-    result.name := name;
-    result.imports := imports;
-    RETURN result
-END makeModuleGenerator;
+PROCEDURE ModuleGenerator.ModuleGenerator(name: STRING; imports: JsMap.Strings)
+    | name(name),
+      imports(imports);
+END;
 
 PROCEDURE checkIndex*(i: INTEGER);
 BEGIN

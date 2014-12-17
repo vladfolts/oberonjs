@@ -5,20 +5,18 @@ CONST
     kCR* = 0AX;
 
 TYPE
-    Type* = POINTER TO RECORD
+    Type* = RECORD
+        PROCEDURE Type*(text: STRING);
+
         s: STRING;
         pos: INTEGER
     END;
 
     ReaderProc = PROCEDURE(c: CHAR): BOOLEAN;
 
-PROCEDURE make*(text: STRING): Type;
-VAR result: Type;
-BEGIN
-    NEW(result);
-    result.s := text;
-    RETURN result
-END make;
+PROCEDURE Type.Type(text: STRING)
+    | s(text);
+END;
 
 PROCEDURE eof*(self: Type): BOOLEAN;
     RETURN self.pos = LEN(self.s)
@@ -28,13 +26,13 @@ PROCEDURE pos*(self: Type): INTEGER;
     RETURN self.pos
 END pos;
 
-PROCEDURE setPos*(self: Type; pos: INTEGER);
+PROCEDURE setPos*(VAR self: Type; pos: INTEGER);
 BEGIN
     ASSERT(pos <= LEN(self.s));
     self.pos := pos
 END setPos;
 
-PROCEDURE next*(self: Type; n: INTEGER);
+PROCEDURE next*(VAR self: Type; n: INTEGER);
 BEGIN
     ASSERT(self.pos + n <= LEN(self.s));
     self.pos := self.pos + n;
@@ -46,7 +44,7 @@ BEGIN
     RETURN self.s[self.pos]
 END peekChar;
 
-PROCEDURE getChar*(self: Type): CHAR;
+PROCEDURE getChar*(VAR self: Type): CHAR;
 VAR result: CHAR;
 BEGIN
     ASSERT(~eof(self));
@@ -69,7 +67,7 @@ BEGIN
     RETURN result
 END peekStr;
 
-PROCEDURE read*(self: Type; f: ReaderProc): BOOLEAN;
+PROCEDURE read*(VAR self: Type; f: ReaderProc): BOOLEAN;
 BEGIN
     WHILE ~eof(self) & f(peekChar(self)) DO
         next(self, 1);

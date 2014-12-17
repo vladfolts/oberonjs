@@ -9,7 +9,7 @@ var Type = require("js/Types.js");
 
 var RecordDecl = Context.RecordDecl.extend({
     init: function OberonContext$RecordDecl(context){
-        Context.RecordDecl.prototype.init.call(this, context, Type.makeRecord);
+        Context.RecordDecl.prototype.init.call(this, context, Type.Record);
     }
 });
 
@@ -49,7 +49,7 @@ var ProcedureCall = Context.Chained.extend({
     callExpression: function(){return this.__callExpression;},
     endParse: function(){
         var e = this.__procCall.end();
-        this.__callExpression = Code.makeExpressionWithPrecedence(this.__id + e.code(), e.type(), undefined, e.constValue(), e.maxPrecedence());
+        this.__callExpression = new Code.Expression(this.__id + e.code(), e.type(), undefined, e.constValue(), e.maxPrecedence());
     }
 });
 

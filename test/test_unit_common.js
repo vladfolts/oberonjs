@@ -36,7 +36,7 @@ var TestContext = Context.Context.extend({
                   types: language.types,
                   stdSymbols: language.stdSymbols
                 });
-        this.pushScope(Scope.makeModule("test", language.stdSymbols));
+        this.pushScope(new Scope.Module("test", language.stdSymbols));
     },
     qualifyScope: function(){return "";},
     handleMessage: function(){}
@@ -60,7 +60,7 @@ function testWithSetup(setup, pass, fail){
 }
 
 function parseInContext(grammar, s, context){
-    var stream = Stream.make(s);
+    var stream = new Stream.Type(s);
     if (!grammar(stream, context) || !Stream.eof(stream))
         throw new Errors.Error("not parsed");
 }
@@ -162,11 +162,11 @@ function testWithModule(src, language, pass, fail){
     var grammar = language.grammar;
     return testWithSetup(
         function(){
-            var imported = oc.compileModule(grammar, Stream.make(src), makeContext(language));
+            var imported = oc.compileModule(grammar, new Stream.Type(src), makeContext(language));
             var module = imported.symbol().info();
             return setup(function(s){
                 oc.compileModule(grammar,
-                                 Stream.make(s),
+                                 new Stream.Type(s),
                                  new TestContextWithModule(module, language));
             });},
         pass,

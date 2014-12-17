@@ -59,7 +59,6 @@ PROCEDURE makeCallGenerator(
     call: PConstructorCall
     ): Procedure.PCallGenerator;
 BEGIN
-    Procedure.initStdCall(call);
     call.recordType := recordType; 
     call.resultType := resultType;
     cons <- EberonRecord.constructor(recordType^);
@@ -82,7 +81,7 @@ BEGIN
 
     variable <- Types.makeVariable(SELF.type, FALSE);
     lval <- fieldInitLval(SELF.field, SELF.type);
-    designator <- Code.makeDesignator(SELF.field, lval, NIL, SELF.type, variable, NIL);
+    designator <- NEW Code.Designator(SELF.field, lval, NIL, SELF.type, variable, NIL);
     left <- Code.makeExpression(SELF.field, SELF.type, designator, NIL);
     SELF.code := Operator.assign(left, e, SELF.cx^);    
 END;
@@ -100,10 +99,8 @@ PROCEDURE makeConstructorCall*(
     cx: LanguageContext.PType;
     forNew: BOOLEAN
     ): Procedure.PCallGenerator;
-VAR
-    call: PConstructorCall;
 BEGIN
-    NEW(call);
+    call <- NEW ConstructorCall();
     resultType <- typeId.type();
     recordType <- resultType(EberonRecord.PRecord); 
     
@@ -114,7 +111,7 @@ BEGIN
     
     EberonRecord.ensureCanBeInstantiated(cx^, recordType, instType);
     IF forNew THEN
-        resultType := Types.makePointer("", typeId);
+        resultType := NEW Types.Pointer("", typeId);
     END;
     RETURN makeCallGenerator(recordType, resultType, cx, call);
 END;
@@ -128,19 +125,15 @@ VAR
     result: Procedure.PCallGenerator;
 
     PROCEDURE initRecord(type: EberonRecord.PRecord): Procedure.PCallGenerator;
-    VAR
-        call: POINTER TO RecordInitCall;
     BEGIN
-        NEW(call);
+        call <- NEW RecordInitCall();
         call.field := field;
         RETURN makeCallGenerator(type, type, cx, call);
     END;
 
     PROCEDURE initNonRecord(): Procedure.PCallGenerator;
-    VAR
-        result: POINTER TO NonRecordInitCall;
     BEGIN
-        NEW(result);
+        result <- NEW NonRecordInitCall();
         result.cx := cx;
         result.field := field;
         result.type := type;
@@ -159,11 +152,7 @@ PROCEDURE makeBaseConstructorCall*(
     type: EberonRecord.PRecord; 
     cx: LanguageContext.PType
     ): Procedure.PCallGenerator;
-VAR
-    call: POINTER TO BaseConstructorCall;
-BEGIN
-    NEW(call);
-    RETURN makeCallGenerator(type, type, cx, call);
+    RETURN makeCallGenerator(type, type, cx, NEW BaseConstructorCall());
 END;
 
 END EberonConstructor.

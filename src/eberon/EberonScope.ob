@@ -31,13 +31,10 @@ BEGIN
 END Operator.addSymbol;
 
 PROCEDURE makeOperator*(parent: Scope.PType; stdSymbols: JsMap.Type): Scope.PType;
-VAR
-    result: POINTER TO Operator;
 BEGIN
-    NEW(result);
-    Scope.init(result^, stdSymbols);
+    result <- NEW Operator(stdSymbols);
     result.parent := parent;
     RETURN result
-END makeOperator;
+END;
 
 END EberonScope.

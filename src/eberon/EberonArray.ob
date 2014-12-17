@@ -7,21 +7,25 @@ TYPE
     END;
     PMethod* = POINTER TO Method;
 
-    MethodField = RECORD(Types.Field)
+    MethodField* = RECORD(Types.Field)
+        PROCEDURE MethodField*(method: PMethod);
+
         method: PMethod
     END;
 
     MethodIndexOf = RECORD(Method)
+        PROCEDURE MethodIndexOf(elementsType: Types.PType);
+
         elementsType: Types.PType
     END;
 
     MethodCallIndexOf = RECORD(Procedure.StdCall)
     END;
 
-    StaticArray = RECORD(Types.StaticArray)
+    StaticArray* = RECORD(Types.StaticArray)
     END;
 
-    OpenArray = RECORD(Types.OpenArray)
+    OpenArray* = RECORD(Types.OpenArray)
     END;
 
 PROCEDURE Method.description(): STRING;
@@ -44,30 +48,20 @@ PROCEDURE MethodField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
     RETURN EberonTypes.makeMethod(SELF.method)
 END MethodField.asVar;
 
-PROCEDURE makeIndexOfMethod(elementsType: Types.PType): PMethod;
-VAR
-    result: POINTER TO MethodIndexOf;
+PROCEDURE MethodIndexOf.MethodIndexOf(elementsType: Types.PType)
+    | SUPER(methodNameIndexOf, NIL),
+      elementsType(elementsType);
 BEGIN
-    NEW(result);
-    result.name := methodNameIndexOf;
-    result.elementsType := elementsType;
-    RETURN result
-END makeIndexOfMethod;
+END;
 
 PROCEDURE MethodIndexOf.designatorCode(id: STRING): STRING;
     RETURN "indexOf"
 END MethodIndexOf.designatorCode;
 
 PROCEDURE MethodIndexOf.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
-VAR
-    a: Types.PProcedureArgument;
-    call: POINTER TO MethodCallIndexOf;
 BEGIN
-    NEW(call);
-    Procedure.initStdCall(call);
-
-    NEW(a);
-    a.type := SELF.elementsType;
+    call <- NEW MethodCallIndexOf();
+    a <- NEW Types.ProcedureArgument(SELF.elementsType, FALSE);
     call.args.add(a);
     RETURN Procedure.makeCallGenerator(call, cx)
 END MethodIndexOf.callGenerator;
@@ -84,19 +78,14 @@ VAR
     result: PMethod;
 BEGIN
     IF id = methodNameIndexOf THEN
-        result := makeIndexOfMethod(elementsType);
+        result := NEW MethodIndexOf(elementsType);
     END;
     RETURN result
 END denoteMethod;
 
-PROCEDURE makeMethodField*(method: PMethod): Types.PField;
-VAR
-    result: POINTER TO MethodField;
-BEGIN
-    NEW(result);
-    result.method := method;
-    RETURN result
-END makeMethodField;
+PROCEDURE MethodField.MethodField(method: PMethod)
+    | method(method);
+END;
 
 PROCEDURE denote(id: STRING; a: Types.Array): Types.PField;
 VAR
@@ -106,7 +95,7 @@ BEGIN
         IF (a.elementsType IS Types.PRecord) OR (a.elementsType IS Types.PArray) THEN
             Errors.raise("'" + methodNameIndexOf + "' is not defined for array of '" + a.elementsType.description() + "'");
         END;
-        result := makeMethodField(makeIndexOfMethod(a.elementsType));
+        result := NEW MethodField(NEW MethodIndexOf(a.elementsType));
     END;
     RETURN result
 END denote;
@@ -128,27 +117,5 @@ BEGIN
     END;
     RETURN result
 END OpenArray.denote;
-
-PROCEDURE makeStaticArray*(
-    initializer: STRING;
-    elementsType: Types.PType;
-    len: INTEGER
-    ): Types.PArray;
-VAR
-    result: POINTER TO StaticArray;
-BEGIN
-    NEW(result);
-    Types.initStaticArray(initializer, elementsType, len, result^);
-    RETURN result
-END makeStaticArray;
-
-PROCEDURE makeOpenArray*(elementsType: Types.PType): Types.PArray;
-VAR
-    result: POINTER TO OpenArray;
-BEGIN
-    NEW(result);
-    Types.initArray(elementsType, result^);
-    RETURN result
-END makeOpenArray;
 
 END EberonArray.

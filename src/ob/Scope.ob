@@ -10,12 +10,16 @@ IMPORT
 TYPE
     Unresolved = ARRAY * OF STRING;
 
-    Finalizer = POINTER TO RECORD
+    Finalizer = RECORD
+        PROCEDURE Finalizer(proc: ScopeBase.FinalizerProc; closure: Object.PType);
+
         proc: ScopeBase.FinalizerProc;
         closure: Object.PType
     END;
 
     Type* = RECORD(ScopeBase.Type)
+        PROCEDURE Type*(stdSymbols: JsMap.Type);
+
         PROCEDURE addSymbol*(s: Symbols.PSymbol; exported: BOOLEAN);
         PROCEDURE findSymbol*(id: STRING): Symbols.PFoundSymbol;
         PROCEDURE close();
@@ -23,7 +27,7 @@ TYPE
         stdSymbols: JsMap.Type;
         symbols: JsMap.Type;
         unresolved: Unresolved;
-        finalizers: ARRAY * OF Finalizer
+        finalizers: ARRAY * OF POINTER TO Finalizer
     END;
     PType* = POINTER TO Type;
 
@@ -31,13 +35,16 @@ TYPE
     END;
 
     CompiledModule = RECORD(Types.Module)
+        PROCEDURE CompiledModule(name: STRING);
+
         PROCEDURE findSymbol(id: STRING): Symbols.PFoundSymbol;
 
         exports: JsMap.Type
     END;
-    PCompiledModule = POINTER TO CompiledModule;
 
     Module* = RECORD(Type)
+        PROCEDURE Module*(name: STRING; stdSymbols: JsMap.Type);
+
         symbol: Symbols.PSymbol;
         exports: JsMap.Type
     END;
@@ -48,7 +55,7 @@ VAR
     name: STRING;
 BEGIN
     name := Types.typeName(t^);
-    JsMap.put(result, name, Symbols.makeSymbol(name, Types.makeTypeId(t)));
+    JsMap.put(result, name, NEW Symbols.Symbol(name, NEW Types.TypeId(t)));
 END addSymbolForType;
 
 PROCEDURE makeStdSymbols*(): JsMap.Type;
@@ -75,33 +82,23 @@ BEGIN
     RETURN result
 END makeStdSymbols;
 
-PROCEDURE init*(VAR scope: Type; stdSymbols: JsMap.Type);
-BEGIN
-    scope.stdSymbols := stdSymbols;
-    scope.symbols := JsMap.make();
-END init;
+PROCEDURE Type.Type(stdSymbols: JsMap.Type)
+    | stdSymbols(stdSymbols),
+      symbols(JsMap.make());
+END;
 
-PROCEDURE makeCompiledModule(name: STRING): PCompiledModule;
-VAR
-    result: PCompiledModule;
-BEGIN
-    NEW(result);
-    Types.initModule(result^, name);
-    result.exports := JsMap.make();
-    RETURN result
-END makeCompiledModule;
+PROCEDURE CompiledModule.CompiledModule(name: STRING)
+    | SUPER(name),
+      exports(JsMap.make());
+END;
 
-PROCEDURE makeModule*(name: STRING; stdSymbols: JsMap.Type): PModule;
-VAR
-    result: PModule;
+PROCEDURE Module.Module(name: STRING; stdSymbols: JsMap.Type)
+    | SUPER(stdSymbols),
+      symbol(NEW Symbols.Symbol(name, NEW CompiledModule(name))),
+      exports(JsMap.make());
 BEGIN
-    NEW(result);
-    init(result^, stdSymbols);
-    result.exports := JsMap.make();
-    result.symbol := Symbols.makeSymbol(name, makeCompiledModule(name));
-    result.addSymbol(result.symbol, FALSE);
-    RETURN result
-END makeModule;
+    SELF.addSymbol(SELF.symbol, FALSE);
+END;
 
 PROCEDURE addUnresolved*(s: Type; id: STRING);
 BEGIN
@@ -147,15 +144,15 @@ BEGIN
     SELF.finalizers.clear(); 
 END Type.close;
 
+PROCEDURE Finalizer.Finalizer(proc: ScopeBase.FinalizerProc; closure: Object.PType)
+    | proc(proc),
+      closure(closure);
+END;
+
 PROCEDURE Type.addFinalizer(proc: ScopeBase.FinalizerProc; closure: Object.PType);
-VAR
-    f: Finalizer;
 BEGIN
-    NEW(f);
-    f.proc := proc;
-    f.closure := closure;
-    SELF.finalizers.add(f);
-END Type.addFinalizer;
+    SELF.finalizers.add(NEW Finalizer(proc, closure));
+END;
 
 PROCEDURE close*(s: Type): Unresolved;
     RETURN s.unresolved
@@ -181,7 +178,7 @@ BEGIN
         void <- JsMap.find(SELF.stdSymbols, id, result);
     END;
     IF result # NIL THEN
-        found := Symbols.makeFound(result(Symbols.PSymbol), SELF(POINTER))
+        found := NEW Symbols.FoundSymbol(result(Symbols.PSymbol), SELF(POINTER))
     END;
     RETURN found
 END Type.findSymbol;
@@ -203,13 +200,8 @@ BEGIN
 END Procedure.addSymbol;
 
 PROCEDURE makeProcedure*(stdSymbols: JsMap.Type): PType;
-VAR
-    result: POINTER TO Procedure;
-BEGIN
-    NEW(result);
-    init(result^, stdSymbols);
-    RETURN result
-END makeProcedure;
+    RETURN NEW Procedure(stdSymbols);
+END;
 
 PROCEDURE addExport(id: STRING; value: Object.PType; VAR closure: Object.Type);
 VAR
@@ -219,7 +211,7 @@ BEGIN
     symbol := value(Symbols.PSymbol);
     info := symbol.info();
     IF info IS Types.PVariable THEN
-        symbol := Symbols.makeSymbol(id, Types.makeExportedVariable(info(Types.PVariable)^));
+        symbol := NEW Symbols.Symbol(id, Types.makeExportedVariable(info(Types.PVariable)^));
     END;
     JsMap.put(closure(CompiledModule).exports, id, symbol);
 END addExport;
@@ -235,7 +227,7 @@ VAR
     result: Symbols.PFoundSymbol;
 BEGIN
     IF JsMap.find(SELF.exports, id, s) THEN
-        result := Symbols.makeFound(s(Symbols.PSymbol), NIL);
+        result := NEW Symbols.FoundSymbol(s(Symbols.PSymbol), NIL);
     END;
     RETURN result
 END CompiledModule.findSymbol;

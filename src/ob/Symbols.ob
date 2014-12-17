@@ -2,6 +2,8 @@ MODULE Symbols;
 IMPORT Object, ScopeBase, Types;
 TYPE
     Symbol* = RECORD(Object.Type)
+        PROCEDURE Symbol*(id: STRING; info: Types.PId);
+
         PROCEDURE id*(): STRING;
         PROCEDURE info*(): Types.PId;
         PROCEDURE isModule*(): BOOLEAN;
@@ -17,6 +19,8 @@ TYPE
     PSymbol* = POINTER TO Symbol;
 
     FoundSymbol* = RECORD
+        PROCEDURE FoundSymbol*(s: PSymbol; scope: ScopeBase.PType);
+
         PROCEDURE symbol(): PSymbol;
         PROCEDURE scope*(): ScopeBase.PType;
 
@@ -62,24 +66,14 @@ PROCEDURE FoundSymbol.symbol(): PSymbol;
     RETURN SELF.mSymbol
 END FoundSymbol.symbol;
 
-PROCEDURE makeSymbol*(id: STRING; info: Types.PId): PSymbol;
-VAR
-    result: PSymbol;
-BEGIN
-    NEW(result);
-    result.mId := id;
-    result.mInfo := info;
-    RETURN result
-END makeSymbol;
+PROCEDURE Symbol.Symbol(id: STRING; info: Types.PId)
+    | mId(id),
+      mInfo(info);
+END;
 
-PROCEDURE makeFound*(s: PSymbol; scope: ScopeBase.PType): PFoundSymbol;
-VAR
-    result: PFoundSymbol;
-BEGIN
-    NEW(result);
-    result.mSymbol := s;
-    result.mScope := scope;
-    RETURN result
-END makeFound;
+PROCEDURE FoundSymbol.FoundSymbol(s: PSymbol; scope: ScopeBase.PType)
+    | mSymbol(s),
+      mScope(scope);
+END;
 
 END Symbols.

@@ -6,7 +6,7 @@ var Lexer = require("js/Lexer.js");
 var Stream = require("js/Stream.js");
 
 function literal(s){
-	var l = Lexer.makeLiteral(s);
+	var l = new Lexer.Literal(s);
 	return function(stream, context){
 		return Lexer.literal(l, stream, context);
 	};

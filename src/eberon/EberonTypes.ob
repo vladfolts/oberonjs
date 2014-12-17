@@ -5,6 +5,8 @@ TYPE
     CallGenerator = PROCEDURE(cx: LanguageContext.PType; type: Types.DefinedProcedure): Procedure.PCallGenerator;
 
     MethodType* = RECORD(Procedure.Std)
+        PROCEDURE MethodType*(id: STRING; t: Types.PDefinedProcedure; call: CallGenerator);
+
         PROCEDURE procType*(): Types.PDefinedProcedure;
 
         type: Types.PDefinedProcedure;
@@ -31,28 +33,19 @@ PROCEDURE MethodType.callGenerator(cx: LanguageContext.PType): Procedure.PCallGe
     RETURN SELF.call(cx, SELF.type^)
 END MethodType.callGenerator;
 
-PROCEDURE makeMethodType*(id: STRING; t: Types.PDefinedProcedure; call: CallGenerator): PMethodType;
-VAR
-    result: PMethodType;
+PROCEDURE MethodType.MethodType(id: STRING; t: Types.PDefinedProcedure; call: CallGenerator)
+    | SUPER(id, NIL);
 BEGIN
-    NEW(result);
-    result.name := id;
-    result.type := t;
-    result.call := call;
-    RETURN result
-END makeMethodType;
+    SELF.type := t;
+    SELF.call := call;
+END;
 
 PROCEDURE MethodVariable.idType(): STRING;
     RETURN "method"
 END MethodVariable.idType;
 
 PROCEDURE makeMethod*(type: Types.PType): Types.PProcedureId;
-VAR
-    result: POINTER TO MethodVariable;
-BEGIN
-    NEW(result);
-    result.type := type;
-    RETURN result
-END makeMethod;
+    RETURN NEW MethodVariable(type);
+END;
 
 END EberonTypes.

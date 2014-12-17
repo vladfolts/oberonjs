@@ -23,13 +23,9 @@ PROCEDURE ElementVariable.isReference(): BOOLEAN;
 END ElementVariable.isReference;
 
 PROCEDURE makeElementVariable*(): Types.PVariable;
-VAR
-    result: POINTER TO ElementVariable;
-BEGIN
-    NEW(result);
-    RETURN result
-END makeElementVariable;
+    RETURN NEW ElementVariable();
+END;
 
 BEGIN
-    string := Types.makeBasic("STRING", "''");
+    string := NEW Types.BasicType("STRING", "''");
 END EberonString.

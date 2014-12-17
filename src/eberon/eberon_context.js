@@ -162,7 +162,7 @@ var Identdef = Context.Identdef.extend({
         Context.Identdef.prototype.handleLiteral.call(this, l);
     },
     _makeIdendef: function(){
-        return EberonContext.makeIdentdefInfo(this._id, this._export, this.__ro);
+        return new EberonContext.IdentdefInfo(this._id, this._export, this.__ro);
     }
 });
 
@@ -229,8 +229,8 @@ var Designator = Context.Designator.extend({
             this._advance(type, type, "this");
         } 
         else if (s == "POINTER"){
-            var typeId = Type.makeTypeId(this.handleMessage(getSelfAsPointerMsg));
-            var pointerType = Type.makePointer("", typeId);
+            var typeId = new Type.TypeId(this.handleMessage(getSelfAsPointerMsg));
+            var pointerType = new Type.Pointer("", typeId);
             var info = Type.makeVariable(pointerType, true);
             this._advance(pointerType, info, "");
         }
@@ -322,7 +322,7 @@ var InPlaceVariableInit = Context.Chained.extend({
             throw new Errors.Error("cannot use " + type.description() + " to initialize variable");
         var v = isString ? new InPlaceStringLiteral(type) 
                          : new TypeNarrowVariable(type, false, false);
-        this._symbol = Symbol.makeSymbol(this.__id, v);
+        this._symbol = new Symbol.Symbol(this.__id, v);
         if (type instanceof Type.Record){
             EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForCopy);
             if (e.designator())
@@ -369,7 +369,7 @@ var ExpressionProcedureCall = Context.Chained.extend({
         var parent = this.parent();
         if (info instanceof ResultVariable){
             var e = info.expression();
-            parent.handleExpression(Code.makeExpressionWithPrecedence(d.code(), d.type(), undefined, e.constValue(), e.maxPrecedence()));
+            parent.handleExpression(new Code.Expression(d.code(), d.type(), undefined, e.constValue(), e.maxPrecedence()));
         }
         else
             parent.setDesignator(d);
@@ -462,7 +462,7 @@ var TypeDeclaration = Context.TypeDeclaration.extend({
 
 var RecordDecl = Context.RecordDecl.extend({
     init: function EberonContext$RecordDecl(context){
-        Context.RecordDecl.prototype.init.call(this, context, EberonRecord.makeRecord);
+        Context.RecordDecl.prototype.init.call(this, context, EberonRecord.Record);
     },
     handleMessage: function(msg){
         if (msg instanceof MethodOrProcMsg){
@@ -479,7 +479,7 @@ var RecordDecl = Context.RecordDecl.extend({
             }
             else
                 boundType.addMethod(msg.id,
-                                    EberonTypes.makeMethodType(id, methodType, Procedure.makeProcCallGenerator));
+                                    new EberonTypes.MethodType(id, methodType, Procedure.makeProcCallGenerator));
             return;
         }
 
@@ -490,7 +490,7 @@ var RecordDecl = Context.RecordDecl.extend({
         return Context.RecordDecl.prototype.handleMessage.call(this, msg);
     },
     _makeField: function(field, type){
-        return EberonRecord.makeRecordField(field, type, this.__type);
+        return new EberonRecord.RecordField(field, type, this.__type);
     },
     _generateBaseConstructorCallCode: function(){
         var base = Type.recordBase(this.type());
@@ -669,7 +669,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     },
     setType: function(type){
         if (this.__methodId){
-            this.__methodType = EberonTypes.makeMethodType(this.__methodId.id(), type, Procedure.makeProcCallGenerator);
+            this.__methodType = new EberonTypes.MethodType(this.__methodId.id(), type, Procedure.makeProcCallGenerator);
             this.__type = type;
             }            
         else
@@ -727,7 +727,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         
         return {
             info: this.__isConstructor ? undefined
-                                       : Type.makeProcedure(EberonTypes.makeMethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
+                                       : new Type.ProcedureId(new EberonTypes.MethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
             code: this.qualifyScope(Type.recordScope(baseType))
                 + Type.typeName(baseType) + ".prototype." + id + ".call"
         };
@@ -1161,7 +1161,7 @@ var ArrayDecl = Context.ArrayDecl.extend({
     },
     _makeType: function(elementsType, init, length){
         return length == dynamicArrayLength
-            ? EberonDynamicArray.makeDynamicArray(elementsType)
+            ? new EberonDynamicArray.DynamicArray(elementsType)
             : Context.ArrayDecl.prototype._makeType.call(this, elementsType, init, length);
     }
 });
@@ -1203,9 +1203,10 @@ var FormalType = Context.HandleSymbolAsType.extend({
     },
     setType: function(type){           
         for(var i = this.__arrayDimensions.length; i--;){
-            type = this.__arrayDimensions[i] 
-                ? EberonDynamicArray.makeDynamicArray(type)
-                : this.language().types.makeOpenArray(type);
+            var Cons = this.__arrayDimensions[i]
+                ? EberonDynamicArray.DynamicArray
+                : this.language().types.OpenArray;
+            type = new Cons(type);
         }
         this.parent().setType(type);
     },

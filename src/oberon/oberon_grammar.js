@@ -117,8 +117,8 @@ exports.language = {
     stdSymbols: Symbols.makeStd(),
     types: {
         implicitCast: Cast.implicit,
-        makeStaticArray: Types.makeStaticArray,
-        makeOpenArray: Types.makeOpenArray
+        StaticArray: Types.StaticArray,
+        OpenArray: Types.OpenArray
     },
     codeGenerator: {
         make: CodeGenerator.makeGenerator,

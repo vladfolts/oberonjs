@@ -7,6 +7,8 @@ CONST
     instantiateForCopy* = 2;    
 TYPE
     Record* = RECORD(Types.Record)
+        PROCEDURE Record(name: STRING; cons: STRING; scope: ScopeBase.PType);
+
         PROCEDURE declareConstructor(type: Types.PDefinedProcedure; exported: BOOLEAN);
         PROCEDURE addMethod(methodId: Context.PIdentdefInfo; type: Types.PProcedure);
         PROCEDURE defineConstructor(type: Types.PDefinedProcedure);
@@ -14,7 +16,7 @@ TYPE
         PROCEDURE requireNewOnly();
         PROCEDURE setBaseConstructorCallCode(code: STRING);
         PROCEDURE setFieldInitializationCode(field: STRING; code: STRING);
-        PROCEDURE setRecordInitializationCode(baseConstructorCallCode, inheritanceCode: STRING);
+        PROCEDURE setRecordInitializationCode(baseConstructorCallCode: STRING);
 
         customConstructor-: Types.PDefinedProcedure;
         customConstructorExported: BOOLEAN;
@@ -29,14 +31,16 @@ TYPE
         declaredAsVariable: BOOLEAN;
         lazyDefinitions: JsMap.Type;
         nonExportedMethods: ARRAY * OF STRING;
-        inheritanceCode-, baseConstructorCallCode-: STRING;
+        baseConstructorCallCode-: STRING;
         fieldsInit: JsMap.Strings;
         fieldsInitOrder: ARRAY * OF STRING;
         lastFieldInit: INTEGER;
     END;
     PRecord* = POINTER TO Record;
 
-    RecordField = RECORD(Types.RecordField)
+    RecordField* = RECORD(Types.RecordField)
+        PROCEDURE RecordField*(identdef: Context.PIdentdefInfo; type: Types.PType; record: PRecord);
+
         record: PRecord;
     END;
 
@@ -44,9 +48,10 @@ TYPE
     END;
     PRecordFieldAsMethod = POINTER TO RecordFieldAsMethod;
 
-    MethodIds = POINTER TO RECORD(Object.Type)
+    MethodIds = RECORD(Object.Type)
         ids: ARRAY * OF STRING;
     END;
+    PMethodIds = POINTER TO MethodIds;
 
     EnsureMethodDefinitionsClosure = RECORD(Object.Type)
         record: PRecord;
@@ -107,7 +112,7 @@ PROCEDURE ensureMethodDefinitionsForEach(key: STRING; value: Object.PType; VAR c
         END;
     END;
 BEGIN
-    do(value(MethodIds).ids, closure(EnsureMethodDefinitionsClosure));
+    do(value(PMethodIds).ids, closure(EnsureMethodDefinitionsClosure));
 END;
 
 PROCEDURE ensureMethodDefinitions(r: PRecord; reasons: JsMap.Type);
@@ -121,21 +126,13 @@ BEGIN
     END;
 END;
 
-PROCEDURE makeMethodIds(): MethodIds;
-VAR
-    result: MethodIds;
-BEGIN
-    NEW(result);
-    RETURN result;
-END;
-
 PROCEDURE requireMethodDefinition*(r: PRecord; id: STRING; reason: STRING);
 VAR
     existingIds: Object.PType;
 
-    PROCEDURE makeIds(): MethodIds;
+    PROCEDURE makeIds(): PMethodIds;
     BEGIN
-        result <- makeMethodIds();
+        result <- NEW MethodIds();
         result.ids.add(id);
         RETURN result;
     END;
@@ -160,7 +157,7 @@ BEGIN
         IF ~JsMap.find(r.lazyDefinitions, reason, existingIds) THEN
             JsMap.put(r.lazyDefinitions, reason, makeIds());
         ELSE
-            addIfNotThere(existingIds(MethodIds).ids);
+            addIfNotThere(existingIds(PMethodIds).ids);
         END;
     END;
 END;
@@ -211,15 +208,6 @@ END;
 
 PROCEDURE RecordFieldAsMethod.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
     RETURN EberonTypes.makeMethod(SELF.type()); 
-END;
-
-PROCEDURE makeRecordFieldAsMethod(identdef: Context.PIdentdefInfo; type: Types.PType): PRecordFieldAsMethod;
-VAR
-    result: PRecordFieldAsMethod;
-BEGIN
-    NEW(result);
-    Types.initRecordField(identdef, type, result^);
-    RETURN result; 
 END;
 
 PROCEDURE constructor*(r: Record): Types.PDefinedProcedure;
@@ -333,7 +321,7 @@ BEGIN
         Errors.raise(msg);
     END;
 
-    JsMap.put(SELF.declaredMethods, id, makeRecordFieldAsMethod(methodId, type));
+    JsMap.put(SELF.declaredMethods, id, NEW RecordFieldAsMethod(methodId, type));
     IF ~methodId.exported() THEN
         SELF.nonExportedMethods.add(id);
     END;
@@ -391,10 +379,9 @@ BEGIN
     JsMap.putString(SELF.fieldsInit, field, code);
 END;
 
-PROCEDURE Record.setRecordInitializationCode(baseConstructorCallCode, inheritanceCode: STRING);
+PROCEDURE Record.setRecordInitializationCode(baseConstructorCallCode: STRING);
 BEGIN
     SELF.baseConstructorCallCode := baseConstructorCallCode;
-    SELF.inheritanceCode := inheritanceCode;
 END;
 
 PROCEDURE Record.declareConstructor(type: Types.PDefinedProcedure; exported: BOOLEAN);
@@ -501,17 +488,12 @@ BEGIN
     RETURN SUPER(actualReadOnly, cx); 
 END;
 
-PROCEDURE makeRecord*(name: STRING; cons: STRING; scope: ScopeBase.PType): Types.PRecord;
-VAR
-    result: PRecord;
-BEGIN
-    NEW(result);
-    Types.initRecord(result, name, cons, scope);
-    result.declaredMethods := JsMap.make();
-    result.lazyDefinitions := JsMap.make();
-    result.fieldsInit := JsMap.makeStrings();
-    result.lastFieldInit := -1;
-    RETURN result;
+PROCEDURE Record.Record(name: STRING; cons: STRING; scope: ScopeBase.PType)
+    | SUPER(name, cons, scope),
+      declaredMethods(JsMap.make()),
+      lazyDefinitions(JsMap.make()),
+      fieldsInit(JsMap.makeStrings()),
+      lastFieldInit(-1);
 END;
 
 PROCEDURE genFieldInitCode(key: STRING; value: Object.PType; VAR closure: Object.Type);
@@ -543,14 +525,10 @@ BEGIN
     RETURN closure.code;
 END;
 
-PROCEDURE makeRecordField*(identdef: Context.PIdentdefInfo; type: Types.PType; record: PRecord): Types.PRecordField;
-VAR
-    result: POINTER TO RecordField;
+PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: Types.PType; record: PRecord)
+    | SUPER(identdef, type);
 BEGIN
-    NEW(result);
-    Types.initRecordField(identdef, type, result^);
-    result.record := record;
-    RETURN result;
+    SELF.record := record;
 END;
 
 END EberonRecord.

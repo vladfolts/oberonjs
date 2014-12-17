@@ -50,7 +50,7 @@ function compileModulesFromText(
         resolveModule,
         handleCompiledModule,
         handleErrors){
-    var stream = Stream.make(text);
+    var stream = new Stream.Type(text);
     do {
         var context = contextFactory(resolveModule);
         var module = compileModule(grammar, stream, context, handleErrors);
@@ -123,7 +123,7 @@ function compileModules(names, moduleReader, grammar, contextFactory, handleErro
 function compile(text, language, handleErrors){
     var result = "";
     var rtl = new RTL();
-    var moduleCode = function(name, imports){return Code.makeModuleGenerator(name, imports);};
+    var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
     var resolver = makeResolver(
             language.grammar,
             function(moduleResolver){

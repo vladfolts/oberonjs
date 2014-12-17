@@ -17,7 +17,9 @@ CONST
         ;
 
 TYPE
-    Literal = POINTER TO RECORD
+    Literal* = RECORD
+        PROCEDURE Literal*(s: STRING);
+
         s: STRING
     END;
 
@@ -29,7 +31,7 @@ PROCEDURE isLetter(c: CHAR): BOOLEAN;
     RETURN ((c >= "a") & (c <= "z")) OR ((c >= "A") & (c <= "Z"))
 END isLetter;
 
-PROCEDURE digit*(stream: Stream.Type; context: Context.Type): BOOLEAN;
+PROCEDURE digit*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;
@@ -44,7 +46,7 @@ BEGIN
     RETURN result
 END digit;
 
-PROCEDURE hexDigit*(stream: Stream.Type; context: Context.Type): BOOLEAN;
+PROCEDURE hexDigit*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;
@@ -64,7 +66,7 @@ BEGIN
     RETURN result
 END handleLiteral;
 
-PROCEDURE point*(stream: Stream.Type; context: Context.Type): BOOLEAN;
+PROCEDURE point*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR result: BOOLEAN;
 BEGIN
     IF    ~Stream.eof(stream)
@@ -76,7 +78,7 @@ BEGIN
     RETURN result
 END point;
 
-PROCEDURE string*(stream: Stream.Type; context: Context.Type): BOOLEAN;
+PROCEDURE string*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;
@@ -124,7 +126,7 @@ BEGIN
     RETURN i = LEN(s)
 END isReservedWord;
 
-PROCEDURE ident*(stream: Stream.Type; context: Context.Type; reservedWords: STRING): BOOLEAN;
+PROCEDURE ident*(VAR stream: Stream.Type; context: Context.Type; reservedWords: STRING): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;
@@ -155,7 +157,7 @@ BEGIN
     RETURN result
 END ident;
 
-PROCEDURE skipComment(stream: Stream.Type; context: Context.Type): BOOLEAN;
+PROCEDURE skipComment(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN
@@ -183,7 +185,7 @@ PROCEDURE readSpaces(c: CHAR): BOOLEAN;
         OR (c = 0DX)
 END readSpaces;
 
-PROCEDURE skipSpaces*(stream: Stream.Type; context: Context.Type);
+PROCEDURE skipSpaces*(VAR stream: Stream.Type; context: Context.Type);
 BEGIN
     IF (context.isLexem = NIL) OR ~context.isLexem() THEN
         WHILE Stream.read(stream, readSpaces)
@@ -195,16 +197,11 @@ PROCEDURE separator*(stream: Stream.Type; context: Context.Type): BOOLEAN;
     RETURN Stream.eof(stream) OR ~isLetter(Stream.peekChar(stream))
 END separator;
 
-PROCEDURE makeLiteral*(s: STRING): Literal;
-VAR
-    result: Literal;
-BEGIN
-    NEW(result);
-    JS.do("result.s = s");
-    RETURN result
-END makeLiteral;
+PROCEDURE Literal.Literal(s: STRING)
+    | s(s);
+END;
 
-PROCEDURE literal*(l: Literal; stream: Stream.Type; context: Context.Type): BOOLEAN;
+PROCEDURE literal*(l: Literal; VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN
