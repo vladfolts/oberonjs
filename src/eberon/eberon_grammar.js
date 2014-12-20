@@ -17,7 +17,7 @@ var repeat = Parser.repeat;
 var required = Parser.required;
 
 function makeStrucType(base, type){
-    var mapType = context(and("MAP", type, "TO", type), EbContext.MapDecl);
+    var mapType = context(and("MAP", "OF", type), EbContext.MapDecl);
     return or(base, mapType);
 }
 

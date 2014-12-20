@@ -2,9 +2,9 @@ MODULE EberonMap;
 IMPORT Context, Types;
 TYPE
     Type* = RECORD(Types.StorageType)
-        PROCEDURE Type*(from, to: Types.PType);
+        PROCEDURE Type*(type: Types.PType);
 
-        from, to: Types.PType;
+        type: Types.PType;
     END;
 
 PROCEDURE Type.initializer(cx: Context.Type): STRING;
@@ -12,12 +12,12 @@ PROCEDURE Type.initializer(cx: Context.Type): STRING;
 END;
 
 PROCEDURE Type.description(): STRING;
-    RETURN "MAP " + SELF.from.description() + " TO " + SELF.to.description();
+    RETURN "MAP OF " + SELF.type.description();
 END;
 
-PROCEDURE Type.Type(from, to: Types.PType)
-    | from(from), 
-      to(to);
+PROCEDURE Type.Type(type: Types.PType)
+    | type(type);
 END;
 
 END EberonMap.
+

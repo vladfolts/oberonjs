@@ -1,4 +1,4 @@
 MODULE m;
 VAR
-    v: MAP STRING TO INTEGER;
+    v: MAP OF INTEGER;
 END m.

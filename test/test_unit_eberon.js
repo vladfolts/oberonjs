@@ -1325,30 +1325,20 @@ exports.suite = {
 "map": {
     "declaration": testWithGrammar(
         grammar.declarationSequence, 
-        pass("TYPE M = MAP INTEGER TO INTEGER;",
-             "TYPE M = MAP INTEGER TO PROCEDURE;",
-             "TYPE M = MAP INTEGER TO PROCEDURE();",
-             "TYPE M = MAP INTEGER TO PROCEDURE(): INTEGER;",
-             "TYPE M = MAP INTEGER TO PROCEDURE(): M;",
-             "TYPE M = MAP STRING TO RECORD END;",
-             "TYPE M = MAP STRING TO POINTER TO RECORD END;",
-             "TYPE M = MAP INTEGER TO MAP INTEGER TO INTEGER;",
-             "TYPE M = MAP INTEGER TO M;",
-             "TYPE T = RECORD field: MAP INTEGER TO T; END;",
-             "VAR v: MAP SET TO STRING;"
+        pass("TYPE M = MAP OF INTEGER;",
+             "TYPE M = MAP OF PROCEDURE;",
+             "TYPE M = MAP OF PROCEDURE();",
+             "TYPE M = MAP OF PROCEDURE(): INTEGER;",
+             "TYPE M = MAP OF PROCEDURE(): M;",
+             "TYPE M = MAP OF RECORD END;",
+             "TYPE M = MAP OF POINTER TO RECORD END;",
+             "TYPE M = MAP OF MAP OF INTEGER;",
+             "TYPE M = MAP OF M;",
+             "TYPE T = RECORD field: MAP OF T; END;",
+             "VAR v: MAP OF SET;"
             ),
-        fail(["TYPE T = RECORD END; M = MAP T TO INTEGER;", "cannot use 'T' as a key of the map, numeric type or SET or STRING or CHAR expected"],
-             ["TYPE M = MAP RECORD END TO INTEGER;", "cannot use 'anonymous RECORD' as a key of the map, numeric type or SET or STRING or CHAR expected"],
-             ["TYPE M = MAP ARRAY 3 OF INTEGER TO INTEGER;", "cannot use 'ARRAY 3 OF INTEGER' as a key of the map, numeric type or SET or STRING or CHAR expected"],
-             ["TYPE M = MAP ARRAY 3 OF CHAR TO INTEGER;", "cannot use 'ARRAY 3 OF CHAR' as a key of the map, numeric type or SET or STRING or CHAR expected"],
-             ["TYPE M = MAP ARRAY * OF INTEGER TO INTEGER;", "cannot use 'ARRAY * OF INTEGER' as a key of the map, numeric type or SET or STRING or CHAR expected"],
-             ["TYPE M = MAP MAP INTEGER TO INTEGER TO INTEGER;", "cannot use 'MAP INTEGER TO INTEGER' as a key of the map, numeric type or SET or STRING or CHAR expected"],
-             ["TYPE P = POINTER TO MAP INTEGER TO INTEGER;", "RECORD is expected as a POINTER base type, got 'MAP INTEGER TO INTEGER'"],
-             ["TYPE M = MAP POINTER TO RECORD END TO BOOLEAN;", "cannot use 'POINTER TO anonymous RECORD' as a key of the map, numeric type or SET or STRING or CHAR expected"],
-             ["TYPE M = MAP PROCEDURE TO PROCEDURE;", "cannot use 'PROCEDURE' as a key of the map, numeric type or SET or STRING or CHAR expected"],
-             ["TYPE M = MAP INTEGER TO Undeclared;", "undeclared identifier: 'Undeclared'"],
-             ["TYPE M = MAP M TO INTEGER;", "cannot use 'M' as a key of the map, numeric type or SET or STRING or CHAR expected"],
-             ["TYPE T = RECORD field: MAP T TO INTEGER; END", "cannot use 'T' as a key of the map, numeric type or SET or STRING or CHAR expected"],
+        fail(["TYPE P = POINTER TO MAP OF INTEGER;", "RECORD is expected as a POINTER base type, got 'MAP OF INTEGER'"],
+             ["TYPE M = MAP OF Undeclared;", "undeclared identifier: 'Undeclared'"],
              ["VAR MAP: INTEGER;", "not parsed"]
             )
         )
