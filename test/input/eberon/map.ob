@@ -1,0 +1,4 @@
+MODULE m;
+VAR
+    v: MAP STRING TO INTEGER;
+END m.

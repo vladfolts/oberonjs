@@ -16,6 +16,11 @@ var or = Parser.or;
 var repeat = Parser.repeat;
 var required = Parser.required;
 
+function makeStrucType(base, type){
+    var mapType = context(and("MAP", type, "TO", type), EbContext.MapDecl);
+    return or(base, mapType);
+}
+
 function makeProcedureHeading(ident, identdef, formalParameters){
     return and("PROCEDURE",
                context(and(optional(and(ident, ".")), identdef), EbContext.ProcOrMethodId),
@@ -110,6 +115,7 @@ exports.language = {
     grammar: Grammar.make(
         makeIdentdef,
         makeDesignator,
+        makeStrucType,
         makeProcedureHeading,
         makeProcedureDeclaration,
         makeFieldList, 
@@ -141,7 +147,7 @@ exports.language = {
             Return:             EbContext.Return,
             ModuleDeclaration:  EbContext.ModuleDeclaration
         },
-        Grammar.reservedWords + " SELF SUPER"
+        Grammar.reservedWords + " SELF SUPER MAP"
         ),
     stdSymbols: Symbols.makeStd(),
     types: {

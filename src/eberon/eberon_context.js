@@ -7,7 +7,8 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var EberonConstructor= require("js/EberonConstructor.js");
 var EberonContext= require("js/EberonContext.js");
-var EberonDynamicArray= require("js/EberonDynamicArray.js");
+var EberonDynamicArray = require("js/EberonDynamicArray.js");
+var EberonMap = require("js/EberonMap.js");
 var EberonRecord = require("js/EberonRecord.js");
 var EberonScope = require("js/EberonScope.js");
 var EberonString = require("js/EberonString.js");
@@ -1146,6 +1147,47 @@ var ArrayDimensions = Context.ArrayDimensions.extend({
     }
 });
 
+function checkMapFromType(type){
+    if (Type.numeric().indexOf(type) != -1
+        || type == Type.basic().set
+        || type == EberonString.string())
+        return;
+    throw new Errors.Error("cannot use '" + type.description() + "' as a key of the map, numeric type or SET or STRING or CHAR expected");
+}
+
+var MapDecl = Context.Chained.extend({
+    init: function EberonContext$MapDecl(context){
+        Context.Chained.prototype.init.call(this, context);
+        this.__fromType = undefined;
+        this.__toType = undefined;
+    },
+    handleQIdent: function(q){
+        var s = Context.getQIdSymbolAndScope(this, q);
+        var type = Context.unwrapType(s.symbol().info());
+        
+        if (!type && !this.__fromType)
+        // This is yet-to-declare type - i.e. MAP is declared during RECORD/ARRAY/PROCEDURE declarion.
+        // None of those types are supported as map's key (but can be map's value)
+            throw new Errors.Error("cannot use '" + q.id + "' as a key of the map, numeric type or SET or STRING or CHAR expected");
+
+        this.setType(type);
+    },
+    // anonymous types can be used in map declaration
+    setType: function(type){
+        if (!this.__fromType){
+            checkMapFromType(type);
+            this.__fromType = type;
+        }
+        else
+            this.__toType = type;
+    },
+    isAnonymousDeclaration: function(){return true;},
+    typeName: function(){return undefined;},
+    endParse: function(){
+        this.parent().setType(new EberonMap.Type(this.__fromType, this.__toType));
+    }
+});
+
 var ArrayDecl = Context.ArrayDecl.extend({
     init: function EberonContext$ArrayDecl(context){
         Context.ArrayDecl.prototype.init.call(this, context);
@@ -1266,6 +1308,7 @@ exports.ModuleDeclaration = ModuleDeclaration;
 exports.MulOperator = MulOperator;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.Factor = Factor;
+exports.MapDecl = MapDecl;
 exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;

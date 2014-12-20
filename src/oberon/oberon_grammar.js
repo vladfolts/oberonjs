@@ -15,6 +15,10 @@ var optional = Parser.optional;
 var or = Parser.or;
 var repeat = Parser.repeat;
 
+function makeStrucType(base){
+    return base;
+}
+
 function makeProcedureHeading(ident, identdef, formalParameters){
     return and("PROCEDURE"
              , identdef
@@ -81,6 +85,7 @@ exports.language = {
     grammar: Grammar.make(
         makeIdentdef,
         makeDesignator,
+        makeStrucType,
         makeProcedureHeading,
         makeProcedureDeclaration,
         makeFieldList,

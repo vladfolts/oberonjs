@@ -24,6 +24,7 @@ var reservedWords = "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONS
 
 function make(makeIdentdef,
               makeDesignator,
+              makeStrucType,
               makeProcedureHeading, 
               makeProcedureDeclaration,
               makeFieldList,
@@ -187,7 +188,7 @@ var formalParameters = and(
 var procedureType = and("PROCEDURE"
                       , context(optional(formalParameters), contexts.FormalParameters)
                         );
-var strucType = or(arrayType, recordType, pointerType, procedureType);
+var strucType = makeStrucType(or(arrayType, recordType, pointerType, procedureType), type);
 var typeDeclaration = context(and(identdef, "=", strucType), contexts.typeDeclaration);
 
 var constantDeclaration = context(and(identdef, "=", constExpression), contexts.constDeclaration);

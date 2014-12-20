@@ -1,5 +1,5 @@
 MODULE EberonSymbols;
-IMPORT EberonString, JsMap, Procedure, Scope, Symbols, Types;
+IMPORT EberonMap, EberonString, JsMap, Procedure, Scope, Symbols, Types;
 
 PROCEDURE lenArgumentCheck(argType: Types.PType): BOOLEAN;
     RETURN Procedure.lenArgumentCheck(argType) 
