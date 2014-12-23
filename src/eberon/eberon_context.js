@@ -193,15 +193,31 @@ var Designator = Context.Designator.extend({
         Context.Designator.prototype.init.call(this, parent);
         this.__procCall = undefined;
     },
-    _indexSequence: function(type, info){
-        if (type == EberonString.string()){
-            var indexType = Type.basic().ch;
+    _checkIndexType: function(type){
+        if (this._currentType() instanceof EberonMap.Type){
+            if (type != EberonString.string() && !Type.isString(type))
+                throw new Errors.Error("invalid MAP index: STRING or string literal or ARRAY OF CHAR expected, got '" + type.description() + "'");            
+            return;
+        }
+        return Context.Designator.prototype._checkIndexType.call(this, type);
+    },
+    _indexSequence: function(info){
+        var currentType = this._currentType();
+        if (currentType == EberonString.string())
+            return { length: undefined, 
+                     type: Type.basic().ch,
+                     info: EberonString.makeElementVariable()
+                   };
+
+        if (currentType instanceof EberonMap.Type){
+            var indexType = currentType.valueType;
             return { length: undefined, 
                      type: indexType,
-                     info: EberonString.makeElementVariable(indexType)
+                     info: Type.makeVariable(indexType, info.isReadOnly())
                    };
         }
-        return Context.Designator.prototype._indexSequence.call(this, type, info);
+        
+        return Context.Designator.prototype._indexSequence.call(this, info);
     },
     _makeDerefVar: function(info){
         if (info instanceof TypeNarrowVariable)

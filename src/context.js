@@ -354,32 +354,37 @@ exports.Designator = ChainedContext.extend({
     handleExpression: function(e){this.__indexExpression = e;},
     __handleIndexExpression: function(){
         var e = this.__indexExpression;
-        var expType = e.type();
-        if (!Type.isInt(expType))
-            throw new Errors.Error(
-                Type.intsDescription() + " expression expected, got '" + expType.description() + "'");
-
-        var index = this._indexSequence(this.__currentType, this.__info);
-        var pValue = e.constValue();
-        if (pValue){
-            var value = pValue.value;
-            Code.checkIndex(value);
-            
-            var length = index.length;
-            if ((this.__currentType instanceof Type.StaticArray || this.__currentType instanceof Type.String)
-             && value >= length)
-                throw new Errors.Error("index out of bounds: maximum possible index is "
-                                     + (length - 1)
-                                     + ", got " + value );
-        }
+        this._checkIndexType(e.type());
+        var index = this._indexSequence(this.__info);
+        this._checkIndexValue(index, e.constValue());  
         return index;
+    },
+    _checkIndexType: function(type){
+        if (!Type.isInt(type))
+            throw new Errors.Error(
+                Type.intsDescription() + " expression expected, got '" + type.description() + "'");
+    },        
+    _checkIndexValue: function(index, pValue){
+        if (!pValue)
+            return;
+
+        var value = pValue.value;
+        Code.checkIndex(value);
+        
+        var length = index.length;
+        if ((this.__currentType instanceof Type.StaticArray || this.__currentType instanceof Type.String)
+         && value >= length)
+            throw new Errors.Error("index out of bounds: maximum possible index is "
+                                 + (length - 1)
+                                 + ", got " + value );
     },
     _advance: function(type, info, code){
         this.__currentType = type;
         this.__info = info;
         this.__code += code;
     },
-    _indexSequence: function(type, info){
+    _indexSequence: function(info){
+        var type = this._currentType();
         var isArray = type instanceof Type.Array;
         if (!isArray && !(type instanceof Type.String))
             throw new Errors.Error("ARRAY or string expected, got '" + type.description() + "'");

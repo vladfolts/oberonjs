@@ -1333,6 +1333,7 @@ exports.suite = {
              "TYPE M = MAP OF RECORD END;",
              "TYPE M = MAP OF POINTER TO RECORD END;",
              "TYPE M = MAP OF MAP OF INTEGER;",
+             "TYPE M = MAP OF ARRAY * OF INTEGER;",
              "TYPE M = MAP OF M;",
              "TYPE T = RECORD field: MAP OF T; END;",
              "VAR v: MAP OF SET;"
@@ -1341,6 +1342,22 @@ exports.suite = {
              ["TYPE M = MAP OF Undeclared;", "undeclared identifier: 'Undeclared'"],
              ["VAR MAP: INTEGER;", "not parsed"]
             )
+        ),
+    "put": testWithContext(
+        context(grammar.statement,
+                "VAR m: MAP OF INTEGER;"
+                + "sIndex: STRING; aIndex: ARRAY 3 OF CHAR;"),
+        pass("m[\"abc\"] := 123",
+             "m[sIndex] := 123",
+             "m[aIndex] := 123"
+            ),
+        fail(["m[123] := 123", "invalid MAP index: STRING or string literal or ARRAY OF CHAR expected, got 'INTEGER'"])
+        ),
+    "non-VAR parameter": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE M = MAP OF INTEGER;"),
+        pass(),
+        fail(["PROCEDURE p(m: M); BEGIN m[\"abc\"] := 123; END;", "cannot assign to read-only variable"])
         ),
     "FOREACH": testWithContext(
         context(grammar.statement,

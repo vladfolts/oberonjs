@@ -10,4 +10,15 @@ BEGIN
     END;
 END;
 
+PROCEDURE put();
+VAR
+    s: STRING;
+    a: ARRAY 3 OF CHAR;
+BEGIN
+    m["a"] := 1;
+    m["abc"] := 2;
+    m[s] := 3;
+    m[a] := 4;
+END;
+
 END test.
