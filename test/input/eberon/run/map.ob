@@ -1,13 +1,14 @@
 MODULE test;
+
+PROCEDURE testEmptyForEach();
 VAR
     m: MAP OF INTEGER;
-
-PROCEDURE ForEach();
 BEGIN
     FOREACH v, k IN m DO
-        ASSERT(v = 0);
-        ASSERT(k # "");
+        ASSERT(FALSE);
     END;
 END;
 
+BEGIN
+    testEmptyForEach();
 END test.

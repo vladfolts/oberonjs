@@ -4,7 +4,7 @@ TYPE
     Type* = RECORD(Types.StorageType)
         PROCEDURE Type*(type: Types.PType);
 
-        type: Types.PType;
+        valueType: Types.PType;
     END;
 
 PROCEDURE Type.initializer(cx: Context.Type): STRING;
@@ -12,11 +12,11 @@ PROCEDURE Type.initializer(cx: Context.Type): STRING;
 END;
 
 PROCEDURE Type.description(): STRING;
-    RETURN "MAP OF " + SELF.type.description();
+    RETURN "MAP OF " + SELF.valueType.description();
 END;
 
-PROCEDURE Type.Type(type: Types.PType)
-    | type(type);
+PROCEDURE Type.Type(valueType: Types.PType)
+    | valueType(valueType);
 END;
 
 END EberonMap.

@@ -19,6 +19,10 @@ function makeStrucType(base){
     return base;
 }
 
+function makeStatement(base){
+    return base;
+}
+
 function makeProcedureHeading(ident, identdef, formalParameters){
     return and("PROCEDURE"
              , identdef
@@ -86,6 +90,7 @@ exports.language = {
         makeIdentdef,
         makeDesignator,
         makeStrucType,
+        makeStatement,
         makeProcedureHeading,
         makeProcedureDeclaration,
         makeFieldList,

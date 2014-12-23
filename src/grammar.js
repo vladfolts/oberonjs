@@ -25,6 +25,7 @@ var reservedWords = "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONS
 function make(makeIdentdef,
               makeDesignator,
               makeStrucType,
+              makeStatement,
               makeProcedureHeading, 
               makeProcedureDeclaration,
               makeFieldList,
@@ -116,16 +117,9 @@ var actualParameters = and("(", context(optional(expList), Context.ActualParamet
 var assignment = and(context(or(":=", "="), Context.CheckAssignment),
                      required(expression, "expression expected"));
 
-var statement = optional(or(
-                   emit(designator.assignmentOrProcedureCall(assignment, expression), Context.emitEndStatement)
-                   // break recursive declaration of ifStatement/caseStatement/whileStatement/repeatStatement
-                 , function(stream, context){return ifStatement(stream, context);}
-                 , function(stream, context){return caseStatement(stream, context);}
-                 , function(stream, context){return whileStatement(stream, context);}
-                 , function(stream, context){return repeatStatement(stream, context);}
-                 , function(stream, context){return forStatement(stream, context);}
-                 ));
-var statementSequence = and(statement, repeat(and(";", statement)));
+// break recursive declaration of statement
+var forwardStatement = function(stream, context){return statement(stream, context);};
+var statementSequence = and(forwardStatement, repeat(and(";", forwardStatement)));
 
 var ifStatement = and("IF", context(and(expression, required("THEN", "THEN expected"), statementSequence,
                                         repeat(and("ELSIF", expression, required("THEN", "THEN expected"), statementSequence)),
@@ -158,6 +152,17 @@ var forStatement = and("FOR",
                                  , emit("DO", Context.emitForBegin)
                                  , statementSequence, required("END", "END expected (FOR)"))
                              , contexts.For));
+
+var statement = optional(
+    makeStatement(or( emit(designator.assignmentOrProcedureCall(assignment, expression), Context.emitEndStatement),
+                      ifStatement,
+                      caseStatement,
+                      whileStatement,
+                      repeatStatement,
+                      forStatement), 
+                  statementSequence,
+                  ident,
+                  qualident));
 
 var fieldList = makeFieldList(
         identdef,

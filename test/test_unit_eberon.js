@@ -1341,6 +1341,31 @@ exports.suite = {
              ["TYPE M = MAP OF Undeclared;", "undeclared identifier: 'Undeclared'"],
              ["VAR MAP: INTEGER;", "not parsed"]
             )
+        ),
+    "FOREACH": testWithContext(
+        context(grammar.statement,
+                "TYPE T = RECORD END;"
+              + "VAR m: MAP OF INTEGER; r: T;"),
+        pass("FOREACH v, k IN m DO END",
+             "FOREACH v, k IN m DO ASSERT(k # \"abc\"); END",
+             "FOREACH v, k IN m DO ASSERT(v # 123); END"
+            ),
+        fail(["FOREACH k, k IN m DO END", "'k' already declared"],
+             ["FOREACH m, k IN m DO END", "'m' already declared in module scope"],
+             ["FOREACH v, m IN m DO END", "'m' already declared in module scope"],
+             ["FOREACH v, k IN m DO k := \"\"; END", "cannot assign to FOREACH variable"],
+             ["FOREACH v, k IN m DO v := 0; END", "cannot assign to FOREACH variable"],
+             ["FOREACH v, k IN r DO END", "variable of type MAP is expected in FOREACH, got 'T'"],
+             ["FOREACH v, k IN T DO END", "variable of type MAP is expected in FOREACH, got 'type'"]
+            )
+        ),
+    "FOREACH scope": testWithContext(
+        context(grammar.declarationSequence,
+                "VAR m: MAP OF INTEGER;"),
+        pass(),
+        fail(["PROCEDURE p(); BEGIN FOREACH k, v IN m DO END; ASSERT(k # \"abc\"); END;", "undeclared identifier: 'k'"],
+             ["PROCEDURE p(); BEGIN FOREACH k, v IN m DO END; ASSERT(v # 123); END;", "undeclared identifier: 'v'"]
+             )
         )
     }
 };

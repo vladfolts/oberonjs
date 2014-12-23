@@ -152,6 +152,13 @@ var InPlaceStringLiteral = TypeNarrowVariable.extend({
     idType: function(){return "string literal";}
 });
 
+var ForEachVariable = TypeNarrowVariable.extend({
+    init: function(type){
+        TypeNarrowVariable.prototype.init.call(this, type, false, true);
+    },
+    idType: function(){return "FOREACH variable";}
+});
+
 var Identdef = Context.Identdef.extend({
     init: function(parent){
         Context.Identdef.prototype.init.call(this, parent);
@@ -1168,6 +1175,55 @@ var MapDecl = Context.Chained.extend({
     }
 });
 
+var ForEach = Context.Chained.extend({
+    init: function EberonContext$MapDecl(context){
+        Context.Chained.prototype.init.call(this, context);
+        this.__valueId = undefined;
+        this.__keyId = undefined;
+    },
+    handleIdent: function(id){
+        if (!this.__valueId)
+            this.__valueId = id;
+        else
+            this.__keyId = id;
+    },
+    handleQIdent: function(q){
+        var found = Context.getQIdSymbolAndScope(this, q);
+        var s = found.symbol();
+        var info = s.info();
+
+        var type;
+        if (info instanceof Type.Variable)
+            type = info.type();            
+        if (!type || !(type instanceof EberonMap.Type))
+            throw new Errors.Error("variable of type MAP is expected in FOREACH, got '" 
+                                 + (type ? type.description() : info.idType()) + "'");
+
+        var scope = EberonScope.makeOperator(
+            this.parent().currentScope(),
+            this.language().stdSymbols);
+        this.pushScope(scope);
+
+        var code = this.codeGenerator();
+        code.write("for(var " + this.__keyId + " in " + q.code + ")");
+        code.openScope();
+        code.write("var " + this.__valueId + " = " + q.code + "[" + this.__keyId + "];\n");
+
+        this.__makeVariable(this.__keyId, EberonString.string(), scope);
+        this.__makeVariable(this.__valueId, type.valueType, scope);
+    },
+    endParse: function(){
+        this.codeGenerator().closeScope("");
+        this.popScope();
+    },
+    __makeVariable: function(id, type, scope){
+        var v = new ForEachVariable(type);
+        var s = new Symbol.Symbol(id, v);
+        scope.addSymbol(s);
+        return s;
+    }
+});
+
 var ArrayDecl = Context.ArrayDecl.extend({
     init: function EberonContext$ArrayDecl(context){
         Context.ArrayDecl.prototype.init.call(this, context);
@@ -1278,6 +1334,7 @@ exports.Designator = Designator;
 exports.Expression = Expression;
 exports.ExpressionProcedureCall = ExpressionProcedureCall;
 exports.For = For;
+exports.ForEach = ForEach;
 exports.FormalParameters = FormalParameters;
 exports.FormalParametersProcDecl = FormalParametersProcDecl;
 exports.FormalType = FormalType;
