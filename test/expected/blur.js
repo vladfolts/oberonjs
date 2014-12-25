@@ -37,6 +37,9 @@ var RTL$ = {
             rtl.__setupCharArrayMethods(result);
             return result;
         };
+        a.toString = function(){
+            return String.fromCharCode.apply(this, this);
+        };
     }
 };
 var Blur = function (){

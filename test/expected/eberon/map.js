@@ -41,12 +41,33 @@ var RTL$ = {
             rtl.__setupCharArrayMethods(result);
             return result;
         };
+        a.toString = function(){
+            return String.fromCharCode.apply(this, this);
+        };
+    },
+    getMappedValue: function (map, key){
+        if (!map.hasOwnProperty(key))
+            throw new Error("invalid key: " + key);
+        return map[key];
+    },
+    copyRecord: function (from, to){
+        for(var prop in to){
+            if (to.hasOwnProperty(prop)){
+                var v = from[prop];
+                var isScalar = prop[0] != "$";
+                if (isScalar)
+                    to[prop] = v;
+                else
+                    to[prop] = v instanceof Array ? this.cloneArrayOfRecords(v)
+                                                  : this.cloneRecord(v);
+            }
+        }
     }
 };
 var test = function (){
-var m = {};
 
 function ForEach(){
+	var m = {};
 	for(var k in m){
 		var v = m[k];
 		RTL$.assert(v == 0);
@@ -55,11 +76,31 @@ function ForEach(){
 }
 
 function put(){
+	function T(){
+		this.field = 0;
+	}
+	var m = {};
 	var s = '';
 	var a = RTL$.makeCharArray(3);
+	var mapOfMap = {};
+	var mapOfRecord = {};
+	var mapOfPointer = {};
 	m["a"] = 1;
 	m["abc"] = 2;
 	m[s] = 3;
 	m[a] = 4;
+	RTL$.getMappedValue(mapOfMap, "abc")["cde"] = 5;
+	RTL$.getMappedValue(mapOfRecord, "abc").field = 6;
+	RTL$.copyRecord(new T(), RTL$.getMappedValue(mapOfPointer, "abc"));
+}
+
+function get(){
+	var m = {};
+	var s = '';
+	var a = RTL$.makeCharArray(3);
+	RTL$.assert(RTL$.getMappedValue(m, "a") == 1);
+	RTL$.assert(RTL$.getMappedValue(m, "abc") == 2);
+	RTL$.assert(RTL$.getMappedValue(m, s) == 3);
+	RTL$.assert(RTL$.getMappedValue(m, a) == 4);
 }
 }();

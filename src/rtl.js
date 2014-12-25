@@ -55,6 +55,11 @@ var impl = {
         }
         return from;
     },
+    getMappedValue: function(map, key){
+        if (!map.hasOwnProperty(key))
+            throw new Error("invalid key: " + key);
+        return map[key];
+    },
     makeArray: function(/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
         var result = new Array(forward.shift());
@@ -80,6 +85,9 @@ var impl = {
             var result = Array.prototype.slice.apply(this, arguments);
             rtl.__setupCharArrayMethods(result);
             return result;
+        };
+        a.toString = function(){
+            return String.fromCharCode.apply(this, this);
         };
     },
     __makeCharArray: function(length){

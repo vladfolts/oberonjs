@@ -201,23 +201,26 @@ var Designator = Context.Designator.extend({
         }
         return Context.Designator.prototype._checkIndexType.call(this, type);
     },
-    _indexSequence: function(info){
+    _indexSequence: function(info, code, indexCode){
         var currentType = this._currentType();
         if (currentType == EberonString.string())
             return { length: undefined, 
                      type: Type.basic().ch,
-                     info: EberonString.makeElementVariable()
+                     info: EberonString.makeElementVariable(),
+                     code: this._stringIndexCode()
                    };
 
         if (currentType instanceof EberonMap.Type){
             var indexType = currentType.valueType;
             return { length: undefined, 
                      type: indexType,
-                     info: Type.makeVariable(indexType, info.isReadOnly())
+                     info: Type.makeVariable(indexType, info.isReadOnly()),
+                     code: this.language().rtl.getMappedValue(code, indexCode),
+                     lval: code + "[" + indexCode + "]"
                    };
         }
         
-        return Context.Designator.prototype._indexSequence.call(this, info);
+        return Context.Designator.prototype._indexSequence.call(this, info, code, indexCode);
     },
     _makeDerefVar: function(info){
         if (info instanceof TypeNarrowVariable)

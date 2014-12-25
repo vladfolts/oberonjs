@@ -1,8 +1,10 @@
 MODULE test;
-VAR
-    m: MAP OF INTEGER;
+TYPE
+    MapOfInteger = MAP OF INTEGER;
 
 PROCEDURE ForEach();
+VAR
+    m: MapOfInteger;
 BEGIN
     FOREACH v, k IN m DO
         ASSERT(v = 0);
@@ -11,14 +13,37 @@ BEGIN
 END;
 
 PROCEDURE put();
+TYPE
+    T = RECORD 
+        field: INTEGER;
+    END;
 VAR
+    m: MapOfInteger;
     s: STRING;
     a: ARRAY 3 OF CHAR;
+    mapOfMap: MAP OF MapOfInteger;
+    mapOfRecord: MAP OF T;
+    mapOfPointer: MAP OF POINTER TO T;
 BEGIN
     m["a"] := 1;
     m["abc"] := 2;
     m[s] := 3;
     m[a] := 4;
+    mapOfMap["abc"]["cde"] := 5;
+    mapOfRecord["abc"].field := 6;
+    mapOfPointer["abc"]^ := T();
+END;
+
+PROCEDURE get();
+VAR
+    m: MapOfInteger;
+    s: STRING;
+    a: ARRAY 3 OF CHAR;
+BEGIN
+    ASSERT(m["a"] = 1);
+    ASSERT(m["abc"] = 2);
+    ASSERT(m[s] = 3);
+    ASSERT(m[a] = 4);
 END;
 
 END test.

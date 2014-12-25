@@ -335,14 +335,13 @@ exports.Designator = ChainedContext.extend({
             isReadOnly = false;
         }
         var field = t.denote(id);
-        this.__currentType = field.type();
+        var currentType = field.type();
         this.__derefCode = this.__code;
-        var codeId = this.__currentType instanceof Type.Procedure 
-                 ? this.__currentType.designatorCode(id)
-                 : Type.mangleField(id, this.__currentType);
+        var codeId = currentType instanceof Type.Procedure 
+                 ? currentType.designatorCode(id)
+                 : Type.mangleField(id, currentType);
         this.__propCode = "\"" + codeId + "\"";
-        this.__info = field.asVar(isReadOnly, this);
-        this.__code += "." + codeId;
+        this._advance(currentType, field.asVar(isReadOnly, this), "." + codeId);
         this.__scope = undefined;
     },
     _currentType: function(){return this.__currentType;},
@@ -355,7 +354,7 @@ exports.Designator = ChainedContext.extend({
     __handleIndexExpression: function(){
         var e = this.__indexExpression;
         this._checkIndexType(e.type());
-        var index = this._indexSequence(this.__info);
+        var index = this._indexSequence(this.__info, this.__derefCode, Code.derefExpression(e).code());
         this._checkIndexValue(index, e.constValue());  
         return index;
     },
@@ -378,12 +377,13 @@ exports.Designator = ChainedContext.extend({
                                  + (length - 1)
                                  + ", got " + value );
     },
-    _advance: function(type, info, code){
+    _advance: function(type, info, code, lval){
         this.__currentType = type;
         this.__info = info;
         this.__code += code;
+        this.__lval = lval;
     },
-    _indexSequence: function(info){
+    _indexSequence: function(info, code, indexCode){
         var type = this._currentType();
         var isArray = type instanceof Type.Array;
         if (!isArray && !(type instanceof Type.String))
@@ -395,22 +395,30 @@ exports.Designator = ChainedContext.extend({
         if (!isArray && !length)
             throw new Errors.Error("cannot index empty string" );
         var indexType = isArray ? Type.arrayElementsType(type) : basicTypes.ch;
+
+        code = code + "[" + indexCode + "]";
+        var lval;
+        if (indexType == basicTypes.ch){
+            lval = code;
+            code = this._stringIndexCode();
+        }
+
         return { length: length,
                  type: indexType,
-                 info: Type.makeVariable(indexType, info instanceof Type.Const || info.isReadOnly())
+                 info: Type.makeVariable(indexType, info instanceof Type.Const || info.isReadOnly()),
+                 code: code,
+                 lval: lval,
+                 asProperty: indexCode
                };
+    },
+    _stringIndexCode: function(){
+        return this.__derefCode + ".charCodeAt(" + Code.derefExpression(this.__indexExpression).code() + ")";
     },
     handleLiteral: function(s){
         if (s == "]" || s == ","){
             var index = this.__handleIndexExpression();
-            var indexCode = Code.derefExpression(this.__indexExpression).code();
-            this.__propCode = indexCode;
-            var code = this.__derefCode + "[" + indexCode + "]";
-            if (index.type == basicTypes.ch){
-                this.__lval = code;
-                code = this.__derefCode + ".charCodeAt(" + indexCode + ")";
-            }
-            this._advance(index.type, index.info, this.__code + code);
+            this.__propCode = index.asProperty;
+            this._advance(index.type, index.info, this.__code + index.code, index.lval);
         }
         if (s == "[" || s == ","){
             this.__derefCode = this.__code;

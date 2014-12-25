@@ -9,6 +9,20 @@ BEGIN
     END;
 END;
 
+PROCEDURE testPutGet();
+VAR
+    m: MAP OF INTEGER;
+    a: ARRAY 3 OF CHAR;
+BEGIN
+    m["abc"] := 1;
+    m["cde"] := 2;
+    ASSERT(m["abc"] = 1);
+    ASSERT(m["cde"] = 2);
+    a := "abc";
+    ASSERT(m[a] = 1);
+END;
+
 BEGIN
     testEmptyForEach();
+    testPutGet();
 END test.
