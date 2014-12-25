@@ -6,7 +6,7 @@ VAR
     true, false, null,
     implements, interface, let, package, private, protected, public, static, yield,
     finally, for, if, in, instanceof, new, return, switch, this, 
-    try, typeof, var, void, while, with, Math, Number
+    try, typeof, var, void, while, with, Object, Math, Number
     : INTEGER;
 PROCEDURE function();
 VAR i: throw;

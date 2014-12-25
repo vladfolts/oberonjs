@@ -1,5 +1,5 @@
 MODULE EberonOperator;
-IMPORT Code, CodePrecedence, OberonRtl, Operator;
+IMPORT Code, CodePrecedence, OberonRtl, Operator, Types;
 
 PROCEDURE opAddStr(left, right: Code.PConst): Code.PConst;
     RETURN Code.makeStringConst(left^(Code.StringConst).value
@@ -63,5 +63,10 @@ END lessEqualStr;
 PROCEDURE greaterEqualStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
     RETURN Operator.relational(left, right, rtl, opGraterEqualStr, " >= ")
 END greaterEqualStr;
+
+PROCEDURE inMap*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    RETURN Code.makeSimpleExpression("Object.prototype.hasOwnProperty.call(" + right.code() + ", " + left.code() + ")",
+                                     Types.basic.bool);
+END;
 
 END EberonOperator.

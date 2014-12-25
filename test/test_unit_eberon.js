@@ -1351,7 +1351,7 @@ exports.suite = {
              "m[sIndex] := 123",
              "m[aIndex] := 123"
             ),
-        fail(["m[123] := 123", "invalid MAP index: STRING or string literal or ARRAY OF CHAR expected, got 'INTEGER'"])
+        fail(["m[123] := 123", "invalid MAP key type: STRING or string literal or ARRAY OF CHAR expected, got 'INTEGER'"])
         ),
     "get": testWithContext(
         context(grammar.expression,
@@ -1361,7 +1361,18 @@ exports.suite = {
              "m[sIndex]",
              "m[aIndex]"
             ),
-        fail(["m[123]", "invalid MAP index: STRING or string literal or ARRAY OF CHAR expected, got 'INTEGER'"])
+        fail(["m[123]", "invalid MAP key type: STRING or string literal or ARRAY OF CHAR expected, got 'INTEGER'"])
+        ),
+    "IN": testWithContext(
+        context(grammar.expression,
+                "VAR m: MAP OF INTEGER;"
+                + "sIndex: STRING; aIndex: ARRAY 3 OF CHAR;"),
+        pass("\"abc\" IN m",
+             "(\"abc\" IN m) = FALSE",
+             "sIndex IN m",
+             "aIndex IN m"
+            ),
+        fail(["123 IN m", "invalid MAP key type: STRING or string literal or ARRAY OF CHAR expected, got 'INTEGER'"])
         ),
     "non-VAR parameter": testWithContext(
         context(grammar.declarationSequence,

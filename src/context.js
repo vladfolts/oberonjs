@@ -1258,8 +1258,11 @@ exports.Expression = ChainedContext.extend({
         leftExpression = promoteTypeInExpression(leftExpression, rightExpression.type());
         rightExpression = promoteTypeInExpression(rightExpression, leftExpression.type());
 
-        var o = relationOp(leftExpression.type(), rightExpression.type(), this.__relation, this.__relOps, this);
+        var o = this._relationOperation(leftExpression.type(), rightExpression.type(), this.__relation);
         this.__expression = o(leftExpression, rightExpression, this.language().rtl);
+    },
+    _relationOperation: function(left, right, relation){
+        return relationOp(left, right, relation, this.__relOps, this);
     },
     handleLiteral: function(relation){
         this.__relation = relation;

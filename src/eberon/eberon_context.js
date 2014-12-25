@@ -188,6 +188,11 @@ function OperatorNewMsg(e){
     this.expression = e;
 }
 
+function checkMapKeyType(type){
+    if (type != EberonString.string() && !Type.isString(type))
+        throw new Errors.Error("invalid MAP key type: STRING or string literal or ARRAY OF CHAR expected, got '" + type.description() + "'");            
+}
+
 var Designator = Context.Designator.extend({
     init: function EberonContext$Designator(parent){
         Context.Designator.prototype.init.call(this, parent);
@@ -195,8 +200,7 @@ var Designator = Context.Designator.extend({
     },
     _checkIndexType: function(type){
         if (this._currentType() instanceof EberonMap.Type){
-            if (type != EberonString.string() && !Type.isString(type))
-                throw new Errors.Error("invalid MAP index: STRING or string literal or ARRAY OF CHAR expected, got '" + type.description() + "'");            
+            checkMapKeyType(type);
             return;
         }
         return Context.Designator.prototype._checkIndexType.call(this, type);
@@ -990,6 +994,13 @@ var Expression = Context.Expression.extend({
         if (this.__currentTypePromotion)
             this.parent().handleMessage(new TransferPromotedTypesMsg(this.__currentTypePromotion));
         return Context.Expression.prototype.endParse.call(this);
+    },
+    _relationOperation: function(left, right, relation){
+        if (relation == "IN" && right instanceof EberonMap.Type){
+            checkMapKeyType(left);
+            return eOp.inMap;            
+        }
+        return Context.Expression.prototype._relationOperation.call(this, left, right, relation);
     }
 });
 

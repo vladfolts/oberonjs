@@ -34,6 +34,13 @@ BEGIN
     mapOfPointer["abc"]^ := T();
 END;
 
+PROCEDURE in();
+VAR
+    m: MAP OF INTEGER;
+BEGIN
+    ASSERT(~("abc" IN m));
+END;
+
 PROCEDURE get();
 VAR
     m: MapOfInteger;

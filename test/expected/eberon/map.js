@@ -94,6 +94,11 @@ function put(){
 	RTL$.copyRecord(new T(), RTL$.getMappedValue(mapOfPointer, "abc"));
 }
 
+function in$(){
+	var m = {};
+	RTL$.assert(!Object.prototype.hasOwnProperty.call(m, "abc"));
+}
+
 function get(){
 	var m = {};
 	var s = '';
