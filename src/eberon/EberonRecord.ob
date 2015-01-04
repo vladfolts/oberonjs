@@ -207,7 +207,7 @@ BEGIN
 END;
 
 PROCEDURE RecordFieldAsMethod.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
-    RETURN EberonTypes.makeMethod(SELF.type()); 
+    RETURN NEW EberonTypes.MethodVariable(SELF.type()); 
 END;
 
 PROCEDURE constructor*(r: Record): Types.PDefinedProcedure;

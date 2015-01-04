@@ -1404,6 +1404,17 @@ exports.suite = {
         fail(["PROCEDURE p(); BEGIN FOREACH k, v IN m DO END; ASSERT(k # \"abc\"); END;", "undeclared identifier: 'k'"],
              ["PROCEDURE p(); BEGIN FOREACH k, v IN m DO END; ASSERT(v # 123); END;", "undeclared identifier: 'v'"]
              )
+        ),
+    "remove": testWithContext(
+        context(grammar.statement,
+                "VAR m: MAP OF INTEGER; a: ARRAY * OF CHAR;"),
+        pass("m.remove(\"abc\")",
+             "m.remove(a)"),
+        fail(["m.remove(123)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'ARRAY OF CHAR'"],
+             ["m.remove()", "1 argument(s) expected, got 0"],
+             ["m.remove(\"abc\", \"abc\")", "1 argument(s) expected, got 2"],
+             ["v <- m.remove", "MAP's method 'remove' cannot be referenced"]
+            )
         )
     }
 };

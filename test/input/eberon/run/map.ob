@@ -48,9 +48,28 @@ BEGIN
     ASSERT(a IN m);
 END;
 
+PROCEDURE testRemove();
+VAR
+    m: MAP OF INTEGER;
+    a: ARRAY 3 OF CHAR;
+BEGIN
+    m["abc"] := 1;
+    m.remove("cde");
+    ASSERT("abc" IN m);
+    m.remove("abc");
+    ASSERT(~("abc" IN m));
+    
+    a := "cde";
+    m[a] := 1;
+    ASSERT("cde" IN m);
+    m.remove(a);
+    ASSERT(~("cde" IN m));
+END;
+
 BEGIN
     testEmptyForEach();
     testForEach();
     testPutGet();
     testIn();
+    testRemove();
 END test.

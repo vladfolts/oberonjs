@@ -10,13 +10,14 @@ TYPE
         PROCEDURE AnyType();
 
         PROCEDURE callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
-        PROCEDURE denote(id: STRING): Types.PField;
         PROCEDURE designatorCode(id: STRING): STRING;
-        asField: POINTER TO AnyField;
         asVar: Types.PId
     END;
 
     AnyField = RECORD(Types.Field)
+        PROCEDURE AnyField(id: STRING);
+
+        mId: STRING;
     END;
 
     AnyTypeProc* = RECORD(Procedure.Std)
@@ -50,8 +51,8 @@ PROCEDURE AnyType.callGenerator(cx: LanguageContext.PType): Procedure.PCallGener
 END AnyType.callGenerator;
 
 PROCEDURE AnyType.denote(id: STRING): Types.PField;
-    RETURN any.asField
-END AnyType.denote;
+    RETURN NEW AnyField(id);
+END;
 
 PROCEDURE AnyType.designatorCode(id: STRING): STRING;
     RETURN id
@@ -72,6 +73,10 @@ END AnyField.type;
 PROCEDURE AnyField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
     RETURN any.asVar
 END AnyField.asVar;
+
+PROCEDURE AnyField.designatorCode(leadCode: STRING): Types.PFieldCode;
+    RETURN NEW Types.FieldCode(leadCode + "." + SELF.mId, "", "");
+END;
 
 PROCEDURE AnyTypeProc.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
     RETURN makeCallGenerator(cx)
@@ -143,8 +148,11 @@ PROCEDURE makeJS*(): PType;
 END;
 
 PROCEDURE AnyType.AnyType()
-    | asField(NEW AnyField()),
-      asVar(NEW Types.TypeId(SELF(POINTER)));
+    | asVar(NEW Types.TypeId(SELF(POINTER)));
+END;
+
+PROCEDURE AnyField.AnyField(id: STRING)
+    | mId(id);
 END;
 
 BEGIN

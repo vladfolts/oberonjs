@@ -53,4 +53,11 @@ BEGIN
     ASSERT(m[a] = 4);
 END;
 
+PROCEDURE remove();
+VAR
+    m: MapOfInteger;
+BEGIN
+    m.remove("abc");
+END;
+
 END test.

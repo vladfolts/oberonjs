@@ -108,4 +108,9 @@ function get(){
 	RTL$.assert(RTL$.getMappedValue(m, s) == 3);
 	RTL$.assert(RTL$.getMappedValue(m, a) == 4);
 }
+
+function remove(){
+	var m = {};
+	delete m["abc"];
+}
 }();

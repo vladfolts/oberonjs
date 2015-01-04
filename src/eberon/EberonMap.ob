@@ -1,10 +1,25 @@
 MODULE EberonMap;
-IMPORT Context, Types;
+IMPORT Code, Context, EberonString, EberonTypes, LanguageContext, Procedure, Types;
+CONST
+    removeMethodName = "remove";
 TYPE
     Type* = RECORD(Types.StorageType)
         PROCEDURE Type*(type: Types.PType);
 
         valueType: Types.PType;
+    END;
+
+    Method = RECORD(Procedure.Std)
+    END;
+
+    MethodRemoveField = RECORD(EberonTypes.MethodField)
+        PROCEDURE MethodRemoveField();
+    END;
+
+    MethodRemove = RECORD(Method)
+    END;
+
+    MethodCallRemove = RECORD(Procedure.StdCall)
     END;
 
 PROCEDURE Type.initializer(cx: Context.Type): STRING;
@@ -17,6 +32,45 @@ END;
 
 PROCEDURE Type.Type(valueType: Types.PType)
     | valueType(valueType);
+END;
+
+PROCEDURE Type.denote(id: STRING): Types.PField;
+VAR
+    result: Types.PField;
+BEGIN
+    IF id = removeMethodName THEN
+        result := NEW MethodRemoveField();
+    ELSE
+        result := SUPER(id);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE MethodCallRemove.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+BEGIN
+    argCode <- Procedure.makeArgumentsCode(cx);
+    arg <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
+    RETURN Code.makeSimpleExpression("[" + argCode.result() + "]", NIL)
+END;
+
+PROCEDURE MethodRemove.description(): STRING;
+    RETURN "MAP's method 'remove'";
+END;
+
+PROCEDURE MethodRemove.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+BEGIN
+    call <- NEW MethodCallRemove();
+    a <- NEW Types.ProcedureArgument(NEW Types.OpenArray(Types.basic.ch), FALSE);
+    call.args.add(a);
+    RETURN Procedure.makeCallGenerator(call, cx)
+END;
+
+PROCEDURE MethodRemoveField.MethodRemoveField()
+    | SUPER(NEW MethodRemove(removeMethodName, NIL));
+END;
+
+PROCEDURE MethodRemoveField.designatorCode(leadCode: STRING): Types.PFieldCode;
+    RETURN NEW Types.FieldCode("delete " + leadCode, "", "");
 END;
 
 END EberonMap.

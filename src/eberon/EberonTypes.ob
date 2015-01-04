@@ -1,5 +1,5 @@
 MODULE EberonTypes;
-IMPORT LanguageContext, Procedure, Types;
+IMPORT Context, LanguageContext, Procedure, Types;
 
 TYPE
     CallGenerator = PROCEDURE(cx: LanguageContext.PType; type: Types.DefinedProcedure): Procedure.PCallGenerator;
@@ -15,6 +15,14 @@ TYPE
     PMethodType* = POINTER TO MethodType;
 
     MethodVariable* = RECORD(Types.ProcedureId)
+    END;
+
+    PMethod* = POINTER TO Procedure.Std;
+
+    MethodField* = RECORD(Types.Field)
+        PROCEDURE MethodField*(method: PMethod);
+
+        method: PMethod
     END;
 
 PROCEDURE MethodType.designatorCode(id: STRING): STRING;
@@ -44,8 +52,28 @@ PROCEDURE MethodVariable.idType(): STRING;
     RETURN "method"
 END MethodVariable.idType;
 
-PROCEDURE makeMethod*(type: Types.PType): Types.PProcedureId;
-    RETURN NEW MethodVariable(type);
+PROCEDURE MethodField.MethodField(method: PMethod)
+    | method(method);
+END;
+
+PROCEDURE MethodField.id(): STRING;
+    RETURN SELF.method.name
+END;
+
+PROCEDURE MethodField.exported(): BOOLEAN;
+    RETURN FALSE
+END;
+
+PROCEDURE MethodField.type(): Types.PType;
+    RETURN SELF.method
+END;
+
+PROCEDURE MethodField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
+    RETURN NEW MethodVariable(SELF.method)
+END;
+
+PROCEDURE MethodField.designatorCode(leadCode: STRING): Types.PFieldCode;
+    RETURN NEW Types.FieldCode(leadCode + "." + Types.mangleField(SELF.method.name, SELF.method), "", "");
 END;
 
 END EberonTypes.

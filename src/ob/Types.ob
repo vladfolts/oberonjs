@@ -1,7 +1,6 @@
 MODULE Types;
 IMPORT
     Context, Errors, JS, JsMap, Object, ScopeBase, Str := String;
-
 TYPE
     Id* = RECORD(Object.Type)
         PROCEDURE idType*(): STRING
@@ -13,11 +12,6 @@ TYPE
         PROCEDURE description*(): STRING
     END;
     PType* = POINTER TO Type;
-
-    StorageType* = RECORD(Type)    
-        PROCEDURE initializer*(cx: Context.Type): STRING
-    END;
-    PStorageType* = POINTER TO StorageType;
 
     TypeId* = RECORD(Id)
         PROCEDURE TypeId*(type: PType);
@@ -96,11 +90,19 @@ TYPE
 
     PString* = POINTER TO String;
 
+    FieldCode* = RECORD
+        PROCEDURE FieldCode*(code, derefCode, propCode: STRING);
+
+        code, derefCode, propCode: STRING;
+    END;
+    PFieldCode* = POINTER TO FieldCode;
+
     Field* = RECORD(Object.Type)
         PROCEDURE id*(): STRING;
         PROCEDURE exported*(): BOOLEAN;
         PROCEDURE type*(): PType;
         PROCEDURE asVar*(isReadOnly: BOOLEAN; cx: Context.Type): PId;
+        PROCEDURE designatorCode*(leadCode: STRING): PFieldCode;
     END;
     PField* = POINTER TO Field;
 
@@ -114,10 +116,14 @@ TYPE
     END;
     PRecordField* = POINTER TO RecordField;
 
+    StorageType* = RECORD(Type)    
+        PROCEDURE initializer*(cx: Context.Type): STRING;
+        PROCEDURE denote*(id: STRING): PField;
+    END;
+    PStorageType* = POINTER TO StorageType;
+
     NamedType* = RECORD(StorageType)
         PROCEDURE NamedType(name: STRING);
-
-        PROCEDURE denote*(id: STRING): PField;
 
         name*: STRING
     END;
@@ -586,12 +592,12 @@ PROCEDURE Array.description(): STRING;
     RETURN arrayDescription(SELF, arrayDimensionDescription)
 END Array.description;
 
-PROCEDURE NamedType.denote(id: STRING): PField;
+PROCEDURE StorageType.denote(id: STRING): PField;
 BEGIN
     Errors.raise("selector '." + id + "' cannot be applied to '" 
                + SELF.description() + "'");
     RETURN NIL
-END NamedType.denote;
+END;
 
 PROCEDURE OpenArray.initializer(cx: Context.Type): STRING;
     RETURN ""
@@ -729,29 +735,8 @@ PROCEDURE Module.Module(name: STRING)
     | name(name);
 END;
 
-PROCEDURE RecordField.id(): STRING;
-    RETURN SELF.mIdentdef.id();
-END;
-
-PROCEDURE RecordField.exported(): BOOLEAN;
-    RETURN SELF.mIdentdef.exported();
-END;
-
-PROCEDURE RecordField.identdef(): Context.PIdentdefInfo;
-    RETURN SELF.mIdentdef;
-END;
-
-PROCEDURE RecordField.type(): PType;
-    RETURN SELF.mType;
-END;
-
-PROCEDURE RecordField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): PId;
-    RETURN makeVariable(SELF.mType, isReadOnly);
-END;
-
-PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: PType)
-    | mIdentdef(identdef),
-      mType(type);
+PROCEDURE FieldCode.FieldCode(code, derefCode, propCode: STRING)
+    | code(code), derefCode(derefCode), propCode(propCode);
 END;
 
 PROCEDURE mangleJSProperty*(id: STRING): STRING;
@@ -774,6 +759,39 @@ BEGIN
         result := "$" + result;
     END;
     RETURN result;
+END;
+
+PROCEDURE RecordField.id(): STRING;
+    RETURN SELF.mIdentdef.id();
+END;
+
+PROCEDURE RecordField.exported(): BOOLEAN;
+    RETURN SELF.mIdentdef.exported();
+END;
+
+PROCEDURE RecordField.identdef(): Context.PIdentdefInfo;
+    RETURN SELF.mIdentdef;
+END;
+
+PROCEDURE RecordField.designatorCode(leadCode: STRING): PFieldCode;
+CONST
+    kQuote = 22X;
+BEGIN
+    codeId <- mangleField(SELF.mIdentdef.id(), SELF.mType);
+    RETURN NEW FieldCode(leadCode + "." + codeId, leadCode, kQuote + codeId + kQuote);
+END;
+
+PROCEDURE RecordField.type(): PType;
+    RETURN SELF.mType;
+END;
+
+PROCEDURE RecordField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): PId;
+    RETURN makeVariable(SELF.mType, isReadOnly);
+END;
+
+PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: PType)
+    | mIdentdef(identdef),
+      mType(type);
 END;
 
 BEGIN

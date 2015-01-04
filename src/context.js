@@ -336,12 +336,10 @@ exports.Designator = ChainedContext.extend({
         }
         var field = t.denote(id);
         var currentType = field.type();
-        this.__derefCode = this.__code;
-        var codeId = currentType instanceof Type.Procedure 
-                 ? currentType.designatorCode(id)
-                 : Type.mangleField(id, currentType);
-        this.__propCode = "\"" + codeId + "\"";
-        this._advance(currentType, field.asVar(isReadOnly, this), "." + codeId);
+        var fieldCode = field.designatorCode(this.__code);
+        this.__derefCode = fieldCode.derefCode;
+        this.__propCode = fieldCode.propCode;
+        this._advance(currentType, field.asVar(isReadOnly, this), fieldCode.code, undefined, true);
         this.__scope = undefined;
     },
     _currentType: function(){return this.__currentType;},
@@ -377,10 +375,10 @@ exports.Designator = ChainedContext.extend({
                                  + (length - 1)
                                  + ", got " + value );
     },
-    _advance: function(type, info, code, lval){
+    _advance: function(type, info, code, lval, replace){
         this.__currentType = type;
         this.__info = info;
-        this.__code += code;
+        this.__code = (replace ? "" : this.__code) + code;
         this.__lval = lval;
     },
     _indexSequence: function(info, code, indexCode){

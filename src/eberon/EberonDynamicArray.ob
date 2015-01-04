@@ -1,5 +1,5 @@
 MODULE EberonDynamicArray;
-IMPORT Cast, Code, Context, EberonArray, Errors, LanguageContext, Procedure, Types;
+IMPORT Cast, Code, Context, EberonArray, EberonTypes, Errors, LanguageContext, Procedure, Types;
 CONST
     methodNameAdd = "add";
     methodNameClear = "clear";
@@ -19,7 +19,7 @@ TYPE
     END;
 
     MethodAdd = RECORD(Method)
-    PROCEDURE MethodAdd(elementsType: Types.PType);
+        PROCEDURE MethodAdd(elementsType: Types.PType);
 
         elementsType: Types.PType
     END;
@@ -35,6 +35,22 @@ TYPE
 
     MethodCallRemove = RECORD(Procedure.StdCall)
     END;
+
+    MethodAddField = RECORD(EberonTypes.MethodField)
+        PROCEDURE MethodAddField(elementsType: Types.PType);
+    END;
+
+    MethodClearField = RECORD(EberonTypes.MethodField)
+        PROCEDURE MethodClearField();
+    END;
+
+    MethodRemoveField = RECORD(EberonTypes.MethodField)
+        PROCEDURE MethodRemoveField();
+    END;
+
+VAR
+    methodClear: POINTER TO MethodClearField;
+    methodRemove: POINTER TO MethodRemoveField;
 
 PROCEDURE arrayDimensionDescription(VAR a: Types.Array): STRING;
 VAR
@@ -63,25 +79,22 @@ END;
 
 PROCEDURE DynamicArray.denote(id: STRING): Types.PField;
 VAR
-    method: EberonArray.PMethod;
     result: Types.PField;
 BEGIN
     IF      id = methodNameAdd THEN
-        method := NEW MethodAdd(SELF.elementsType);
+        result := NEW MethodAddField(SELF.elementsType);
     ELSIF   id = methodNameClear THEN
-        method := NEW MethodClear(methodNameClear, NIL);
+        result := methodClear;
     ELSIF   id = methodNameRemove THEN
-        method := NEW MethodRemove(methodNameRemove, NIL);
+        result := methodRemove;
     ELSE
-        method := EberonArray.denoteMethod(id, SELF.elementsType);
-    END;
-    IF method # NIL THEN
-        result := NEW EberonArray.MethodField(method);
-    ELSE
-        result := SUPER(id);
+        result := EberonArray.denoteMethod(id, SELF.elementsType);
+        IF result = NIL THEN
+            result := SUPER(id);
+        END;
     END;
     RETURN result
-END DynamicArray.denote;
+END;
 
 PROCEDURE AddCallGenerator.handleArgument(e: Code.PExpression);
 BEGIN
@@ -120,9 +133,17 @@ PROCEDURE Method.description(): STRING;
     RETURN "dynamic array method '" + SELF.name + "'"
 END Method.description;
 
-PROCEDURE MethodAdd.designatorCode(id: STRING): STRING;
-    RETURN "push"
-END MethodAdd.designatorCode;
+PROCEDURE MethodAddField.designatorCode(leadCode: STRING): Types.PFieldCode;
+    RETURN NEW Types.FieldCode(leadCode + "." + "push", "", "");
+END;
+
+PROCEDURE MethodClearField.designatorCode(leadCode: STRING): Types.PFieldCode;
+    RETURN NEW Types.FieldCode(leadCode + "." + "splice", "", "");
+END;
+
+PROCEDURE MethodRemoveField.designatorCode(leadCode: STRING): Types.PFieldCode;
+    RETURN NEW Types.FieldCode(leadCode + "." + "splice", "", "");
+END;
 
 PROCEDURE MethodAdd.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
 BEGIN
@@ -132,9 +153,17 @@ BEGIN
     RETURN result
 END MethodAdd.callGenerator;
 
-PROCEDURE MethodClear.designatorCode(id: STRING): STRING;
-    RETURN "splice"
-END MethodClear.designatorCode;
+PROCEDURE MethodAddField.MethodAddField(elementsType: Types.PType)
+    | SUPER(NEW MethodAdd(elementsType));
+END;
+
+PROCEDURE MethodClearField.MethodClearField()
+    | SUPER(NEW MethodClear(methodNameClear, NIL));
+END;
+
+PROCEDURE MethodRemoveField.MethodRemoveField()
+    | SUPER(NEW MethodRemove(methodNameRemove, NIL));
+END;
 
 PROCEDURE MethodCallClear.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
@@ -153,16 +182,11 @@ BEGIN
     RETURN Code.makeSimpleExpression("(" + argCode.result() + ", 1)", NIL)
 END MethodCallRemove.make;
 
-PROCEDURE MethodRemove.designatorCode(id: STRING): STRING;
-    RETURN "splice"
-END MethodRemove.designatorCode;
-
 PROCEDURE MethodClear.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
     RETURN Procedure.makeCallGenerator(NEW MethodCallClear(), cx)
 END;
 
-PROCEDURE MethodRemove.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator
-;
+PROCEDURE MethodRemove.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
 BEGIN
     call <- NEW MethodCallRemove();
     a <- NEW Types.ProcedureArgument(Types.basic.integer, FALSE);
@@ -170,4 +194,7 @@ BEGIN
     RETURN Procedure.makeCallGenerator(call, cx)
 END MethodRemove.callGenerator;
 
+BEGIN
+    NEW(methodClear);
+    NEW(methodRemove);
 END EberonDynamicArray.

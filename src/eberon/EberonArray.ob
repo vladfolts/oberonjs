@@ -1,16 +1,9 @@
 MODULE EberonArray;
-IMPORT Code, Context, EberonTypes, Errors, LanguageContext, Procedure, Types;
+IMPORT Code, EberonTypes, Errors, LanguageContext, Procedure, Types;
 CONST
     methodNameIndexOf = "indexOf";
 TYPE
     Method* = RECORD(Procedure.Std)
-    END;
-    PMethod* = POINTER TO Method;
-
-    MethodField* = RECORD(Types.Field)
-        PROCEDURE MethodField*(method: PMethod);
-
-        method: PMethod
     END;
 
     MethodIndexOf = RECORD(Method)
@@ -32,31 +25,11 @@ PROCEDURE Method.description(): STRING;
     RETURN "array method '" + SELF.name + "'"
 END Method.description;
 
-PROCEDURE MethodField.id(): STRING;
-    RETURN SELF.method.name
-END MethodField.id;
-
-PROCEDURE MethodField.exported(): BOOLEAN;
-    RETURN FALSE
-END MethodField.exported;
-
-PROCEDURE MethodField.type(): Types.PType;
-    RETURN SELF.method
-END MethodField.type;
-
-PROCEDURE MethodField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
-    RETURN EberonTypes.makeMethod(SELF.method)
-END MethodField.asVar;
-
 PROCEDURE MethodIndexOf.MethodIndexOf(elementsType: Types.PType)
     | SUPER(methodNameIndexOf, NIL),
       elementsType(elementsType);
 BEGIN
 END;
-
-PROCEDURE MethodIndexOf.designatorCode(id: STRING): STRING;
-    RETURN "indexOf"
-END MethodIndexOf.designatorCode;
 
 PROCEDURE MethodIndexOf.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
 BEGIN
@@ -73,18 +46,14 @@ BEGIN
     RETURN Code.makeSimpleExpression("(" + argCode.result() + ")", Types.basic.integer)
 END MethodCallIndexOf.make;
 
-PROCEDURE denoteMethod*(id: STRING; elementsType: Types.PType): PMethod;
+PROCEDURE denoteMethod*(id: STRING; elementsType: Types.PType): Types.PField;
 VAR
-    result: PMethod;
+    result: Types.PField;
 BEGIN
     IF id = methodNameIndexOf THEN
-        result := NEW MethodIndexOf(elementsType);
+        result := NEW EberonTypes.MethodField(NEW MethodIndexOf(elementsType));
     END;
     RETURN result
-END denoteMethod;
-
-PROCEDURE MethodField.MethodField(method: PMethod)
-    | method(method);
 END;
 
 PROCEDURE denote(id: STRING; a: Types.Array): Types.PField;
@@ -95,7 +64,7 @@ BEGIN
         IF (a.elementsType IS Types.PRecord) OR (a.elementsType IS Types.PArray) THEN
             Errors.raise("'" + methodNameIndexOf + "' is not defined for array of '" + a.elementsType.description() + "'");
         END;
-        result := NEW MethodField(NEW MethodIndexOf(a.elementsType));
+        result := NEW EberonTypes.MethodField(NEW MethodIndexOf(a.elementsType));
     END;
     RETURN result
 END denote;
