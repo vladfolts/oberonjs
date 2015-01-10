@@ -121,17 +121,28 @@ PROCEDURE CastOpDoNothing.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.
     RETURN e
 END CastOpDoNothing.make;
 
-PROCEDURE CastOpDoNothing.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+PROCEDURE passedByReference*(e: Code.PExpression): BOOLEAN;
 BEGIN
-    rightCode <- SELF.make(rtl, Code.derefExpression(right)).code();
-    info <- left.designator().info();
-    IF (info IS Types.PVariable) & info.isReference() THEN
-        rightCode := ".set(" + rightCode + ")";
+    info <- e.designator().info();
+    RETURN (info IS Types.PVariable) & info.isReference();
+END;
+
+PROCEDURE assignByReference*(left, right: Code.PExpression): STRING;
+    RETURN left.code() + ".set(" + Code.derefExpression(right).code() + ")";
+END;
+
+PROCEDURE CastOpDoNothing.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+VAR
+    result: STRING;
+BEGIN
+    rightConverted <- SELF.make(rtl, right);
+    IF passedByReference(left) THEN
+        result := assignByReference(left, rightConverted);
     ELSE
-        rightCode := " = " + rightCode;
+        result := left.lval() + " = " + Code.derefExpression(rightConverted).code();
     END;
-    RETURN left.lval() + rightCode
-END CastOpDoNothing.assign;
+    RETURN result;
+END;
 
 PROCEDURE cloneArray*(t: Types.Array; code: STRING; rtl: OberonRtl.Type): STRING;
 VAR

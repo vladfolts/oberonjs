@@ -1,6 +1,13 @@
 var m = function (){
 var ic = 10;
 var i = 0;
+
+function byRef(i/*VAR INTEGER*/){
+	i.set(i.get() + 1 | 0);
+	i.set(i.get() - 1 | 0);
+	i.set(i.get() + 123 | 0);
+	i.set(i.get() - 123 | 0);
+}
 ++i;
 i += 2;
 i += 15/*3 * 5 | 0*/;

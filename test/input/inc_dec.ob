@@ -3,6 +3,15 @@ MODULE m;
 CONST ic = 10;
 VAR i: INTEGER;
 
+PROCEDURE byRef(VAR i: INTEGER);
+BEGIN
+	INC(i);
+	DEC(i);
+
+	INC(i, 123);
+	DEC(i, 123);
+END byRef;
+
 BEGIN
 	INC(i);
 	INC(i, 2);

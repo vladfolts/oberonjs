@@ -10,7 +10,7 @@ IMPORT
     String,
     Types;
 TYPE
-    BinaryProc = PROCEDURE(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
+    BinaryProc* = PROCEDURE(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
 
     BinaryOp = PROCEDURE(left, right: Code.PConst): Code.PConst;
     CodePredicate = PROCEDURE(left, right: STRING; rtl: OberonRtl.PType): STRING;

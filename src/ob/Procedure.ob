@@ -485,12 +485,13 @@ BEGIN
     END;
 END checkVariableArgumentsCount;
 
-PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr): Symbols.PSymbol;
+PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr; incRefOp: Operator.BinaryProc): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
             name: STRING;
             unary: STRING;
-            incOp: BinaryOpStr
+            incOp: BinaryOpStr;
+            incRefOp: Operator.BinaryProc;
         END;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
@@ -503,7 +504,15 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr): Symbols.PSym
         checkVariableArgumentsCount(1, 2, args);
         checkArgumentsType(args, SELF.args, NIL, cx.types);
         x := args[0];
-        IF LEN(args) = 1 THEN
+        IF Cast.passedByReference(x) THEN
+            IF LEN(args) = 1 THEN
+                y := Code.makeSimpleExpression("1", NIL);
+            ELSE
+                y := args[1];
+            END;
+            addExp <- SELF.incRefOp(x, y, cx.rtl);
+            code := Cast.assignByReference(x, addExp);
+        ELSIF LEN(args) = 1 THEN
             code := SELF.unary + x.code();
         ELSE
             y := args[1];
@@ -525,6 +534,7 @@ BEGIN
     call.name := name;
     call.unary := unary;
     call.incOp := incOp;
+    call.incRefOp := incRefOp;
     hasVarArgument(call, Types.basic.integer);
     hasArgument(call, Types.basic.integer);
     RETURN makeSymbol(NEW Std(call.name, call))
@@ -825,8 +835,8 @@ BEGIN
     predefined.add(makeAssert());
     predefined.add(setBitImpl("INCL", inclOp));
     predefined.add(setBitImpl("EXCL", exclOp));
-    predefined.add(incImpl("INC", "++", incOp));
-    predefined.add(incImpl("DEC", "--", decOp));
+    predefined.add(incImpl("INC", "++", incOp, Operator.addInt));
+    predefined.add(incImpl("DEC", "--", decOp, Operator.subInt));
     predefined.add(makeAbs());
     predefined.add(makeFloor());
     predefined.add(makeFlt());
