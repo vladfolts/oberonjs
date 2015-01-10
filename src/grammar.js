@@ -162,7 +162,7 @@ var statement = optional(
                       forStatement), 
                   statementSequence,
                   ident,
-                  qualident));
+                  expression));
 
 var fieldList = makeFieldList(
         identdef,

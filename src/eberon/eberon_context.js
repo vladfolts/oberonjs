@@ -1210,6 +1210,8 @@ var ForEach = Context.Chained.extend({
         Context.Chained.prototype.init.call(this, context);
         this.__valueId = undefined;
         this.__keyId = undefined;
+        this.__scopeWasCreated = false;
+        this.__codeGenerator = CodeGenerator.nullGenerator();
     },
     handleIdent: function(id){
         if (!this.__valueId)
@@ -1217,34 +1219,34 @@ var ForEach = Context.Chained.extend({
         else
             this.__keyId = id;
     },
-    handleQIdent: function(q){
-        var found = Context.getQIdSymbolAndScope(this, q);
-        var s = found.symbol();
-        var info = s.info();
-
-        var type;
-        if (info instanceof Type.Variable)
-            type = info.type();            
-        if (!type || !(type instanceof EberonMap.Type))
-            throw new Errors.Error("variable of type MAP is expected in FOREACH, got '" 
-                                 + (type ? type.description() : info.idType()) + "'");
+    codeGenerator: function(){return this.__codeGenerator;},
+    handleExpression: function(e){
+        var type = e.type();
+        if (!(type instanceof EberonMap.Type))
+            throw new Errors.Error("expression of type MAP is expected in FOREACH, got '" 
+                                 + type.description() + "'");
 
         var scope = EberonScope.makeOperator(
             this.parent().currentScope(),
             this.language().stdSymbols);
         this.pushScope(scope);
+        this.__scopeWasCreated = true;
 
-        var code = this.codeGenerator();
-        code.write("for(var " + this.__keyId + " in " + q.code + ")");
+        var code = this.parent().codeGenerator();
+        var mapVar = this.currentScope().generateTempVar("map");
+        code.write("var " + mapVar + " = " + e.code() + ";\n");
+        code.write("for(var " + this.__keyId + " in " + mapVar + ")");
         code.openScope();
-        code.write("var " + this.__valueId + " = " + q.code + "[" + this.__keyId + "];\n");
+        code.write("var " + this.__valueId + " = " + mapVar + "[" + this.__keyId + "];\n");
+        this.__codeGenerator = code;
 
         this.__makeVariable(this.__keyId, EberonString.string(), scope);
         this.__makeVariable(this.__valueId, type.valueType, scope);
     },
     endParse: function(){
-        this.codeGenerator().closeScope("");
-        this.popScope();
+        this.__codeGenerator.closeScope("");
+        if (this.__scopeWasCreated)
+            this.popScope();
     },
     __makeVariable: function(id, type, scope){
         var v = new ForEachVariable(type);

@@ -147,7 +147,6 @@ var ChainedContext = Class.extend({
     handleLiteral: function(s){this.__parent.handleLiteral(s);},
     handleConst: function(type, value, code){this.__parent.handleConst(type, value, code);},
     genTypeName: function(){return this.__parent.genTypeName();},
-    genVarName: function(id){return this.__parent.genVarName(id);},
     qualifyScope: function(scope){return this.__parent.qualifyScope(scope);}
 });
 
@@ -1332,9 +1331,10 @@ exports.Case = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.__type = undefined;
         this.__firstCase = true;
-        this.genVarName("$c");
-        this.codeGenerator().write("$c = ");
+        this.__var = this.currentScope().generateTempVar("case");
+        this.codeGenerator().write("var " + this.__var + " = ");
     },
+    caseVar: function(){return this.__var;},
     handleExpression: function(e){
         var type = e.type();
         var gen = this.codeGenerator();
@@ -1372,12 +1372,14 @@ exports.CaseLabelList = ChainedContext.extend({
     },
     handleLabelType: function(type){this.parent().handleLabelType(type);},
     handleRange: function(from, to){
+        var parent = this.parent();
         if (!this.__glue)
-            this.parent().caseLabelBegin();
+            parent.caseLabelBegin();
 
+        var v = parent.parent().caseVar();
         var cond = to === undefined
-            ? "$c === " + from.value
-            : "($c >= " + from.value + " && $c <= " + to.value + ")";
+            ? v + " === " + from.value
+            : "(" + v + " >= " + from.value + " && " + v + " <= " + to.value + ")";
         this.codeGenerator().write(this.__glue + cond);
         this.__glue = " || ";
     },
@@ -1990,18 +1992,11 @@ exports.Context = Class.extend({
         this.__language = language;
         this.__scopes = [];
         this.__gen = 0;
-        this.__vars = [];
     },
     language: function(){return this.__language;},
     genTypeName: function(){
         ++this.__gen;
         return "anonymous$" + this.__gen;
-    },
-    genVarName: function(id){
-        if (this.__vars.indexOf(id) === -1) {
-            this.codeGenerator().write("var " + id + ";\n");
-            this.__vars.push(id);
-        }
     },
     findSymbol: function(ident){
         for(var i = this.__scopes.length; i--;){
@@ -2013,7 +2008,9 @@ exports.Context = Class.extend({
         }
         return undefined;
     },
-    currentScope: function(){return this.__scopes[this.__scopes.length - 1];},
+    currentScope: function(){
+        return this.__scopes[this.__scopes.length - 1];
+    },
     pushScope: function(scope){this.__scopes.push(scope);},
     popScope: function(){
         var scope = this.__scopes.pop();

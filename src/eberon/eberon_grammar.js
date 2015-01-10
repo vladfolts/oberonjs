@@ -21,9 +21,9 @@ function makeStrucType(base, type){
     return or(base, mapType);
 }
 
-function makeStatement(base, statementSequence, ident, qualident){
+function makeStatement(base, statementSequence, ident, expression){
     return or(base, 
-              context(and("FOREACH", ident, ",", ident, "IN", qualident, "DO", 
+              context(and("FOREACH", ident, ",", ident, "IN", expression, "DO", 
                           statementSequence, required("END", "END expected (FOREACH)")), 
                       EbContext.ForEach));
 }

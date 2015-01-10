@@ -1393,8 +1393,8 @@ exports.suite = {
              ["FOREACH v, m IN m DO END", "'m' already declared in module scope"],
              ["FOREACH v, k IN m DO k := \"\"; END", "cannot assign to FOREACH variable"],
              ["FOREACH v, k IN m DO v := 0; END", "cannot assign to FOREACH variable"],
-             ["FOREACH v, k IN r DO END", "variable of type MAP is expected in FOREACH, got 'T'"],
-             ["FOREACH v, k IN T DO END", "variable of type MAP is expected in FOREACH, got 'type'"]
+             ["FOREACH v, k IN r DO END", "expression of type MAP is expected in FOREACH, got 'T'"],
+             ["FOREACH v, k IN T DO END", "expression of type MAP is expected in FOREACH, got 'type T'"]
             )
         ),
     "FOREACH scope": testWithContext(

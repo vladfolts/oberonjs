@@ -65,13 +65,58 @@ var RTL$ = {
     }
 };
 var test = function (){
+var m = {};
 
 function ForEach(){
 	var m = {};
-	for(var k in m){
-		var v = m[k];
+	var $map1 = m;
+	for(var k in $map1){
+		var v = $map1[k];
 		RTL$.assert(v == 0);
 		RTL$.assert(k != "");
+	}
+}
+
+function makeMap(){
+	var m = {};
+	return m;
+}
+
+function ForEachWithExpression(){
+	var $map1 = makeMap();
+	for(var k in $map1){
+		var v = $map1[k];
+	}
+}
+
+function NestedForEach(){
+	var m = {};
+	
+	function inner(){
+		var $map1 = m;
+		for(var k in $map1){
+			var v = $map1[k];
+			var $map2 = m;
+			for(var k2 in $map2){
+				var v2 = $map2[k2];
+			}
+		}
+	}
+	var $map1 = m;
+	for(var k in $map1){
+		var v = $map1[k];
+		var $map2 = m;
+		for(var k2 in $map2){
+			var v2 = $map2[k2];
+		}
+	}
+	var $map3 = m;
+	for(var k3 in $map3){
+		var v3 = $map3[k3];
+		var $map4 = m;
+		for(var k in $map4){
+			var v = $map4[k];
+		}
 	}
 }
 
@@ -112,5 +157,13 @@ function get(){
 function remove(){
 	var m = {};
 	delete m["abc"];
+}
+var $map1 = m;
+for(var k in $map1){
+	var v = $map1[k];
+	var $map2 = m;
+	for(var k2 in $map2){
+		var v2 = $map2[k2];
+	}
 }
 }();

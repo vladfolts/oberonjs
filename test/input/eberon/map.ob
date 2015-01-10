@@ -1,6 +1,8 @@
 MODULE test;
 TYPE
     MapOfInteger = MAP OF INTEGER;
+VAR
+    m: MapOfInteger;
 
 PROCEDURE ForEach();
 VAR
@@ -9,6 +11,41 @@ BEGIN
     FOREACH v, k IN m DO
         ASSERT(v = 0);
         ASSERT(k # "");
+    END;
+END;
+
+PROCEDURE makeMap(): MapOfInteger;
+VAR
+    m: MapOfInteger;
+BEGIN
+    RETURN m;
+END;
+
+PROCEDURE ForEachWithExpression();
+BEGIN
+    FOREACH v, k IN makeMap() DO
+    END;
+END;
+
+PROCEDURE NestedForEach();
+VAR
+    m: MapOfInteger;
+
+    PROCEDURE inner();
+    BEGIN
+        FOREACH v, k IN m DO
+            FOREACH v2, k2 IN m DO
+            END;
+        END;
+    END;
+BEGIN
+    FOREACH v, k IN m DO
+        FOREACH v2, k2 IN m DO
+        END;
+    END;
+    FOREACH v3, k3 IN m DO
+        FOREACH v, k IN m DO
+        END;
     END;
 END;
 
@@ -60,4 +97,9 @@ BEGIN
     m.remove("abc");
 END;
 
+BEGIN
+    FOREACH v, k IN m DO
+        FOREACH v2, k2 IN m DO
+        END;
+    END;
 END test.

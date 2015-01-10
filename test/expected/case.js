@@ -6,70 +6,69 @@ var b1 = false;
 var i1 = 0;
 var byte = 0;
 var c = 0;
-var $c;
-$c = i1;
-$c = i1;
-$c = i1;
-if ($c === 1){
+var $case1 = i1;
+var $case2 = i1;
+var $case3 = i1;
+if ($case3 === 1){
 	b1 = false;
 }
-$c = 123;
-if ($c === 1){
+var $case4 = 123;
+if ($case4 === 1){
 	b1 = true;
 }
-$c = i1;
-if ($c === 1){
+var $case5 = i1;
+if ($case5 === 1){
 	i = 2;
 }
-else if ($c === 2){
+else if ($case5 === 2){
 	i = 3;
 	b1 = false;
 }
-$c = i1;
-if ($c === 1){
+var $case6 = i1;
+if ($case6 === 1){
 	i = 2;
 }
-else if ($c === 2){
+else if ($case6 === 2){
 	i = 3;
 	b1 = false;
 }
-$c = i1;
-if ($c === 1 || $c === 2 || $c === 3){
+var $case7 = i1;
+if ($case7 === 1 || $case7 === 2 || $case7 === 3){
 	i = 4;
 }
-else if ($c === 12){
+else if ($case7 === 12){
 	i = constI;
 }
-else if (($c >= 4 && $c <= 5)){
+else if (($case7 >= 4 && $case7 <= 5)){
 	i = 5;
 }
-else if ($c === 6 || ($c >= 7 && $c <= 10)){
+else if ($case7 === 6 || ($case7 >= 7 && $case7 <= 10)){
 	b1 = true;
 }
-$c = byte;
-if ($c === 1){
+var $case8 = byte;
+if ($case8 === 1){
 	i = 2;
 }
-else if ($c === 257){
+else if ($case8 === 257){
 	i = 3;
 }
-else if (($c >= 4 && $c <= 12)){
+else if (($case8 >= 4 && $case8 <= 12)){
 	i = 5;
 }
-$c = c;
-if ($c === 65){
+var $case9 = c;
+if ($case9 === 65){
 	i = 1;
 }
-else if ($c === 97){
+else if ($case9 === 97){
 	i = 2;
 }
-else if ($c === 66 || $c === 67){
+else if ($case9 === 66 || $case9 === 67){
 	i = 2;
 }
-else if (($c >= 68 && $c <= 70) || $c === 73 || $c === 74){
+else if (($case9 >= 68 && $case9 <= 70) || $case9 === 73 || $case9 === 74){
 	i = 3;
 }
-else if (($c >= 75 && $c <= 90)){
+else if (($case9 >= 75 && $case9 <= 90)){
 	b1 = true;
 }
 }();

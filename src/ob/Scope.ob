@@ -5,6 +5,7 @@ IMPORT
     Object, 
     Procedures := Procedure, 
     ScopeBase,
+    String,
     Symbols, 
     Types;
 TYPE
@@ -23,6 +24,7 @@ TYPE
         PROCEDURE addSymbol*(s: Symbols.PSymbol; exported: BOOLEAN);
         PROCEDURE findSymbol*(id: STRING): Symbols.PFoundSymbol;
         PROCEDURE close();
+        PROCEDURE generateTempVar*(pattern: STRING): STRING;
 
         stdSymbols: JsMap.Type;
         symbols: JsMap.Type;
@@ -32,6 +34,7 @@ TYPE
     PType* = POINTER TO Type;
 
     Procedure* = RECORD(Type)
+        tempVarCounter: INTEGER;
     END;
 
     CompiledModule = RECORD(Types.Module)
@@ -46,7 +49,8 @@ TYPE
         PROCEDURE Module*(name: STRING; stdSymbols: JsMap.Type);
 
         symbol: Symbols.PSymbol;
-        exports: JsMap.Type
+        exports: JsMap.Type;
+        tempVarCounter: INTEGER;
     END;
     PModule = POINTER TO Module;
 
@@ -198,6 +202,20 @@ BEGIN
     END;
     SUPER(s, exported);
 END Procedure.addSymbol;
+
+PROCEDURE generateTempVar(pattern: STRING; VAR counter: INTEGER): STRING;
+BEGIN
+    counter := counter + 1;
+    RETURN "$" + pattern + String.fromInt(counter);
+END;
+
+PROCEDURE Procedure.generateTempVar(pattern: STRING): STRING;
+    RETURN generateTempVar(pattern, SELF.tempVarCounter);
+END;
+
+PROCEDURE Module.generateTempVar(pattern: STRING): STRING;
+    RETURN generateTempVar(pattern, SELF.tempVarCounter);
+END;
 
 PROCEDURE makeProcedure*(stdSymbols: JsMap.Type): PType;
     RETURN NEW Procedure(stdSymbols);

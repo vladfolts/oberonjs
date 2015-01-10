@@ -30,6 +30,10 @@ BEGIN
     SUPER(s, exported);
 END Operator.addSymbol;
 
+PROCEDURE Operator.generateTempVar(pattern: STRING): STRING;
+    RETURN SELF.parent.generateTempVar(pattern);
+END;
+
 PROCEDURE makeOperator*(parent: Scope.PType; stdSymbols: JsMap.Type): Scope.PType;
 BEGIN
     result <- NEW Operator(stdSymbols);
