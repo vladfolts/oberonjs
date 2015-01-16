@@ -4,7 +4,7 @@ var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var Context = require("context.js");
 var oc = require("oc.js");
-var RTL = require("rtl_code.js").RTL;
+var makeRTL = require("rtl_code.js").makeRTL;
 var Type = require("js/Types.js");
 
 var fs = require("fs");
@@ -57,7 +57,7 @@ function writeCompiledModule(name, code, outDir){
 
 function compile(sources, language, handleErrors, includeDirs, outDir, importDir){
     var rtlCodeWatcher = new RtlCodeUsingWatcher();
-    var rtl = new RTL(rtlCodeWatcher.using.bind(rtlCodeWatcher));
+    var rtl = new makeRTL(language.rtlBase, rtlCodeWatcher.using.bind(rtlCodeWatcher));
     var moduleCode = function(name, imports){
         return new ModuleGenerator(name, imports, importDir);};
 

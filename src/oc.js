@@ -5,7 +5,7 @@ var Code = require("js/Code.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var Lexer = require("js/Lexer.js");
-var RTL = require("rtl_code.js").RTL;
+var makeRTL = require("rtl_code.js").makeRTL;
 var Scope = require("js/Scope.js");
 var Stream = require("js/Stream.js");
 
@@ -122,7 +122,7 @@ function compileModules(names, moduleReader, grammar, contextFactory, handleErro
 
 function compile(text, language, handleErrors){
     var result = "";
-    var rtl = new RTL();
+    var rtl = new makeRTL(language.rtlBase);
     var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
     var resolver = makeResolver(
             language.grammar,

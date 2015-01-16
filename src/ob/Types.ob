@@ -102,7 +102,7 @@ TYPE
         PROCEDURE exported*(): BOOLEAN;
         PROCEDURE type*(): PType;
         PROCEDURE asVar*(isReadOnly: BOOLEAN; cx: Context.Type): PId;
-        PROCEDURE designatorCode*(leadCode: STRING): PFieldCode;
+        PROCEDURE designatorCode*(leadCode: STRING; cx: Context.Type): PFieldCode;
     END;
     PField* = POINTER TO Field;
 
@@ -118,7 +118,7 @@ TYPE
 
     StorageType* = RECORD(Type)    
         PROCEDURE initializer*(cx: Context.Type): STRING;
-        PROCEDURE denote*(id: STRING): PField;
+        PROCEDURE denote*(id: STRING; isReadObly: BOOLEAN): PField;
     END;
     PStorageType* = POINTER TO StorageType;
 
@@ -484,10 +484,10 @@ BEGIN
     RETURN result
 END existingField;
 
-PROCEDURE Record.denote(id: STRING): PField;
+PROCEDURE Record.denote(id: STRING; isReadObly: BOOLEAN): PField;
 BEGIN
     RETURN existingField(SELF, id, SELF)
-END Record.denote;
+END;
 
 PROCEDURE recordBase*(r: Record): PRecord;
     RETURN r.base
@@ -536,7 +536,7 @@ PROCEDURE Pointer.initializer(cx: Context.Type): STRING;
     RETURN "null"
 END Pointer.initializer;
 
-PROCEDURE Pointer.denote(id: STRING): PField;
+PROCEDURE Pointer.denote(id: STRING; isReadObly: BOOLEAN): PField;
 VAR
     d: POINTER TO NamedType;
 BEGIN
@@ -547,7 +547,7 @@ BEGIN
         d := SELF(POINTER);
     END;
     RETURN existingField(base^, id, d^)
-END Pointer.denote;
+END;
 
 PROCEDURE foldArrayDimensions(VAR a: Array; dimToStr: ArrayDimensionDescriptionCallback; VAR sizes, of: STRING);
 BEGIN  
@@ -592,7 +592,7 @@ PROCEDURE Array.description(): STRING;
     RETURN arrayDescription(SELF, arrayDimensionDescription)
 END Array.description;
 
-PROCEDURE StorageType.denote(id: STRING): PField;
+PROCEDURE StorageType.denote(id: STRING; isReadObly: BOOLEAN): PField;
 BEGIN
     Errors.raise("selector '." + id + "' cannot be applied to '" 
                + SELF.description() + "'");
@@ -773,7 +773,7 @@ PROCEDURE RecordField.identdef(): Context.PIdentdefInfo;
     RETURN SELF.mIdentdef;
 END;
 
-PROCEDURE RecordField.designatorCode(leadCode: STRING): PFieldCode;
+PROCEDURE RecordField.designatorCode(leadCode: STRING; cx: Context.Type): PFieldCode;
 CONST
     kQuote = 22X;
 BEGIN

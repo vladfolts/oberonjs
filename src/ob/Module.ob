@@ -50,7 +50,7 @@ PROCEDURE AnyType.callGenerator(cx: LanguageContext.PType): Procedure.PCallGener
     RETURN makeCallGenerator(cx)
 END AnyType.callGenerator;
 
-PROCEDURE AnyType.denote(id: STRING): Types.PField;
+PROCEDURE AnyType.denote(id: STRING; isReadObly: BOOLEAN): Types.PField;
     RETURN NEW AnyField(id);
 END;
 
@@ -74,7 +74,7 @@ PROCEDURE AnyField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
     RETURN any.asVar
 END AnyField.asVar;
 
-PROCEDURE AnyField.designatorCode(leadCode: STRING): Types.PFieldCode;
+PROCEDURE AnyField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
     RETURN NEW Types.FieldCode(leadCode + "." + SELF.mId, "", "");
 END;
 

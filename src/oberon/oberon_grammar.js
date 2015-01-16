@@ -5,6 +5,7 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var Grammar = require("grammar.js");
 var ObContext = require("oberon/oberon_context.js");
+var ObRtl = require("js/OberonRtl.js");
 var Parser = require("parser.js");
 var Symbols = require("js/OberonSymbols.js");
 var Types = require("js/Types.js");
@@ -133,7 +134,8 @@ exports.language = {
     codeGenerator: {
         make: CodeGenerator.makeGenerator,
         nil: CodeGenerator.nullGenerator()
-    }
+    },
+    rtlBase: ObRtl.Type
 };
 
 

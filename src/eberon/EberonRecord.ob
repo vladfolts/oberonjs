@@ -69,6 +69,13 @@ TYPE
         code: STRING;
     END;
 
+PROCEDURE assertNotReadOnly*(isReadObly: BOOLEAN; method: STRING; class: STRING);
+BEGIN
+    IF isReadObly THEN
+        Errors.raise("method '" + method + "' cannot be applied to non-VAR " + class);
+    END;
+END;
+
 PROCEDURE cannotInstantiateErrMsg(r: Types.Record): STRING;
     RETURN "cannot instantiate '" 
          + r.name 
@@ -96,7 +103,7 @@ BEGIN
 END;
 
 PROCEDURE ensureMethodDefinitionsForEach(key: STRING; value: Object.PType; VAR closure: Object.Type);
-    PROCEDURE do(ids: ARRAY OF STRING; closure: EnsureMethodDefinitionsClosure);
+    PROCEDURE do(ids: ARRAY OF STRING; VAR closure: EnsureMethodDefinitionsClosure);
     VAR
         report: ARRAY * OF STRING;
     BEGIN
@@ -413,7 +420,7 @@ BEGIN
     SELF.customConstructorDefined := TRUE;
 END;
 
-PROCEDURE collectAbstractMethods(r: Record);
+PROCEDURE collectAbstractMethods(VAR r: Record);
 VAR
     methods: ARRAY * OF STRING;
 BEGIN

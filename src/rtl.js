@@ -60,6 +60,10 @@ var impl = {
             throw new Error("invalid key: " + key);
         return map[key];
     },
+    clearMap: function(map){
+        for(var p in map)
+            delete map[p];
+    },
     makeArray: function(/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
         var result = new Array(forward.shift());
@@ -247,5 +251,6 @@ exports.dependencies = {
     "__makeCharArray": ["__setupCharArrayMethods"]
 };
 
+exports.methods = impl;
 for(var e in impl)
     exports[e] = impl[e];

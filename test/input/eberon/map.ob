@@ -97,6 +97,14 @@ BEGIN
     m.remove("abc");
 END;
 
+PROCEDURE clear();
+VAR
+    m: MapOfInteger;
+BEGIN
+    m.clear();
+    m.clear;
+END;
+
 BEGIN
     FOREACH v, k IN m DO
         FOREACH v2, k2 IN m DO

@@ -62,6 +62,10 @@ var RTL$ = {
                                                   : this.cloneRecord(v);
             }
         }
+    },
+    clearMap: function (map){
+        for(var p in map)
+            delete map[p];
     }
 };
 var test = function (){
@@ -157,6 +161,12 @@ function get(){
 function remove(){
 	var m = {};
 	delete m["abc"];
+}
+
+function clear(){
+	var m = {};
+	RTL$.clearMap(m);
+	RTL$.clearMap(m);
 }
 var $map1 = m;
 for(var k in $map1){

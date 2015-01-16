@@ -104,14 +104,14 @@ BEGIN
     SELF.addSymbol(SELF.symbol, FALSE);
 END;
 
-PROCEDURE addUnresolved*(s: Type; id: STRING);
+PROCEDURE addUnresolved*(VAR s: Type; id: STRING);
 BEGIN
     IF s.unresolved.indexOf(id) = -1 THEN
         s.unresolved.add(id);
     END;
 END addUnresolved;
 
-PROCEDURE resolve*(s: Type; symbol: Symbols.PSymbol);
+PROCEDURE resolve*(VAR s: Type; symbol: Symbols.PSymbol);
 VAR
     id: STRING;
     i: INTEGER;
@@ -205,7 +205,7 @@ END Procedure.addSymbol;
 
 PROCEDURE generateTempVar(pattern: STRING; VAR counter: INTEGER): STRING;
 BEGIN
-    counter := counter + 1;
+    INC(counter);
     RETURN "$" + pattern + String.fromInt(counter);
 END;
 

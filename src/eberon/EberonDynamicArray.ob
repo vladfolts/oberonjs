@@ -1,5 +1,5 @@
 MODULE EberonDynamicArray;
-IMPORT Cast, Code, Context, EberonArray, EberonTypes, Errors, LanguageContext, Procedure, Types;
+IMPORT Cast, Code, Context, EberonArray, EberonRecord, EberonTypes, Errors, LanguageContext, Procedure, Types;
 CONST
     methodNameAdd = "add";
     methodNameClear = "clear";
@@ -77,20 +77,28 @@ PROCEDURE MethodAdd.MethodAdd(elementsType: Types.PType)
       elementsType(elementsType);
 END;
 
-PROCEDURE DynamicArray.denote(id: STRING): Types.PField;
+PROCEDURE DynamicArray.denote(id: STRING; isReadObly: BOOLEAN): Types.PField;
 VAR
     result: Types.PField;
+
+    PROCEDURE assertReadOnly();
+    BEGIN
+        EberonRecord.assertNotReadOnly(isReadObly, id, "dynamic array");
+    END;
 BEGIN
     IF      id = methodNameAdd THEN
+        assertReadOnly();
         result := NEW MethodAddField(SELF.elementsType);
     ELSIF   id = methodNameClear THEN
+        assertReadOnly();
         result := methodClear;
     ELSIF   id = methodNameRemove THEN
+        assertReadOnly();
         result := methodRemove;
     ELSE
         result := EberonArray.denoteMethod(id, SELF.elementsType);
         IF result = NIL THEN
-            result := SUPER(id);
+            result := SUPER(id, isReadObly);
         END;
     END;
     RETURN result
@@ -133,15 +141,15 @@ PROCEDURE Method.description(): STRING;
     RETURN "dynamic array method '" + SELF.name + "'"
 END Method.description;
 
-PROCEDURE MethodAddField.designatorCode(leadCode: STRING): Types.PFieldCode;
+PROCEDURE MethodAddField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
     RETURN NEW Types.FieldCode(leadCode + "." + "push", "", "");
 END;
 
-PROCEDURE MethodClearField.designatorCode(leadCode: STRING): Types.PFieldCode;
+PROCEDURE MethodClearField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
     RETURN NEW Types.FieldCode(leadCode + "." + "splice", "", "");
 END;
 
-PROCEDURE MethodRemoveField.designatorCode(leadCode: STRING): Types.PFieldCode;
+PROCEDURE MethodRemoveField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
     RETURN NEW Types.FieldCode(leadCode + "." + "splice", "", "");
 END;
 

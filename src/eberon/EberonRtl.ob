@@ -1,0 +1,9 @@
+MODULE EberonRtl;
+IMPORT OberonRtl;
+TYPE
+    Type* = RECORD(OberonRtl.Type)
+        clearMap*: PROCEDURE(s: STRING): STRING;
+    END;
+    PType* = POINTER TO Type;
+
+END EberonRtl.

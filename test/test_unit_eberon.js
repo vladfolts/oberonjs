@@ -1073,6 +1073,18 @@ exports.suite = {
                         "VAR a: ARRAY * OF INTEGER;"),
                 pass("a.clear()"),
                 fail(["a.clear(0)", "0 argument(s) expected, got 1"])
+            ),
+            "add, remove and clear cannot be called for read-only array": testWithContext(
+                context(grammar.declarationSequence, 
+                        "TYPE T = RECORD a: ARRAY * OF INTEGER; END;"),
+                pass("PROCEDURE p(VAR r: T); BEGIN r.a.add(1); END;",
+                     "PROCEDURE p(VAR r: T); BEGIN r.a.remove(1); END;",
+                     "PROCEDURE p(VAR r: T); BEGIN r.a.clear(); END;"
+                     ),
+                fail(["PROCEDURE p(r: T); BEGIN r.a.add(1); END;", "method 'add' cannot be applied to non-VAR dynamic array"],
+                     ["PROCEDURE p(r: T); BEGIN r.a.remove(1); END;", "method 'remove' cannot be applied to non-VAR dynamic array"],
+                     ["PROCEDURE p(r: T); BEGIN r.a.clear(); END;", "method 'clear' cannot be applied to non-VAR dynamic array"]
+                    )
             )
         }
     },
@@ -1414,6 +1426,22 @@ exports.suite = {
              ["m.remove()", "1 argument(s) expected, got 0"],
              ["m.remove(\"abc\", \"abc\")", "1 argument(s) expected, got 2"],
              ["v <- m.remove", "MAP's method 'remove' cannot be referenced"]
+            )
+        ),
+    "clear": testWithContext(
+        context(grammar.statement,
+                "VAR m: MAP OF INTEGER;"),
+        pass("m.clear()", "m.clear"),
+        fail(["m.clear(123)", "0 argument(s) expected, got 1"]
+            )
+        ),
+    "clear and remove cannot be applied to read only map": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE M = MAP OF INTEGER;"),
+        pass("PROCEDURE p(VAR m: M); BEGIN; m.remove(\"abc\"); END;",
+             "PROCEDURE p(VAR m: M); BEGIN; m.clear(); END;"),
+        fail(["PROCEDURE p(m: M); BEGIN; m.remove(\"abc\"); END;", "method 'remove' cannot be applied to non-VAR MAP"],
+             ["PROCEDURE p(m: M); BEGIN; m.clear(); END;", "method 'clear' cannot be applied to non-VAR MAP"]
             )
         )
     }

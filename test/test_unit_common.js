@@ -5,7 +5,7 @@ var Code = require("js/Code.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
 var oc = require("oc.js");
-var RTL = require("rtl_code.js").RTL;
+var makeRTL = require("rtl_code.js").makeRTL;
 var Scope = require("js/Scope.js");
 var Stream = require("js/Stream.js");
 var Test = require("test.js");
@@ -32,7 +32,7 @@ var TestContext = Context.Context.extend({
                 this,
                 { codeGenerator: language.codeGenerator.nil,
                   moduleGenerator: function(){return new TestModuleGenerator();},
-                  rtl: new RTL(),
+                  rtl: new makeRTL(language.rtlBase),
                   types: language.types,
                   stdSymbols: language.stdSymbols
                 });

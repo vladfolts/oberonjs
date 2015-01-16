@@ -333,9 +333,9 @@ exports.Designator = ChainedContext.extend({
             this.__handleDeref();
             isReadOnly = false;
         }
-        var field = t.denote(id);
+        var field = t.denote(id, isReadOnly);
         var currentType = field.type();
-        var fieldCode = field.designatorCode(this.__code);
+        var fieldCode = field.designatorCode(this.__code, this.language());
         this.__derefCode = fieldCode.derefCode;
         this.__propCode = fieldCode.propCode;
         this._advance(currentType, field.asVar(isReadOnly, this), fieldCode.code, undefined, true);

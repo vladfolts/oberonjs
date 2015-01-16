@@ -72,7 +72,7 @@ PROCEDURE MethodField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
     RETURN NEW MethodVariable(SELF.method)
 END;
 
-PROCEDURE MethodField.designatorCode(leadCode: STRING): Types.PFieldCode;
+PROCEDURE MethodField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
     RETURN NEW Types.FieldCode(leadCode + "." + Types.mangleField(SELF.method.name, SELF.method), "", "");
 END;
 

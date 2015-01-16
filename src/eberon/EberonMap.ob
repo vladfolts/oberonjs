@@ -1,7 +1,8 @@
 MODULE EberonMap;
-IMPORT Code, Context, EberonString, EberonTypes, LanguageContext, Procedure, Types;
+IMPORT Code, Context, EberonRtl, EberonString, EberonRecord, EberonTypes, Errors, LanguageContext, Procedure, Types;
 CONST
     removeMethodName = "remove";
+    clearMethodName = "clear";
 TYPE
     Type* = RECORD(Types.StorageType)
         PROCEDURE Type*(type: Types.PType);
@@ -16,10 +17,25 @@ TYPE
         PROCEDURE MethodRemoveField();
     END;
 
-    MethodRemove = RECORD(Method)
+    MethodClearField = RECORD(EberonTypes.MethodField)
+        PROCEDURE MethodClearField();
+    END;
+
+    MapMethod = RECORD(Method)
+    END;
+
+    MethodRemove = RECORD(MapMethod)
+        PROCEDURE MethodRemove();
+    END;
+
+    MethodClear = RECORD(MapMethod)
+        PROCEDURE MethodClear();
     END;
 
     MethodCallRemove = RECORD(Procedure.StdCall)
+    END;
+
+    MethodCallClear = RECORD(Procedure.StdCall)
     END;
 
 PROCEDURE Type.initializer(cx: Context.Type): STRING;
@@ -34,14 +50,23 @@ PROCEDURE Type.Type(valueType: Types.PType)
     | valueType(valueType);
 END;
 
-PROCEDURE Type.denote(id: STRING): Types.PField;
+PROCEDURE Type.denote(id: STRING; isReadObly: BOOLEAN): Types.PField;
 VAR
     result: Types.PField;
+
+    PROCEDURE assertReadOnly();
+    BEGIN
+        EberonRecord.assertNotReadOnly(isReadObly, id, "MAP");
+    END;
 BEGIN
     IF id = removeMethodName THEN
+        assertReadOnly();
         result := NEW MethodRemoveField();
+    ELSIF id = clearMethodName THEN
+        assertReadOnly();
+        result := NEW MethodClearField();
     ELSE
-        result := SUPER(id);
+        result := SUPER(id, isReadObly);
     END;
     RETURN result;
 END;
@@ -51,10 +76,24 @@ BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
     arg <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
     RETURN Code.makeSimpleExpression("[" + argCode.result() + "]", NIL)
+END;        
+
+PROCEDURE MethodCallClear.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+BEGIN
+    Procedure.checkArgumentsCount(LEN(args), 0);
+    RETURN Code.makeSimpleExpression("", NIL);
 END;
 
-PROCEDURE MethodRemove.description(): STRING;
-    RETURN "MAP's method 'remove'";
+PROCEDURE MapMethod.description(): STRING;
+    RETURN "MAP's method '" + SELF.name + "'";
+END;
+
+PROCEDURE MethodRemove.MethodRemove()
+    | SUPER(removeMethodName, NIL);
+END;
+
+PROCEDURE MethodClear.MethodClear()
+    | SUPER(clearMethodName, NIL);
 END;
 
 PROCEDURE MethodRemove.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
@@ -65,12 +104,26 @@ BEGIN
     RETURN Procedure.makeCallGenerator(call, cx)
 END;
 
-PROCEDURE MethodRemoveField.MethodRemoveField()
-    | SUPER(NEW MethodRemove(removeMethodName, NIL));
+PROCEDURE MethodClear.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
+BEGIN
+    call <- NEW MethodCallClear();
+    RETURN Procedure.makeCallGenerator(call, cx)
 END;
 
-PROCEDURE MethodRemoveField.designatorCode(leadCode: STRING): Types.PFieldCode;
+PROCEDURE MethodRemoveField.MethodRemoveField()
+    | SUPER(NEW MethodRemove());
+END;
+
+PROCEDURE MethodClearField.MethodClearField()
+    | SUPER(NEW MethodClear());
+END;
+
+PROCEDURE MethodRemoveField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
     RETURN NEW Types.FieldCode("delete " + leadCode, "", "");
+END;
+
+PROCEDURE MethodClearField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
+    RETURN NEW Types.FieldCode(cx.rtl(EberonRtl.PType).clearMap(leadCode), "", "");
 END;
 
 END EberonMap.

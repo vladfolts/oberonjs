@@ -69,22 +69,22 @@ BEGIN
     RETURN result
 END denote;
 
-PROCEDURE StaticArray.denote(id: STRING): Types.PField;
+PROCEDURE StaticArray.denote(id: STRING; isReadObly: BOOLEAN): Types.PField;
 BEGIN
     result <- denote(id, SELF);
     IF result = NIL THEN
-        result := SUPER(id);
+        result := SUPER(id, isReadObly);
     END;
     RETURN result
-END StaticArray.denote;
+END;
 
-PROCEDURE OpenArray.denote(id: STRING): Types.PField;
+PROCEDURE OpenArray.denote(id: STRING; isReadObly: BOOLEAN): Types.PField;
 BEGIN
     result <- denote(id, SELF);
     IF result = NIL THEN
-        result := SUPER(id);
+        result := SUPER(id, isReadObly);
     END;
     RETURN result
-END OpenArray.denote;
+END;
 
 END EberonArray.

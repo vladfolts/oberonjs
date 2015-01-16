@@ -6,6 +6,7 @@ var EbArray = require("js/EberonArray.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var EbContext = require("eberon/eberon_context.js");
 var Grammar = require("grammar.js");
+var EbRtl = require("js/EberonRtl.js");
 var Parser = require("parser.js");
 var Symbols = require("js/EberonSymbols.js");
 
@@ -166,5 +167,6 @@ exports.language = {
     codeGenerator: {
         make: CodeGenerator.makeGenerator,
         nil: CodeGenerator.nullGenerator()
-    }
+    },
+    rtlBase: EbRtl.Type
 };
