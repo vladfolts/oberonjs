@@ -1,4 +1,4 @@
-var RTL$ = require("rtl.js");
+var RTL$ = require("test_rtl.js");
 var ci = 123;
 function Base(){
 	this.i = 0;

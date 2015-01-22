@@ -122,7 +122,7 @@ function compileModules(names, moduleReader, grammar, contextFactory, handleErro
 
 function compile(text, language, handleErrors){
     var result = "";
-    var rtl = new makeRTL(language.rtlBase);
+    var rtl = new makeRTL(language.rtl);
     var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
     var resolver = makeResolver(
             language.grammar,

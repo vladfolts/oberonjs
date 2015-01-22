@@ -8,11 +8,15 @@ if (typeof Uint16Array == "undefined"){
     };
 }
 
+function copyMap(from, to){
+    for(var p in from)
+        to[p] = from[p];
+}
+
 function Class(){}
 Class.extend = function extend(methods){
         function Type(){
-            for(var m in methods)
-                this[m] = methods[m];
+            copyMap(methods, this);
         }
         Type.prototype = this.prototype;
 
@@ -24,7 +28,7 @@ Class.extend = function extend(methods){
         return result;
     };
 
-var impl = {
+var methods = {
     extend: function(cons, base){
         function Type(){}
         Type.prototype = base.prototype;
@@ -54,15 +58,6 @@ var impl = {
             throw new Error(msg);
         }
         return from;
-    },
-    getMappedValue: function(map, key){
-        if (!map.hasOwnProperty(key))
-            throw new Error("invalid key: " + key);
-        return map[key];
-    },
-    clearMap: function(map){
-        for(var p in map)
-            delete map[p];
     },
     makeArray: function(/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
@@ -242,15 +237,17 @@ var impl = {
 };
 
 exports.Class = Class;
-exports.dependencies = { 
-    "cloneRecord": ["copyRecord"],
-    "cloneArrayOfRecords": ["cloneRecord"],
-    "copyArrayOfRecords": ["cloneArrayOfRecords", "cloneRecord"],
-    "copyArrayOfScalars": ["cloneArrayOfScalars"],
-    "makeCharArray": ["__makeCharArray"],
-    "__makeCharArray": ["__setupCharArrayMethods"]
+exports.rtl = {
+    dependencies: { 
+        "cloneRecord": ["copyRecord"],
+        "cloneArrayOfRecords": ["cloneRecord"],
+        "copyArrayOfRecords": ["cloneArrayOfRecords", "cloneRecord"],
+        "copyArrayOfScalars": ["cloneArrayOfScalars"],
+        "makeCharArray": ["__makeCharArray"],
+        "__makeCharArray": ["__setupCharArrayMethods"]
+    },
+    methods: methods,
+    nodejsModule: "rtl.js"
 };
-
-exports.methods = impl;
-for(var e in impl)
-    exports[e] = impl[e];
+exports.copyMap = copyMap;
+copyMap(methods, exports);

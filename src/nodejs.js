@@ -57,7 +57,7 @@ function writeCompiledModule(name, code, outDir){
 
 function compile(sources, language, handleErrors, includeDirs, outDir, importDir){
     var rtlCodeWatcher = new RtlCodeUsingWatcher();
-    var rtl = new makeRTL(language.rtlBase, rtlCodeWatcher.using.bind(rtlCodeWatcher));
+    var rtl = new makeRTL(language.rtl, rtlCodeWatcher.using.bind(rtlCodeWatcher));
     var moduleCode = function(name, imports){
         return new ModuleGenerator(name, imports, importDir);};
 
@@ -92,7 +92,7 @@ function compile(sources, language, handleErrors, includeDirs, outDir, importDir
             function(e){handleErrors("File \"" + compiledFilesStack[compiledFilesStack.length - 1] + "\", " + e);},
             function(name, code){
                 if (rtlCodeWatcher.used()){
-                    code = "var " + rtl.name() + " = require(\"rtl.js\");\n" + code;
+                    code = "var " + rtl.name() + " = require(\"" + rtl.module() + "\");\n" + code;
                     rtlCodeWatcher.reset();
                 }
                 writeCompiledModule(name, code, outDir);

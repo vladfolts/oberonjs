@@ -7,6 +7,7 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var EbContext = require("eberon/eberon_context.js");
 var Grammar = require("grammar.js");
 var EbRtl = require("js/EberonRtl.js");
+var EbRtlCode = require("eberon/eberon_rtl.js");
 var Parser = require("parser.js");
 var Symbols = require("js/EberonSymbols.js");
 
@@ -168,5 +169,10 @@ exports.language = {
         make: CodeGenerator.makeGenerator,
         nil: CodeGenerator.nullGenerator()
     },
-    rtlBase: EbRtl.Type
+    rtl: {
+        base: EbRtl.Type,
+        methods: EbRtlCode.rtl.methods,
+        dependencies: EbRtlCode.rtl.dependencies,
+        nodejsModule: EbRtlCode.rtl.nodejsModule
+    }
 };

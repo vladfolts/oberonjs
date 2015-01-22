@@ -6,6 +6,7 @@ var Context = require("context.js");
 var Grammar = require("grammar.js");
 var ObContext = require("oberon/oberon_context.js");
 var ObRtl = require("js/OberonRtl.js");
+var ObRtlCode = require("rtl.js");
 var Parser = require("parser.js");
 var Symbols = require("js/OberonSymbols.js");
 var Types = require("js/Types.js");
@@ -135,7 +136,12 @@ exports.language = {
         make: CodeGenerator.makeGenerator,
         nil: CodeGenerator.nullGenerator()
     },
-    rtlBase: ObRtl.Type
+    rtl: {
+        base: ObRtl.Type,
+        methods: ObRtlCode.rtl.methods,
+        dependencies: ObRtlCode.rtl.dependencies,
+        nodejsModule: ObRtlCode.rtl.nodejsModule
+    }
 };
 
 

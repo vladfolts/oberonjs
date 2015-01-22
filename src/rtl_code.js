@@ -1,8 +1,5 @@
 "use strict";
 
-var Rtl = require("rtl.js");
-//var OberonRtl = require("js/OberonRtl.js");
-
 // support IE8
 if (!Array.prototype.indexOf)
     Array.prototype.indexOf = function(x){
@@ -22,17 +19,19 @@ if (!Function.prototype.bind)
         };
     };
 
-function RtlCons(demandedCallback){
+function RtlCons(rtl, demandedCallback){
     this.__entries = {};
+    this.__rtl = rtl;
     this.__demandedCallback = demandedCallback;
 
-    for(var name in Rtl.methods){
+    for(var name in rtl.methods){
         this[name] = this.__makeOnDemand(name);
         this[name + "Id"] = this.__makeIdOnDemand(name);
     }
 }
 var rtlPrototype = {
     name: function(){return "RTL$";},
+    module: function(){return this.__rtl.nodejsModule;},
     generate: function(){
         var result = "var " + this.name() + " = {\n";
         var firstEntry = true;
@@ -52,9 +51,9 @@ var rtlPrototype = {
     },
     __putEntry: function(name){
         if (!this.__entries[name])
-            this.__entries[name] = Rtl.methods[name];
+            this.__entries[name] = this.__rtl.methods[name];
         
-        var dependencies = Rtl.dependencies[name];
+        var dependencies = this.__rtl.dependencies[name];
         if (dependencies)
             for(var i = 0; i < dependencies.length; ++i)
                 this.__putEntry(dependencies[i]);
@@ -81,15 +80,15 @@ var rtlPrototype = {
     }
 };
 
-function makeRTL(base, demandedCallback){
+function makeRTL(rtl, demandedCallback){
     function RTL(){
         RtlCons.apply(this, arguments);
     }
 
-    Rtl.extend(RTL, base);
+    rtl.methods.extend(RTL, rtl.base);
     for(var m in rtlPrototype)
         RTL.prototype[m] = rtlPrototype[m];
-    return new RTL(demandedCallback);
+    return new RTL(rtl, demandedCallback);
 }
 
 exports.makeRTL = makeRTL;

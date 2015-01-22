@@ -32,7 +32,7 @@ var TestContext = Context.Context.extend({
                 this,
                 { codeGenerator: language.codeGenerator.nil,
                   moduleGenerator: function(){return new TestModuleGenerator();},
-                  rtl: new makeRTL(language.rtlBase),
+                  rtl: new makeRTL(language.rtl),
                   types: language.types,
                   stdSymbols: language.stdSymbols
                 });

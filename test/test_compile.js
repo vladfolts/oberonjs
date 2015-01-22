@@ -30,6 +30,8 @@ function compile(src, language){
 }
 
 function compileNodejs(src, dirs, language){
+    language.rtl.nodejsModule = "test_rtl.js"; // make test results the same for oberon/eberon
+
     var subdir = path.basename(src);
     subdir = subdir.substr(0, subdir.length - path.extname(subdir).length);
 
