@@ -7,7 +7,8 @@ CONST
 TYPE
     CastOp* = RECORD
         PROCEDURE make*(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
-        PROCEDURE assign*(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING
+        PROCEDURE assign*(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+        PROCEDURE clone*(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
     END;
 
     PCastOp* = POINTER TO CastOp;
@@ -15,7 +16,7 @@ TYPE
     CastOpDoNothing* = RECORD (CastOp)
     END;
 
-    CastOpArray = RECORD (CastOpDoNothing)
+    CastOpArray* = RECORD (CastOpDoNothing)
     END;
 
     CastOpRecord = RECORD (CastOpDoNothing)
@@ -119,7 +120,7 @@ END areTypesExactlyMatchImpl;
 
 PROCEDURE CastOpDoNothing.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
     RETURN e
-END CastOpDoNothing.make;
+END;
 
 PROCEDURE passedByReference*(e: Code.PExpression): BOOLEAN;
 BEGIN
@@ -144,6 +145,10 @@ BEGIN
     RETURN result;
 END;
 
+PROCEDURE CastOpDoNothing.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
+    RETURN Code.derefExpression(e).code();
+END;
+
 PROCEDURE cloneArray*(t: Types.Array; code: STRING; rtl: OberonRtl.Type): STRING;
 VAR
     result: STRING;
@@ -156,15 +161,19 @@ BEGIN
         result := rtl.cloneArrayOfRecords(code);
     END;
     RETURN result
-END cloneArray;
+END;
 
 PROCEDURE CastOpArray.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
     RETURN left.code() + " = " + cloneArray(right.type()(Types.PArray)^, right.code(), rtl^)
-END CastOpArray.assign;
+END;
+
+PROCEDURE CastOpArray.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
+    RETURN cloneArray(e.type()(Types.PArray)^, e.code(), rtl^);
+END;
 
 PROCEDURE CastOpRecord.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
     RETURN rtl.copyRecord(right.code(), left.code())
-END CastOpRecord.assign;
+END;
 
 PROCEDURE CastOpStrToChar.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
 BEGIN

@@ -1,11 +1,15 @@
 MODULE EberonCast;
-IMPORT Cast, Code, EberonString, EberonDynamicArray, OberonRtl, Types;
+IMPORT Cast, Code, EberonMap, EberonRtl, EberonString, EberonDynamicArray, OberonRtl, Types;
 TYPE
-    CastOpToDynamicArray = RECORD (Cast.CastOp)
+    CastOpToDynamicArray = RECORD (Cast.CastOpArray)
+    END;
+
+    CastOpToMap = RECORD (Cast.CastOp)
     END;
 
 VAR
     castOpToDynamicArray: POINTER TO CastOpToDynamicArray;
+    castOpToMap: POINTER TO CastOpToMap;
 
 PROCEDURE CastOpToDynamicArray.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
     RETURN Code.makeSimpleExpression(Cast.cloneArray(e.type()(Types.PArray)^, e.code(), rtl^), NIL)
@@ -27,7 +31,21 @@ END copyArray;
 
 PROCEDURE CastOpToDynamicArray.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
     RETURN copyArray(left.type()(Types.PArray)^, left.code(), right.code(), rtl^)
-END CastOpToDynamicArray.assign;
+END;
+
+PROCEDURE CastOpToMap.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
+    RETURN e;
+END;
+
+PROCEDURE CastOpToMap.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+    (* TODO: support non-scalar MAPs *)
+    RETURN rtl(EberonRtl.PType).copyMapOfScalars(right.code(), left.code());
+END;
+
+PROCEDURE CastOpToMap.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
+    (* TODO: support non-scalar MAPs *)
+    RETURN rtl(EberonRtl.PType).cloneMapOfScalars(e.code());
+END;
 
 PROCEDURE isOpenCharArray(type: Types.PType): BOOLEAN;
     RETURN (type IS Types.POpenArray) 
@@ -73,6 +91,13 @@ BEGIN
             op := castOpToDynamicArray;
             result := Cast.errNo;
         END;
+    ELSIF (from IS EberonMap.PType) & (to IS EberonMap.PType) THEN
+        IF Cast.areTypesExactlyMatch(from.valueType, to.valueType) THEN
+            op := castOpToMap;
+            result := Cast.errNo;
+        ELSE
+            result := Cast.err;
+        END;
     ELSE
         result := Cast.implicit(from, to, toVar, ops, op);
     END;
@@ -81,4 +106,5 @@ END implicit;
 
 BEGIN
     NEW(castOpToDynamicArray);
+    NEW(castOpToMap);
 END EberonCast.

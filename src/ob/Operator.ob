@@ -763,7 +763,11 @@ PROCEDURE CastToUint8.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExp
         opCastToUint8, 
         " & ", 
         Precedence.bitAnd)
-END CastToUint8.make;
+END;
+
+PROCEDURE CastToUint8.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
+    RETURN SELF.make(rtl, e).code();
+END;
 
 BEGIN
     openArrayChar := NEW Types.OpenArray(Types.basic.ch);

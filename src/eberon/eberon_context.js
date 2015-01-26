@@ -361,13 +361,15 @@ var InPlaceVariableInit = Context.Chained.extend({
             else // do not clone if it is temporary, e.g. constructor call
                 this._code += e.code();
         }
-        else if (type instanceof Type.Array){
+        else {
             if (type instanceof Type.OpenArray)
                 throw new Errors.Error("cannot initialize variable '" + this.__id + "' with open array");
-            this._code += Cast.cloneArray(type, e.code(), this.language().rtl);
+          
+            var language = this.language();
+            var cloneOp;
+            language.types.implicitCast(type, type, false, op.castOperations(), {set: function(v){cloneOp = v;}, get:function(){return cloneOp;}});
+            this._code += cloneOp.clone(language.rtl, e);
         }
-        else
-            this._code += Code.derefExpression(e).code();
     },
     _onParsed: function(){
         this.parent().codeGenerator().write(this._code);
@@ -425,15 +427,8 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
         var type = d.type();
         var code;
         if (this.__right){
-        /*    if (type instanceof EberonDynamicArray.DynamicArray){
-                if (!(this.__right.type() instanceof Type.Array))
-                    throw new Errors.Error("type mismatch");
-                code = d.code() + " = " + this.language().rtl.clone(this.__right.code());
-            }
-            else */{
-                var left = Code.makeExpression(d.code(), type, d);
-                code = op.assign(left, this.__right, this.language());
-            } 
+            var left = Code.makeExpression(d.code(), type, d);
+            code = op.assign(left, this.__right, this.language());
         }
         else if (!(d.info() instanceof ResultVariable)){
             var procCall = Context.makeProcCall(this, type, d.info());
@@ -1140,17 +1135,7 @@ var Repeat = Context.Repeat.extend({
     }
 });
 
-var Return = Context.Return.extend({
-    init: function EberonContext$Return(context){
-        Context.Return.prototype.init.call(this, context);
-    },
-    handleExpression: function(e){
-        var type = e.type();
-        if (type instanceof Type.Array)
-            e = Code.makeSimpleExpression(Cast.cloneArray(type, e.code(), this.language().rtl), type);
-        Context.Return.prototype.handleExpression.call(this, e);
-    }
-});
+var Return = Context.Return;
 
 var For = Context.For.extend({
     init: function EberonContext$Repeat(context){

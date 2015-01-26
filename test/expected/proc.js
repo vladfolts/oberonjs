@@ -60,7 +60,7 @@ function withByteArgument(b/*BYTE*/){
 }
 
 function withByteResult(){
-	return 0;
+	return 0 & 0xFF;
 }
 
 function withByteResult2(b/*BYTE*/){

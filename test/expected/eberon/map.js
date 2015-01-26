@@ -3,6 +3,20 @@ var RTL$ = {
         if (!condition)
             throw new Error("assertion failed");
     },
+    cloneMapOfScalars: function (from){
+        var result = {};
+        this.copyMapOfScalars(from, result);
+        return result;
+    },
+    copyMapOfScalars: function (from, to){
+        this.clearMap(to);
+        for(var k in from)
+            to[k] = from[k];
+    },
+    clearMap: function (map){
+        for(var p in map)
+            delete map[p];
+    },
     makeCharArray: function (/*dimensions*/){
         var forward = Array.prototype.slice.call(arguments);
         var length = forward.pop();
@@ -62,10 +76,6 @@ var RTL$ = {
                                                   : this.cloneRecord(v);
             }
         }
-    },
-    clearMap: function (map){
-        for(var p in map)
-            delete map[p];
     }
 };
 var test = function (){
@@ -83,7 +93,7 @@ function ForEach(){
 
 function makeMap(){
 	var m = {};
-	return m;
+	return RTL$.cloneMapOfScalars(m);
 }
 
 function ForEachWithExpression(){
@@ -167,6 +177,24 @@ function clear(){
 	var m = {};
 	RTL$.clearMap(m);
 	RTL$.clearMap(m);
+}
+
+function returnLocalMap(){
+	var result = {};
+	return RTL$.cloneMapOfScalars(result);
+}
+
+function returnNonLocalMap(m/*MAP OF INTEGER*/){
+	return RTL$.cloneMapOfScalars(m);
+}
+
+function assign(a/*MAP OF INTEGER*/){
+	var v = {};
+	RTL$.copyMapOfScalars(a, v);
+	var v2 = RTL$.cloneMapOfScalars(a);
+	var v3 = RTL$.cloneMapOfScalars(v2);
+	var v4 = RTL$.cloneMapOfScalars(returnLocalMap());
+	var v5 = RTL$.cloneMapOfScalars(returnNonLocalMap(v));
 }
 var $map1 = m;
 for(var k in $map1){

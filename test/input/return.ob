@@ -1,0 +1,7 @@
+MODULE m;
+
+PROCEDURE castIntegerWhenReturnByte(i: INTEGER): BYTE;
+    RETURN i
+END castIntegerWhenReturnByte;
+
+END m.

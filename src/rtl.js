@@ -8,7 +8,7 @@ if (typeof Uint16Array == "undefined"){
     };
 }
 
-function copyMap(from, to){
+function extendMap(from, to){
     for(var p in from)
         to[p] = from[p];
 }
@@ -16,7 +16,7 @@ function copyMap(from, to){
 function Class(){}
 Class.extend = function extend(methods){
         function Type(){
-            copyMap(methods, this);
+            extendMap(methods, this);
         }
         Type.prototype = this.prototype;
 
@@ -249,5 +249,5 @@ exports.rtl = {
     methods: methods,
     nodejsModule: "rtl.js"
 };
-exports.copyMap = copyMap;
-copyMap(methods, exports);
+exports.extendMap = extendMap;
+extendMap(methods, exports);

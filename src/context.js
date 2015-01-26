@@ -630,15 +630,21 @@ exports.ProcDecl = ChainedContext.extend({
             return this.__addArgument(msg.name, msg.arg);
         return ChainedContext.prototype.handleMessage.call(this, msg);
     },
-    handleReturn: function(type){
+    handleReturn: function(e){
+        var type = e.type();
         var result = this.__type.result();
         if (!result)
             throw new Errors.Error("unexpected RETURN in PROCEDURE declared with no result type");
+        
+        var language = this.language();
         var op;
-        if (this.language().types.implicitCast(type, result, false, castOperations, {set: function(v){op = v;}, get:function(){return op;}}))
+        if (language.types.implicitCast(type, result, false, castOperations, {set: function(v){op = v;}, get:function(){return op;}}))
             throw new Errors.Error(
                 "RETURN '" + result.description() + "' expected, got '"
                 + type.description() + "'");
+
+        this.codeGenerator().write("return " + op.clone(language.rtl, e) + ";\n");
+
         this.__returnParsed = true;
     },
     endParse: function(){
@@ -655,14 +661,10 @@ exports.ProcDecl = ChainedContext.extend({
 exports.Return = ChainedContext.extend({
     init: function Context$Return(context){
         ChainedContext.prototype.init.call(this, context);
-        this.__expr = undefined;
     },
     codeGenerator: function(){return nullCodeGenerator;},
-    handleExpression: function(e){this.__expr = e;},
-    endParse: function(){
-        var parent = this.parent();
-        parent.codeGenerator().write("return " + Code.derefExpression(this.__expr).code() + ";\n");
-        parent.handleReturn(this.__expr.type());
+    handleExpression: function(e){
+        this.parent().handleReturn(e);
     }
 });
 

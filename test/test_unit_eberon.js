@@ -1355,6 +1355,14 @@ exports.suite = {
              ["VAR MAP: INTEGER;", "not parsed"]
             )
         ),
+    "assign": testWithContext(
+        context(grammar.statement, 
+                "TYPE MapOfInteger = MAP OF INTEGER;"
+                + "VAR mapOfInteger1: MapOfInteger; mapOfInteger2: MAP OF INTEGER;"
+                + "mapOfString: MAP OF STRING;"),
+        pass("mapOfInteger1 := mapOfInteger2"),
+        fail(["mapOfInteger1 := mapOfString", "type mismatch: 'mapOfInteger1' is 'MAP OF INTEGER' and cannot be assigned to 'MAP OF STRING' expression"])
+    ),
     "put": testWithContext(
         context(grammar.statement,
                 "VAR m: MAP OF INTEGER;"

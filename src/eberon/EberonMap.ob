@@ -7,8 +7,9 @@ TYPE
     Type* = RECORD(Types.StorageType)
         PROCEDURE Type*(type: Types.PType);
 
-        valueType: Types.PType;
+        valueType*: Types.PType;
     END;
+    PType* = POINTER TO Type;
 
     Method = RECORD(Procedure.Std)
     END;
