@@ -759,7 +759,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         };
     },
     __handleFieldInit: function(id){
-        var fields = Type.recordOwnFields(this.__boundType);
+        var fields = this.__boundType.fields;
         if (!fields.hasOwnProperty(id))
             throw new Errors.Error("'" + id + "' is not record '" + Type.typeName(this.__boundType) + "' own field");
         

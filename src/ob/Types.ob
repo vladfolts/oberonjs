@@ -199,10 +199,10 @@ TYPE
         PROCEDURE codeForNew*(cx: Context.Type): STRING;
         PROCEDURE finalize*();
 
-        fields: JsMap.Type;
-        base-:  PRecord;
-        cons-:  STRING;
-        scope-: ScopeBase.PType;
+        fields-: MAP OF PField;
+        base-:   PRecord;
+        cons-:   STRING;
+        scope-:  ScopeBase.PType;
         notExported: ARRAY * OF STRING
     END;
     
@@ -256,14 +256,13 @@ END;
 PROCEDURE Record.finalize();
 BEGIN
     FOR i <- 0 TO LEN(SELF.notExported) - 1 DO
-        JsMap.erase(SELF.fields, SELF.notExported[i])
+        SELF.fields.remove(SELF.notExported[i])
     END;
     SELF.notExported.clear();
 END Record.finalize;
 
 PROCEDURE Record.Record(name: STRING; cons: STRING; scope: ScopeBase.PType)
     | SUPER(name),
-      fields(JsMap.make()),
       cons(cons),
       scope(scope);
 BEGIN
@@ -453,13 +452,13 @@ END;
 
 PROCEDURE Record.addField(f: PField);
 BEGIN
-    IF JsMap.has(SELF.fields, f.id()) THEN
+    IF f.id() IN SELF.fields THEN
         Errors.raise("duplicated field: '" + f.id() + "'");
     END;
     IF (SELF.base # NIL) & (SELF.base.findSymbol(f.id()) # NIL) THEN
         Errors.raise("base record already has field: '" + f.id() + "'");
     END;
-    JsMap.put(SELF.fields, f.id(), f);
+    SELF.fields[f.id()] := f;
     IF ~f.exported() THEN
         SELF.notExported.add(f.id());
     END;
@@ -467,13 +466,15 @@ END Record.addField;
 
 PROCEDURE Record.findSymbol(id: STRING): PField;
 VAR
-    result: Object.PType;
+    result: PField;
 BEGIN
-    IF ~JsMap.find(SELF.fields, id, result) & (SELF.base # NIL) THEN
+    IF id IN SELF.fields THEN
+        result := SELF.fields[id];
+    ELSIF SELF.base # NIL THEN
         result := SELF.base.findSymbol(id);
     END;
-    RETURN result(PField)
-END Record.findSymbol;
+    RETURN result;
+END;
 
 PROCEDURE existingField(r: Record; id: STRING; d: NamedType): PField;
 BEGIN
@@ -505,10 +506,6 @@ END recordScope;
 PROCEDURE recordConstructor*(r: Record): STRING;
     RETURN r.cons
 END recordConstructor;
-
-PROCEDURE recordOwnFields*(r: Record): JsMap.Type;
-    RETURN r.fields
-END recordOwnFields;
 
 PROCEDURE pointerBase*(p: Pointer): PRecord;
 VAR

@@ -1715,7 +1715,7 @@ function isTypeRecursive(type, base){
     if (type instanceof Type.Record){
         if (isTypeRecursive(Type.recordBase(type), base))
             return true;
-        var fields = Type.recordOwnFields(type);
+        var fields = type.fields;
         for(var fieldName in fields){
             if (isTypeRecursive(fields[fieldName].type(), base))
                 return true;
@@ -1786,7 +1786,7 @@ exports.RecordDecl = ChainedContext.extend({
     },
     __generateFieldsInitializationCode: function(){
         var result = "";
-        var ownFields = Type.recordOwnFields(this.__type);
+        var ownFields = this.__type.fields;
         for(var f in ownFields){
             var fieldType = ownFields[f].type();
             result += "this." + Type.mangleField(f, fieldType) + " = " + fieldType.initializer(this) + ";\n";

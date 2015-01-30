@@ -1,11 +1,18 @@
 MODULE EberonRecord;
 IMPORT 
-    Cast, Context, EberonContext, EberonTypes, Errors, JS, JsMap, Object, Scope, ScopeBase, Stream, String, Types;
+    Cast, Context, EberonContext, EberonTypes, Errors, JS, Object, Scope, ScopeBase, Stream, String, Types;
 CONST
     instantiateForVar* = 0;    
     instantiateForNew* = 1;    
     instantiateForCopy* = 2;    
 TYPE
+    MethodIds = RECORD
+        ids: ARRAY * OF STRING;
+    END;
+    PMethodIds = POINTER TO MethodIds;
+    MapOfMethodIds = MAP OF PMethodIds;
+    MapOfFields = MAP OF Types.PField;
+
     Record* = RECORD(Types.Record)
         PROCEDURE Record(name: STRING; cons: STRING; scope: ScopeBase.PType);
 
@@ -23,16 +30,16 @@ TYPE
         customConstructorDefined: BOOLEAN;
         customInitedfields-: ARRAY * OF STRING;
         finalized: BOOLEAN;
-        declaredMethods: JsMap.Type;
+        declaredMethods: MapOfFields;
         definedMethods: ARRAY * OF STRING;
         abstractMethods: ARRAY * OF STRING;
         instantiated: BOOLEAN;
         createByNewOnly: BOOLEAN;
         declaredAsVariable: BOOLEAN;
-        lazyDefinitions: JsMap.Type;
+        lazyDefinitions: MapOfMethodIds;
         nonExportedMethods: ARRAY * OF STRING;
         baseConstructorCallCode-: STRING;
-        fieldsInit: JsMap.Strings;
+        fieldsInit: MAP OF STRING;
         fieldsInitOrder: ARRAY * OF STRING;
         lastFieldInit: INTEGER;
     END;
@@ -47,27 +54,6 @@ TYPE
     RecordFieldAsMethod = RECORD(Types.RecordField)
     END;
     PRecordFieldAsMethod = POINTER TO RecordFieldAsMethod;
-
-    MethodIds = RECORD(Object.Type)
-        ids: ARRAY * OF STRING;
-    END;
-    PMethodIds = POINTER TO MethodIds;
-
-    EnsureMethodDefinitionsClosure = RECORD(Object.Type)
-        record: PRecord;
-        result: ARRAY * OF STRING;
-    END;
-
-    RequireMethodDefinitionClosure = RECORD(Object.Type)
-        record: PRecord;
-        base: PRecord;
-    END;
-
-    GenFieldInitCodeClosure = RECORD(Object.Type)
-        cx: Context.PType;
-        record: PRecord;
-        code: STRING;
-    END;
 
 PROCEDURE assertNotReadOnly*(isReadObly: BOOLEAN; method: STRING; class: STRING);
 BEGIN
@@ -93,49 +79,51 @@ END;
 
 PROCEDURE findMethodDeclaration(r: PRecord; id: STRING): Types.PField;
 VAR
-    result: Object.PType;
+    result: Types.PField;
 BEGIN
     type <- r;
-    WHILE (type # NIL) & ~JsMap.find(type.declaredMethods, id, result) DO
-        type := type.base(PRecord);
-    END;
-    RETURN result(Types.PField);
-END;
-
-PROCEDURE ensureMethodDefinitionsForEach(key: STRING; value: Object.PType; VAR closure: Object.Type);
-    PROCEDURE do(ids: ARRAY OF STRING; VAR closure: EnsureMethodDefinitionsClosure);
-    VAR
-        report: ARRAY * OF STRING;
-    BEGIN
-        FOR i <- 0 TO LEN(ids) - 1 DO
-            m <- ids[i];
-            IF ~hasMethodDefinition(closure.record, m) THEN
-                report.add(m);
-            END;
-        END;
-
-        IF LEN(report) # 0 THEN
-            closure.result.add(key + ": " + String.join(report, ", "));
+    WHILE (type # NIL) & (result = NIL) DO
+        IF id IN type.declaredMethods THEN
+            result := type.declaredMethods[id];
+        ELSE
+            type := type.base(PRecord);
         END;
     END;
-BEGIN
-    do(value(PMethodIds).ids, closure(EnsureMethodDefinitionsClosure));
+    RETURN result;
 END;
 
-PROCEDURE ensureMethodDefinitions(r: PRecord; reasons: JsMap.Type);
+PROCEDURE ensureMethodDefinitionsForEach(key: STRING; ids: ARRAY OF STRING; r: PRecord; VAR result: ARRAY * OF STRING);
 VAR
-    closure: EnsureMethodDefinitionsClosure;
+    report: ARRAY * OF STRING;
 BEGIN
-    closure.record := r;
-    JsMap.forEach(reasons, ensureMethodDefinitionsForEach, closure);
-    IF LEN(closure.result) # 0 THEN
-        Errors.raise(String.join(closure.result, "; "));
+    FOR i <- 0 TO LEN(ids) - 1 DO
+        m <- ids[i];
+        IF ~hasMethodDefinition(r, m) THEN
+            report.add(m);
+        END;
+    END;
+
+    IF LEN(report) # 0 THEN
+        result.add(key + ": " + String.join(report, ", "));
+    END;
+END;
+
+PROCEDURE ensureMethodDefinitions(r: PRecord; reasons: MapOfMethodIds);
+VAR
+    result: ARRAY * OF STRING;
+BEGIN
+    FOREACH v, k IN reasons DO
+        ensureMethodDefinitionsForEach(k, v.ids, r, result);
+    END;
+    IF LEN(result) # 0 THEN
+        Errors.raise(String.join(result, "; "));
     END;
 END;
 
 PROCEDURE requireMethodDefinition*(r: PRecord; id: STRING; reason: STRING);
 VAR
     existingIds: Object.PType;
+    reasons: MapOfMethodIds;
 
     PROCEDURE makeIds(): PMethodIds;
     BEGIN
@@ -157,43 +145,35 @@ BEGIN
     END;
 
     IF r.finalized THEN
-        reasons <- JsMap.make();
-        JsMap.put(reasons, reason, makeIds());
+        reasons[reason] := makeIds();
         ensureMethodDefinitions(r, reasons);
     ELSE
-        IF ~JsMap.find(r.lazyDefinitions, reason, existingIds) THEN
-            JsMap.put(r.lazyDefinitions, reason, makeIds());
+        IF ~(reason IN r.lazyDefinitions) THEN
+            r.lazyDefinitions[reason] := makeIds();
         ELSE
-            addIfNotThere(existingIds(PMethodIds).ids);
+            addIfNotThere(r.lazyDefinitions[reason].ids);
         END;
     END;
-END;
-
-PROCEDURE requireMethodDefinitionForEach(key: STRING; value: Object.PType; VAR closure: Object.Type);
-    PROCEDURE do(closure: RequireMethodDefinitionClosure);
-    BEGIN
-        IF ~hasMethodDefinition(closure.record, key) THEN
-            requireMethodDefinition(closure.base, key, cannotInstantiateErrMsg(closure.record^));
-        END;
-    END;
-BEGIN
-    do(closure(RequireMethodDefinitionClosure));
 END;
 
 PROCEDURE ensureNonAbstract(r: PRecord);
-VAR
-    closure: RequireMethodDefinitionClosure;
+    PROCEDURE require(declaredMethods: MapOfFields; base: PRecord);
+    BEGIN
+        FOREACH v, k IN declaredMethods DO
+            IF ~hasMethodDefinition(r, k) THEN
+                requireMethodDefinition(base, k, cannotInstantiateErrMsg(r^));
+            END;
+        END;
+    END;
 BEGIN
     IF LEN(r.abstractMethods) # 0 THEN
         Errors.raise(cannotInstantiateErrMsg(r^) + ": " + String.join(r.abstractMethods, ", "));
     END;
 
     baseType <- r.base(PRecord);
-    closure.record := r;
     WHILE baseType # NIL DO
         IF ~baseType.finalized THEN
-            closure.base := baseType;
-            JsMap.forEach(baseType.declaredMethods, requireMethodDefinitionForEach, closure);
+            require(baseType.declaredMethods, baseType)
         END;
         baseType := baseType.base(PRecord);
     END;
@@ -328,7 +308,7 @@ BEGIN
         Errors.raise(msg);
     END;
 
-    JsMap.put(SELF.declaredMethods, id, NEW RecordFieldAsMethod(methodId, type));
+    SELF.declaredMethods[id] := NEW RecordFieldAsMethod(methodId, type);
     IF ~methodId.exported() THEN
         SELF.nonExportedMethods.add(id);
     END;
@@ -383,7 +363,7 @@ BEGIN
     ELSE
         SELF.lastFieldInit := index;
     END;
-    JsMap.putString(SELF.fieldsInit, field, code);
+    SELF.fieldsInit[field] := code;
 END;
 
 PROCEDURE Record.setRecordInitializationCode(baseConstructorCallCode: STRING);
@@ -421,10 +401,22 @@ BEGIN
 END;
 
 PROCEDURE collectAbstractMethods(VAR r: Record);
+TYPE
+    Strings = ARRAY * OF STRING;
 VAR
-    methods: ARRAY * OF STRING;
+    methods: Strings;
+
+    PROCEDURE keys(m: MapOfFields): Strings;
+    VAR
+        result: Strings;
+    BEGIN
+        FOREACH v, k IN m DO
+            result.add(k);
+        END;
+        RETURN result;
+    END;
 BEGIN
-    selfMethods <- JsMap.keys(r.declaredMethods);
+    selfMethods <- keys(r.declaredMethods);
     baseType <- r.base(PRecord);
     IF baseType # NIL THEN
         JS.do("methods = baseType.abstractMethods.concat(selfMethods);");
@@ -446,7 +438,7 @@ VAR
 BEGIN
     FOR i <- 0 TO LEN(r.customInitedfields) - 1 DO
         f <- r.customInitedfields[i];
-        IF ~JsMap.hasString(r.fieldsInit, f) THEN
+        IF ~(f IN r.fieldsInit) THEN
             fieldsWereNotInited.add(f);
         END;
     END;
@@ -477,7 +469,7 @@ BEGIN
     ensureMethodDefinitions(SELF(POINTER), SELF.lazyDefinitions);
 
     FOR i <- 0 TO LEN(SELF.nonExportedMethods) - 1 DO
-        JsMap.erase(SELF.declaredMethods, SELF.nonExportedMethods[i]);
+        SELF.declaredMethods.remove(SELF.nonExportedMethods[i]);
     END;
     SELF.nonExportedMethods.clear();
 
@@ -497,39 +489,25 @@ END;
 
 PROCEDURE Record.Record(name: STRING; cons: STRING; scope: ScopeBase.PType)
     | SUPER(name, cons, scope),
-      declaredMethods(JsMap.make()),
-      lazyDefinitions(JsMap.make()),
-      fieldsInit(JsMap.makeStrings()),
       lastFieldInit(-1);
-END;
-
-PROCEDURE genFieldInitCode(key: STRING; value: Object.PType; VAR closure: Object.Type);
-    PROCEDURE do(f: Types.PField; VAR closure: GenFieldInitCodeClosure);
-    VAR
-        code: STRING;
-        result: STRING;
-    BEGIN
-        type <- f.type()(Types.PStorageType);
-        IF JsMap.findString(closure.record.fieldsInit, key, code) THEN
-            result := code;
-        ELSE
-            result := "this." + Types.mangleField(key, type) 
-                    + " = " + type.initializer(closure.cx^);
-        END;
-        closure.code := closure.code + result + ";" + Stream.kCR;
-    END;
-BEGIN
-    do(value(Types.PField), closure(GenFieldInitCodeClosure));
 END;
 
 PROCEDURE fieldsInitializationCode*(r: PRecord; cx: Context.PType): STRING;
 VAR
-    closure: GenFieldInitCodeClosure;
+    code: STRING;
+    result: STRING;
 BEGIN
-    closure.cx := cx;
-    closure.record := r;
-    JsMap.forEach(Types.recordOwnFields(r^), genFieldInitCode, closure);
-    RETURN closure.code;
+    FOREACH f, key IN r.fields DO
+        type <- f.type()(Types.PStorageType);
+        IF key IN r.fieldsInit THEN
+            code := r.fieldsInit[key];
+        ELSE
+            code := "this." + Types.mangleField(key, type) 
+                    + " = " + type.initializer(cx^);
+        END;
+        result := result + code + ";" + Stream.kCR;
+    END;
+    RETURN result;
 END;
 
 PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: Types.PType; record: PRecord)
