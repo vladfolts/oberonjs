@@ -46,7 +46,7 @@ TYPE
     PRecord* = POINTER TO Record;
 
     RecordField* = RECORD(Types.RecordField)
-        PROCEDURE RecordField*(identdef: Context.PIdentdefInfo; type: Types.PType; record: PRecord);
+        PROCEDURE RecordField*(identdef: Context.PIdentdefInfo; type: Types.PStorageType; record: PRecord);
 
         record: PRecord;
     END;
@@ -510,7 +510,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: Types.PType; record: PRecord)
+PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: Types.PStorageType; record: PRecord)
     | SUPER(identdef, type);
 BEGIN
     SELF.record := record;

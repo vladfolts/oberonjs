@@ -1,4 +1,22 @@
 var RTL$ = {
+    makeArray: function (/*dimensions, initializer*/){
+        var forward = Array.prototype.slice.call(arguments);
+        var result = new Array(forward.shift());
+        var i;
+        if (forward.length == 1){
+            var init = forward[0];
+            if (typeof init == "function")
+                for(i = 0; i < result.length; ++i)
+                    result[i] = init();
+            else
+                for(i = 0; i < result.length; ++i)
+                    result[i] = init;
+        }
+        else
+            for(i = 0; i < result.length; ++i)
+                result[i] = this.makeArray.apply(this, forward);
+        return result;
+    },
     assert: function (condition){
         if (!condition)
             throw new Error("assertion failed");
@@ -80,6 +98,11 @@ var RTL$ = {
 };
 var test = function (){
 var m = {};
+function anonymous$1(){
+	this.$m = {};
+}
+var r = new anonymous$1();
+var a = RTL$.makeArray(1, {});
 
 function ForEach(){
 	var m = {};
@@ -196,6 +219,11 @@ function assign(a/*MAP OF INTEGER*/){
 	var v4 = RTL$.cloneMapOfScalars(returnLocalMap());
 	var v5 = RTL$.cloneMapOfScalars(returnNonLocalMap(v));
 }
+
+function passByRef(m/*VAR MAP OF INTEGER*/){
+	m["abc"] = 123;
+	RTL$.assert(Object.prototype.hasOwnProperty.call(m, "abc"));
+}
 var $map1 = m;
 for(var k in $map1){
 	var v = $map1[k];
@@ -204,4 +232,7 @@ for(var k in $map1){
 		var v2 = $map2[k2];
 	}
 }
+passByRef(m);
+passByRef(r.$m);
+passByRef(a[0]);
 }();

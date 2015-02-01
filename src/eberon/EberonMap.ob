@@ -72,6 +72,10 @@ BEGIN
     RETURN result;
 END;
 
+PROCEDURE Type.isScalar(): BOOLEAN;
+    RETURN FALSE;
+END;
+
 PROCEDURE MethodCallRemove.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);

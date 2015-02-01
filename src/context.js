@@ -450,8 +450,7 @@ exports.Designator = ChainedContext.extend({
             new Code.Designator(code, this.__lval ? this.__lval : code, refCode, this.__currentType, this.__info, this.__scope));
     },
     __makeRefCode: function(code){
-        if (   this.__currentType instanceof Type.Array
-            || this.__currentType instanceof Type.Record
+        if (   !this.__currentType.isScalar()
             || this.__info.isReference())
             return code;
         if (this.__derefCode)
@@ -1715,7 +1714,7 @@ function isTypeRecursive(type, base){
     if (type instanceof Type.Record){
         if (isTypeRecursive(Type.recordBase(type), base))
             return true;
-        var fields = type.fields;
+        var fields = Type.recordOwnFields(type);
         for(var fieldName in fields){
             if (isTypeRecursive(fields[fieldName].type(), base))
                 return true;
@@ -1786,7 +1785,7 @@ exports.RecordDecl = ChainedContext.extend({
     },
     __generateFieldsInitializationCode: function(){
         var result = "";
-        var ownFields = this.__type.fields;
+        var ownFields = Type.recordOwnFields(this.__type);
         for(var f in ownFields){
             var fieldType = ownFields[f].type();
             result += "this." + Type.mangleField(f, fieldType) + " = " + fieldType.initializer(this) + ";\n";

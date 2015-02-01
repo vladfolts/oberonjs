@@ -16,7 +16,7 @@ TYPE
 
     NonRecordInitCall = RECORD(Procedure.CallGenerator)
         cx: LanguageContext.PType;
-        type: Types.PType;
+        type: Types.PStorageType;
         field: STRING;
         code: STRING;
     END;
@@ -41,14 +41,14 @@ BEGIN
     RETURN Code.makeSimpleExpression(code, NIL);
 END;
 
-PROCEDURE fieldInitLval(field: STRING; type: Types.PType): STRING;
+PROCEDURE fieldInitLval(field: STRING; type: Types.PStorageType): STRING;
     RETURN "this." + Types.mangleField(field, type);
 END;
 
 PROCEDURE RecordInitCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
     e <- SUPER(args, cx);
-    t <- e.type();
+    t <- e.type()(Types.PStorageType);
     RETURN Code.makeSimpleExpression(fieldInitLval(SELF.field, t) + " = " + e.code(), t);
 END;
 
@@ -117,7 +117,7 @@ BEGIN
 END;
 
 PROCEDURE makeFieldInitCall*(
-    type: Types.PType; 
+    type: Types.PStorageType; 
     cx: LanguageContext.PType;
     field: STRING
     ): Procedure.PCallGenerator;

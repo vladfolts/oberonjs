@@ -106,21 +106,23 @@ TYPE
     END;
     PField* = POINTER TO Field;
 
+    PStorageType* = POINTER TO StorageType;
+
     RecordField* = RECORD(Field)
-        PROCEDURE RecordField*(identdef: Context.PIdentdefInfo; type: PType);
+        PROCEDURE RecordField*(identdef: Context.PIdentdefInfo; type: PStorageType);
 
         PROCEDURE identdef*(): Context.PIdentdefInfo;
 
         mIdentdef: Context.PIdentdefInfo;
-        mType: PType;
+        mType: PStorageType;
     END;
     PRecordField* = POINTER TO RecordField;
 
     StorageType* = RECORD(Type)    
         PROCEDURE initializer*(cx: Context.Type): STRING;
         PROCEDURE denote*(id: STRING; isReadObly: BOOLEAN): PField;
+        PROCEDURE isScalar*(): BOOLEAN;
     END;
-    PStorageType* = POINTER TO StorageType;
 
     NamedType* = RECORD(StorageType)
         PROCEDURE NamedType(name: STRING);
@@ -129,9 +131,9 @@ TYPE
     END;
 
     Array* = RECORD(NamedType)
-        PROCEDURE Array*(elementsType: PType);
+        PROCEDURE Array*(elementsType: PStorageType);
 
-        elementsType-: PType
+        elementsType-: PStorageType
     END;
     PArray* = POINTER TO Array;
 
@@ -140,7 +142,7 @@ TYPE
     POpenArray* = POINTER TO OpenArray;
 
     StaticArray* = RECORD(Array)
-        PROCEDURE StaticArray*(initializer: STRING; elementsType: PType; len: INTEGER); 
+        PROCEDURE StaticArray*(initializer: STRING; elementsType: PStorageType; len: INTEGER); 
 
         PROCEDURE length*(): INTEGER;
 
@@ -190,6 +192,8 @@ TYPE
 
     PBasicType* = POINTER TO BasicType;
 
+    FieldsMap = MAP OF PField;
+
     Record* = RECORD(NamedType)
         PROCEDURE Record*(name: STRING; cons: STRING; scope: ScopeBase.PType);
 
@@ -199,7 +203,7 @@ TYPE
         PROCEDURE codeForNew*(cx: Context.Type): STRING;
         PROCEDURE finalize*();
 
-        fields-: MAP OF PField;
+        fields-: FieldsMap;
         base-:   PRecord;
         cons-:   STRING;
         scope-:  ScopeBase.PType;
@@ -260,6 +264,14 @@ BEGIN
     END;
     SELF.notExported.clear();
 END Record.finalize;
+
+PROCEDURE Record.isScalar(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE recordOwnFields*(r: Record): FieldsMap;
+    RETURN r.fields;
+END;
 
 PROCEDURE Record.Record(name: STRING; cons: STRING; scope: ScopeBase.PType)
     | SUPER(name),
@@ -404,6 +416,10 @@ PROCEDURE BasicType.initializer(cx: Context.Type): STRING;
     RETURN SELF.mInitializer
 END BasicType.initializer;
 
+PROCEDURE BasicType.isScalar(): BOOLEAN;
+    RETURN TRUE;
+END;
+
 PROCEDURE Nil.description(): STRING;
     RETURN "NIL"
 END Nil.description;
@@ -546,6 +562,10 @@ BEGIN
     RETURN existingField(base^, id, d^)
 END;
 
+PROCEDURE Pointer.isScalar(): BOOLEAN;
+    RETURN TRUE;
+END;
+
 PROCEDURE foldArrayDimensions(VAR a: Array; dimToStr: ArrayDimensionDescriptionCallback; VAR sizes, of: STRING);
 BEGIN  
     elementsType <- a.elementsType;
@@ -587,7 +607,11 @@ END arrayDescription;
 
 PROCEDURE Array.description(): STRING;
     RETURN arrayDescription(SELF, arrayDimensionDescription)
-END Array.description;
+END;
+
+PROCEDURE Array.isScalar(): BOOLEAN;
+    RETURN FALSE;
+END;
 
 PROCEDURE StorageType.denote(id: STRING; isReadObly: BOOLEAN): PField;
 BEGIN
@@ -604,24 +628,20 @@ PROCEDURE StaticArray.initializer(cx: Context.Type): STRING;
     RETURN SELF.mInitializer
 END StaticArray.initializer;
 
-PROCEDURE arrayElementsType*(a: Array): PType;
+PROCEDURE arrayElementsType*(a: Array): PStorageType;
     RETURN a.elementsType
 END arrayElementsType;
 
-PROCEDURE arrayBaseElementsType*(a: Array): PType;
+PROCEDURE arrayBaseElementsType*(a: Array): PStorageType;
 VAR
-    result: PType;
+    result: PStorageType;
 BEGIN
     result := a.elementsType;
     WHILE result IS PArray DO
         result := result(PArray).elementsType;
     END;
-    RETURN result
-END arrayBaseElementsType;
-
-PROCEDURE isScalar*(VAR t: Type): BOOLEAN;
-    RETURN ~(t IS Array) & ~(t IS Record) 
-END isScalar;
+    RETURN result;
+END;
 
 PROCEDURE StaticArray.length(): INTEGER;
     RETURN SELF.len
@@ -634,6 +654,10 @@ END Procedure.initializer;
 PROCEDURE Procedure.description(): STRING;
     RETURN SELF.name
 END Procedure.description;
+
+PROCEDURE Procedure.isScalar(): BOOLEAN;
+    RETURN TRUE;
+END;
 
 PROCEDURE DefinedProcedure.designatorCode(id: STRING): STRING;
     RETURN id
@@ -674,7 +698,7 @@ PROCEDURE NamedType.NamedType(name: STRING)
     | name(name);
 END;
 
-PROCEDURE Array.Array(elementsType: PType)
+PROCEDURE Array.Array(elementsType: PStorageType)
     | SUPER(""),
       elementsType(elementsType);
 BEGIN
@@ -682,7 +706,7 @@ END;
 
 PROCEDURE StaticArray.StaticArray(
     initializer: STRING;
-    elementsType: PType;
+    elementsType: PStorageType;
     len: INTEGER ) | 
     SUPER(elementsType),
     mInitializer(initializer),
@@ -745,12 +769,12 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE mangleField*(id: STRING; type: PType): STRING;
+PROCEDURE mangleField*(id: STRING; type: PStorageType): STRING;
 BEGIN
     result <- id;
-    IF isScalar(type^) 
+    IF type.isScalar() 
         OR ((type IS PArray)
-            & isScalar(arrayBaseElementsType(type^)^)) THEN
+            & arrayBaseElementsType(type^).isScalar()) THEN
         result := mangleJSProperty(result);
     ELSE
         result := "$" + result;
@@ -786,7 +810,7 @@ PROCEDURE RecordField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): PId;
     RETURN makeVariable(SELF.mType, isReadOnly);
 END;
 
-PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: PType)
+PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: PStorageType)
     | mIdentdef(identdef),
       mType(type);
 END;

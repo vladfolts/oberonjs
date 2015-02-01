@@ -153,9 +153,9 @@ PROCEDURE cloneArray*(t: Types.Array; code: STRING; rtl: OberonRtl.Type): STRING
 VAR
     result: STRING;
 BEGIN
-    IF Types.isScalar(Types.arrayElementsType(t)^) THEN
+    IF Types.arrayElementsType(t).isScalar() THEN
         result := code + ".slice()";
-    ELSIF Types.isScalar(Types.arrayBaseElementsType(t)^) THEN 
+    ELSIF Types.arrayBaseElementsType(t).isScalar() THEN 
         result := rtl.cloneArrayOfScalars(code);
     ELSE
         result := rtl.cloneArrayOfRecords(code);

@@ -3,6 +3,8 @@ TYPE
     MapOfInteger = MAP OF INTEGER;
 VAR
     m: MapOfInteger;
+    r: RECORD m: MapOfInteger; END;
+    a: ARRAY 1 OF MapOfInteger;
 
 PROCEDURE ForEach();
 VAR
@@ -127,9 +129,19 @@ BEGIN
     v5 <- returnNonLocalMap(v);
 END;
 
+PROCEDURE passByRef(VAR m: MapOfInteger);
+BEGIN
+    m["abc"] := 123;
+    ASSERT("abc" IN m);
+END;
+
 BEGIN
     FOREACH v, k IN m DO
         FOREACH v2, k2 IN m DO
         END;
     END;
+
+    passByRef(m);
+    passByRef(r.m);
+    passByRef(a[0]);
 END test.

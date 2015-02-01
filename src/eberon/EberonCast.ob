@@ -19,9 +19,9 @@ PROCEDURE copyArray(t: Types.Array; leftCode, rightCode: STRING; rtl: OberonRtl.
 VAR
     result: STRING;
 BEGIN
-    IF Types.isScalar(Types.arrayElementsType(t)^) THEN
+    IF Types.arrayElementsType(t).isScalar() THEN
         result := "Array.prototype.splice.apply(" + leftCode + ", [0, Number.MAX_VALUE].concat(" + rightCode + "))";
-    ELSIF Types.isScalar(Types.arrayBaseElementsType(t)^) THEN 
+    ELSIF Types.arrayBaseElementsType(t).isScalar() THEN 
         result := rtl.copyArrayOfScalars(rightCode, leftCode);
     ELSE
         result := rtl.copyArrayOfRecords(rightCode, leftCode);

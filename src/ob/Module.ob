@@ -55,8 +55,12 @@ PROCEDURE AnyType.denote(id: STRING; isReadObly: BOOLEAN): Types.PField;
 END;
 
 PROCEDURE AnyType.designatorCode(id: STRING): STRING;
-    RETURN id
-END AnyType.designatorCode;
+    RETURN id;
+END;
+
+PROCEDURE AnyType.isScalar(): BOOLEAN;
+    RETURN FALSE;
+END;
 
 PROCEDURE AnyField.id(): STRING;
     RETURN "any field"
