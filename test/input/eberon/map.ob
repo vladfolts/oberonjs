@@ -1,10 +1,20 @@
 MODULE test;
 TYPE
     MapOfInteger = MAP OF INTEGER;
+
+    RecordWithMapInitializedInConstructor = RECORD
+        PROCEDURE RecordWithMapInitializedInConstructor(m: MapOfInteger);
+
+        m: MapOfInteger;
+    END;
 VAR
     m: MapOfInteger;
     r: RECORD m: MapOfInteger; END;
     a: ARRAY 1 OF MapOfInteger;
+
+PROCEDURE RecordWithMapInitializedInConstructor.RecordWithMapInitializedInConstructor(m: MapOfInteger)
+    | m(m);
+END;
 
 PROCEDURE ForEach();
 VAR

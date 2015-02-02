@@ -1179,7 +1179,8 @@ exports.suite = {
         pass("PROCEDURE T.T() | i(123); END;"),
         fail(["PROCEDURE T.T() | i(); END;", "single argument expected to initialize field 'i'"],
              ["PROCEDURE T.T() | i(123, 456); END;", "single argument expected to initialize field 'i'"],
-             ["PROCEDURE T.T() | i(TRUE); END;", "type mismatch: 'i' is 'INTEGER' and cannot be assigned to 'BOOLEAN' expression"]
+             ["PROCEDURE T.T() | i(TRUE); END;", 
+              "type mismatch: field 'i' is 'INTEGER' and cannot be initialized using 'BOOLEAN' expression"]
             )
         ),
     "initialize array fields": testWithContext(
@@ -1188,7 +1189,7 @@ exports.suite = {
                 ),
         pass("PROCEDURE RecordWithArray.RecordWithArray(a: ARRAY OF INTEGER) | aDynamic(a); END;"),
         fail(["PROCEDURE RecordWithArray.RecordWithArray(a: ARRAY OF INTEGER) | aStatic(a); END;", 
-              "type mismatch: 'aStatic' is 'ARRAY 3 OF INTEGER' and cannot be assigned to 'ARRAY OF INTEGER' expression"]
+              "type mismatch: field 'aStatic' is 'ARRAY 3 OF INTEGER' and cannot be initialized using 'ARRAY OF INTEGER' expression"]
             )
         ),
     "initialize fields (of record type)": testWithContext(

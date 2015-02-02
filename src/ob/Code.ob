@@ -18,7 +18,7 @@ TYPE
         PROCEDURE Designator*(code: STRING; lval: STRING; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: ScopeBase.PType);
 
         PROCEDURE code(): STRING;
-        PROCEDURE lval(): STRING;
+        PROCEDURE lval*(): STRING;
         PROCEDURE refCode(): RefCodeProc;
         PROCEDURE type(): Types.PType;
         PROCEDURE info*(): Types.PId;

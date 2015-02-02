@@ -1,5 +1,5 @@
 MODULE EberonConstructor;
-IMPORT Code, EberonRecord, Errors, LanguageContext, Operator, Procedure, Stream, Types;
+IMPORT Cast, Code, EberonCast, EberonRecord, Errors, LanguageContext, Operator, Procedure, Stream, Types;
 TYPE
     ConstructorCall = RECORD(Procedure.StdCall)
         recordType: EberonRecord.PRecord;
@@ -74,16 +74,20 @@ BEGIN
 END;
 
 PROCEDURE NonRecordInitCall.handleArgument(e: Code.PExpression);
+VAR
+    op: Cast.PCastOp;
 BEGIN
     IF LEN(SELF.code) # 0 THEN
         raiseSingleArgumentException(SELF);
     END;
 
-    variable <- Types.makeVariable(SELF.type, FALSE);
+    IF SELF.cx.types.implicitCast(e.type(), SELF.type, FALSE, Operator.castOperations, op)
+        # Cast.errNo THEN
+            Errors.raise("type mismatch: field '" + SELF.field + "' is '" + SELF.type.description()
+                         + "' and cannot be initialized using '" + e.type().description() + "' expression");
+    END;
     lval <- fieldInitLval(SELF.field, SELF.type);
-    designator <- NEW Code.Designator(SELF.field, lval, NIL, SELF.type, variable, NIL);
-    left <- Code.makeExpression(SELF.field, SELF.type, designator, NIL);
-    SELF.code := Operator.assign(left, e, SELF.cx^);    
+    SELF.code := lval + " = " + op.clone(SELF.cx.rtl, e);
 END;
         
 PROCEDURE NonRecordInitCall.end(): Code.PExpression;

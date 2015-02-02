@@ -17,10 +17,6 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-    assert: function (condition){
-        if (!condition)
-            throw new Error("assertion failed");
-    },
     cloneMapOfScalars: function (from){
         var result = {};
         this.copyMapOfScalars(from, result);
@@ -34,6 +30,10 @@ var RTL$ = {
     clearMap: function (map){
         for(var p in map)
             delete map[p];
+    },
+    assert: function (condition){
+        if (!condition)
+            throw new Error("assertion failed");
     },
     makeCharArray: function (/*dimensions*/){
         var forward = Array.prototype.slice.call(arguments);
@@ -103,6 +103,9 @@ function anonymous$1(){
 }
 var r = new anonymous$1();
 var a = RTL$.makeArray(1, {});
+function RecordWithMapInitializedInConstructor(m/*MAP OF INTEGER*/){
+	this.$m = RTL$.cloneMapOfScalars(m);
+}
 
 function ForEach(){
 	var m = {};

@@ -493,7 +493,7 @@ BEGIN
         result := assignArrayFromString(leftType(Types.PArray)^, rightType^);
     ELSE
         IF cx.types.implicitCast(rightType, leftType, FALSE, castOperations, castOperation)
-            # Cast.errNo THEN;
+            # Cast.errNo THEN
             Errors.raise("type mismatch: '" + left.code() + "' is '" + leftType.description()
                          + "' and cannot be assigned to '" + rightType.description() + "' expression");
         END;
