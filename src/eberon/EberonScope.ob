@@ -1,5 +1,5 @@
 MODULE EberonScope;
-IMPORT Errors, JsMap, Scope, Symbols;
+IMPORT Errors, Scope, Symbols;
 TYPE
     Operator = RECORD(Scope.Type)
         parent: Scope.PType
@@ -34,7 +34,7 @@ PROCEDURE Operator.generateTempVar(pattern: STRING): STRING;
     RETURN SELF.parent.generateTempVar(pattern);
 END;
 
-PROCEDURE makeOperator*(parent: Scope.PType; stdSymbols: JsMap.Type): Scope.PType;
+PROCEDURE makeOperator*(parent: Scope.PType; stdSymbols: Symbols.Map): Scope.PType;
 BEGIN
     result <- NEW Operator(stdSymbols);
     result.parent := parent;

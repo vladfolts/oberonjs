@@ -1,6 +1,6 @@
 MODULE Types;
 IMPORT
-    Context, Errors, JS, JsMap, Object, ScopeBase, Str := String;
+    Context, Errors, JS, Object, ScopeBase, Str := String;
 TYPE
     Id* = RECORD(Object.Type)
         PROCEDURE idType*(): STRING

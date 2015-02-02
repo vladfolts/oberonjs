@@ -1,7 +1,6 @@
 MODULE Scope;
 IMPORT 
     Errors, 
-    JsMap, 
     Object, 
     Procedures := Procedure, 
     ScopeBase,
@@ -19,15 +18,15 @@ TYPE
     END;
 
     Type* = RECORD(ScopeBase.Type)
-        PROCEDURE Type*(stdSymbols: JsMap.Type);
+        PROCEDURE Type*(stdSymbols: Symbols.Map);
 
         PROCEDURE addSymbol*(s: Symbols.PSymbol; exported: BOOLEAN);
         PROCEDURE findSymbol*(id: STRING): Symbols.PFoundSymbol;
         PROCEDURE close();
         PROCEDURE generateTempVar*(pattern: STRING): STRING;
 
-        stdSymbols: JsMap.Type;
-        symbols: JsMap.Type;
+        stdSymbols: Symbols.Map;
+        symbols: Symbols.Map;
         unresolved: Unresolved;
         finalizers: ARRAY * OF POINTER TO Finalizer
     END;
@@ -38,40 +37,34 @@ TYPE
     END;
 
     CompiledModule = RECORD(Types.Module)
-        PROCEDURE CompiledModule(name: STRING);
-
         PROCEDURE findSymbol(id: STRING): Symbols.PFoundSymbol;
 
-        exports: JsMap.Type
+        exports: Symbols.Map;
     END;
 
     Module* = RECORD(Type)
-        PROCEDURE Module*(name: STRING; stdSymbols: JsMap.Type);
+        PROCEDURE Module*(name: STRING; stdSymbols: Symbols.Map);
 
         symbol: Symbols.PSymbol;
-        exports: JsMap.Type;
+        exports: Symbols.Map;
         tempVarCounter: INTEGER;
     END;
     PModule = POINTER TO Module;
 
-PROCEDURE addSymbolForType*(t: Types.PBasicType; result: JsMap.Type);
-VAR
-    name: STRING;
+PROCEDURE addSymbolForType*(t: Types.PBasicType; VAR result: Symbols.Map);
 BEGIN
-    name := Types.typeName(t^);
-    JsMap.put(result, name, NEW Symbols.Symbol(name, NEW Types.TypeId(t)));
-END addSymbolForType;
+    result[t.name] := NEW Symbols.Symbol(t.name, NEW Types.TypeId(t));
+END;
 
-PROCEDURE makeStdSymbols*(): JsMap.Type;
+PROCEDURE makeStdSymbols*(): Symbols.Map;
 VAR 
-    result: JsMap.Type;
+    result: Symbols.Map;
 
     PROCEDURE addSymbol(t: Types.PBasicType);
     BEGIN
         addSymbolForType(t, result);
-    END addSymbol;
+    END;
 BEGIN
-    result := JsMap.make();
     addSymbol(Types.basic.bool);
     addSymbol(Types.basic.ch);
     addSymbol(Types.basic.integer);
@@ -81,25 +74,18 @@ BEGIN
 
     FOR i <- 0 TO LEN(Procedures.predefined) - 1 DO
         proc <- Procedures.predefined[i];
-        JsMap.put(result, proc.id(), proc);
+        result[proc.id()] := proc;
     END;
     RETURN result
-END makeStdSymbols;
-
-PROCEDURE Type.Type(stdSymbols: JsMap.Type)
-    | stdSymbols(stdSymbols),
-      symbols(JsMap.make());
 END;
 
-PROCEDURE CompiledModule.CompiledModule(name: STRING)
-    | SUPER(name),
-      exports(JsMap.make());
+PROCEDURE Type.Type(stdSymbols: Symbols.Map)
+    | stdSymbols(stdSymbols);
 END;
 
-PROCEDURE Module.Module(name: STRING; stdSymbols: JsMap.Type)
+PROCEDURE Module.Module(name: STRING; stdSymbols: Symbols.Map)
     | SUPER(stdSymbols),
-      symbol(NEW Symbols.Symbol(name, NEW CompiledModule(name))),
-      exports(JsMap.make());
+      symbol(NEW Symbols.Symbol(name, NEW CompiledModule(name)));
 BEGIN
     SELF.addSymbol(SELF.symbol, FALSE);
 END;
@@ -109,7 +95,7 @@ BEGIN
     IF s.unresolved.indexOf(id) = -1 THEN
         s.unresolved.add(id);
     END;
-END addUnresolved;
+END;
 
 PROCEDURE resolve*(VAR s: Type; symbol: Symbols.PSymbol);
 VAR
@@ -131,11 +117,11 @@ BEGIN
         END;
         s.unresolved.remove(i);
     END;
-END resolve;
+END;
 
 PROCEDURE unresolved*(s: Type): Unresolved;
     RETURN s.unresolved
-END unresolved;
+END;
 
 PROCEDURE Type.close();
 BEGIN
@@ -146,7 +132,7 @@ BEGIN
 
     (* make second close() call safe and free memory *)
     SELF.finalizers.clear(); 
-END Type.close;
+END;
 
 PROCEDURE Finalizer.Finalizer(proc: ScopeBase.FinalizerProc; closure: Object.PType)
     | proc(proc),
@@ -160,36 +146,36 @@ END;
 
 PROCEDURE close*(s: Type): Unresolved;
     RETURN s.unresolved
-END close;
+END;
 
 PROCEDURE Type.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
-VAR
-    id: STRING;
 BEGIN
-    id := s.id();
+    id <- s.id();
     IF SELF.findSymbol(id) # NIL THEN
         Errors.raise("'" + id + "' already declared");
     END;
-    JsMap.put(SELF.symbols, id, s);
-END Type.addSymbol;
+    SELF.symbols[id] := s;
+END;
 
 PROCEDURE Type.findSymbol(id: STRING): Symbols.PFoundSymbol;
 VAR
-    result: Object.PType;
+    result: Symbols.PSymbol;
     found: Symbols.PFoundSymbol;
 BEGIN
-    IF ~JsMap.find(SELF.symbols, id, result) THEN
-        void <- JsMap.find(SELF.stdSymbols, id, result);
+    IF id IN SELF.symbols THEN
+        result := SELF.symbols[id];
+    ELSIF id IN SELF.stdSymbols THEN
+        result := SELF.stdSymbols[id];
     END;
     IF result # NIL THEN
-        found := NEW Symbols.FoundSymbol(result(Symbols.PSymbol), SELF(POINTER))
+        found := NEW Symbols.FoundSymbol(result, SELF(POINTER))
     END;
     RETURN found
-END Type.findSymbol;
+END;
 
 PROCEDURE Procedure.name(): STRING;
     RETURN "procedure"
-END Procedure.name;
+END;
 
 PROCEDURE Procedure.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
 VAR
@@ -201,7 +187,7 @@ BEGIN
                      + info.idType() + " '" + s.id() + "'");
     END;
     SUPER(s, exported);
-END Procedure.addSymbol;
+END;
 
 PROCEDURE generateTempVar(pattern: STRING; VAR counter: INTEGER): STRING;
 BEGIN
@@ -217,57 +203,46 @@ PROCEDURE Module.generateTempVar(pattern: STRING): STRING;
     RETURN generateTempVar(pattern, SELF.tempVarCounter);
 END;
 
-PROCEDURE makeProcedure*(stdSymbols: JsMap.Type): PType;
+PROCEDURE makeProcedure*(stdSymbols: Symbols.Map): PType;
     RETURN NEW Procedure(stdSymbols);
 END;
 
-PROCEDURE addExport(id: STRING; value: Object.PType; VAR closure: Object.Type);
-VAR
-    symbol: Symbols.PSymbol;
-    info: Types.PId;
+PROCEDURE defineExports*(VAR m: CompiledModule; exports: Symbols.Map);
 BEGIN
-    symbol := value(Symbols.PSymbol);
-    info := symbol.info();
-    IF info IS Types.PVariable THEN
-        symbol := NEW Symbols.Symbol(id, Types.makeExportedVariable(info(Types.PVariable)^));
+    FOREACH k, id IN exports DO
+        symbol <- k;
+        info <- symbol.info();
+        IF info IS Types.PVariable THEN
+            symbol := NEW Symbols.Symbol(id, Types.makeExportedVariable(info^));
+        END;
+        m.exports[id] := symbol;
     END;
-    JsMap.put(closure(CompiledModule).exports, id, symbol);
-END addExport;
-
-PROCEDURE defineExports*(VAR m: CompiledModule; exports: JsMap.Type);
-BEGIN
-    JsMap.forEach(exports, addExport, m);
-END defineExports;
+END;
 
 PROCEDURE CompiledModule.findSymbol(id: STRING): Symbols.PFoundSymbol;
 VAR
-    s: Object.PType;
     result: Symbols.PFoundSymbol;
 BEGIN
-    IF JsMap.find(SELF.exports, id, s) THEN
-        result := NEW Symbols.FoundSymbol(s(Symbols.PSymbol), NIL);
+    IF id IN SELF.exports THEN
+        result := NEW Symbols.FoundSymbol(SELF.exports[id], NIL);
     END;
     RETURN result
-END CompiledModule.findSymbol;
+END;
 
 PROCEDURE Module.name(): STRING;
     RETURN "module"
-END Module.name;
+END;
 
 PROCEDURE Module.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
 BEGIN
     SUPER(s, exported);
     IF exported THEN
-        JsMap.put(SELF.exports, s.id(), s);
+        SELF.exports[s.id()] := s;
     END;
-END Module.addSymbol;
+END;
 
 PROCEDURE moduleSymbol*(m: Module): Symbols.PSymbol;
     RETURN m.symbol
-END moduleSymbol;
-
-PROCEDURE moduleExports*(m: Module): JsMap.Type;
-    RETURN m.exports
-END moduleExports;
+END;
 
 END Scope.

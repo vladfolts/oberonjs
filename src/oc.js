@@ -40,7 +40,7 @@ function compileModule(grammar, stream, context, handleErrors){
     return new CompiledModule(
             Scope.moduleSymbol(scope),
             context.codeGenerator().result(),
-            Scope.moduleExports(scope));
+            scope.exports);
 }
 
 function compileModulesFromText(

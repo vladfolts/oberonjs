@@ -1,7 +1,6 @@
 MODULE Code;
 IMPORT 
     CodeGenerator,
-    JsMap, 
     Errors,
     Object, 
     Stream, 
@@ -18,7 +17,7 @@ TYPE
         PROCEDURE Designator*(code: STRING; lval: STRING; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: ScopeBase.PType);
 
         PROCEDURE code(): STRING;
-        PROCEDURE lval*(): STRING;
+        PROCEDURE lval(): STRING;
         PROCEDURE refCode(): RefCodeProc;
         PROCEDURE type(): Types.PType;
         PROCEDURE info*(): Types.PId;
@@ -79,21 +78,19 @@ TYPE
 
     PExpression* = POINTER TO Expression;
 
+    StringsMap = MAP OF STRING;
+
     ModuleGenerator* = RECORD
-        PROCEDURE ModuleGenerator*(name: STRING; imports: JsMap.Strings);
+        PROCEDURE ModuleGenerator*(name: STRING; imports: StringsMap);
 
         PROCEDURE prolog(): STRING;
-        PROCEDURE epilog(exports: JsMap.Type): STRING;
+        PROCEDURE epilog(exports: Symbols.Map): STRING;
 
         name: STRING;
-        imports: JsMap.Strings
+        imports: StringsMap;
     END;
 
     PModuleGenerator = POINTER TO ModuleGenerator;
-
-    Closure = RECORD(Object.Type)
-        result: STRING
-    END;
 
 PROCEDURE Expression.code(): STRING;
     RETURN SELF.mCode
@@ -300,71 +297,51 @@ BEGIN
         result := typeShouldBeExported(s.info(), s.id())
     END;
     RETURN result
-END genExport;
+END;
 
-PROCEDURE genCommaList(name: STRING; VAR closure: Closure);
-BEGIN
-    IF LEN(closure.result) # 0 THEN
-        closure.result := closure.result + ", ";
-    END;
-    closure.result := closure.result + name;
-END genCommaList;
-
-PROCEDURE genAliasesAdaptor(key: STRING; value: STRING; VAR closure: Object.Type);
-BEGIN
-    genCommaList(value, closure(Closure));
-END genAliasesAdaptor;
-
-PROCEDURE ModuleGenerator.prolog(): STRING;
-VAR
-    closure: Closure;
-BEGIN
-    JsMap.forEachString(SELF.imports, genAliasesAdaptor, closure);
-    RETURN "var " + SELF.name + " = function (" + closure.result + "){" + Stream.kCR
-END ModuleGenerator.prolog;
-
-PROCEDURE genExports(s: Symbols.Symbol; VAR closure: Closure);
-VAR
-    code: STRING;
-BEGIN
-    code := genExport(s);
-    IF LEN(code) # 0 THEN
-        IF LEN(closure.result) # 0 THEN
-            closure.result := closure.result + "," + Stream.kCR;
-        END;
-        closure.result := closure.result + CodeGenerator.kTab + s.id() + ": " + code;
-    END;
-END genExports;
-
-PROCEDURE genExportsAdaptor(key: STRING; value: Object.PType; VAR closure: Object.Type);
-BEGIN
-    genExports(value^(Symbols.Symbol), closure(Closure));
-END genExportsAdaptor;
-
-PROCEDURE genImportListAdaptor(key: STRING; value: STRING; VAR closure: Object.Type);
-BEGIN
-    genCommaList(key, closure(Closure));
-END genImportListAdaptor;
-
-PROCEDURE ModuleGenerator.epilog(exports: JsMap.Type): STRING;
+PROCEDURE genCommaList(m: StringsMap; import: BOOLEAN): STRING;
 VAR
     result: STRING;
-    closure: Closure;
 BEGIN
-    JsMap.forEach(exports, genExportsAdaptor, closure);
-    result := closure.result;
+    FOREACH alias, name IN m DO;
+        IF LEN(result) # 0 THEN
+            result := result + ", ";
+        END;
+        IF import THEN
+            result := result + alias;
+        ELSE
+            result := result + name;
+        END;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ModuleGenerator.prolog(): STRING;
+    RETURN "var " + SELF.name + " = function (" + genCommaList(SELF.imports, TRUE) + "){" + Stream.kCR
+END;
+
+PROCEDURE ModuleGenerator.epilog(exports: Symbols.Map): STRING;
+VAR
+    result: STRING;
+BEGIN
+    FOREACH s, k IN exports DO
+        code <- genExport(s^);
+        IF LEN(code) # 0 THEN
+            IF LEN(result) # 0 THEN
+                result := result + "," + Stream.kCR;
+            END;
+            result := result + CodeGenerator.kTab + s.id() + ": " + code;
+        END;
+    END;
+
     IF LEN(result) # 0 THEN
         result := "return {" + Stream.kCR + result + Stream.kCR + "}" + Stream.kCR;
     END;
-    result := result + "}(";
-
-    closure.result := "";
-    JsMap.forEachString(SELF.imports, genImportListAdaptor, closure);
-    result := result + closure.result + ");" + Stream.kCR;
+    result := result + "}(" + genCommaList(SELF.imports, FALSE) + ");" + Stream.kCR;
     RETURN result
-END ModuleGenerator.epilog;
+END;
 
-PROCEDURE ModuleGenerator.ModuleGenerator(name: STRING; imports: JsMap.Strings)
+PROCEDURE ModuleGenerator.ModuleGenerator(name: STRING; imports: StringsMap)
     | name(name),
       imports(imports);
 END;

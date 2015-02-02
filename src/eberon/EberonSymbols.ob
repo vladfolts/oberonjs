@@ -1,22 +1,19 @@
 MODULE EberonSymbols;
-IMPORT EberonMap, EberonString, JsMap, Procedure, Scope, Symbols, Types;
+IMPORT EberonMap, EberonString, Procedure, Scope, Symbols, Types;
 
 PROCEDURE lenArgumentCheck(argType: Types.PType): BOOLEAN;
     RETURN Procedure.lenArgumentCheck(argType) 
         OR (argType = EberonString.string)
 END lenArgumentCheck;
 
-PROCEDURE makeStd*(): JsMap.Type;
-VAR 
-    proc: Symbols.PSymbol;
-    result: JsMap.Type;
+PROCEDURE makeStd*(): Symbols.Map;
 BEGIN
-    result := Scope.makeStdSymbols();
-    proc := Procedure.makeLen(lenArgumentCheck);
-    JsMap.put(result, proc.id(), proc);
+    result <- Scope.makeStdSymbols();
+    proc <- Procedure.makeLen(lenArgumentCheck);
+    result[proc.id()] := proc;
     
     Scope.addSymbolForType(EberonString.string, result);
-    RETURN result
-END makeStd;
+    RETURN result;
+END;
 
 END EberonSymbols.

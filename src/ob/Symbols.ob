@@ -17,6 +17,7 @@ TYPE
     END;
 
     PSymbol* = POINTER TO Symbol;
+    Map* = MAP OF PSymbol;
 
     FoundSymbol* = RECORD
         PROCEDURE FoundSymbol*(s: PSymbol; scope: ScopeBase.PType);
