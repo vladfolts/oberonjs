@@ -316,11 +316,17 @@ exports.suite = {
 "import abstract record": testWithModule(
       "MODULE test;"
     + "TYPE T* = RECORD PROCEDURE m*(); END;"
+    +      "Derived* = RECORD(T) END;"
     + "END test.",
     pass("MODULE m; IMPORT test; TYPE T = RECORD f: POINTER TO test.T; END; END m."
         ),
-    fail(["MODULE m; IMPORT test; TYPE T = RECORD f: test.T; END; END m",
-          "cannot instantiate 'T' because it has abstract method(s): m"])
+    fail(["MODULE m; IMPORT test; TYPE T = RECORD f: test.T; END; END m.",
+          "cannot instantiate 'T' because it has abstract method(s): m"],
+         ["MODULE m; IMPORT test; TYPE T = RECORD(test.T) END; VAR r: T; END m.",
+          "cannot instantiate 'T' because it has abstract method(s): m"],
+         ["MODULE m; IMPORT test; TYPE T = RECORD(test.Derived) END; VAR r: T; END m.",
+          "cannot instantiate 'T' because it has abstract method(s): m"]
+        )
     ),
 "non-scalar variables can be exported": testWithContext(
     context(grammar.declarationSequence, 

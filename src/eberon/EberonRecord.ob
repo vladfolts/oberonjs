@@ -511,9 +511,8 @@ BEGIN
 END;
 
 PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: Types.PStorageType; record: PRecord)
-    | SUPER(identdef, type);
-BEGIN
-    SELF.record := record;
+    | SUPER(identdef, type),
+      record(record);
 END;
 
 END EberonRecord.
