@@ -169,66 +169,58 @@ var methods = {
         }
         return cmp ? cmp : s1.length - s2.length;
     },
-    cloneArrayOfRecords: function(from){
-        var length = from.length;
-        var result = new Array(length);
-        if (length){
-            var method = from[0] instanceof Array 
-                       ? this.cloneArrayOfRecords // this is array of arrays, go deeper
-                       : this.cloneRecord;
-            for(var i = 0; i < result.length; ++i)
-                result[i] = method.call(this, from[i]);
-        }
-        return result;
-    },
-    cloneArrayOfScalars: function(from){
-        var length = from.length;
-        if (!length)
-            return [];
-        if (!(from[0] instanceof Array))
-            return from.slice();
-
-        // this is array of arrays, go deeper
-        var result = new Array(length);
-        for(var i = 0; i < length; ++i)
-            result[i] = this.cloneArrayOfScalars(from[i]);
-        return result;
-    },
-    copyArrayOfRecords: function(from, to){
-        to.splice(0, to.length);
-        var length = from.length;
-        if (!length)
-            return;
-
-        var method = from[0] instanceof Array 
-                   ? this.cloneArrayOfRecords // this is array of arrays, go deeper
-                   : this.cloneRecord;
-        for(var i = 0; i < length; ++i)
-            to.push(method.call(this, from[i]));
-    },
-    copyArrayOfScalars: function(from, to){
-        to.splice(0, to.length);
-        for(var i = 0; i < from.length; ++i)
-            to.push(this.cloneArrayOfScalars(from[i]));
-    },
-    copyRecord: function(from, to){
-        for(var prop in to){
-            if (to.hasOwnProperty(prop)){
-                var v = from[prop];
-                var isScalar = prop[0] != "$";
-                if (isScalar)
-                    to[prop] = v;
+    copy: function(from, to, type){
+        var r = type.record;
+        if (r){
+            for(var f in r){
+                var fieldType = r[f];
+                if (fieldType){
+                    // temporary support for mangled fields
+                    var mangled = "$" + f;
+                    if (!from.hasOwnProperty(mangled))
+                        mangled = f;
+                    this.copy(from[mangled], to[mangled], fieldType);
+                }
                 else
-                    to[prop] = v instanceof Array ? this.cloneArrayOfRecords(v)
-                                                  : this.cloneRecord(v);
+                    to[f] = from[f];
+            }
+            return;
+        }
+        var a = type.array;
+        if (a !== undefined ){
+            if (a === null)
+                // shallow copy
+                Array.prototype.splice.apply(to, [0, to.length].concat(from));
+            else {
+                // deep copy
+                to.splice(0, to.length);
+                for(var i = 0; i < from.length; ++i)
+                    to.push(this.clone(from[i], a));
             }
         }
     },
-    cloneRecord: function(from){
-        var Ctr = from.constructor;
-        var result = new Ctr();
-        this.copyRecord(from, result);
-        return result;
+    clone: function(from, type){
+        var result;
+        var r = type.record;
+        if (r){
+            var Ctr = from.constructor;
+            result = new Ctr();
+            this.copy(from, result, type);
+            return result;
+        }
+        var a = type.array;
+        if (a !== undefined ){
+            if (a === null)
+                // shallow clone
+                return from.slice();
+
+            // deep clone
+            var length = from.length;
+            result = new Array(length);
+            for(var i = 0; i < length; ++i)
+                result[i] = this.clone(from[i], a);
+            return result;
+        }
     },
     assert: function(condition){
         if (!condition)
@@ -239,10 +231,8 @@ var methods = {
 exports.Class = Class;
 exports.rtl = {
     dependencies: { 
-        "cloneRecord": ["copyRecord"],
-        "cloneArrayOfRecords": ["cloneRecord"],
-        "copyArrayOfRecords": ["cloneArrayOfRecords", "cloneRecord"],
-        "copyArrayOfScalars": ["cloneArrayOfScalars"],
+        "copy": ["clone"],
+        "clone": ["copy"],
         "makeCharArray": ["__makeCharArray"],
         "__makeCharArray": ["__setupCharArrayMethods"]
     },

@@ -121,9 +121,9 @@ BEGIN
     
     t <- e.type();
     IF t IS Types.PArray THEN
-        SELF.code := Cast.cloneArray(t^, SELF.code, SELF.cx.rtl^);
+        SELF.code := Cast.cloneArray(t, SELF.code, SELF.cx.rtl^);
     ELSIF t IS Types.PRecord THEN
-        SELF.code := SELF.cx.rtl.cloneRecord(SELF.code);
+        SELF.code := SELF.cx.rtl.clone(SELF.code, Types.generateTypeInfo(t));
     END;
 END AddCallGenerator.handleArgument;
 

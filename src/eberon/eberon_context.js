@@ -357,7 +357,7 @@ var InPlaceVariableInit = Context.Chained.extend({
         if (type instanceof Type.Record){
             EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForCopy);
             if (e.designator())
-                this._code += this.language().rtl.cloneRecord(e.code());
+                this._code += this.language().rtl.clone(e.code(), Type.generateTypeInfo(type));
             else // do not clone if it is temporary, e.g. constructor call
                 this._code += e.code();
         }

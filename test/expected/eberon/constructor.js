@@ -18,8 +18,8 @@ RTL$.extend(DerivedRecordWithParamConstructorWithoutConstructor, RecordWithParam
 function MixAutoAndManualInitFields(){
 	this.iAuto = 0;
 	this.iManual = 123;
-	this.$rAuto = new T();
-	this.$rManual = new RecordWithParamConstructor(345);
+	this.rAuto = new T();
+	this.rManual = new RecordWithParamConstructor(345);
 	this.setManual = 8;
 	this.stringAuto = '';
 }
@@ -57,7 +57,7 @@ function InitializeField(){
 	this.i = 123;
 }
 function InitializeRecordField(){
-	this.$r = new RecordWithParamConstructor(123);
+	this.r = new RecordWithParamConstructor(123);
 }
 function InitializeMangledField(){
 	this.constructor$ = 123;

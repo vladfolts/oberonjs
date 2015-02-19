@@ -1893,7 +1893,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
         else if (id === this.__name){
             var scope = parent.currentScope();
             scope.close();
-            var exports = scope.$exports;
+            var exports = scope.exports;
             Scope.defineExports(Scope.moduleSymbol(scope).info(), exports);
             this.codeGenerator().write(this.__moduleGen.epilog(exports));
         }

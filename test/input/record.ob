@@ -19,7 +19,7 @@ TYPE
     END;
 VAR
 	b1: Base1;
-	r1: T1;
+	r1, r2: T1;
     recordWithInnerRecord: RecordWithInnerRecord;
     recordWithInnerArray: RecordWithInnerArray;
     recordWithMangledFields: RecordWithMangledFields;
@@ -37,6 +37,8 @@ END byRef;
 
 BEGIN
 	b1 := r1;
+    r1 := r2;
+    recordWithInnerArray := recordWithInnerArray;
     p1(r1);
     p2(r1);
 

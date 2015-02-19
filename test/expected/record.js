@@ -23,17 +23,57 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-    copyRecord: function (from, to){
-        for(var prop in to){
-            if (to.hasOwnProperty(prop)){
-                var v = from[prop];
-                var isScalar = prop[0] != "$";
-                if (isScalar)
-                    to[prop] = v;
+    copy: function (from, to, type){
+        var r = type.record;
+        if (r){
+            for(var f in r){
+                var fieldType = r[f];
+                if (fieldType){
+                    // temporary support for mangled fields
+                    var mangled = "$" + f;
+                    if (!from.hasOwnProperty(mangled))
+                        mangled = f;
+                    this.copy(from[mangled], to[mangled], fieldType);
+                }
                 else
-                    to[prop] = v instanceof Array ? this.cloneArrayOfRecords(v)
-                                                  : this.cloneRecord(v);
+                    to[f] = from[f];
             }
+            return;
+        }
+        var a = type.array;
+        if (a !== undefined ){
+            if (a === null)
+                // shallow copy
+                Array.prototype.splice.apply(to, [0, to.length].concat(from));
+            else {
+                // deep copy
+                to.splice(0, to.length);
+                for(var i = 0; i < from.length; ++i)
+                    to.push(this.clone(from[i], a));
+            }
+        }
+    },
+    clone: function (from, type){
+        var result;
+        var r = type.record;
+        if (r){
+            var Ctr = from.constructor;
+            result = new Ctr();
+            this.copy(from, result, type);
+            return result;
+        }
+        var a = type.array;
+        if (a !== undefined ){
+            if (a === null)
+                // shallow clone
+                return from.slice();
+
+            // deep clone
+            var length = from.length;
+            result = new Array(length);
+            for(var i = 0; i < length; ++i)
+                result[i] = this.clone(from[i], a);
+            return result;
         }
     },
     makeRef: function (obj, prop){
@@ -54,11 +94,11 @@ function T1(){
 }
 RTL$.extend(T1, Base1);
 function RecordWithInnerRecord(){
-	this.$r = new T1();
+	this.r = new T1();
 }
 function RecordWithInnerArray(){
 	this.aInts = RTL$.makeArray(3, 0);
-	this.$aRecords = RTL$.makeArray(3, function(){return new T1();});
+	this.aRecords = RTL$.makeArray(3, function(){return new T1();});
 	this.aPointers = RTL$.makeArray(3, null);
 }
 function RecordWithMangledFields(){
@@ -66,7 +106,7 @@ function RecordWithMangledFields(){
 	this.prototype$ = false;
 }
 var b1 = new Base1();
-var r1 = new T1();
+var r1 = new T1();var r2 = new T1();
 var recordWithInnerRecord = new RecordWithInnerRecord();
 var recordWithInnerArray = new RecordWithInnerArray();
 var recordWithMangledFields = new RecordWithMangledFields();
@@ -80,15 +120,17 @@ function p2(r/*VAR T1*/){
 
 function byRef(i/*VAR INTEGER*/){
 }
-RTL$.copyRecord(r1, b1);
+RTL$.copy(r1, b1, {record: {}});
+RTL$.copy(r2, r1, {record: {i: null}});
+RTL$.copy(recordWithInnerArray, recordWithInnerArray, {record: {aInts: {array: null}, aRecords: {array: {record: {i: null}}}, aPointers: {array: null}}});
 p1(r1);
 p2(r1);
-recordWithInnerRecord.$r.i = 123;
-p1(recordWithInnerRecord.$r);
-p2(recordWithInnerRecord.$r);
-byRef(RTL$.makeRef(recordWithInnerRecord.$r, "i"));
+recordWithInnerRecord.r.i = 123;
+p1(recordWithInnerRecord.r);
+p2(recordWithInnerRecord.r);
+byRef(RTL$.makeRef(recordWithInnerRecord.r, "i"));
 recordWithInnerArray.aInts[0] = 123;
-recordWithInnerArray.$aRecords[0].i = 123;
+recordWithInnerArray.aRecords[0].i = 123;
 recordWithInnerArray.aPointers[0].i = 123;
 RTL$.assert(recordWithMangledFields.constructor$ == 0);
 RTL$.assert(!recordWithMangledFields.prototype$);

@@ -149,30 +149,28 @@ PROCEDURE CastOpDoNothing.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRI
     RETURN Code.derefExpression(e).code();
 END;
 
-PROCEDURE cloneArray*(t: Types.Array; code: STRING; rtl: OberonRtl.Type): STRING;
+PROCEDURE cloneArray*(t: Types.PArray; code: STRING; rtl: OberonRtl.Type): STRING;
 VAR
     result: STRING;
 BEGIN
-    IF Types.arrayElementsType(t).isScalar() THEN
+    IF Types.arrayElementsType(t^).isScalar() THEN
         result := code + ".slice()";
-    ELSIF Types.arrayBaseElementsType(t).isScalar() THEN 
-        result := rtl.cloneArrayOfScalars(code);
     ELSE
-        result := rtl.cloneArrayOfRecords(code);
+        result := rtl.clone(code, Types.generateTypeInfo(t));
     END;
     RETURN result
 END;
 
 PROCEDURE CastOpArray.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
-    RETURN left.code() + " = " + cloneArray(right.type()(Types.PArray)^, right.code(), rtl^)
+    RETURN left.code() + " = " + cloneArray(right.type()(Types.PArray), right.code(), rtl^)
 END;
 
 PROCEDURE CastOpArray.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
-    RETURN cloneArray(e.type()(Types.PArray)^, e.code(), rtl^);
+    RETURN cloneArray(e.type()(Types.PArray), e.code(), rtl^);
 END;
 
 PROCEDURE CastOpRecord.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
-    RETURN rtl.copyRecord(right.code(), left.code())
+    RETURN rtl.copy(right.code(), left.code(), Types.generateTypeInfo(left.type()))
 END;
 
 PROCEDURE CastOpStrToChar.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;

@@ -23,22 +23,56 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-    cloneRecord: function (from){
-        var Ctr = from.constructor;
-        var result = new Ctr();
-        this.copyRecord(from, result);
-        return result;
+    clone: function (from, type){
+        var result;
+        var r = type.record;
+        if (r){
+            var Ctr = from.constructor;
+            result = new Ctr();
+            this.copy(from, result, type);
+            return result;
+        }
+        var a = type.array;
+        if (a !== undefined ){
+            if (a === null)
+                // shallow clone
+                return from.slice();
+
+            // deep clone
+            var length = from.length;
+            result = new Array(length);
+            for(var i = 0; i < length; ++i)
+                result[i] = this.clone(from[i], a);
+            return result;
+        }
     },
-    copyRecord: function (from, to){
-        for(var prop in to){
-            if (to.hasOwnProperty(prop)){
-                var v = from[prop];
-                var isScalar = prop[0] != "$";
-                if (isScalar)
-                    to[prop] = v;
+    copy: function (from, to, type){
+        var r = type.record;
+        if (r){
+            for(var f in r){
+                var fieldType = r[f];
+                if (fieldType){
+                    // temporary support for mangled fields
+                    var mangled = "$" + f;
+                    if (!from.hasOwnProperty(mangled))
+                        mangled = f;
+                    this.copy(from[mangled], to[mangled], fieldType);
+                }
                 else
-                    to[prop] = v instanceof Array ? this.cloneArrayOfRecords(v)
-                                                  : this.cloneRecord(v);
+                    to[f] = from[f];
+            }
+            return;
+        }
+        var a = type.array;
+        if (a !== undefined ){
+            if (a === null)
+                // shallow copy
+                Array.prototype.splice.apply(to, [0, to.length].concat(from));
+            else {
+                // deep copy
+                to.splice(0, to.length);
+                for(var i = 0; i < from.length; ++i)
+                    to.push(this.clone(from[i], a));
             }
         }
     },
@@ -69,13 +103,13 @@ function void$(){
 }
 
 function valueArgs(r/*Derived*/, i/*INTEGER*/, a/*ARRAY 10 OF INTEGER*/){
-	var v1 = RTL$.cloneRecord(r);
+	var v1 = RTL$.clone(r, {record: {derivedField: null}});
 	var v2 = i;
 	var v3 = a.slice();
 }
 
 function varArgs(r/*VAR Derived*/, i/*VAR INTEGER*/, a/*ARRAY 10 OF INTEGER*/){
-	var v1 = RTL$.cloneRecord(r);
+	var v1 = RTL$.clone(r, {record: {derivedField: null}});
 	var v2 = i.get();
 	var v3 = a.slice();
 }
@@ -102,7 +136,7 @@ var v6 = i + i | 0;
 var v7 = p();
 var v8 = void$;
 var do$ = 0;
-var tempRecord = RTL$.cloneRecord(r);
+var tempRecord = RTL$.clone(r, {record: {derivedField: null}});
 var tempArray = a.slice();
 pdVar = new Derived();
 pbVar = pdVar;

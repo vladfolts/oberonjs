@@ -236,6 +236,8 @@ VAR
     numeric*: ARRAY * OF PType;
     nil*: POINTER TO Nil;
 
+    pGenerateTypeInfo: PROCEDURE(type: PType): STRING;
+
 PROCEDURE TypeId.description(): STRING;
 VAR
     t: PType;
@@ -632,17 +634,6 @@ PROCEDURE arrayElementsType*(a: Array): PStorageType;
     RETURN a.elementsType
 END arrayElementsType;
 
-PROCEDURE arrayBaseElementsType*(a: Array): PStorageType;
-VAR
-    result: PStorageType;
-BEGIN
-    result := a.elementsType;
-    WHILE result IS PArray DO
-        result := result(PArray).elementsType;
-    END;
-    RETURN result;
-END;
-
 PROCEDURE StaticArray.length(): INTEGER;
     RETURN SELF.len
 END StaticArray.length;
@@ -770,16 +761,7 @@ BEGIN
 END;
 
 PROCEDURE mangleField*(id: STRING; type: PStorageType): STRING;
-BEGIN
-    result <- id;
-    IF type.isScalar() 
-        OR ((type IS PArray)
-            & arrayBaseElementsType(type^).isScalar()) THEN
-        result := mangleJSProperty(result);
-    ELSE
-        result := "$" + result;
-    END;
-    RETURN result;
+    RETURN mangleJSProperty(id);
 END;
 
 PROCEDURE RecordField.id(): STRING;
@@ -815,6 +797,36 @@ PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: PStorag
       mType(type);
 END;
 
+PROCEDURE dumpRecordFields*(type: PRecord): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF type.base # NIL THEN
+        result := dumpRecordFields(type.base);
+    END;
+    FOREACH v, k IN type.fields DO
+        IF LEN(result) # 0 THEN
+            result := result + ", ";
+        END;
+        result := result + k + ": " + pGenerateTypeInfo(v.type());
+    END;
+    RETURN result;
+END;
+
+PROCEDURE generateTypeInfo*(type: PType): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF type IS PRecord THEN
+        result := "{record: {" + dumpRecordFields(type) + "}}";
+    ELSIF type IS PArray THEN
+        result := "{array: " + generateTypeInfo(type.elementsType) + "}";
+    ELSE
+        result := "null";
+    END;
+    RETURN result;
+END;
+
 BEGIN
     basic.bool := NEW BasicType("BOOLEAN", "false");
     basic.ch := NEW BasicType("CHAR", "0");
@@ -828,4 +840,6 @@ BEGIN
     numeric.add(basic.real);
 
     NEW(nil);
+
+    pGenerateTypeInfo := generateTypeInfo;
 END Types.

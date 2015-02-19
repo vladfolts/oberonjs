@@ -11,6 +11,12 @@ TYPE
 		p: POINTER TO T1
 	END;
 
+	Arrays = RECORD
+		aIntegers: ARRAY 3 OF INTEGER;
+		aRecords: ARRAY 5 OF T1;
+		aChars: ARRAY 7 OF ARRAY 10 OF CHAR
+	END;
+
 VAR
 	a1: ARRAY 3 OF T1;
 	a2: ARRAY 3 OF T1;
@@ -31,6 +37,52 @@ BEGIN
 	ASSERT(r1.p = r2.p);
 END testPointerAndRecordFieldsCopy;
 
+PROCEDURE testRecordArraysCopy();
+VAR
+	r1, r2: Arrays;
+BEGIN
+	r2.aIntegers[0] := 1;
+	r2.aIntegers[1] := 2;
+	r2.aIntegers[2] := 3;
+	r2.aRecords[0].i1 := 1;
+	r2.aChars[1][2] := "a";
+	r1 := r2;
+	ASSERT(r1.aIntegers[0] = 1);
+	ASSERT(r1.aIntegers[1] = 2);
+	ASSERT(r1.aIntegers[2] = 3);
+	ASSERT(r1.aRecords[0].i1 = 1);
+	ASSERT(r1.aChars[1][2] = "a");
+
+	r2.aIntegers[1] := 5;
+	ASSERT(r1.aIntegers[1] = 2);
+
+	r2.aRecords[0].i1 := 3;
+	ASSERT(r1.aRecords[0].i1 = 1);
+
+	r2.aChars[1][2] := "b";
+	ASSERT(r1.aChars[1][2] = "a");
+END testRecordArraysCopy;
+
+PROCEDURE testBaseCopy();
+TYPE
+	Base = RECORD END;
+	Derived = RECORD(Base) field: INTEGER END;
+VAR
+	r1, r2: Derived;
+
+	PROCEDURE copy(r1: Base; VAR r2: Base);
+	BEGIN
+		r2 := r1;
+	END copy;
+
+BEGIN
+	r1.field := 1;
+	r2.field := 2;
+	copy(r1, r2);
+	ASSERT(r1.field = 1);
+	ASSERT(r2.field = 2);
+END testBaseCopy;
+
 BEGIN
 	a1[0].i1 := 123;
 	a1[0].proc1 := proc1;
@@ -46,4 +98,6 @@ BEGIN
 	ASSERT(a2[0].proc1 = proc1);
 
 	testPointerAndRecordFieldsCopy();
+	testRecordArraysCopy();
+	testBaseCopy();
 END m.

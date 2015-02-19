@@ -50,8 +50,10 @@ var rtlPrototype = {
         return result;
     },
     __putEntry: function(name){
-        if (!this.__entries[name])
-            this.__entries[name] = this.__rtl.methods[name];
+        if (this.__entries[name])
+            return;
+        
+        this.__entries[name] = this.__rtl.methods[name];
         
         var dependencies = this.__rtl.dependencies[name];
         if (dependencies)

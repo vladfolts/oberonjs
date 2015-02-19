@@ -82,29 +82,69 @@ var RTL$ = {
             throw new Error("invalid key: " + key);
         return map[key];
     },
-    copyRecord: function (from, to){
-        for(var prop in to){
-            if (to.hasOwnProperty(prop)){
-                var v = from[prop];
-                var isScalar = prop[0] != "$";
-                if (isScalar)
-                    to[prop] = v;
+    copy: function (from, to, type){
+        var r = type.record;
+        if (r){
+            for(var f in r){
+                var fieldType = r[f];
+                if (fieldType){
+                    // temporary support for mangled fields
+                    var mangled = "$" + f;
+                    if (!from.hasOwnProperty(mangled))
+                        mangled = f;
+                    this.copy(from[mangled], to[mangled], fieldType);
+                }
                 else
-                    to[prop] = v instanceof Array ? this.cloneArrayOfRecords(v)
-                                                  : this.cloneRecord(v);
+                    to[f] = from[f];
             }
+            return;
+        }
+        var a = type.array;
+        if (a !== undefined ){
+            if (a === null)
+                // shallow copy
+                Array.prototype.splice.apply(to, [0, to.length].concat(from));
+            else {
+                // deep copy
+                to.splice(0, to.length);
+                for(var i = 0; i < from.length; ++i)
+                    to.push(this.clone(from[i], a));
+            }
+        }
+    },
+    clone: function (from, type){
+        var result;
+        var r = type.record;
+        if (r){
+            var Ctr = from.constructor;
+            result = new Ctr();
+            this.copy(from, result, type);
+            return result;
+        }
+        var a = type.array;
+        if (a !== undefined ){
+            if (a === null)
+                // shallow clone
+                return from.slice();
+
+            // deep clone
+            var length = from.length;
+            result = new Array(length);
+            for(var i = 0; i < length; ++i)
+                result[i] = this.clone(from[i], a);
+            return result;
         }
     }
 };
 var test = function (){
 var m = {};
 function anonymous$1(){
-	this.$m = {};
+	this.m = {};
 }
 var r = new anonymous$1();
 var a = RTL$.makeArray(1, {});
 function RecordWithMapInitializedInConstructor(m/*MAP OF INTEGER*/){
-	this.$m = RTL$.cloneMapOfScalars(m);
+	this.m = RTL$.cloneMapOfScalars(m);
 }
 
 function ForEach(){
@@ -176,7 +216,7 @@ function put(){
 	m[a] = 4;
 	RTL$.getMappedValue(mapOfMap, "abc")["cde"] = 5;
 	RTL$.getMappedValue(mapOfRecord, "abc").field = 6;
-	RTL$.copyRecord(new T(), RTL$.getMappedValue(mapOfPointer, "abc"));
+	RTL$.copy(new T(), RTL$.getMappedValue(mapOfPointer, "abc"), {record: {field: null}});
 }
 
 function in$(){
@@ -236,6 +276,6 @@ for(var k in $map1){
 	}
 }
 passByRef(m);
-passByRef(r.$m);
+passByRef(r.m);
 passByRef(a[0]);
 }();

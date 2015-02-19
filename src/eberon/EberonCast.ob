@@ -12,25 +12,23 @@ VAR
     castOpToMap: POINTER TO CastOpToMap;
 
 PROCEDURE CastOpToDynamicArray.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
-    RETURN Code.makeSimpleExpression(Cast.cloneArray(e.type()(Types.PArray)^, e.code(), rtl^), NIL)
-END CastOpToDynamicArray.make;
+    RETURN Code.makeSimpleExpression(Cast.cloneArray(e.type()(Types.PArray), e.code(), rtl^), NIL)
+END;
 
-PROCEDURE copyArray(t: Types.Array; leftCode, rightCode: STRING; rtl: OberonRtl.Type): STRING;
+PROCEDURE copyArray(t: Types.PArray; leftCode, rightCode: STRING; rtl: OberonRtl.Type): STRING;
 VAR
     result: STRING;
 BEGIN
-    IF Types.arrayElementsType(t).isScalar() THEN
+    IF t.elementsType.isScalar() THEN
         result := "Array.prototype.splice.apply(" + leftCode + ", [0, Number.MAX_VALUE].concat(" + rightCode + "))";
-    ELSIF Types.arrayBaseElementsType(t).isScalar() THEN 
-        result := rtl.copyArrayOfScalars(rightCode, leftCode);
     ELSE
-        result := rtl.copyArrayOfRecords(rightCode, leftCode);
+        result := rtl.copy(rightCode, leftCode, Types.generateTypeInfo(t));
     END;
     RETURN result
-END copyArray;
+END;
 
 PROCEDURE CastOpToDynamicArray.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
-    RETURN copyArray(left.type()(Types.PArray)^, left.code(), right.code(), rtl^)
+    RETURN copyArray(left.type()(Types.PArray), left.code(), right.code(), rtl^)
 END;
 
 PROCEDURE CastOpToMap.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
