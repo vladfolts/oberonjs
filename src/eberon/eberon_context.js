@@ -367,7 +367,7 @@ var InPlaceVariableInit = Context.Chained.extend({
           
             var language = this.language();
             var cloneOp;
-            language.types.implicitCast(type, type, false, op.castOperations(), {set: function(v){cloneOp = v;}, get:function(){return cloneOp;}});
+            language.types.implicitCast(type, type, false, {set: function(v){cloneOp = v;}, get:function(){return cloneOp;}});
             this._code += cloneOp.clone(language.rtl, e);
         }
     },

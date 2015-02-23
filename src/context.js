@@ -18,8 +18,6 @@ var basicTypes = Type.basic();
 var nullCodeGenerator = CodeGenerator.nullGenerator();
 var nilType = Type.nil();
 
-var castOperations = op.castOperations();
-
 function log(s){
     console.info(s);
 }
@@ -68,7 +66,7 @@ function checkTypeMatch(from, to){
 
 function checkImplicitCast(types, from, to){
     var op;
-    if (types.implicitCast(from, to, false, castOperations, {set: function(v){op = v;}, get:function(){return op;}}))
+    if (types.implicitCast(from, to, false, {set: function(v){op = v;}, get:function(){return op;}}))
         throwTypeMismatch(from, to);
 }
 
@@ -433,6 +431,7 @@ exports.Designator = ChainedContext.extend({
         this.__currentType = Type.pointerBase(this.__currentType);
         if (this.__currentType instanceof Type.NonExportedRecord)
             throw new Errors.Error("POINTER TO non-exported RECORD type cannot be dereferenced");
+        this.__lval = undefined;
     },
     handleTypeCast: function(type){
         checkTypeCast(this.__info, this.__currentType, type, "type cast");
@@ -637,7 +636,7 @@ exports.ProcDecl = ChainedContext.extend({
         
         var language = this.language();
         var op;
-        if (language.types.implicitCast(type, result, false, castOperations, {set: function(v){op = v;}, get:function(){return op;}}))
+        if (language.types.implicitCast(type, result, false, {set: function(v){op = v;}, get:function(){return op;}}))
             throw new Errors.Error(
                 "RETURN '" + result.description() + "' expected, got '"
                 + type.description() + "'");

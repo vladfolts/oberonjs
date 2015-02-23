@@ -1,5 +1,10 @@
 MODULE EberonOperator;
-IMPORT Code, CodePrecedence, OberonRtl, Operator, Types;
+IMPORT Cast, Code, CodePrecedence, OberonRtl, Operator, Types;
+TYPE
+    CastOpRecord = RECORD(Cast.CastOpRecord)
+    END;
+VAR
+    castOperations*: Cast.Operations;
 
 PROCEDURE opAddStr(left, right: Code.PConst): Code.PConst;
     RETURN Code.makeStringConst(left^(Code.StringConst).value
@@ -69,4 +74,26 @@ PROCEDURE inMap*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExp
                                      Types.basic.bool);
 END;
 
+PROCEDURE CastOpRecord.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+VAR
+    result: STRING;
+BEGIN
+    leftCode <- left.code();
+    leftLval <- left.lval();
+    IF leftCode # leftLval THEN (* TRUE for putting to MAP *)
+        (* optimize the case when the temporary is used - do not clone it *)
+        IF right.designator() = NIL THEN
+            result := leftLval + " = " + right.code();
+        ELSE
+            result := leftLval + " = " + rtl.clone(right.code(), Types.generateTypeInfo(left.type()));
+        END;
+    ELSE
+        result := SUPER(rtl, left, right);
+    END;
+    RETURN result;
+END;
+
+BEGIN
+    castOperations.castToUint8 := NEW Operator.CastToUint8();
+    castOperations.castToRecord := NEW CastOpRecord();
 END EberonOperator.

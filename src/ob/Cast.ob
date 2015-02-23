@@ -19,13 +19,14 @@ TYPE
     CastOpArray* = RECORD (CastOpDoNothing)
     END;
 
-    CastOpRecord = RECORD (CastOpDoNothing)
+    CastOpRecord* = RECORD (CastOpDoNothing)
     END;
 
     CastOpStrToChar = RECORD (CastOpDoNothing)
     END;
 
     Operations* = RECORD
+        castToRecord*: PCastOp;
         castToUint8*: PCastOp
     END;
 
@@ -36,7 +37,6 @@ VAR
     doNothing*: POINTER TO CastOpDoNothing;
     castOpStrToChar: POINTER TO CastOpStrToChar;
     castOpArray: POINTER TO CastOpArray;
-    castOpRecord: POINTER TO CastOpRecord;
 
 PROCEDURE findBaseType(base: Types.PRecord; type: Types.PRecord): Types.PRecord;
 BEGIN
@@ -170,7 +170,7 @@ PROCEDURE CastOpArray.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
 END;
 
 PROCEDURE CastOpRecord.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
-    RETURN rtl.copy(right.code(), left.code(), Types.generateTypeInfo(left.type()))
+    RETURN rtl.copy(right.code(), left.lval(), Types.generateTypeInfo(left.type()));
 END;
 
 PROCEDURE CastOpStrToChar.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
@@ -190,7 +190,7 @@ BEGIN
     op := NIL;
     IF from = to THEN
         IF from IS Types.PRecord THEN
-            op := castOpRecord;
+            op := ops.castToRecord;
         ELSIF from IS Types.PArray THEN
             op := castOpArray;
         END;
@@ -239,7 +239,7 @@ BEGIN
         END;
     ELSIF (from IS Types.PRecord) & (to IS Types.PRecord) THEN
         IF findBaseType(to, from) # NIL THEN
-            op := castOpRecord;
+            op := ops.castToRecord;
             result := errNo;
         END;
     ELSIF (from = Types.nil) & matchesToNIL(to^) THEN
@@ -260,6 +260,5 @@ BEGIN
     areTypesExactlyMatch := areTypesExactlyMatchImpl;
     NEW(doNothing);
     NEW(castOpArray);
-    NEW(castOpRecord);
     NEW(castOpStrToChar);
 END Cast.

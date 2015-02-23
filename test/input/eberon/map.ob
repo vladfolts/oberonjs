@@ -66,10 +66,14 @@ TYPE
     T = RECORD 
         field: INTEGER;
     END;
+    Derived = RECORD(T)
+    END;
 VAR
     m: MapOfInteger;
     s: STRING;
     a: ARRAY 3 OF CHAR;
+    r: T;
+    d: Derived;
     mapOfMap: MAP OF MapOfInteger;
     mapOfRecord: MAP OF T;
     mapOfPointer: MAP OF POINTER TO T;
@@ -79,8 +83,18 @@ BEGIN
     m[s] := 3;
     m[a] := 4;
     mapOfMap["abc"]["cde"] := 5;
+
+    mapOfRecord["abc"] := r;
+    (*mapOfRecord["abc"] := d;*)
+    mapOfRecord["abc"] := T();
+    (*mapOfRecord["abc"] := Derived();*)
     mapOfRecord["abc"].field := 6;
+    
+    mapOfPointer["abc"] := NEW T();
     mapOfPointer["abc"]^ := T();
+
+    mapOfPointer["abc"] := NEW Derived();
+    mapOfPointer["abc"]^ := Derived();
 END;
 
 PROCEDURE in();

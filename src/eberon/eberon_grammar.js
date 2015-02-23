@@ -8,6 +8,7 @@ var EbContext = require("eberon/eberon_context.js");
 var Grammar = require("grammar.js");
 var EbRtl = require("js/EberonRtl.js");
 var EbRtlCode = require("eberon/eberon_rtl.js");
+var EbOperator = require("js/EberonOperator.js");
 var Parser = require("parser.js");
 var Symbols = require("js/EberonSymbols.js");
 
@@ -161,7 +162,9 @@ exports.language = {
         ),
     stdSymbols: Symbols.makeStd(),
     types: {
-        implicitCast: Cast.implicit,
+        implicitCast: function(from, to, toVar, op){
+            return Cast.implicit(from, to, toVar, EbOperator.castOperations(), op);
+        },
         StaticArray: EbArray.StaticArray,
         OpenArray: EbArray.OpenArray
     },

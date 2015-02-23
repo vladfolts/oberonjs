@@ -7,6 +7,7 @@ var Grammar = require("grammar.js");
 var ObContext = require("oberon/oberon_context.js");
 var ObRtl = require("js/OberonRtl.js");
 var ObRtlCode = require("rtl.js");
+var Operator = require("js/Operator.js");
 var Parser = require("parser.js");
 var Symbols = require("js/OberonSymbols.js");
 var Types = require("js/Types.js");
@@ -128,7 +129,9 @@ exports.language = {
         ),
     stdSymbols: Symbols.makeStd(),
     types: {
-        implicitCast: Cast.implicit,
+        implicitCast: function(from, to, toVar, op){
+            return Cast.implicit(from, to, toVar, Operator.castOperations(), op);
+        },
         StaticArray: Types.StaticArray,
         OpenArray: Types.OpenArray
     },

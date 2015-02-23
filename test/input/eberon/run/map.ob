@@ -66,10 +66,35 @@ BEGIN
     ASSERT(~("cde" IN m));
 END;
 
+PROCEDURE testCopy();
+TYPE
+    T = RECORD
+        i: INTEGER;
+    END;
+VAR
+    m1, m2: MAP OF INTEGER;
+    mr1, mr2: MAP OF T;
+BEGIN
+    m1["a"] := 1;
+    m2 := m1;
+    ASSERT(m2["a"] = 1);
+    m2["a"] := 2;
+    ASSERT(m1["a"] = 1);
+(*
+    mr1["a"] := T();
+    mr1["a"].i := 1;
+    mr2 := mr1;
+    ASSERT(mr2["a"].i = 1);
+    mr1["a"].i := 2;
+    ASSERT(mr1["a"].i = 1);
+    *)
+END;
+
 BEGIN
     testEmptyForEach();
     testForEach();
     testPutGet();
     testIn();
     testRemove();
+    testCopy();
 END test.

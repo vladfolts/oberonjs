@@ -1,5 +1,5 @@
 MODULE EberonConstructor;
-IMPORT Cast, Code, EberonCast, EberonRecord, Errors, LanguageContext, Operator, Procedure, Stream, Types;
+IMPORT Cast, Code, EberonCast, EberonRecord, Errors, LanguageContext, Procedure, Stream, Types;
 TYPE
     ConstructorCall = RECORD(Procedure.StdCall)
         recordType: EberonRecord.PRecord;
@@ -81,7 +81,7 @@ BEGIN
         raiseSingleArgumentException(SELF);
     END;
 
-    IF SELF.cx.types.implicitCast(e.type(), SELF.type, FALSE, Operator.castOperations, op)
+    IF SELF.cx.types.implicitCast(e.type(), SELF.type, FALSE, op)
         # Cast.errNo THEN
             Errors.raise("type mismatch: field '" + SELF.field + "' is '" + SELF.type.description()
                          + "' and cannot be initialized using '" + e.type().description() + "' expression");

@@ -37,7 +37,7 @@ TYPE
         pred: CodePredicate
     END;
 
-    CastToUint8 = RECORD (Cast.CastOpDoNothing)
+    CastToUint8* = RECORD (Cast.CastOpDoNothing)
     END;
 
 VAR
@@ -492,7 +492,7 @@ BEGIN
         & (rightType IS Types.PString) THEN
         result := assignArrayFromString(leftType(Types.PArray)^, rightType^);
     ELSE
-        IF cx.types.implicitCast(rightType, leftType, FALSE, castOperations, castOperation)
+        IF cx.types.implicitCast(rightType, leftType, FALSE, castOperation)
             # Cast.errNo THEN
             Errors.raise("type mismatch: '" + left.code() + "' is '" + leftType.description()
                          + "' and cannot be assigned to '" + rightType.description() + "' expression");
@@ -772,4 +772,5 @@ END;
 BEGIN
     openArrayChar := NEW Types.OpenArray(Types.basic.ch);
     castOperations.castToUint8 := NEW CastToUint8();
+    castOperations.castToRecord := NEW Cast.CastOpRecord();
 END Operator.

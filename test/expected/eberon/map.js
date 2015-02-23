@@ -35,6 +35,12 @@ var RTL$ = {
         if (!condition)
             throw new Error("assertion failed");
     },
+    extend: function (cons, base){
+        function Type(){}
+        Type.prototype = base.prototype;
+        cons.prototype = new Type();
+        cons.prototype.constructor = cons;
+    },
     makeCharArray: function (/*dimensions*/){
         var forward = Array.prototype.slice.call(arguments);
         var length = forward.pop();
@@ -82,6 +88,29 @@ var RTL$ = {
             throw new Error("invalid key: " + key);
         return map[key];
     },
+    clone: function (from, type){
+        var result;
+        var r = type.record;
+        if (r){
+            var Ctr = from.constructor;
+            result = new Ctr();
+            this.copy(from, result, type);
+            return result;
+        }
+        var a = type.array;
+        if (a !== undefined ){
+            if (a === null)
+                // shallow clone
+                return from.slice();
+
+            // deep clone
+            var length = from.length;
+            result = new Array(length);
+            for(var i = 0; i < length; ++i)
+                result[i] = this.clone(from[i], a);
+            return result;
+        }
+    },
     copy: function (from, to, type){
         var r = type.record;
         if (r){
@@ -110,29 +139,6 @@ var RTL$ = {
                 for(var i = 0; i < from.length; ++i)
                     to.push(this.clone(from[i], a));
             }
-        }
-    },
-    clone: function (from, type){
-        var result;
-        var r = type.record;
-        if (r){
-            var Ctr = from.constructor;
-            result = new Ctr();
-            this.copy(from, result, type);
-            return result;
-        }
-        var a = type.array;
-        if (a !== undefined ){
-            if (a === null)
-                // shallow clone
-                return from.slice();
-
-            // deep clone
-            var length = from.length;
-            result = new Array(length);
-            for(var i = 0; i < length; ++i)
-                result[i] = this.clone(from[i], a);
-            return result;
         }
     }
 };
@@ -204,9 +210,15 @@ function put(){
 	function T(){
 		this.field = 0;
 	}
+	function Derived(){
+		T.call(this);
+	}
+	RTL$.extend(Derived, T);
 	var m = {};
 	var s = '';
 	var a = RTL$.makeCharArray(3);
+	var r = new T();
+	var d = new Derived();
 	var mapOfMap = {};
 	var mapOfRecord = {};
 	var mapOfPointer = {};
@@ -215,8 +227,13 @@ function put(){
 	m[s] = 3;
 	m[a] = 4;
 	RTL$.getMappedValue(mapOfMap, "abc")["cde"] = 5;
+	mapOfRecord["abc"] = RTL$.clone(r, {record: {field: null}});
+	mapOfRecord["abc"] = new T();
 	RTL$.getMappedValue(mapOfRecord, "abc").field = 6;
+	mapOfPointer["abc"] = new T();
 	RTL$.copy(new T(), RTL$.getMappedValue(mapOfPointer, "abc"), {record: {field: null}});
+	mapOfPointer["abc"] = new Derived();
+	RTL$.copy(new Derived(), RTL$.getMappedValue(mapOfPointer, "abc"), {record: {field: null}});
 }
 
 function in$(){

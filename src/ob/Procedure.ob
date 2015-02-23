@@ -94,7 +94,7 @@ BEGIN
     expectType := expected.type; (* can be NIL for predefined functions (like NEW), dont check it in this case *)
     IF expectType # NIL THEN
         actualType := actual.type();
-        castErr := types.implicitCast(actualType, expectType, expected.isVar, Operator.castOperations, result);
+        castErr := types.implicitCast(actualType, expectType, expected.isVar, result);
         IF castErr = Cast.errVarParameter THEN
             Errors.raise("type mismatch for argument " + String.fromInt(pos + 1)
                          + ": cannot pass '" + actualType.description()
