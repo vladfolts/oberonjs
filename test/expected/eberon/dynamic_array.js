@@ -47,11 +47,11 @@ var RTL$ = {
             }
         }
     },
-    clone: function (from, type){
+    clone: function (from, type, recordCons){
         var result;
         var r = type.record;
         if (r){
-            var Ctr = from.constructor;
+            var Ctr = recordCons || from.constructor;
             result = new Ctr();
             this.copy(from, result, type);
             return result;
@@ -127,7 +127,7 @@ dynamicString.push(s);
 dynamicChar.push(34);
 dynamicByte.push(byte);
 dynamicByte.push(i & 0xFF);
-dynamicRecord.push(RTL$.clone(r, {record: {a: {array: null}}}));
+dynamicRecord.push(RTL$.clone(r, {record: {a: {array: null}}}, T));
 dynamicArrayOfStaticArrayInt.push(a.slice());
 RTL$.assert(dynamicInt.indexOf(i) != -1);
 RTL$.assert(dynamicChar.indexOf(34) != -1);

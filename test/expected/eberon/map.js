@@ -88,11 +88,11 @@ var RTL$ = {
             throw new Error("invalid key: " + key);
         return map[key];
     },
-    clone: function (from, type){
+    clone: function (from, type, recordCons){
         var result;
         var r = type.record;
         if (r){
-            var Ctr = from.constructor;
+            var Ctr = recordCons || from.constructor;
             result = new Ctr();
             this.copy(from, result, type);
             return result;
@@ -218,6 +218,7 @@ function put(){
 	var s = '';
 	var a = RTL$.makeCharArray(3);
 	var r = new T();
+	var pr = null;
 	var d = new Derived();
 	var mapOfMap = {};
 	var mapOfRecord = {};
@@ -227,8 +228,12 @@ function put(){
 	m[s] = 3;
 	m[a] = 4;
 	RTL$.getMappedValue(mapOfMap, "abc")["cde"] = 5;
-	mapOfRecord["abc"] = RTL$.clone(r, {record: {field: null}});
+	mapOfRecord["abc"] = RTL$.clone(r, {record: {field: null}}, T);
+	pr = new T();
+	mapOfRecord["abc"] = RTL$.clone(pr, {record: {field: null}}, T);
+	mapOfRecord["abc"] = RTL$.clone(d, {record: {field: null}}, T);
 	mapOfRecord["abc"] = new T();
+	mapOfRecord["abc"] = RTL$.clone(new Derived(), {record: {field: null}}, T);
 	RTL$.getMappedValue(mapOfRecord, "abc").field = 6;
 	mapOfPointer["abc"] = new T();
 	RTL$.copy(new T(), RTL$.getMappedValue(mapOfPointer, "abc"), {record: {field: null}});

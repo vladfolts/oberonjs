@@ -37,7 +37,7 @@ END;
 PROCEDURE BaseConstructorCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
     argCode <- checkArgs(SELF, args, cx);
-    code <- cx.qualifyScope(SELF.recordType.scope) + SELF.recordType.cons + ".call(this, " + argCode + ");" + Stream.kCR;
+    code <- Types.recordConstructor(cx^, SELF.recordType^) + ".call(this, " + argCode + ");" + Stream.kCR;
     RETURN Code.makeSimpleExpression(code, NIL);
 END;
 

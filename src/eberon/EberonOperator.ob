@@ -1,5 +1,5 @@
 MODULE EberonOperator;
-IMPORT Cast, Code, CodePrecedence, OberonRtl, Operator, Types;
+IMPORT Cast, Code, CodePrecedence, Context, OberonRtl, Operator, Types;
 TYPE
     CastOpRecord = RECORD(Cast.CastOpRecord)
     END;
@@ -74,21 +74,24 @@ PROCEDURE inMap*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExp
                                      Types.basic.bool);
 END;
 
-PROCEDURE CastOpRecord.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpRecord.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
 VAR
     result: STRING;
 BEGIN
     leftCode <- left.code();
     leftLval <- left.lval();
     IF leftCode # leftLval THEN (* TRUE for putting to MAP *)
-        (* optimize the case when the temporary is used - do not clone it *)
-        IF right.designator() = NIL THEN
+        (* optimize the case when the temporary is used - do not clone it 
+           but only if types exactly match - derived temporary still must be cloned *)
+        IF (right.designator() = NIL) & (left.type() = right.type()) THEN
             result := leftLval + " = " + right.code();
         ELSE
-            result := leftLval + " = " + rtl.clone(right.code(), Types.generateTypeInfo(left.type()));
+            result := leftLval + " = " + cx.rtl.clone(right.code(), 
+                                                      Types.generateTypeInfo(left.type()), 
+                                                      Types.recordConstructor(cx, left.type()(Types.PRecord)^));
         END;
     ELSE
-        result := SUPER(rtl, left, right);
+        result := SUPER(cx, left, right);
     END;
     RETURN result;
 END;

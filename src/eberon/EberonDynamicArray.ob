@@ -123,7 +123,7 @@ BEGIN
     IF t IS Types.PArray THEN
         SELF.code := Cast.cloneArray(t, SELF.code, SELF.cx.rtl^);
     ELSIF t IS Types.PRecord THEN
-        SELF.code := SELF.cx.rtl.clone(SELF.code, Types.generateTypeInfo(t));
+        SELF.code := SELF.cx.rtl.clone(SELF.code, Types.generateTypeInfo(t), Types.recordConstructor(SELF.cx^, t^));
     END;
 END AddCallGenerator.handleArgument;
 

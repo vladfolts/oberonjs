@@ -460,8 +460,12 @@ BEGIN
     RETURN result
 END Record.description;
 
+PROCEDURE recordConstructor*(cx: Context.Type; r: Record): STRING;
+    RETURN cx.qualifyScope(r.scope) + r.cons;
+END;
+
 PROCEDURE recordInitializer*(cx: Context.Type; r: Record; args: STRING): STRING;
-    RETURN "new " + cx.qualifyScope(r.scope) + r.cons + "(" + args + ")";
+    RETURN "new " + recordConstructor(cx, r)  + "(" + args + ")";
 END;
 
 PROCEDURE Record.initializer(cx: Context.Type): STRING;
@@ -520,10 +524,6 @@ END;
 PROCEDURE recordScope*(r: Record): ScopeBase.PType;
     RETURN r.scope
 END recordScope;
-
-PROCEDURE recordConstructor*(r: Record): STRING;
-    RETURN r.cons
-END recordConstructor;
 
 PROCEDURE pointerBase*(p: Pointer): PRecord;
 VAR

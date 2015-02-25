@@ -73,6 +73,7 @@ VAR
     s: STRING;
     a: ARRAY 3 OF CHAR;
     r: T;
+    pr: POINTER TO T;
     d: Derived;
     mapOfMap: MAP OF MapOfInteger;
     mapOfRecord: MAP OF T;
@@ -85,9 +86,12 @@ BEGIN
     mapOfMap["abc"]["cde"] := 5;
 
     mapOfRecord["abc"] := r;
-    (*mapOfRecord["abc"] := d;*)
+
+    NEW(pr);
+    mapOfRecord["abc"] := pr^;
+    mapOfRecord["abc"] := d;
     mapOfRecord["abc"] := T();
-    (*mapOfRecord["abc"] := Derived();*)
+    mapOfRecord["abc"] := Derived();
     mapOfRecord["abc"].field := 6;
     
     mapOfPointer["abc"] := NEW T();

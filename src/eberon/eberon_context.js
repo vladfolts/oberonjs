@@ -174,14 +174,17 @@ var Identdef = Context.Identdef.extend({
     }
 });
 
-function makeContextCall(context, call){
+function makeContext(context){
     var l = context.language();
-    var cx = {
+    return {
         types: l.types, 
         rtl: l.rtl, 
         qualifyScope: context.qualifyScope.bind(context)
         };
-    return call(cx);
+    }
+
+function makeContextCall(context, call){
+    return call(makeContext(context));
     }
 
 function OperatorNewMsg(e){
@@ -428,7 +431,7 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
         var code;
         if (this.__right){
             var left = Code.makeExpression(d.code(), type, d);
-            code = op.assign(left, this.__right, this.language());
+            code = op.assign(left, this.__right, makeContext(this));
         }
         else if (!(d.info() instanceof ResultVariable)){
             var procCall = Context.makeProcCall(this, type, d.info());

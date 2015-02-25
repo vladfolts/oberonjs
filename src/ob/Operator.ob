@@ -501,7 +501,7 @@ BEGIN
             Errors.raise("'" + leftCode + "' is open '" + leftType.description() + "' and cannot be assigned");
         END;
             
-        result := castOperation.assign(cx.rtl, left, right);
+        result := castOperation.assign(cx, left, right);
     END;
     RETURN result
 END assign;

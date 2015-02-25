@@ -23,11 +23,11 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-    clone: function (from, type){
+    clone: function (from, type, recordCons){
         var result;
         var r = type.record;
         if (r){
-            var Ctr = from.constructor;
+            var Ctr = recordCons || from.constructor;
             result = new Ctr();
             this.copy(from, result, type);
             return result;

@@ -17,11 +17,11 @@ var RTL$ = {
                 result[i] = this.makeArray.apply(this, forward);
         return result;
     },
-    clone: function (from, type){
+    clone: function (from, type, recordCons){
         var result;
         var r = type.record;
         if (r){
-            var Ctr = from.constructor;
+            var Ctr = recordCons || from.constructor;
             result = new Ctr();
             this.copy(from, result, type);
             return result;
@@ -101,9 +101,9 @@ function testAssign(){
 	var aPointers1 = RTL$.makeArray(3, null);var aPointers2 = RTL$.makeArray(3, null);
 	var arrayOfArray1 = RTL$.makeArray(3, 5, false);var arrayOfArray2 = RTL$.makeArray(3, 5, false);
 	aInts2 = aInts1.slice();
-	aRecords2 = RTL$.clone(aRecords1, {array: {record: {}}});
+	aRecords2 = RTL$.clone(aRecords1, {array: {record: {}}}, undefined);
 	aPointers2 = aPointers1.slice();
-	arrayOfArray2 = RTL$.clone(arrayOfArray1, {array: {array: null}});
+	arrayOfArray2 = RTL$.clone(arrayOfArray1, {array: {array: null}}, undefined);
 }
 
 function testPassOpenArray(a/*ARRAY OF INTEGER*/){

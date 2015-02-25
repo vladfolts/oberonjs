@@ -285,7 +285,7 @@ exports.Identdef = ChainedContext.extend({
 
 function castCode(type, context){
     var baseType = type instanceof Type.Pointer ? Type.pointerBase(type) : type;
-    return context.qualifyScope(Type.recordScope(baseType)) + Type.recordConstructor(baseType);
+    return Type.recordConstructor(context, baseType);
 }
 
 exports.Designator = ChainedContext.extend({

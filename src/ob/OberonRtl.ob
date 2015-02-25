@@ -2,7 +2,7 @@ MODULE OberonRtl;
 TYPE
     Type* = RECORD
         copy*: PROCEDURE(from, to, type: STRING): STRING;
-        clone*: PROCEDURE(from, type: STRING): STRING;
+        clone*: PROCEDURE(from, type, constructor: STRING): STRING;
         strCmp*: PROCEDURE(s1, s2: STRING): STRING;
         assignArrayFromString*: PROCEDURE(s1, s2: STRING): STRING;
         setInclL*: PROCEDURE(l, r: STRING): STRING;

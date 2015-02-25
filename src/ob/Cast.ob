@@ -1,5 +1,5 @@
 MODULE Cast;
-IMPORT Code, OberonRtl, String, Types;
+IMPORT Code, Context, OberonRtl, String, Types;
 CONST
     errNo* = 0;
     err* = 1;
@@ -7,7 +7,7 @@ CONST
 TYPE
     CastOp* = RECORD
         PROCEDURE make*(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
-        PROCEDURE assign*(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+        PROCEDURE assign*(cx: Context.Type; left, right: Code.PExpression): STRING;
         PROCEDURE clone*(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
     END;
 
@@ -132,11 +132,11 @@ PROCEDURE assignByReference*(left, right: Code.PExpression): STRING;
     RETURN left.code() + ".set(" + Code.derefExpression(right).code() + ")";
 END;
 
-PROCEDURE CastOpDoNothing.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpDoNothing.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
 VAR
     result: STRING;
 BEGIN
-    rightConverted <- SELF.make(rtl, right);
+    rightConverted <- SELF.make(cx.rtl, right);
     IF passedByReference(left) THEN
         result := assignByReference(left, rightConverted);
     ELSE
@@ -156,21 +156,21 @@ BEGIN
     IF Types.arrayElementsType(t^).isScalar() THEN
         result := code + ".slice()";
     ELSE
-        result := rtl.clone(code, Types.generateTypeInfo(t));
+        result := rtl.clone(code, Types.generateTypeInfo(t), "undefined");
     END;
     RETURN result
 END;
 
-PROCEDURE CastOpArray.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
-    RETURN left.code() + " = " + cloneArray(right.type()(Types.PArray), right.code(), rtl^)
+PROCEDURE CastOpArray.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
+    RETURN left.code() + " = " + cloneArray(right.type()(Types.PArray), right.code(), cx.rtl^)
 END;
 
 PROCEDURE CastOpArray.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
     RETURN cloneArray(e.type()(Types.PArray), e.code(), rtl^);
 END;
 
-PROCEDURE CastOpRecord.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
-    RETURN rtl.copy(right.code(), left.lval(), Types.generateTypeInfo(left.type()));
+PROCEDURE CastOpRecord.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
+    RETURN cx.rtl.copy(right.code(), left.lval(), Types.generateTypeInfo(left.type()));
 END;
 
 PROCEDURE CastOpStrToChar.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;

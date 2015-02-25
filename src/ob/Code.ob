@@ -266,7 +266,7 @@ VAR
 BEGIN
     r := Types.pointerBase(type);
     IF LEN(Types.typeName(r^)) = 0 THEN
-        result := Types.recordConstructor(r^);
+        result := r.cons;
     END;
     RETURN result
 END isPointerShouldBeExported;

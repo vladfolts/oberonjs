@@ -1,5 +1,5 @@
 MODULE EberonCast;
-IMPORT Cast, Code, EberonMap, EberonRtl, EberonString, EberonDynamicArray, OberonRtl, Types;
+IMPORT Cast, Code, Context, EberonMap, EberonRtl, EberonString, EberonDynamicArray, OberonRtl, Types;
 TYPE
     CastOpToDynamicArray = RECORD (Cast.CastOpArray)
     END;
@@ -27,17 +27,17 @@ BEGIN
     RETURN result
 END;
 
-PROCEDURE CastOpToDynamicArray.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
-    RETURN copyArray(left.type()(Types.PArray), left.code(), right.code(), rtl^)
+PROCEDURE CastOpToDynamicArray.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
+    RETURN copyArray(left.type()(Types.PArray), left.code(), right.code(), cx.rtl^)
 END;
 
 PROCEDURE CastOpToMap.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
     RETURN e;
 END;
 
-PROCEDURE CastOpToMap.assign(rtl: OberonRtl.PType; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpToMap.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
     (* TODO: support non-scalar MAPs *)
-    RETURN rtl(EberonRtl.PType).copyMapOfScalars(right.code(), left.code());
+    RETURN cx.rtl(EberonRtl.PType).copyMapOfScalars(right.code(), left.code());
 END;
 
 PROCEDURE CastOpToMap.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
