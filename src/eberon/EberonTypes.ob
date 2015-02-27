@@ -73,7 +73,7 @@ PROCEDURE MethodField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
 END;
 
 PROCEDURE MethodField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
-    RETURN NEW Types.FieldCode(leadCode + "." + Types.mangleField(SELF.method.name, SELF.method), "", "");
+    RETURN NEW Types.FieldCode(leadCode + "." + Types.mangleField(SELF.method.name), "", "");
 END;
 
 END EberonTypes.

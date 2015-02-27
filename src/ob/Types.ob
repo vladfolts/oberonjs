@@ -760,7 +760,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE mangleField*(id: STRING; type: PStorageType): STRING;
+PROCEDURE mangleField*(id: STRING): STRING;
     RETURN mangleJSProperty(id);
 END;
 
@@ -780,7 +780,7 @@ PROCEDURE RecordField.designatorCode(leadCode: STRING; cx: Context.Type): PField
 CONST
     kQuote = 22X;
 BEGIN
-    codeId <- mangleField(SELF.mIdentdef.id(), SELF.mType);
+    codeId <- mangleField(SELF.mIdentdef.id());
     RETURN NEW FieldCode(leadCode + "." + codeId, leadCode, kQuote + codeId + kQuote);
 END;
 
@@ -808,7 +808,7 @@ BEGIN
         IF LEN(result) # 0 THEN
             result := result + ", ";
         END;
-        result := result + k + ": " + pGenerateTypeInfo(v.type());
+        result := result + mangleField(k) + ": " + pGenerateTypeInfo(v.type());
     END;
     RETURN result;
 END;

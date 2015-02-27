@@ -1787,7 +1787,7 @@ exports.RecordDecl = ChainedContext.extend({
         var ownFields = Type.recordOwnFields(this.__type);
         for(var f in ownFields){
             var fieldType = ownFields[f].type();
-            result += "this." + Type.mangleField(f, fieldType) + " = " + fieldType.initializer(this) + ";\n";
+            result += "this." + Type.mangleField(f) + " = " + fieldType.initializer(this) + ";\n";
         }
         return result;
     },

@@ -502,7 +502,7 @@ BEGIN
         IF key IN r.fieldsInit THEN
             code := r.fieldsInit[key];
         ELSE
-            code := "this." + Types.mangleField(key, type) 
+            code := "this." + Types.mangleField(key) 
                     + " = " + type.initializer(cx^);
         END;
         result := result + code + ";" + Stream.kCR;

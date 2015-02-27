@@ -83,6 +83,22 @@ BEGIN
 	ASSERT(r2.field = 2);
 END testBaseCopy;
 
+PROCEDURE testMangleFields(); 
+	TYPE     
+		T = RECORD         
+			constructor: INTEGER;         
+			prototype: CHAR     
+			END; 
+	VAR     
+		r1, r2: T; 
+BEGIN
+	r1.constructor := 123;     
+	r1.prototype := "a";     
+	r2 := r1;
+	ASSERT(r2.constructor = 123); 
+	ASSERT(r2.prototype = "a"); 
+END testMangleFields;
+
 BEGIN
 	a1[0].i1 := 123;
 	a1[0].proc1 := proc1;
@@ -100,4 +116,5 @@ BEGIN
 	testPointerAndRecordFieldsCopy();
 	testRecordArraysCopy();
 	testBaseCopy();
+	testMangleFields();
 END m.

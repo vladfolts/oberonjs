@@ -41,15 +41,15 @@ BEGIN
     RETURN Code.makeSimpleExpression(code, NIL);
 END;
 
-PROCEDURE fieldInitLval(field: STRING; type: Types.PStorageType): STRING;
-    RETURN "this." + Types.mangleField(field, type);
+PROCEDURE fieldInitLval(field: STRING): STRING;
+    RETURN "this." + Types.mangleField(field);
 END;
 
 PROCEDURE RecordInitCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
 BEGIN
     e <- SUPER(args, cx);
     t <- e.type()(Types.PStorageType);
-    RETURN Code.makeSimpleExpression(fieldInitLval(SELF.field, t) + " = " + e.code(), t);
+    RETURN Code.makeSimpleExpression(fieldInitLval(SELF.field) + " = " + e.code(), t);
 END;
 
 PROCEDURE makeCallGenerator(
@@ -86,7 +86,7 @@ BEGIN
             Errors.raise("type mismatch: field '" + SELF.field + "' is '" + SELF.type.description()
                          + "' and cannot be initialized using '" + e.type().description() + "' expression");
     END;
-    lval <- fieldInitLval(SELF.field, SELF.type);
+    lval <- fieldInitLval(SELF.field);
     SELF.code := lval + " = " + op.clone(SELF.cx.rtl, e);
 END;
         
