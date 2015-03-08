@@ -1,5 +1,5 @@
 MODULE EberonCast;
-IMPORT Cast, Code, Context, EberonMap, EberonRtl, EberonString, EberonOperator, EberonDynamicArray, LanguageContext, OberonRtl, Types;
+IMPORT Cast, Code, Context, EberonMap, EberonString, EberonOperator, EberonDynamicArray, LanguageContext, OberonRtl, Types;
 TYPE
     CastOpToDynamicArray = RECORD (Cast.CastOpArray)
     END;
