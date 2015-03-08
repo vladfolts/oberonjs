@@ -1,8 +1,0 @@
-MODULE Language;
-IMPORT Cast, T := Types;
-TYPE
-    Types* = RECORD         
-        PROCEDURE implicitCast*(from, to: T.PType; toVar: BOOLEAN; VAR op: Cast.PCastOp): INTEGER
-    END;
-    PTypes* = POINTER TO Types;
-END Language.
