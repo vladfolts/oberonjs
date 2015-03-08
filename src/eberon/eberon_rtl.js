@@ -19,9 +19,6 @@ var methods = extendMap(oberon_rtl.rtl.methods, {
         for(var p in map)
             delete map[p];
     },
-    cloneMapOfScalars: function(map){ // support old code
-        return this.clone(map, {map: null});
-    },
     clone: function(from, type, recordCons){
         var m = type.map;
         if (m !== undefined){

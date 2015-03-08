@@ -174,13 +174,8 @@ var methods = {
         if (r){
             for(var f in r){
                 var fieldType = r[f];
-                if (fieldType){
-                    // temporary support for mangled fields
-                    var mangled = "$" + f;
-                    if (!from.hasOwnProperty(mangled))
-                        mangled = f;
-                    this.copy(from[mangled], to[mangled], fieldType);
-                }
+                if (fieldType)
+                    this.copy(from[f], to[f], fieldType);
                 else
                     to[f] = from[f];
             }
