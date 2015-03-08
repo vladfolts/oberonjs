@@ -1,35 +1,4 @@
-var RTL$ = {
-    extend: function (cons, base){
-        function Type(){}
-        Type.prototype = base.prototype;
-        cons.prototype = new Type();
-        cons.prototype.constructor = cons;
-    },
-    typeGuard: function (from, to){
-        if (!from)
-            return from;
-        if (!(from instanceof to)){
-            var fromStr;
-            var toStr;
-            
-            if (from && from.constructor && from.constructor.name)
-                fromStr = "" + from.constructor.name;
-            else
-                fromStr = "" + from;
-            
-            if (to.name)
-                toStr = "" + to.name;
-            else
-                toStr = "" + to;
-            
-            var msg = "typeguard assertion failed";
-            if (fromStr || toStr)               
-                msg += ": '" + fromStr + "' is not an extension of '" + toStr + "'";
-            throw new Error(msg);
-        }
-        return from;
-    }
-};
+<rtl code>
 var m = function (){
 function Base(){
 }

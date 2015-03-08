@@ -132,6 +132,7 @@ exports.language = {
         implicitCast: function(from, to, toVar, op){
             return Cast.implicit(from, to, toVar, Operator.castOperations(), op);
         },
+        typeInfo: function(type){return Types.generateTypeInfo(type);},
         StaticArray: Types.StaticArray,
         OpenArray: Types.OpenArray
     },

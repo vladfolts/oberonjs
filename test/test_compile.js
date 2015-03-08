@@ -13,7 +13,20 @@ function normalizeLineEndings(text){
                .replace(/\s+$/,''); // ending spaces
 }
 
+function filterOutRtlCode(text){
+    var prefix = "var RTL$ = {";
+    if (text.substr(0, prefix.length) != prefix)
+        return text;
+    
+    var suffix = "\n};";
+    var end = text.indexOf(suffix);
+    if (end == -1)
+        return text;
+    return "<rtl code>" + text.substr(end + suffix.length);
+}
+
 function compareResults(result, name, dirs){
+    result = filterOutRtlCode(result);
     fs.writeFileSync(path.join(dirs.output, name), result);
     var expected = fs.readFileSync(path.join(dirs.expected, name), "utf8");
     if (normalizeLineEndings(result) != normalizeLineEndings(expected))

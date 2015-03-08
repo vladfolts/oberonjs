@@ -3,8 +3,6 @@ IMPORT OberonRtl;
 TYPE
     Type* = RECORD(OberonRtl.Type)
         clearMap*: PROCEDURE(s: STRING): STRING;
-        cloneMapOfScalars*: PROCEDURE(s: STRING): STRING;
-        copyMapOfScalars*: PROCEDURE(from, to: STRING): STRING;
     END;
     PType* = POINTER TO Type;
 

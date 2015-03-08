@@ -1,5 +1,5 @@
 MODULE EberonOperator;
-IMPORT Cast, Code, CodePrecedence, Context, OberonRtl, Operator, Types;
+IMPORT Cast, Code, CodePrecedence, EberonMap, LanguageContext, OberonRtl, Operator, Types;
 TYPE
     CastOpRecord = RECORD(Cast.CastOpRecord)
     END;
@@ -41,32 +41,32 @@ PROCEDURE opGraterEqualStr(left, right: Code.PConst): Code.PConst;
                               >= right^(Code.StringConst).value))
 END opGraterEqualStr;
 
-PROCEDURE addStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN Operator.binaryWithCode(left, right, rtl, opAddStr, " + ", CodePrecedence.addSub)
+PROCEDURE addStr*(left, right: Code.PExpression): Code.PExpression;
+    RETURN Operator.binaryWithCode(left, right, opAddStr, " + ", CodePrecedence.addSub)
 END addStr;
 
-PROCEDURE equalStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN Operator.equal(left, right, rtl, opEqualStr, " == ")
+PROCEDURE equalStr*(left, right: Code.PExpression): Code.PExpression;
+    RETURN Operator.equal(left, right, opEqualStr, " == ")
 END equalStr;
 
-PROCEDURE notEqualStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN Operator.equal(left, right, rtl, opNotEqualStr, " != ")
+PROCEDURE notEqualStr*(left, right: Code.PExpression): Code.PExpression;
+    RETURN Operator.equal(left, right, opNotEqualStr, " != ")
 END notEqualStr;
 
-PROCEDURE lessStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN Operator.relational(left, right, rtl, opLessStr, " < ")
+PROCEDURE lessStr*(left, right: Code.PExpression): Code.PExpression;
+    RETURN Operator.relational(left, right, opLessStr, " < ")
 END lessStr;
 
-PROCEDURE greaterStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN Operator.relational(left, right, rtl, opGreaterStr, " > ")
+PROCEDURE greaterStr*(left, right: Code.PExpression): Code.PExpression;
+    RETURN Operator.relational(left, right, opGreaterStr, " > ")
 END greaterStr;
 
-PROCEDURE lessEqualStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN Operator.relational(left, right, rtl, opLessEqualStr, " <= ")
+PROCEDURE lessEqualStr*(left, right: Code.PExpression): Code.PExpression;
+    RETURN Operator.relational(left, right, opLessEqualStr, " <= ")
 END lessEqualStr;
 
-PROCEDURE greaterEqualStr*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN Operator.relational(left, right, rtl, opGraterEqualStr, " >= ")
+PROCEDURE greaterEqualStr*(left, right: Code.PExpression): Code.PExpression;
+    RETURN Operator.relational(left, right, opGraterEqualStr, " >= ")
 END greaterEqualStr;
 
 PROCEDURE inMap*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
@@ -74,7 +74,19 @@ PROCEDURE inMap*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExp
                                      Types.basic.bool);
 END;
 
-PROCEDURE CastOpRecord.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
+PROCEDURE generateTypeInfo*(type: Types.PType): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF type IS EberonMap.PType THEN
+        result := "{map: " + generateTypeInfo(type.valueType) + "}";
+    ELSE
+        result := Types.generateTypeInfo(type);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
 VAR
     result: STRING;
 BEGIN
@@ -87,8 +99,8 @@ BEGIN
             result := leftLval + " = " + right.code();
         ELSE
             result := leftLval + " = " + cx.rtl.clone(right.code(), 
-                                                      Types.generateTypeInfo(left.type()), 
-                                                      Types.recordConstructor(cx, left.type()(Types.PRecord)^));
+                                                      generateTypeInfo(left.type()), 
+                                                      Types.recordConstructor(cx^, left.type()(Types.PRecord)^));
         END;
     ELSE
         result := SUPER(cx, left, right);

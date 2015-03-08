@@ -1,9 +1,4 @@
-var RTL$ = {
-    makeRef: function (obj, prop){
-        return {set: function(v){ obj[prop] = v; },
-                get: function(){ return obj[prop]; }};
-    }
-};
+<rtl code>
 var m = function (){
 function TP(){
 	this.i = 0;

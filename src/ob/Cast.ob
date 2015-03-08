@@ -1,19 +1,12 @@
 MODULE Cast;
-IMPORT Code, Context, OberonRtl, String, Types;
+IMPORT Code, LanguageContext, OberonRtl, String, Types;
 CONST
     errNo* = 0;
     err* = 1;
     errVarParameter* = 2;
 TYPE
-    CastOp* = RECORD
-        PROCEDURE make*(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
-        PROCEDURE assign*(cx: Context.Type; left, right: Code.PExpression): STRING;
-        PROCEDURE clone*(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
-    END;
 
-    PCastOp* = POINTER TO CastOp;
-
-    CastOpDoNothing* = RECORD (CastOp)
+    CastOpDoNothing* = RECORD (LanguageContext.CastOp)
     END;
 
     CastOpArray* = RECORD (CastOpDoNothing)
@@ -26,8 +19,7 @@ TYPE
     END;
 
     Operations* = RECORD
-        castToRecord*: PCastOp;
-        castToUint8*: PCastOp
+        castToRecord*, castToUint8*: LanguageContext.PCastOp;
     END;
 
 VAR
@@ -118,7 +110,7 @@ BEGIN
     RETURN result
 END areTypesExactlyMatchImpl;
 
-PROCEDURE CastOpDoNothing.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
+PROCEDURE CastOpDoNothing.make(cx: LanguageContext.PType; e: Code.PExpression): Code.PExpression;
     RETURN e
 END;
 
@@ -132,11 +124,11 @@ PROCEDURE assignByReference*(left, right: Code.PExpression): STRING;
     RETURN left.code() + ".set(" + Code.derefExpression(right).code() + ")";
 END;
 
-PROCEDURE CastOpDoNothing.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpDoNothing.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
 VAR
     result: STRING;
 BEGIN
-    rightConverted <- SELF.make(cx.rtl, right);
+    rightConverted <- SELF.make(cx, right);
     IF passedByReference(left) THEN
         result := assignByReference(left, rightConverted);
     ELSE
@@ -145,35 +137,35 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE CastOpDoNothing.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
+PROCEDURE CastOpDoNothing.clone(cx: LanguageContext.PType; e: Code.PExpression): STRING;
     RETURN Code.derefExpression(e).code();
 END;
 
-PROCEDURE cloneArray*(t: Types.PArray; code: STRING; rtl: OberonRtl.Type): STRING;
+PROCEDURE cloneArray*(t: Types.PArray; code: STRING; cx: LanguageContext.PType): STRING;
 VAR
     result: STRING;
 BEGIN
     IF Types.arrayElementsType(t^).isScalar() THEN
         result := code + ".slice()";
     ELSE
-        result := rtl.clone(code, Types.generateTypeInfo(t), "undefined");
+        result := cx.rtl.clone(code, cx.types.typeInfo(t), "undefined");
     END;
     RETURN result
 END;
 
-PROCEDURE CastOpArray.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
-    RETURN left.code() + " = " + cloneArray(right.type()(Types.PArray), right.code(), cx.rtl^)
+PROCEDURE CastOpArray.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
+    RETURN left.code() + " = " + cloneArray(right.type()(Types.PArray), right.code(), cx)
 END;
 
-PROCEDURE CastOpArray.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
-    RETURN cloneArray(e.type()(Types.PArray), e.code(), rtl^);
+PROCEDURE CastOpArray.clone(cx: LanguageContext.PType; e: Code.PExpression): STRING;
+    RETURN cloneArray(e.type()(Types.PArray), e.code(), cx);
 END;
 
-PROCEDURE CastOpRecord.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
     RETURN cx.rtl.copy(right.code(), left.lval(), Types.generateTypeInfo(left.type()));
 END;
 
-PROCEDURE CastOpStrToChar.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
+PROCEDURE CastOpStrToChar.make(cx: LanguageContext.PType; e: Code.PExpression): Code.PExpression;
 BEGIN
     s <- e.type()(Types.PString);
     ASSERT(LEN(s.s) = 1);
@@ -182,7 +174,7 @@ BEGIN
     RETURN Code.makeSimpleExpression(code, Types.basic.ch)
 END CastOpStrToChar.make;
 
-PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Operations; VAR op: PCastOp): INTEGER;
+PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Operations; VAR op: LanguageContext.PCastOp): INTEGER;
 VAR
     ignore: BOOLEAN;
 BEGIN

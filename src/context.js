@@ -641,7 +641,7 @@ exports.ProcDecl = ChainedContext.extend({
                 "RETURN '" + result.description() + "' expected, got '"
                 + type.description() + "'");
 
-        this.codeGenerator().write("return " + op.clone(language.rtl, e) + ";\n");
+        this.codeGenerator().write("return " + op.clone(language, e) + ";\n");
 
         this.__returnParsed = true;
     },
@@ -1256,7 +1256,7 @@ exports.Expression = ChainedContext.extend({
         rightExpression = promoteTypeInExpression(rightExpression, leftExpression.type());
 
         var o = this._relationOperation(leftExpression.type(), rightExpression.type(), this.__relation);
-        this.__expression = o(leftExpression, rightExpression, this.language().rtl);
+        this.__expression = o(leftExpression, rightExpression, this.language());
     },
     _relationOperation: function(left, right, relation){
         return relationOp(left, right, relation, this.__relOps, this);

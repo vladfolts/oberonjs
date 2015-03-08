@@ -1,27 +1,4 @@
-var RTL$ = {
-    makeArray: function (/*dimensions, initializer*/){
-        var forward = Array.prototype.slice.call(arguments);
-        var result = new Array(forward.shift());
-        var i;
-        if (forward.length == 1){
-            var init = forward[0];
-            if (typeof init == "function")
-                for(i = 0; i < result.length; ++i)
-                    result[i] = init();
-            else
-                for(i = 0; i < result.length; ++i)
-                    result[i] = init;
-        }
-        else
-            for(i = 0; i < result.length; ++i)
-                result[i] = this.makeArray.apply(this, forward);
-        return result;
-    },
-    assert: function (condition){
-        if (!condition)
-            throw new Error("assertion failed");
-    }
-};
+<rtl code>
 var m = function (){
 var ch = 0;
 var i = 0;

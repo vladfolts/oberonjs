@@ -75,7 +75,7 @@ END;
 
 PROCEDURE NonRecordInitCall.handleArgument(e: Code.PExpression);
 VAR
-    op: Cast.PCastOp;
+    op: LanguageContext.PCastOp;
 BEGIN
     IF LEN(SELF.code) # 0 THEN
         raiseSingleArgumentException(SELF);
@@ -87,7 +87,7 @@ BEGIN
                          + "' and cannot be initialized using '" + e.type().description() + "' expression");
     END;
     lval <- fieldInitLval(SELF.field);
-    SELF.code := lval + " = " + op.clone(SELF.cx.rtl, e);
+    SELF.code := lval + " = " + op.clone(SELF.cx, e);
 END;
         
 PROCEDURE NonRecordInitCall.end(): Code.PExpression;

@@ -359,8 +359,10 @@ var InPlaceVariableInit = Context.Chained.extend({
         this._symbol = new Symbol.Symbol(this.__id, v);
         if (type instanceof Type.Record){
             EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForCopy);
-            if (e.designator())
-                this._code += this.language().rtl.clone(e.code(), Type.generateTypeInfo(type));
+            if (e.designator()){
+                var l = this.language();
+                this._code += l.rtl.clone(e.code(), l.types.typeInfo(type));
+            }
             else // do not clone if it is temporary, e.g. constructor call
                 this._code += e.code();
         }
@@ -371,7 +373,7 @@ var InPlaceVariableInit = Context.Chained.extend({
             var language = this.language();
             var cloneOp;
             language.types.implicitCast(type, type, false, {set: function(v){cloneOp = v;}, get:function(){return cloneOp;}});
-            this._code += cloneOp.clone(language.rtl, e);
+            this._code += cloneOp.clone(language, e);
         }
     },
     _onParsed: function(){

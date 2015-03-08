@@ -1,10 +1,25 @@
 MODULE LanguageContext;
-IMPORT Context, Language;
+IMPORT Code, Context, T := Types;
 
 TYPE
-    Type* = RECORD(Context.Type)
-        types*: Language.PTypes
-    END;
     PType* = POINTER TO Type;
+
+    CastOp* = RECORD
+        PROCEDURE make*(cx: PType; e: Code.PExpression): Code.PExpression;
+        PROCEDURE assign*(cx: PType; left, right: Code.PExpression): STRING;
+        PROCEDURE clone*(cx: PType; e: Code.PExpression): STRING;
+    END;
+
+    PCastOp* = POINTER TO CastOp;
+
+    Types* = RECORD         
+        PROCEDURE implicitCast*(from, to: T.PType; toVar: BOOLEAN; VAR op: PCastOp): INTEGER;
+        PROCEDURE typeInfo*(type: T.PType): STRING;
+    END;
+    PTypes* = POINTER TO Types;
+
+    Type* = RECORD(Context.Type)
+        types*: PTypes;
+    END;
 
 END LanguageContext.

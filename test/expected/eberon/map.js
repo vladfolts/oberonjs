@@ -1,147 +1,4 @@
-var RTL$ = {
-    makeArray: function (/*dimensions, initializer*/){
-        var forward = Array.prototype.slice.call(arguments);
-        var result = new Array(forward.shift());
-        var i;
-        if (forward.length == 1){
-            var init = forward[0];
-            if (typeof init == "function")
-                for(i = 0; i < result.length; ++i)
-                    result[i] = init();
-            else
-                for(i = 0; i < result.length; ++i)
-                    result[i] = init;
-        }
-        else
-            for(i = 0; i < result.length; ++i)
-                result[i] = this.makeArray.apply(this, forward);
-        return result;
-    },
-    cloneMapOfScalars: function (from){
-        var result = {};
-        this.copyMapOfScalars(from, result);
-        return result;
-    },
-    copyMapOfScalars: function (from, to){
-        this.clearMap(to);
-        for(var k in from)
-            to[k] = from[k];
-    },
-    clearMap: function (map){
-        for(var p in map)
-            delete map[p];
-    },
-    assert: function (condition){
-        if (!condition)
-            throw new Error("assertion failed");
-    },
-    extend: function (cons, base){
-        function Type(){}
-        Type.prototype = base.prototype;
-        cons.prototype = new Type();
-        cons.prototype.constructor = cons;
-    },
-    makeCharArray: function (/*dimensions*/){
-        var forward = Array.prototype.slice.call(arguments);
-        var length = forward.pop();
-
-        if (!forward.length)
-            return this.__makeCharArray(length);
-
-        function makeArray(){
-            var forward = Array.prototype.slice.call(arguments);
-            var result = new Array(forward.shift());
-            var i;
-            if (forward.length == 1){
-                var init = forward[0];
-                for(i = 0; i < result.length; ++i)
-                    result[i] = init();
-            }
-            else
-                for(i = 0; i < result.length; ++i)
-                    result[i] = makeArray.apply(undefined, forward);
-            return result;
-        }
-
-        forward.push(this.__makeCharArray.bind(this, length));
-        return makeArray.apply(undefined, forward);
-    },
-    __makeCharArray: function (length){
-        var result = new Uint16Array(length);
-        this.__setupCharArrayMethods(result);
-        return result;
-    },
-    __setupCharArrayMethods: function (a){
-        var rtl = this;
-        a.charCodeAt = function(i){return this[i];};
-        a.slice = function(){
-            var result = Array.prototype.slice.apply(this, arguments);
-            rtl.__setupCharArrayMethods(result);
-            return result;
-        };
-        a.toString = function(){
-            return String.fromCharCode.apply(this, this);
-        };
-    },
-    getMappedValue: function (map, key){
-        if (!map.hasOwnProperty(key))
-            throw new Error("invalid key: " + key);
-        return map[key];
-    },
-    clone: function (from, type, recordCons){
-        var result;
-        var r = type.record;
-        if (r){
-            var Ctr = recordCons || from.constructor;
-            result = new Ctr();
-            this.copy(from, result, type);
-            return result;
-        }
-        var a = type.array;
-        if (a !== undefined ){
-            if (a === null)
-                // shallow clone
-                return from.slice();
-
-            // deep clone
-            var length = from.length;
-            result = new Array(length);
-            for(var i = 0; i < length; ++i)
-                result[i] = this.clone(from[i], a);
-            return result;
-        }
-    },
-    copy: function (from, to, type){
-        var r = type.record;
-        if (r){
-            for(var f in r){
-                var fieldType = r[f];
-                if (fieldType){
-                    // temporary support for mangled fields
-                    var mangled = "$" + f;
-                    if (!from.hasOwnProperty(mangled))
-                        mangled = f;
-                    this.copy(from[mangled], to[mangled], fieldType);
-                }
-                else
-                    to[f] = from[f];
-            }
-            return;
-        }
-        var a = type.array;
-        if (a !== undefined ){
-            if (a === null)
-                // shallow copy
-                Array.prototype.splice.apply(to, [0, to.length].concat(from));
-            else {
-                // deep copy
-                to.splice(0, to.length);
-                for(var i = 0; i < from.length; ++i)
-                    to.push(this.clone(from[i], a));
-            }
-        }
-    }
-};
+<rtl code>
 var test = function (){
 var m = {};
 function anonymous$1(){
@@ -150,7 +7,7 @@ function anonymous$1(){
 var r = new anonymous$1();
 var a = RTL$.makeArray(1, {});
 function RecordWithMapInitializedInConstructor(m/*MAP OF INTEGER*/){
-	this.m = RTL$.cloneMapOfScalars(m);
+	this.m = RTL$.clone(m, {map: null}, undefined);
 }
 
 function ForEach(){
@@ -165,7 +22,7 @@ function ForEach(){
 
 function makeMap(){
 	var m = {};
-	return RTL$.cloneMapOfScalars(m);
+	return RTL$.clone(m, {map: null}, undefined);
 }
 
 function ForEachWithExpression(){
@@ -269,20 +126,34 @@ function clear(){
 
 function returnLocalMap(){
 	var result = {};
-	return RTL$.cloneMapOfScalars(result);
+	return RTL$.clone(result, {map: null}, undefined);
 }
 
 function returnNonLocalMap(m/*MAP OF INTEGER*/){
-	return RTL$.cloneMapOfScalars(m);
+	return RTL$.clone(m, {map: null}, undefined);
 }
 
 function assign(a/*MAP OF INTEGER*/){
 	var v = {};
-	RTL$.copyMapOfScalars(a, v);
-	var v2 = RTL$.cloneMapOfScalars(a);
-	var v3 = RTL$.cloneMapOfScalars(v2);
-	var v4 = RTL$.cloneMapOfScalars(returnLocalMap());
-	var v5 = RTL$.cloneMapOfScalars(returnNonLocalMap(v));
+	RTL$.copy(a, v, {map: null});
+	var v2 = RTL$.clone(a, {map: null}, undefined);
+	var v3 = RTL$.clone(v2, {map: null}, undefined);
+	var v4 = RTL$.clone(returnLocalMap(), {map: null}, undefined);
+	var v5 = RTL$.clone(returnNonLocalMap(v), {map: null}, undefined);
+}
+
+function copyMapOfRecord(){
+	function T(){
+	}
+	var r1 = {};var r2 = {};
+	RTL$.copy(r2, r1, {map: {record: {}}});
+}
+
+function cloneMapOfRecord(){
+	function T(){
+	}
+	var r1 = {};
+	var r2 = RTL$.clone(r1, {map: {record: {}}}, undefined);
 }
 
 function passByRef(m/*VAR MAP OF INTEGER*/){

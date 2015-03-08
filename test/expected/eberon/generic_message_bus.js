@@ -1,15 +1,4 @@
-var RTL$ = {
-    extend: function (cons, base){
-        function Type(){}
-        Type.prototype = base.prototype;
-        cons.prototype = new Type();
-        cons.prototype.constructor = cons;
-    },
-    assert: function (condition){
-        if (!condition)
-            throw new Error("assertion failed");
-    }
-};
+<rtl code>
 var m = function (){
 function Message(){
 }

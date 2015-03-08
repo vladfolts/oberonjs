@@ -1,9 +1,4 @@
-var RTL$ = {
-    assert: function (condition){
-        if (!condition)
-            throw new Error("assertion failed");
-    }
-};
+<rtl code>
 var m = function (){
 var ch = 0;
 var set = 0;

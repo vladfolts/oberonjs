@@ -1,18 +1,18 @@
 MODULE EberonCast;
-IMPORT Cast, Code, Context, EberonMap, EberonRtl, EberonString, EberonDynamicArray, OberonRtl, Types;
+IMPORT Cast, Code, Context, EberonMap, EberonRtl, EberonString, EberonOperator, EberonDynamicArray, LanguageContext, OberonRtl, Types;
 TYPE
     CastOpToDynamicArray = RECORD (Cast.CastOpArray)
     END;
 
-    CastOpToMap = RECORD (Cast.CastOp)
+    CastOpToMap = RECORD (LanguageContext.CastOp)
     END;
 
 VAR
     castOpToDynamicArray: POINTER TO CastOpToDynamicArray;
     castOpToMap: POINTER TO CastOpToMap;
 
-PROCEDURE CastOpToDynamicArray.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
-    RETURN Code.makeSimpleExpression(Cast.cloneArray(e.type()(Types.PArray), e.code(), rtl^), NIL)
+PROCEDURE CastOpToDynamicArray.make(cx: LanguageContext.PType; e: Code.PExpression): Code.PExpression;
+    RETURN Code.makeSimpleExpression(Cast.cloneArray(e.type()(Types.PArray), e.code(), cx), NIL)
 END;
 
 PROCEDURE copyArray(t: Types.PArray; leftCode, rightCode: STRING; rtl: OberonRtl.Type): STRING;
@@ -22,27 +22,25 @@ BEGIN
     IF t.elementsType.isScalar() THEN
         result := "Array.prototype.splice.apply(" + leftCode + ", [0, Number.MAX_VALUE].concat(" + rightCode + "))";
     ELSE
-        result := rtl.copy(rightCode, leftCode, Types.generateTypeInfo(t));
+        result := rtl.copy(rightCode, leftCode, EberonOperator.generateTypeInfo(t));
     END;
     RETURN result
 END;
 
-PROCEDURE CastOpToDynamicArray.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpToDynamicArray.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
     RETURN copyArray(left.type()(Types.PArray), left.code(), right.code(), cx.rtl^)
 END;
 
-PROCEDURE CastOpToMap.make(rtl: OberonRtl.PType; e: Code.PExpression): Code.PExpression;
+PROCEDURE CastOpToMap.make(cx: LanguageContext.PType; e: Code.PExpression): Code.PExpression;
     RETURN e;
 END;
 
-PROCEDURE CastOpToMap.assign(cx: Context.Type; left, right: Code.PExpression): STRING;
-    (* TODO: support non-scalar MAPs *)
-    RETURN cx.rtl(EberonRtl.PType).copyMapOfScalars(right.code(), left.code());
+PROCEDURE CastOpToMap.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
+    RETURN cx.rtl.copy(right.code(), left.code(), EberonOperator.generateTypeInfo(left.type()));
 END;
 
-PROCEDURE CastOpToMap.clone(rtl: OberonRtl.PType; e: Code.PExpression): STRING;
-    (* TODO: support non-scalar MAPs *)
-    RETURN rtl(EberonRtl.PType).cloneMapOfScalars(e.code());
+PROCEDURE CastOpToMap.clone(cx: LanguageContext.PType; e: Code.PExpression): STRING;
+    RETURN cx.rtl.clone(e.code(), EberonOperator.generateTypeInfo(e.type()), "undefined");
 END;
 
 PROCEDURE isOpenCharArray(type: Types.PType): BOOLEAN;
@@ -63,7 +61,7 @@ BEGIN
     RETURN result
 END dynamicArrayElementsMatch;
 
-PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Cast.Operations; VAR op: Cast.PCastOp): INTEGER;
+PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Cast.Operations; VAR op: LanguageContext.PCastOp): INTEGER;
 VAR
     result: INTEGER;
 BEGIN

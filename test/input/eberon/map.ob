@@ -157,6 +157,24 @@ BEGIN
     v5 <- returnNonLocalMap(v);
 END;
 
+PROCEDURE copyMapOfRecord();
+TYPE
+    T = RECORD END;
+VAR
+    r1, r2: MAP OF T;
+BEGIN
+    r1 := r2;
+END;
+
+PROCEDURE cloneMapOfRecord();
+TYPE
+    T = RECORD END;
+VAR
+    r1: MAP OF T;
+BEGIN
+    r2 <- r1;
+END;
+
 PROCEDURE passByRef(VAR m: MapOfInteger);
 BEGIN
     m["abc"] := 123;

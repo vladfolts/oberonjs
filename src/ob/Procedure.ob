@@ -4,7 +4,6 @@ IMPORT
     Code, 
     Context, 
     Errors, 
-    Language,
     LanguageContext,
     OberonRtl,
     Object, 
@@ -61,7 +60,7 @@ TYPE
     ArgumentsCode* = RECORD
         PROCEDURE write*(actual: Code.PExpression; 
                          expected: Types.PProcedureArgument; 
-                         cast: Cast.PCastOp
+                         cast: LanguageContext.PCastOp
                          );
         PROCEDURE result*(): STRING
     END;
@@ -69,10 +68,9 @@ TYPE
 
     GenArgCode = RECORD(ArgumentsCode)
         code: STRING;
-        cx: Context.PType
+        cx: LanguageContext.PType
     END;
 
-    BinaryOp = PROCEDURE(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
     BinaryOpStr = PROCEDURE (x, y: STRING): STRING;
 VAR
     predefined*: ARRAY * OF Symbols.PSymbol;
@@ -82,13 +80,13 @@ PROCEDURE checkArgument*(
     expected: Types.PProcedureArgument; 
     pos: INTEGER;
     code: PArgumentsCode;
-    types: Language.PTypes
+    types: LanguageContext.PTypes
     );
 VAR
     actualType, expectType: Types.PType;
     designator: Code.PDesignator;
     info: Types.PId;
-    result: Cast.PCastOp;
+    result: LanguageContext.PCastOp;
     castErr: INTEGER;
 BEGIN
     expectType := expected.type; (* can be NIL for predefined functions (like NEW), dont check it in this case *)
@@ -128,7 +126,7 @@ PROCEDURE checkArgumentsType(
     actual: ARRAY OF Code.PExpression;
     expected: ARRAY OF Types.PProcedureArgument; 
     code: PArgumentsCode;
-    types: Language.PTypes
+    types: LanguageContext.PTypes
     );
 BEGIN
     FOR i <- 0 TO LEN(actual) - 1 DO
@@ -149,14 +147,14 @@ PROCEDURE processArguments*(
     actual: ARRAY OF Code.PExpression;
     expected: ARRAY OF Types.PProcedureArgument; 
     code: PArgumentsCode;
-    types: Language.PTypes
+    types: LanguageContext.PTypes
     );
 BEGIN
     checkArgumentsCount(LEN(actual), LEN(expected));
     checkArgumentsType(actual, expected, code, types);
 END processArguments;
 
-PROCEDURE checkArguments(actual: ARRAY OF Code.PExpression; expected: ARRAY OF Types.PProcedureArgument; types: Language.PTypes);
+PROCEDURE checkArguments(actual: ARRAY OF Code.PExpression; expected: ARRAY OF Types.PProcedureArgument; types: LanguageContext.PTypes);
 BEGIN
     processArguments(actual, expected, NIL, types);
 END checkArguments;
@@ -185,7 +183,7 @@ BEGIN
     RETURN result
 END;
 
-PROCEDURE GenArgCode.write(actual: Code.PExpression; expected: Types.PProcedureArgument; cast: Cast.PCastOp);
+PROCEDURE GenArgCode.write(actual: Code.PExpression; expected: Types.PProcedureArgument; cast: LanguageContext.PCastOp);
 VAR
     e: Code.PExpression;
     coercedArg: Code.PExpression;
@@ -199,7 +197,7 @@ BEGIN
         SELF.code := SELF.code + ", ";
     END;
     IF cast # NIL THEN
-        e := cast.make(SELF.cx.rtl, coercedArg);
+        e := cast.make(SELF.cx, coercedArg);
     ELSE
         e := coercedArg;
     END;
@@ -238,7 +236,7 @@ BEGIN
     RETURN makeCallGenerator(call, cx)
 END makeProcCallGeneratorWithCustomArgs;
 
-PROCEDURE makeArgumentsCode*(cx: Context.PType): PArgumentsCode;
+PROCEDURE makeArgumentsCode*(cx: LanguageContext.PType): PArgumentsCode;
 BEGIN
     result <- NEW GenArgCode();
     result.cx := cx;
@@ -291,7 +289,7 @@ END hasVarArgumnetWithCustomType;
 PROCEDURE checkSingleArgument*(
     actual: ARRAY OF Code.PExpression; 
     call: StdCall; 
-    types: Language.PTypes; 
+    types: LanguageContext.PTypes; 
     code: PArgumentsCode
     ): Code.PExpression;
 BEGIN
@@ -441,8 +439,7 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
                     Types.basic.integer,
                     NIL,
                     Code.makeIntConst(1)), 
-                y,
-                cx.rtl);
+                y);
             valueCode := valueCodeExp.code();
         ELSE
             yValue := value^(Code.IntConst).value;
@@ -510,7 +507,7 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr; incRefOp: Ope
             ELSE
                 y := args[1];
             END;
-            addExp <- SELF.incRefOp(x, y, cx.rtl);
+            addExp <- SELF.incRefOp(x, y);
             code := Cast.assignByReference(x, addExp);
         ELSIF LEN(args) = 1 THEN
             code := SELF.unary + x.code();
@@ -628,18 +625,18 @@ BEGIN
     RETURN makeSymbol(NEW Std("FLT", call))
 END makeFlt;
 
-PROCEDURE bitShiftImpl(name: STRING; op: BinaryOp): Symbols.PSymbol;
+PROCEDURE bitShiftImpl(name: STRING; op: Operator.BinaryProc): Symbols.PSymbol;
     TYPE
         CallImpl = RECORD(StdCall)
             name: STRING;
-            op: BinaryOp
+            op: Operator.BinaryProc
         END;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     BEGIN
         checkArguments(args, SELF.args, cx.types);
         ASSERT(LEN(args) = 2);
-        RETURN SELF.op(args[0], args[1], cx.rtl)
+        RETURN SELF.op(args[0], args[1])
     END CallImpl.make;
 BEGIN
     call <- NEW CallImpl();
@@ -732,7 +729,7 @@ PROCEDURE makePack(): Symbols.PSymbol;
         x := args[0];
         y := args[1];
         RETURN Code.makeSimpleExpression(
-            Operator.mulInplace(x, Operator.pow2(y), cx^),
+            Operator.mulInplace(x, Operator.pow2(y), cx),
             NIL)
     END CallImpl.make;
 BEGIN
@@ -755,9 +752,9 @@ PROCEDURE makeUnpk(): Symbols.PSymbol;
         x := args[0];
         y := args[1];
         RETURN Code.makeSimpleExpression(
-                Operator.assign(y, Operator.log2(x), cx^) 
+                Operator.assign(y, Operator.log2(x), cx) 
                 + "; "
-                + Operator.divInplace(x, Operator.pow2(y), cx^),
+                + Operator.divInplace(x, Operator.pow2(y), cx),
             NIL)
     END CallImpl.make;
 BEGIN
