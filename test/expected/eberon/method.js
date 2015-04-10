@@ -20,16 +20,20 @@ T.prototype.methodDefinedWithoutEndingIdent = function(){
 function acceptPointer(p/*PT*/){
 }
 
-function acceptReferenace(p/*VAR T*/){
+function acceptReference(p/*VAR T*/){
 }
 
 function acceptConstReferenace(p/*T*/){
+}
+T.prototype.useSelfAsVar = function(){
+	acceptReference(this);
+	acceptConstReferenace(this);
 }
 T.prototype.useSelfAsPointer = function(){
 	var pVar = null;
 	pVar = this;
 	acceptPointer(this);
-	acceptReferenace(this);
+	acceptReference(this);
 	acceptConstReferenace(this);
 }
 D.prototype.p = function(){

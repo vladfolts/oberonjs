@@ -8,19 +8,24 @@ VAR
 
 PROCEDURE ElementVariable.idType(): STRING;
     RETURN "string element"
-END ElementVariable.idType;
+END;
 
 PROCEDURE ElementVariable.isReadOnly(): BOOLEAN;
     RETURN TRUE
-END ElementVariable.isReadOnly;
+END;
 
-PROCEDURE ElementVariable.type(): Types.PType;
+PROCEDURE ElementVariable.type(): Types.PStorageType;
     RETURN Types.basic.ch
-END ElementVariable.type;
+END;
 
 PROCEDURE ElementVariable.isReference(): BOOLEAN;
     RETURN FALSE
-END ElementVariable.isReference;
+END;
+
+PROCEDURE ElementVariable.referenceCode(): STRING;
+BEGIN
+    RETURN "";
+END;
 
 PROCEDURE makeElementVariable*(): Types.PVariable;
     RETURN NEW ElementVariable();

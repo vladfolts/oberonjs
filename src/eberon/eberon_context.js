@@ -104,16 +104,23 @@ var TypeNarrowVariableBase = Class.extend.call(Type.Variable, {
 });
 
 var TypeNarrowVariable = TypeNarrowVariableBase.extend({
-    init: function TypeNarrowVariable(type, isRef, isReadOnly){
+    init: function TypeNarrowVariable(type, isRef, isReadOnly, code){
         this.__type = type;
         this.__isRef = isRef;
         this.__isReadOnly = isReadOnly;
+        this.__code = code;
     },
     type: function(){
         return this.__type;
     },
     isReference: function(){
         return this.__isRef;
+    },
+    code: function(){
+        return this.__code;
+    },
+    referenceCode: function(){
+        return this.__code;
     },
     isReadOnly: function(){
         return this.__isReadOnly;
@@ -142,6 +149,9 @@ var DereferencedTypeNarrowVariable = TypeNarrowVariableBase.extend({
     },
     setType: function(type){
         this.__v.setType(type);
+    },
+    referenceCode: function(){
+        return this.__v.code();
     }
 });
 
@@ -174,17 +184,8 @@ var Identdef = Context.Identdef.extend({
     }
 });
 
-function makeContext(context){
-    var l = context.language();
-    return {
-        types: l.types, 
-        rtl: l.rtl, 
-        qualifyScope: context.qualifyScope.bind(context)
-        };
-    }
-
 function makeContextCall(context, call){
-    return call(makeContext(context));
+    return call(Context.makeContext(context));
     }
 
 function OperatorNewMsg(e){
@@ -195,6 +196,34 @@ function checkMapKeyType(type){
     if (type != EberonString.string() && !Type.isString(type))
         throw new Errors.Error("invalid MAP key type: STRING or string literal or ARRAY OF CHAR expected, got '" + type.description() + "'");            
 }
+
+var MapElementVariable = Class.extend.call(Type.Variable, {
+    init: function(type, readOnly, code){
+        this.__type = type;
+        this.__isReadOnly = readOnly;
+        this.__code = code;
+    },
+    type: function(){return this.__type;},
+    isReadOnly: function(){return this.__isReadOnly;},
+    isReference: function(){return false;},
+    referenceCode: function(){
+        if (this.__type.isScalar())
+            throw new Errors.Error("cannot reference map element of type '" 
+                                 + this.__type.description() + "'");
+        return this.__code;        
+    },
+    idType: function(){
+        return (this.__isReadOnly ? "read-only " : "") + "MAP's element";
+    }
+});
+
+var SelfAsPointer = Class.extend.call(Type.Id, {
+    init: function(){
+    },
+    idType: function(){
+        return "SELF(POINTER)";
+    }
+});
 
 var Designator = Context.Designator.extend({
     init: function EberonContext$Designator(parent){
@@ -219,10 +248,11 @@ var Designator = Context.Designator.extend({
 
         if (currentType instanceof EberonMap.Type){
             var indexType = currentType.valueType;
+            var rval = this.language().rtl.getMappedValue(code, indexCode);
             return { length: undefined, 
                      type: indexType,
-                     info: Type.makeVariable(indexType, info.isReadOnly()),
-                     code: this.language().rtl.getMappedValue(code, indexCode),
+                     info: new MapElementVariable(indexType, info.isReadOnly(), rval),
+                     code: rval,
                      lval: code + "[" + indexCode + "]"
                    };
         }
@@ -232,7 +262,7 @@ var Designator = Context.Designator.extend({
     _makeDerefVar: function(info){
         if (info instanceof TypeNarrowVariable)
             return new DereferencedTypeNarrowVariable(info);
-        return Context.Designator.prototype._makeDerefVar(info);
+        return Context.Designator.prototype._makeDerefVar.call(this, info);
     },
     handleMessage: function(msg){
         if (msg == Context.beginCallMsg)
@@ -260,12 +290,13 @@ var Designator = Context.Designator.extend({
     handleLiteral: function(s){
         if (s == "SELF"){
             var type = this.handleMessage(getMethodSelf);
-            this._advance(type, type, "this");
+            var info = new Type.DeclaredVariable("this", type);
+            this._advance(type, info, "this");
         } 
         else if (s == "POINTER"){
             var typeId = new Type.TypeId(this.handleMessage(getSelfAsPointerMsg));
             var pointerType = new Type.Pointer("", typeId);
-            var info = Type.makeVariable(pointerType, true);
+            var info = new SelfAsPointer();
             this._advance(pointerType, info, "");
         }
         else if (s == "SUPER"){
@@ -355,7 +386,7 @@ var InPlaceVariableInit = Context.Chained.extend({
         if (!isString && !(type instanceof Type.StorageType))
             throw new Errors.Error("cannot use " + type.description() + " to initialize variable");
         var v = isString ? new InPlaceStringLiteral(type) 
-                         : new TypeNarrowVariable(type, false, false);
+                         : new TypeNarrowVariable(type, false, false, this.__id);
         this._symbol = new Symbol.Symbol(this.__id, v);
         if (type instanceof Type.Record){
             EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForCopy);
@@ -433,7 +464,7 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
         var code;
         if (this.__right){
             var left = Code.makeExpression(d.code(), type, d);
-            code = op.assign(left, this.__right, makeContext(this));
+            code = op.assign(left, this.__right, Context.makeContext(this));
         }
         else if (!(d.info() instanceof ResultVariable)){
             var procCall = Context.makeProcCall(this, type, d.info());
@@ -689,14 +720,14 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 this.__boundType.baseConstructorCallCode
               + EberonRecord.fieldsInitializationCode(this.__boundType, this));
     },
-    _makeArgumentVariable: function(arg){
+    _makeArgumentVariable: function(arg, name){
         if (!arg.isVar)
-            return new TypeNarrowVariable(arg.type, false, true);
+            return new TypeNarrowVariable(arg.type, false, true, name);
 
         if (arg.type instanceof Type.Record)
-            return new TypeNarrowVariable(arg.type, true, false);
+            return new TypeNarrowVariable(arg.type, true, false, name);
 
-        return Context.ProcDecl.prototype._makeArgumentVariable.call(this, arg);
+        return Context.ProcDecl.prototype._makeArgumentVariable.call(this, arg, name);
     },
     setType: function(type){
         if (this.__methodId){

@@ -202,22 +202,32 @@ exports.suite = {
     fail(["PROCEDURE p(); BEGIN SELF.i := 0; END p;",
           "SELF can be used only in methods"])
     ),
+"SELF as VAR parameter": testWithContext(
+    context(grammar.declarationSequence, 
+            "TYPE T = RECORD PROCEDURE method() END;"
+            + "PROCEDURE refProc(VAR r: T); END;"
+            ),
+    pass("PROCEDURE T.method(); BEGIN refProc(SELF); END;")
+    ),
 "SELF as pointer": testWithContext(
     context(grammar.declarationSequence, 
             "TYPE T = RECORD PROCEDURE method() END;"
             + "PT = POINTER TO T;"
             + "VAR pVar: PT;"
-            + "PROCEDURE refProc(VAR p: PT); END refProc;"
+            + "PROCEDURE refProc(VAR r: T); END;"
+            + "PROCEDURE refPointerProc(VAR p: PT); END;"
             ),
     pass("PROCEDURE T.method(); BEGIN pVar := SELF(POINTER) END T.method;",
          "PROCEDURE p();"
           + "TYPE Derived = RECORD(T) END; VAR pd: POINTER TO Derived;"
           + "PROCEDURE Derived.method(); VAR pVar: PT; BEGIN NEW(pd); pVar := SELF(POINTER); END Derived.method;"
-          + "END p;"),
-    fail(["PROCEDURE T.method(); BEGIN refProc(SELF(POINTER)) END T.method;", 
-          "read-only variable cannot be used as VAR parameter"],
+          + "END p;",
+          "PROCEDURE T.method(); BEGIN refProc(SELF(POINTER)^) END;"
+          ),
+    fail(["PROCEDURE T.method(); BEGIN refPointerProc(SELF(POINTER)) END T.method;", 
+          "SELF(POINTER) cannot be passed as VAR actual parameter"],
          ["PROCEDURE T.method(); BEGIN SELF(POINTER) := pVar; END T.method;", 
-          "cannot assign to read-only variable"],
+          "cannot assign to SELF(POINTER)"],
          ["PROCEDURE p();"
           + "TYPE Derived = RECORD(T) END; VAR d: Derived;"
           + "PROCEDURE Derived.method(); VAR pVar: PT; BEGIN pVar := SELF(POINTER); END Derived.method;"
@@ -363,9 +373,9 @@ exports.suite = {
     "MODULE test; TYPE T* = RECORD f-: INTEGER END; END test.",
     pass(),
     fail(["MODULE m; IMPORT test; VAR r: test.T; BEGIN r.f := 123; END m.",
-          "cannot assign to read-only variable"],
+          "cannot assign to read-only record's field"],
          ["MODULE m; IMPORT test; TYPE D = RECORD(test.T) END; VAR r: D; BEGIN r.f := 123; END m.",
-          "cannot assign to read-only variable"]
+          "cannot assign to read-only record's field"]
         )),
 "STRING variable": testWithGrammar(
     grammar.variableDeclaration,
@@ -471,7 +481,7 @@ exports.suite = {
             + "PROCEDURE pCharByVar(VAR c: CHAR): CHAR; RETURN c END pCharByVar;"),
     pass("s[0]"),
     fail(["s[-1]", "index is negative: -1"],
-         ["pCharByVar(s[0])", "string element cannot be used as VAR parameter"]
+         ["pCharByVar(s[0])", "string element cannot be passed as VAR actual parameter"]
          )
     ),
 "designate call result in expression": testWithContext(
@@ -649,7 +659,7 @@ exports.suite = {
         context(grammar.declarationSequence, ""),
         pass(),
         fail(["PROCEDURE p(); BEGIN s <- \"abc\"; s := \"def\"; END p;", "cannot assign to string literal"],
-             ["PROCEDURE p(); BEGIN s <- \"abc\"; s[0] := \"d\"; END p;", "cannot assign to read-only variable"])
+             ["PROCEDURE p(); BEGIN s <- \"abc\"; s[0] := \"d\"; END p;", "cannot assign to read-only array's element"])
         ),
     "scope": testWithContext(
         temporaryValues.context,
@@ -911,10 +921,10 @@ exports.suite = {
               "cannot assign to non-VAR formal parameter"],
              ["PROCEDURE p(b: PBase); BEGIN b := NIL; END p;", 
               "cannot assign to non-VAR formal parameter"],
-             ["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN pArrayRef(a) END p",
-              "non-VAR formal parameter cannot be used as VAR parameter"],
+             ["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN pArrayRef(a) END;",
+              "non-VAR formal parameter cannot be passed as VAR actual parameter"],
              ["PROCEDURE p(r: T); BEGIN recordVar(r); END p",
-              "non-VAR formal parameter cannot be used as VAR parameter"],
+              "non-VAR formal parameter cannot be passed as VAR actual parameter"],
              ["PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
               "cannot assign to non-VAR formal parameter"],
              ["PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", 
@@ -1390,6 +1400,21 @@ exports.suite = {
             ),
         fail(["m[123]", "invalid MAP key type: STRING or string literal or ARRAY OF CHAR expected, got 'INTEGER'"])
         ),
+    "get and pass as VAR": testWithContext(
+        context(grammar.statement,
+                "TYPE T = RECORD END;"
+                + "VAR mInt: MAP OF INTEGER;"
+                + "    mS: MAP OF STRING;"
+                + "    mR: MAP OF T;"
+                + "PROCEDURE intByRef(VAR i: INTEGER); END;"
+                + "PROCEDURE stringByRef(VAR s: STRING); END;"
+                + "PROCEDURE recordByRef(VAR r: T); END;"
+                ),
+        pass("recordByRef(mR[\"a\"])"),
+        fail(["intByRef(mInt[\"a\"])", "cannot reference map element of type 'INTEGER'"],
+             ["stringByRef(mS[\"a\"])", "cannot reference map element of type 'STRING'"]
+            )
+        ),
     "IN": testWithContext(
         context(grammar.expression,
                 "VAR m: MAP OF INTEGER;"
@@ -1405,7 +1430,7 @@ exports.suite = {
         context(grammar.declarationSequence,
                 "TYPE M = MAP OF INTEGER;"),
         pass(),
-        fail(["PROCEDURE p(m: M); BEGIN m[\"abc\"] := 123; END;", "cannot assign to read-only variable"])
+        fail(["PROCEDURE p(m: M); BEGIN m[\"abc\"] := 123; END;", "cannot assign to read-only MAP's element"])
         ),
     "FOREACH": testWithContext(
         context(grammar.statement,

@@ -88,7 +88,7 @@ return {
     fail(["\"", "unexpected end of string"],
          ["\"abc", "unexpected end of string"],
          ["FFX", "undeclared identifier: 'FFX'"],
-         ["charByRef(cs[1])", "read-only variable cannot be used as VAR parameter"]
+         ["charByRef(cs[1])", "read-only array's element cannot be passed as VAR actual parameter"]
         )
     ),
 "parentheses": testWithGrammar(
@@ -797,11 +797,12 @@ return {
             + "PROCEDURE p1(VAR i: INTEGER); END p1;"
             + "PROCEDURE p2(VAR b: BOOLEAN); END p2;"
             + "PROCEDURE procBasePointer(VAR p: PBase); END procBasePointer;"
+            + "PROCEDURE int(): INTEGER; RETURN 0 END int;"
             ),
     pass("p1(i1)",
          "p1(a1[0])",
          "p1(r1.f1)"),
-    fail(["p1(c)", "constant cannot be used as VAR parameter"],
+    fail(["p1(c)", "constant cannot be passed as VAR actual parameter"],
          ["p1(123)", "expression cannot be used as VAR parameter"],
          ["p2(TRUE)", "expression cannot be used as VAR parameter"],
          ["procBasePointer(NIL)", "expression cannot be used as VAR parameter"],
@@ -810,6 +811,7 @@ return {
          ["p1(+i1)", "expression cannot be used as VAR parameter"],
          ["p1(-i1)", "expression cannot be used as VAR parameter"],
          ["p2(~b1)", "expression cannot be used as VAR parameter"],
+         ["p1(int())", "expression cannot be used as VAR parameter"],
          ["procBasePointer(pDerived)", 
           "type mismatch for argument 1: cannot pass 'PDerived' as VAR parameter of type 'PBase'"]
          )
@@ -987,7 +989,7 @@ return {
     fail(["MODULE m; IMPORT test; BEGIN test.i := 123; END m.",
           "cannot assign to imported variable"],
          ["MODULE m; IMPORT test; PROCEDURE p(VAR i: INTEGER); END p; BEGIN p(test.i); END m.",
-          "imported variable cannot be used as VAR parameter"]
+          "imported variable cannot be passed as VAR actual parameter"]
         )
     ),
 "import pointer type": testWithModule(
@@ -1106,7 +1108,7 @@ return {
             "TYPE P = POINTER TO RECORD END;"),
     pass(),
     fail(["PROCEDURE readOnlyPointers(a: ARRAY OF P); BEGIN NEW(a[0]) END readOnlyPointers",
-          "read-only variable cannot be used as VAR parameter"])
+          "read-only array's element cannot be passed as VAR actual parameter"])
     ),
 "LEN": testWithGrammar(
     grammar.procedureDeclaration,
@@ -1254,11 +1256,11 @@ return {
          "PROCEDURE p(a: ARRAY OF INTEGER); BEGIN p2(a) END p",
          "PROCEDURE p(a: ARRAY OF T); BEGIN varInteger(a[0].p.i) END p"),
     fail(["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN a[0] := 0 END p",
-          "cannot assign to read-only variable"],
+          "cannot assign to read-only array's element"],
          ["PROCEDURE p(a: ARRAY OF T); BEGIN a[0].i := 0 END p",
-          "cannot assign to read-only variable"],
+          "cannot assign to read-only record's field"],
          ["PROCEDURE p(a: ARRAY OF T); BEGIN varInteger(a[0].i) END p",
-          "read-only variable cannot be used as VAR parameter"])
+          "read-only record's field cannot be passed as VAR actual parameter"])
     ),
 "RECORD parameter": testWithContext(
     context(grammar.procedureDeclaration,
@@ -1273,9 +1275,9 @@ return {
          "PROCEDURE p(r: T); BEGIN intValue(r.i); recordValue(r); END p"
         ),
     fail(["PROCEDURE p(r: T); BEGIN r.i := 0 END p",
-          "cannot assign to read-only variable"],
+          "cannot assign to read-only record's field"],
          ["PROCEDURE p(r: T); BEGIN intVar(r.i); END p",
-          "read-only variable cannot be used as VAR parameter"]
+          "read-only record's field cannot be passed as VAR actual parameter"]
         )
     ),
 "local procedure": testWithContext(

@@ -1,6 +1,6 @@
 MODULE Types;
 IMPORT
-    Context, Errors, JS, Object, ScopeBase, Str := String;
+    Context, Errors, JS, OberonRtl, Object, ScopeBase, Str := String;
 TYPE
     Id* = RECORD(Object.Type)
         PROCEDURE idType*(): STRING
@@ -49,27 +49,61 @@ TYPE
 
     PConst* = POINTER TO Const;
 
+    PStorageType* = POINTER TO StorageType;
+
     Variable* = RECORD(Id)
-        PROCEDURE type*(): PType;
+        PROCEDURE type*(): PStorageType;
         PROCEDURE isReadOnly*(): BOOLEAN;
-        PROCEDURE isReference*(): BOOLEAN
+        PROCEDURE isReference*(): BOOLEAN;
+        PROCEDURE referenceCode*(): STRING;
     END;
 
     PVariable* = POINTER TO Variable;
 
-    VariableImpl = RECORD(Variable)
-        PROCEDURE VariableImpl(type: PType; ref: BOOLEAN);
+    TypedVariable = RECORD(Variable)
+        PROCEDURE TypedVariable(type: PStorageType);
 
-        mType: PType;
-        mRef: BOOLEAN
-    END;
-    PVariableImpl = POINTER TO VariableImpl;
-
-    ReadOnlyVariable = RECORD(VariableImpl)
-        PROCEDURE ReadOnlyVariable(type: PType);
+        mType: PStorageType;
     END;
 
-    ExportedVariable = RECORD(ReadOnlyVariable)
+    DeclaredVariable* = RECORD(TypedVariable)
+        PROCEDURE DeclaredVariable(id: STRING; type: PStorageType);
+
+        id: STRING;
+    END;
+
+    ArgumentVariable* = RECORD(DeclaredVariable)
+        PROCEDURE ArgumentVariable(id: STRING; type: PStorageType; var: BOOLEAN);
+
+        var: BOOLEAN;
+    END;
+
+    PRecordField* = POINTER TO RecordField;
+
+    FieldVariable* = RECORD(Variable)
+        PROCEDURE FieldVariable(f: PRecordField; leadCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType);
+
+        field: PRecordField;
+        leadCode: STRING;
+        readOnly: BOOLEAN;
+        rtl: OberonRtl.PType;
+    END;
+
+    PropertyVariable* = RECORD(TypedVariable)
+        PROCEDURE PropertyVariable(type: PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType);
+
+        leadCode, propCode: STRING;
+        readOnly: BOOLEAN;
+        rtl: OberonRtl.PType;
+    END;
+
+    DerefVariable* = RECORD(TypedVariable)
+        PROCEDURE DerefVariable(type: PStorageType; code: STRING);
+
+        code: STRING;
+    END;
+
+    ExportedVariable = RECORD(TypedVariable)
     END;
 
     PExportedVariable = POINTER TO ExportedVariable;
@@ -101,12 +135,10 @@ TYPE
         PROCEDURE id*(): STRING;
         PROCEDURE exported*(): BOOLEAN;
         PROCEDURE type*(): PType;
-        PROCEDURE asVar*(isReadOnly: BOOLEAN; cx: Context.Type): PId;
+        PROCEDURE asVar*(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): PId;
         PROCEDURE designatorCode*(leadCode: STRING; cx: Context.Type): PFieldCode;
     END;
     PField* = POINTER TO Field;
-
-    PStorageType* = POINTER TO StorageType;
 
     RecordField* = RECORD(Field)
         PROCEDURE RecordField*(identdef: Context.PIdentdefInfo; type: PStorageType);
@@ -116,7 +148,6 @@ TYPE
         mIdentdef: Context.PIdentdefInfo;
         mType: PStorageType;
     END;
-    PRecordField* = POINTER TO RecordField;
 
     StorageType* = RECORD(Type)    
         PROCEDURE initializer*(cx: Context.Type): STRING;
@@ -374,37 +405,173 @@ PROCEDURE Variable.idType(): STRING;
     RETURN "variable"
 END Variable.idType;
 
-PROCEDURE ReadOnlyVariable.ReadOnlyVariable(type: PType)
-    | SUPER(type, FALSE);
+PROCEDURE TypedVariable.type(): PStorageType;
+    RETURN SELF.mType
 END;
 
-PROCEDURE ReadOnlyVariable.idType(): STRING;
-    RETURN "read-only variable"
-END ReadOnlyVariable.idType;
+PROCEDURE DeclaredVariable.referenceCode(): STRING;
+BEGIN
+    result <- SELF.id;
+    IF SELF.mType.isScalar() THEN
+        result := "{set: function($v){" + result + " = $v;}, get: function(){return " + result + ";}}";
+    END;
+    RETURN result;
+END;
 
-PROCEDURE VariableImpl.type(): PType;
-    RETURN SELF.mType
-END VariableImpl.type;
+PROCEDURE DeclaredVariable.isReference(): BOOLEAN;
+    RETURN FALSE;
+END;
 
-PROCEDURE VariableImpl.isReference(): BOOLEAN;
-    RETURN SELF.mRef
-END VariableImpl.isReference;
+PROCEDURE DeclaredVariable.isReadOnly(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE ArgumentVariable.idType(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    result := "formal parameter";
+    IF ~SELF.var THEN
+        result := "non-VAR " + result;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ArgumentVariable.isReference(): BOOLEAN;
+    RETURN SELF.var;
+END;
+
+PROCEDURE ArgumentVariable.isReadOnly(): BOOLEAN;
+    RETURN ~SELF.var 
+        & ((SELF.mType IS PArray) OR (SELF.mType IS PRecord));
+END;
+
+PROCEDURE ArgumentVariable.referenceCode(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF SELF.var THEN
+        result := SELF.id;
+    ELSE
+        result := SUPER();
+    END;
+    RETURN result;
+END;
+
+PROCEDURE mangleJSProperty*(id: STRING): STRING;
+BEGIN
+    result <- id;
+    IF (id = "constructor") OR (id = "prototype") THEN
+        result := result + "$";
+    END;
+    RETURN result;
+END;
+
+PROCEDURE mangleField*(id: STRING): STRING;
+    RETURN mangleJSProperty(id);
+END;
+
+PROCEDURE FieldVariable.idType(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    result := "record's field";
+    IF SELF.readOnly THEN
+        result := "read-only " + result; 
+    END;
+    RETURN result;
+END;
+
+PROCEDURE FieldVariable.type(): PStorageType;
+    RETURN SELF.field.mType;
+END;
+
+PROCEDURE FieldVariable.referenceCode(): STRING;
+CONST
+    kQuote = 22X;
+VAR
+    result: STRING;
+BEGIN
+    codeId <- mangleField(SELF.field.mIdentdef.id());
+    IF SELF.type().isScalar() THEN
+        result := SELF.rtl.makeRef(SELF.leadCode, kQuote + codeId + kQuote);
+    ELSE
+        result := SELF.leadCode + "." + codeId;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE FieldVariable.isReference(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE FieldVariable.isReadOnly(): BOOLEAN;
+    RETURN SELF.readOnly;
+END;
+
+PROCEDURE PropertyVariable.idType(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    result := "array's element";
+    IF SELF.readOnly THEN
+        result := "read-only " + result; 
+    END;
+    RETURN result;
+END;
+
+PROCEDURE PropertyVariable.referenceCode(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF SELF.type().isScalar() THEN
+        result := SELF.rtl.makeRef(SELF.leadCode, SELF.propCode);
+    ELSE
+        result := SELF.leadCode + "[" + SELF.propCode + "]";
+    END;
+    RETURN result;
+END;
+
+PROCEDURE PropertyVariable.isReference(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE PropertyVariable.isReadOnly(): BOOLEAN;
+    RETURN SELF.readOnly;
+END;
+
+PROCEDURE DerefVariable.referenceCode(): STRING;
+    RETURN SELF.code;
+END;
+
+PROCEDURE DerefVariable.isReference(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE DerefVariable.isReadOnly(): BOOLEAN;
+    RETURN FALSE;
+END;
 
 PROCEDURE procedureType*(p: ProcedureId): PType;
     RETURN p.type
 END procedureType;
 
-PROCEDURE Variable.isReadOnly(): BOOLEAN;
-    RETURN FALSE
-END Variable.isReadOnly;
-
-PROCEDURE ReadOnlyVariable.isReadOnly(): BOOLEAN;
-    RETURN TRUE
-END ReadOnlyVariable.isReadOnly;
-
 PROCEDURE ExportedVariable.idType(): STRING;
     RETURN "imported variable"
 END ExportedVariable.idType;
+
+PROCEDURE ExportedVariable.isReference(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE ExportedVariable.isReadOnly(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE ExportedVariable.referenceCode(): STRING;
+BEGIN
+    RETURN "";
+END;
 
 PROCEDURE TypeId.idType(): STRING;
     RETURN "type"
@@ -714,26 +881,39 @@ PROCEDURE Const.Const(type: PType; value: JS.var)
       value(value);
 END;
 
-PROCEDURE VariableImpl.VariableImpl(type: PType; ref: BOOLEAN)
-    | mType(type),
-      mRef(ref);
+PROCEDURE TypedVariable.TypedVariable(type: PStorageType)
+    | mType(type);
 END;
 
-PROCEDURE makeVariable*(type: PType; readOnly: BOOLEAN): PVariable;
-VAR
-    result: PVariableImpl;
-BEGIN
-    IF readOnly THEN
-        result := NEW ReadOnlyVariable(type);
-    ELSE
-        result := NEW VariableImpl(type, FALSE);
-    END;
-    RETURN result
-END makeVariable;
-
-PROCEDURE makeVariableRef*(type: PType): PVariable;
-    RETURN NEW VariableImpl(type, TRUE);
+PROCEDURE DeclaredVariable.DeclaredVariable(id: STRING; type: PStorageType)
+    | SUPER(type),
+      id(id);
 END;
+
+PROCEDURE ArgumentVariable.ArgumentVariable(id: STRING; type: PStorageType; var: BOOLEAN)
+    | SUPER(id, type),
+      var(var);
+END;
+
+PROCEDURE FieldVariable.FieldVariable(f: PRecordField; leadCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType)
+    | field(f),
+      leadCode(leadCode),
+      readOnly(isReadOnly),
+      rtl(rtl);
+END;
+
+PROCEDURE PropertyVariable.PropertyVariable(type: PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType)
+    | SUPER(type),
+      leadCode(leadCode),
+      propCode(propCode),
+      readOnly(isReadOnly),
+      rtl(rtl);
+END;
+
+PROCEDURE DerefVariable.DerefVariable(type: PStorageType; code: STRING)
+    | SUPER(type),
+      code(code);
+      END;
 
 PROCEDURE makeExportedVariable*(v: Variable): PVariable;
     RETURN NEW ExportedVariable(v.type());
@@ -749,19 +929,6 @@ END;
 
 PROCEDURE FieldCode.FieldCode(code, derefCode, propCode: STRING)
     | code(code), derefCode(derefCode), propCode(propCode);
-END;
-
-PROCEDURE mangleJSProperty*(id: STRING): STRING;
-BEGIN
-    result <- id;
-    IF (id = "constructor") OR (id = "prototype") THEN
-        result := result + "$";
-    END;
-    RETURN result;
-END;
-
-PROCEDURE mangleField*(id: STRING): STRING;
-    RETURN mangleJSProperty(id);
 END;
 
 PROCEDURE RecordField.id(): STRING;
@@ -788,8 +955,8 @@ PROCEDURE RecordField.type(): PType;
     RETURN SELF.mType;
 END;
 
-PROCEDURE RecordField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): PId;
-    RETURN makeVariable(SELF.mType, isReadOnly);
+PROCEDURE RecordField.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): PId;
+    RETURN NEW FieldVariable(SELF(POINTER), leadCode, isReadOnly, cx.rtl);
 END;
 
 PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: PStorageType)

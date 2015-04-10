@@ -28,12 +28,13 @@ function compileModule(grammar, stream, context, handleErrors){
     }
     catch (x) {
         if (x instanceof Errors.Error) {
-            //console.log(context.getResult());
             if (handleErrors){
                 handleErrors("line " + Stream.lineNumber(stream) + ": " + x);
                 return undefined;
             }
         }
+        if (x.message)
+            x.message = "internal compiler error while parsing line " + Stream.lineNumber(stream) + ": " + Stream.currentLine(stream) + "\n" + x.message;
         throw x;
     }
     var scope = context.currentScope();

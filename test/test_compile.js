@@ -158,6 +158,7 @@ function main(){
     var errDirs = makeTestDirs("errors");
     var runDirs = makeTestDirs("run");
     var nodejsDirs = makeTestDirs("nodejs");
+    var oberonDirs = makeTestDirs("oberon");
     var eberonDirs = makeTestDirs("eberon");
     var eberonRunDirs = makeTestDirs("eberon/run");
     var eberonErrDirs = makeTestDirs("eberon/errors");
@@ -175,6 +176,7 @@ function main(){
         Test.run({"common": {"oberon": makeCommonTests(oberon, "oberon"),
                              "eberon": makeCommonTests(eberon, "eberon")
                             },
+                  "oberon": {"expect OK": makeTests(expectOk, oberonDirs, oberon)},
                   "eberon": {"expect OK": makeTests(expectOk, eberonDirs, eberon),
                              "run": makeTests(run, eberonRunDirs, eberon),
                              "expect compile error": makeTests(expectError, eberonErrDirs, eberon)

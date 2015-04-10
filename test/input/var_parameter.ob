@@ -1,6 +1,8 @@
 MODULE m;
 
-TYPE R = RECORD i: INTEGER; byte: BYTE; a: ARRAY 3 OF INTEGER; p: POINTER TO R END;
+TYPE
+	PR = POINTER TO R;
+	R = RECORD i: INTEGER; byte: BYTE; a: ARRAY 3 OF INTEGER; p: POINTER TO R END;
 
 VAR 
 	i: INTEGER;
@@ -58,6 +60,16 @@ BEGIN
 	j := array(ai);
 	j := array(r.a);
 END p3;
+
+PROCEDURE testPointerDereferenceAndPassAsVAR(p: PR);
+	PROCEDURE innerVAR(VAR r: R);
+	END innerVAR;
+	PROCEDURE innerConstVAR(r: R);
+	END innerConstVAR;
+BEGIN
+	innerVAR(p^);
+	innerConstVAR(p^);
+END testPointerDereferenceAndPassAsVAR;
 
 BEGIN
     p3(i, byte, b)

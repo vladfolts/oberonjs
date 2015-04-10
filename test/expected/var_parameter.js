@@ -56,5 +56,16 @@ function p3(i/*VAR INTEGER*/, byte/*VAR BYTE*/, b/*VAR BOOLEAN*/){
 	j = array(ai);
 	j = array(r.a);
 }
+
+function testPointerDereferenceAndPassAsVAR(p/*PR*/){
+	
+	function innerVAR(r/*VAR R*/){
+	}
+	
+	function innerConstVAR(r/*R*/){
+	}
+	innerVAR(p);
+	innerConstVAR(p);
+}
 p3({set: function($v){i = $v;}, get: function(){return i;}}, {set: function($v){byte = $v;}, get: function(){return byte;}}, {set: function($v){b = $v;}, get: function(){return b;}});
 }();

@@ -288,6 +288,15 @@ function castCode(type, context){
     return Type.recordConstructor(context, baseType);
 }
 
+function makeContext(context){
+    var l = context.language();
+    return {
+        types: l.types, 
+        rtl: l.rtl, 
+        qualifyScope: context.qualifyScope.bind(context)
+        };
+    }
+
 exports.Designator = ChainedContext.extend({
     init: function Context$Designator(context){
         ChainedContext.prototype.init.call(this, context);
@@ -333,17 +342,19 @@ exports.Designator = ChainedContext.extend({
         }
         var field = t.denote(id, isReadOnly);
         var currentType = field.type();
-        var fieldCode = field.designatorCode(this.__code, this.language());
+        var language = this.language();
+        var cx = makeContext(this);
+        var fieldCode = field.designatorCode(this.__code, cx);
         this.__derefCode = fieldCode.derefCode;
         this.__propCode = fieldCode.propCode;
-        this._advance(currentType, field.asVar(isReadOnly, this), fieldCode.code, undefined, true);
+        this._advance(currentType, field.asVar(this.__code, isReadOnly, cx), fieldCode.code, undefined, true);
         this.__scope = undefined;
     },
     _currentType: function(){return this.__currentType;},
     _currentInfo: function(){return this.__info;},
     _discardCode: function(){this.__code = "";},
-    _makeDerefVar: function(){
-        return Type.makeVariableRef(this.__currentType, false);
+    _makeDerefVar: function(info){
+        return new Type.DerefVariable(this.__currentType, this.__code);
     },
     handleExpression: function(e){this.__indexExpression = e;},
     __handleIndexExpression: function(){
@@ -391,6 +402,7 @@ exports.Designator = ChainedContext.extend({
             throw new Errors.Error("cannot index empty string" );
         var indexType = isArray ? Type.arrayElementsType(type) : basicTypes.ch;
 
+        var leadCode = code;
         code = code + "[" + indexCode + "]";
         var lval;
         if (indexType == basicTypes.ch){
@@ -400,7 +412,7 @@ exports.Designator = ChainedContext.extend({
 
         return { length: length,
                  type: indexType,
-                 info: Type.makeVariable(indexType, info instanceof Type.Const || info.isReadOnly()),
+                 info: new Type.PropertyVariable(indexType, leadCode, indexCode, info instanceof Type.Const || info.isReadOnly(), this.language().rtl),
                  code: code,
                  lval: lval,
                  asProperty: indexCode
@@ -443,18 +455,8 @@ exports.Designator = ChainedContext.extend({
     },
     endParse: function(){
         var code = this.__code;
-        var self = this;
-        var refCode = function(code){return self.__makeRefCode(code);};
         this.parent().setDesignator(
-            new Code.Designator(code, this.__lval ? this.__lval : code, refCode, this.__currentType, this.__info, this.__scope));
-    },
-    __makeRefCode: function(code){
-        if (   !this.__currentType.isScalar()
-            || this.__info.isReference())
-            return code;
-        if (this.__derefCode)
-            return this.language().rtl.makeRef(this.__derefCode, this.__propCode);
-        return "{set: function($v){" + code + " = $v;}, get: function(){return " + code + ";}}";
+            new Code.Designator(code, this.__lval ? this.__lval : code, this.__currentType, this.__info, this.__scope));
     }
 });
 
@@ -601,7 +603,7 @@ exports.ProcDecl = ChainedContext.extend({
     __addArgument: function(name, arg){
         if (name == this.__id.id())
             throw new Errors.Error("argument '" + name + "' has the same name as procedure");
-        var v = this._makeArgumentVariable(arg);
+        var v = this._makeArgumentVariable(arg, name);
         var s = new Symbol.Symbol(name, v);
         this.currentScope().addSymbol(s);
 
@@ -612,11 +614,8 @@ exports.ProcDecl = ChainedContext.extend({
             this.__firstArgument = false;
         code.write(name + "/*" + arg.description() + "*/");
     },
-    _makeArgumentVariable: function(arg){
-        var readOnly = !arg.isVar 
-                    && (arg.type instanceof Type.Array || arg.type instanceof Type.Record);
-        return arg.isVar ? Type.makeVariableRef(arg.type)
-                         : Type.makeVariable(arg.type, readOnly);
+    _makeArgumentVariable: function(arg, name){
+        return new Type.ArgumentVariable(name, arg.type, arg.isVar);
     },
     handleMessage: function(msg){
         if (msg == endParametersMsg){
@@ -1640,7 +1639,6 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
         return this.__type.initializer(this);
     },
     endParse: function(){
-        var v = Type.makeVariable(this.__type, false);
         var idents = this.__idents;
         var gen = this.codeGenerator();
         for(var i = 0; i < idents.length; ++i){
@@ -1648,6 +1646,8 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
             var varName = id.id();
             if (id.exported())
                 this.checkExport(varName);
+
+            var v = new Type.DeclaredVariable(varName, this.__type);
             this.currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
             gen.write("var " + varName + " = " + this._initCode() + ";");
         }
@@ -2052,3 +2052,4 @@ exports.makeProcCall = makeProcCall;
 exports.unwrapType = unwrapType;
 exports.RelationOps = RelationOps;
 exports.HandleSymbolAsType = HandleSymbolAsType;
+exports.makeContext = makeContext;

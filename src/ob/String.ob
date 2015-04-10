@@ -33,6 +33,14 @@ BEGIN
     RETURN result
 END indexOfFrom;
 
+PROCEDURE lastIndexOfFrom*(self: STRING; c: CHAR; pos: INTEGER): INTEGER;
+VAR 
+    result: INTEGER;
+BEGIN
+    JS.do("result = self.lastIndexOf(JS.String.fromCharCode(c), pos)")
+    RETURN result
+END;
+
 PROCEDURE substr*(self: STRING; pos: INTEGER; len: INTEGER): STRING;
 VAR 
     result: STRING;

@@ -193,7 +193,7 @@ BEGIN
     END;
 END;
 
-PROCEDURE RecordFieldAsMethod.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
+PROCEDURE RecordFieldAsMethod.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
     RETURN NEW EberonTypes.MethodVariable(SELF.type()); 
 END;
 
@@ -478,13 +478,13 @@ BEGIN
     SUPER();
 END;
 
-PROCEDURE RecordField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
+PROCEDURE RecordField.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
 BEGIN
     actualReadOnly <- isReadOnly;
     IF ~actualReadOnly & (LEN(cx.qualifyScope(Types.recordScope(SELF.record^))) # 0) THEN
         actualReadOnly := SELF.identdef()(EberonContext.PIdentdefInfo).isReadOnly();
     END;
-    RETURN SUPER(actualReadOnly, cx); 
+    RETURN SUPER(leadCode, actualReadOnly, cx); 
 END;
 
 PROCEDURE Record.Record(name: STRING; cons: STRING; scope: ScopeBase.PType)

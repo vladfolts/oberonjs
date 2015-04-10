@@ -77,7 +77,7 @@ exports.suite = {
             ),
     pass(),
     fail(["PROCEDURE p(a: ARRAY OF INTEGER); BEGIN pArrayRef(a) END p",
-          "read-only variable cannot be used as VAR parameter"]
+          "non-VAR formal parameter cannot be passed as VAR actual parameter"]
          )
     ),
 "Non-VAR RECORD parameter cannot be passed as VAR": testWithContext(
@@ -87,19 +87,19 @@ exports.suite = {
             ),
     pass(),
     fail(["PROCEDURE p(r: T); BEGIN recordVar(r); END p",
-          "read-only variable cannot be used as VAR parameter"]
+          "non-VAR formal parameter cannot be passed as VAR actual parameter"]
          )
     ),
 "Non-VAR open array assignment fails": testWithGrammar(
     grammar.procedureDeclaration,
     pass(),
     fail(["PROCEDURE p(s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
-          "cannot assign to read-only variable"])
+          "cannot assign to non-VAR formal parameter"])
     ),
 "string assignment to non-VAR open array fails": testWithGrammar(
     grammar.procedureDeclaration,
     pass(),
-    fail(["PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "cannot assign to read-only variable"])
+    fail(["PROCEDURE p(s: ARRAY OF CHAR); BEGIN s := \"abc\" END p", "cannot assign to non-VAR formal parameter"])
     ),
 "procedure": testWithGrammar(
     grammar.procedureDeclaration,

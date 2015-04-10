@@ -7,8 +7,13 @@ TYPE
 
         m: MapOfInteger;
     END;
+
+    T = RECORD END;
 VAR
     m: MapOfInteger;
+    mr: MAP OF T;
+    mm: MAP OF MapOfInteger;
+    ma: MAP OF ARRAY * OF INTEGER;
     r: RECORD m: MapOfInteger; END;
     a: ARRAY 1 OF MapOfInteger;
 
@@ -181,6 +186,15 @@ BEGIN
     ASSERT("abc" IN m);
 END;
 
+PROCEDURE passMapRecordElementByRef(VAR r: T);
+END;
+
+PROCEDURE passMapMapElementByRef(VAR m: MapOfInteger);
+END;
+
+PROCEDURE passMapArrayElementByRef(VAR a: ARRAY * OF INTEGER);
+END;
+
 BEGIN
     FOREACH v, k IN m DO
         FOREACH v2, k2 IN m DO
@@ -190,4 +204,7 @@ BEGIN
     passByRef(m);
     passByRef(r.m);
     passByRef(a[0]);
+    passMapRecordElementByRef(mr["a"]);
+    passMapMapElementByRef(mm["a"]);
+    passMapArrayElementByRef(ma["a"]);
 END test.

@@ -11,21 +11,17 @@ IMPORT
     Types;
 
 TYPE
-    RefCodeProc = PROCEDURE(s: STRING): STRING;
-
     Designator* = RECORD
-        PROCEDURE Designator*(code: STRING; lval: STRING; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: ScopeBase.PType);
+        PROCEDURE Designator*(code: STRING; lval: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType);
 
         PROCEDURE code(): STRING;
         PROCEDURE lval(): STRING;
-        PROCEDURE refCode(): RefCodeProc;
         PROCEDURE type(): Types.PType;
         PROCEDURE info*(): Types.PId;
         PROCEDURE scope(): ScopeBase.PType;
 
         mCode: STRING;
         mLval: STRING;
-        mRefCode: RefCodeProc;
         mType: Types.PType;
         mInfo: Types.PId;
         mScope: ScopeBase.PType
@@ -193,10 +189,6 @@ PROCEDURE Designator.lval(): STRING;
     RETURN SELF.mLval
 END Designator.lval;
 
-PROCEDURE Designator.refCode(): RefCodeProc;
-    RETURN SELF.mRefCode
-END Designator.refCode;
-
 PROCEDURE Designator.type(): Types.PType;
     RETURN SELF.mType
 END Designator.type;
@@ -209,10 +201,9 @@ PROCEDURE Designator.scope(): ScopeBase.PType;
     RETURN SELF.mScope
 END Designator.scope;
 
-PROCEDURE Designator.Designator(code: STRING; lval: STRING; refCode: RefCodeProc; type: Types.PType; info: Types.PId; scope: ScopeBase.PType)
+PROCEDURE Designator.Designator(code: STRING; lval: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType)
   | mCode(code),
     mLval(lval),
-    mRefCode(refCode),
     mType(type),
     mInfo(info),
     mScope(scope);
@@ -232,21 +223,6 @@ BEGIN
     END;
     RETURN result
 END derefExpression;
-
-PROCEDURE refExpression*(e: PExpression): PExpression;
-VAR
-    result: PExpression;
-BEGIN
-    IF     (e.mDesignator = NIL) 
-        OR ((e.mDesignator.mInfo IS Types.PVariable) 
-            & e.mDesignator.mInfo(Types.PVariable).isReference()) THEN
-        result := e;
-    ELSE
-        result := makeSimpleExpression(e.mDesignator.mRefCode(e.mDesignator.mCode),
-                                       e.mType);
-    END;
-    RETURN result
-END refExpression;
 
 PROCEDURE adjustPrecedence*(e: PExpression; precedence: INTEGER): STRING;
 VAR

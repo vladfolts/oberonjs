@@ -447,7 +447,6 @@ END;
 PROCEDURE assign*(left, right: Code.PExpression; cx: LanguageContext.PType): STRING;
 VAR
     designator: Code.PDesignator;
-    info: Types.PId;
     leftCode, rightCode: STRING;
     isArray: BOOLEAN;
     castOperation: LanguageContext.PCastOp;
@@ -468,9 +467,8 @@ VAR
     END assignArrayFromString;
 BEGIN
     designator := left.designator();
-    info := designator.info();
-    IF ~(info IS Types.PVariable) 
-        OR info(Types.PVariable).isReadOnly() THEN
+    info <- designator.info();
+    IF ~(info IS Types.PVariable) OR info.isReadOnly() THEN
         Errors.raise("cannot assign to " + info.idType());
     END; 
 

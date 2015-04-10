@@ -85,7 +85,6 @@ PROCEDURE checkArgument*(
 VAR
     actualType, expectType: Types.PType;
     designator: Code.PDesignator;
-    info: Types.PId;
     result: LanguageContext.PCastOp;
     castErr: INTEGER;
 BEGIN
@@ -108,13 +107,9 @@ BEGIN
         IF designator = NIL THEN
             Errors.raise("expression cannot be used as VAR parameter");
         END;
-        info := designator.info();
-        IF info IS Types.PConst THEN
-            Errors.raise("constant cannot be used as VAR parameter");
-        END;
-        IF (info IS Types.PVariable) 
-         & info(Types.PVariable).isReadOnly() THEN
-            Errors.raise(info.idType() + " cannot be used as VAR parameter");
+        info <- designator.info();
+        IF ~(info IS Types.PVariable) OR info.isReadOnly() THEN
+            Errors.raise(info.idType() + " cannot be passed as VAR actual parameter");
         END;
     END;
     IF code # NIL THEN
@@ -189,7 +184,8 @@ VAR
     coercedArg: Code.PExpression;
 BEGIN
     IF (expected # NIL) & expected.isVar THEN
-        coercedArg := Code.refExpression(actual);
+        referenceCode <- actual.designator().info()(Types.PVariable).referenceCode();
+        coercedArg := Code.makeSimpleExpression(referenceCode, actual.type());
     ELSE
         coercedArg := Code.derefExpression(actual);
     END;
@@ -306,24 +302,23 @@ PROCEDURE makeNew(): Symbols.PSymbol;
 
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
-        arg: Code.PExpression;
-        argType: Types.PType;
-        baseType: Types.PRecord;
+        result: Code.PExpression;
     BEGIN
-        arg := checkSingleArgument(args, SELF, cx.types, NIL);
-        argType := arg.type();
+        arg <- checkSingleArgument(args, SELF, cx.types, NIL);
+        argType <- arg.type();
         IF ~(argType IS Types.PPointer) THEN
             Errors.raise("POINTER variable expected, got '" 
                          + argType.description() + "'");
+        ELSE
+            baseType <- Types.pointerBase(argType^);
+            IF baseType IS Types.PNonExportedRecord THEN
+                Errors.raise("non-exported RECORD type cannot be used in NEW");
+            END;
+            right <- Code.makeSimpleExpression(baseType.codeForNew(cx^), argType);
+            result := Code.makeSimpleExpression(Operator.assign(arg, right, cx), NIL);
         END;
-        baseType := Types.pointerBase(argType(Types.PPointer)^);
-        IF baseType IS Types.PNonExportedRecord THEN
-            Errors.raise("non-exported RECORD type cannot be used in NEW");
-        END;
-        RETURN Code.makeSimpleExpression(
-                arg.code() + " = " + baseType.codeForNew(cx^),
-                NIL)
-    END CallImpl.make;
+        RETURN result;
+    END;
 BEGIN
     call <- NEW CallImpl();
     hasVarArgumnetWithCustomType(call);

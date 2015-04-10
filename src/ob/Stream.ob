@@ -88,4 +88,19 @@ BEGIN
     RETURN line + 1
 END lineNumber;
 
+PROCEDURE currentLine*(self: Type): STRING;
+BEGIN
+    from <- String.lastIndexOfFrom(self.s, kCR, self.pos);
+    IF from = -1 THEN
+        from := 0
+    ELSE
+        from := from + 1;
+    END;
+    to <- String.indexOfFrom(self.s, kCR, self.pos);
+    IF to = -1 THEN
+        to := LEN(self.s);
+    END;
+    RETURN String.substr(self.s, from, to - from);
+END;
+
 END Stream.

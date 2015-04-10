@@ -1,0 +1,10 @@
+MODULE m;
+
+PROCEDURE testPassNonVarArgumentAsVarToAnotherProcedure(i: INTEGER);
+    PROCEDURE test(VAR i: INTEGER);
+    END test;
+BEGIN
+    test(i);
+END testPassNonVarArgumentAsVarToAnotherProcedure;
+
+END m.

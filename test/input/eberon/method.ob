@@ -3,6 +3,7 @@ TYPE
     T = RECORD
         PROCEDURE p();
         PROCEDURE p2(i: INTEGER): INTEGER;
+        PROCEDURE useSelfAsVar();
         PROCEDURE useSelfAsPointer();
         PROCEDURE methodDefinedWithoutEndingIdent();
 		i: INTEGER
@@ -27,11 +28,17 @@ END;
 PROCEDURE acceptPointer(p: PT);
 END acceptPointer;
 
-PROCEDURE acceptReferenace(VAR p: T);
-END acceptReferenace;
+PROCEDURE acceptReference(VAR p: T);
+END;
 
 PROCEDURE acceptConstReferenace(p: T);
 END acceptConstReferenace;
+
+PROCEDURE T.useSelfAsVar();
+BEGIN
+    acceptReference(SELF);
+    acceptConstReferenace(SELF);
+END;
 
 PROCEDURE T.useSelfAsPointer();
 VAR
@@ -39,7 +46,7 @@ VAR
 BEGIN
     pVar := SELF(POINTER);
     acceptPointer(SELF(POINTER));
-    acceptReferenace(SELF(POINTER)^);
+    acceptReference(SELF(POINTER)^);
     acceptConstReferenace(SELF(POINTER)^);
 END T.useSelfAsPointer;
 

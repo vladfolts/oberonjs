@@ -74,7 +74,7 @@ PROCEDURE AnyField.type(): Types.PType;
     RETURN any
 END AnyField.type;
 
-PROCEDURE AnyField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
+PROCEDURE AnyField.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
     RETURN any.asVar
 END AnyField.asVar;
 

@@ -68,7 +68,7 @@ PROCEDURE MethodField.type(): Types.PType;
     RETURN SELF.method
 END;
 
-PROCEDURE MethodField.asVar(isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
+PROCEDURE MethodField.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
     RETURN NEW MethodVariable(SELF.method)
 END;
 

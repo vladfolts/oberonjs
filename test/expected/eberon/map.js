@@ -1,6 +1,11 @@
 <rtl code>
 var test = function (){
+function T(){
+}
 var m = {};
+var mr = {};
+var mm = {};
+var ma = {};
 function anonymous$1(){
 	this.m = {};
 }
@@ -160,6 +165,15 @@ function passByRef(m/*VAR MAP OF INTEGER*/){
 	m["abc"] = 123;
 	RTL$.assert(Object.prototype.hasOwnProperty.call(m, "abc"));
 }
+
+function passMapRecordElementByRef(r/*VAR T*/){
+}
+
+function passMapMapElementByRef(m/*VAR MAP OF INTEGER*/){
+}
+
+function passMapArrayElementByRef(a/*VAR ARRAY * OF INTEGER*/){
+}
 var $map1 = m;
 for(var k in $map1){
 	var v = $map1[k];
@@ -171,4 +185,7 @@ for(var k in $map1){
 passByRef(m);
 passByRef(r.m);
 passByRef(a[0]);
+passMapRecordElementByRef(RTL$.getMappedValue(mr, "a"));
+passMapMapElementByRef(RTL$.getMappedValue(mm, "a"));
+passMapArrayElementByRef(RTL$.getMappedValue(ma, "a"));
 }();
