@@ -4,7 +4,7 @@ PROCEDURE testEmptyForEach();
 VAR
     m: MAP OF INTEGER;
 BEGIN
-    FOREACH v, k IN m DO
+    FOR k, v IN m DO
         ASSERT(FALSE);
     END;
 END;
@@ -15,7 +15,7 @@ VAR
 BEGIN
     m["abc"] := 1;
     count <- 0;
-    FOREACH v, k IN m DO
+    FOR k, v IN m DO
         ASSERT(v = 1);
         ASSERT(k = "abc");
         INC(count);

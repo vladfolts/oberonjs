@@ -112,7 +112,7 @@ PROCEDURE ensureMethodDefinitions(r: PRecord; reasons: MapOfMethodIds);
 VAR
     result: ARRAY * OF STRING;
 BEGIN
-    FOREACH v, k IN reasons DO
+    FOR k, v IN reasons DO
         ensureMethodDefinitionsForEach(k, v.ids, r, result);
     END;
     IF LEN(result) # 0 THEN
@@ -159,7 +159,7 @@ END;
 PROCEDURE ensureNonAbstract(r: PRecord);
     PROCEDURE require(declaredMethods: MapOfFields; base: PRecord);
     BEGIN
-        FOREACH v, k IN declaredMethods DO
+        FOR k, v IN declaredMethods DO
             IF ~hasMethodDefinition(r, k) THEN
                 requireMethodDefinition(base, k, cannotInstantiateErrMsg(r^));
             END;
@@ -410,7 +410,7 @@ VAR
     VAR
         result: Strings;
     BEGIN
-        FOREACH v, k IN m DO
+        FOR k, v IN m DO
             result.add(k);
         END;
         RETURN result;
@@ -497,7 +497,7 @@ VAR
     code: STRING;
     result: STRING;
 BEGIN
-    FOREACH f, key IN r.fields DO
+    FOR key, f IN r.fields DO
         type <- f.type()(Types.PStorageType);
         IF key IN r.fieldsInit THEN
             code := r.fieldsInit[key];

@@ -25,10 +25,11 @@ function makeStrucType(base, type){
 }
 
 function makeStatement(base, statementSequence, ident, expression){
-    return or(base, 
-              context(and("FOREACH", ident, ",", ident, "IN", expression, "DO", 
-                          statementSequence, required("END", "END expected (FOREACH)")), 
-                      EbContext.ForEach));
+    return or(context(and("FOR", ident, ",", ident, "IN", expression, "DO", 
+                          statementSequence, required("END", "END expected (FOR)")), 
+                      EbContext.ForEach),
+              base
+              );
 }
 
 function makeProcedureHeading(ident, identdef, formalParameters){
@@ -158,7 +159,7 @@ exports.language = {
             Return:             EbContext.Return,
             ModuleDeclaration:  EbContext.ModuleDeclaration
         },
-        Grammar.reservedWords + " SELF SUPER MAP FOREACH"
+        Grammar.reservedWords + " SELF SUPER MAP"
         ),
     stdSymbols: Symbols.makeStd(),
     types: {

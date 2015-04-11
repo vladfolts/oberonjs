@@ -25,7 +25,7 @@ PROCEDURE ForEach();
 VAR
     m: MapOfInteger;
 BEGIN
-    FOREACH v, k IN m DO
+    FOR k, v IN m DO
         ASSERT(v = 0);
         ASSERT(k # "");
     END;
@@ -40,7 +40,7 @@ END;
 
 PROCEDURE ForEachWithExpression();
 BEGIN
-    FOREACH v, k IN makeMap() DO
+    FOR k, v IN makeMap() DO
     END;
 END;
 
@@ -50,18 +50,18 @@ VAR
 
     PROCEDURE inner();
     BEGIN
-        FOREACH v, k IN m DO
-            FOREACH v2, k2 IN m DO
+        FOR k, v IN m DO
+            FOR k2, v2 IN m DO
             END;
         END;
     END;
 BEGIN
-    FOREACH v, k IN m DO
-        FOREACH v2, k2 IN m DO
+    FOR k, v IN m DO
+        FOR k2, v2 IN m DO
         END;
     END;
-    FOREACH v3, k3 IN m DO
-        FOREACH v, k IN m DO
+    FOR k3, v3 IN m DO
+        FOR k, v IN m DO
         END;
     END;
 END;
@@ -196,8 +196,8 @@ PROCEDURE passMapArrayElementByRef(VAR a: ARRAY * OF INTEGER);
 END;
 
 BEGIN
-    FOREACH v, k IN m DO
-        FOREACH v2, k2 IN m DO
+    FOR k, v IN m DO
+        FOR k2, v2 IN m DO
         END;
     END;
 

@@ -971,7 +971,7 @@ BEGIN
     IF type.base # NIL THEN
         result := dumpRecordFields(type.base);
     END;
-    FOREACH v, k IN type.fields DO
+    FOR k, v IN type.fields DO
         IF LEN(result) # 0 THEN
             result := result + ", ";
         END;

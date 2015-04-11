@@ -166,7 +166,7 @@ var ForEachVariable = TypeNarrowVariable.extend({
     init: function(type){
         TypeNarrowVariable.prototype.init.call(this, type, false, true);
     },
-    idType: function(){return "FOREACH variable";}
+    idType: function(){return "FOR variable";}
 });
 
 var Identdef = Context.Identdef.extend({
@@ -296,8 +296,7 @@ var Designator = Context.Designator.extend({
         else if (s == "POINTER"){
             var typeId = new Type.TypeId(this.handleMessage(getSelfAsPointerMsg));
             var pointerType = new Type.Pointer("", typeId);
-            var info = new SelfAsPointer();
-            this._advance(pointerType, info, "");
+            this._advance(pointerType, new SelfAsPointer(), "");
         }
         else if (s == "SUPER"){
             var ms = this.handleMessage(getMethodSuper);
@@ -1235,16 +1234,16 @@ var ForEach = Context.Chained.extend({
         this.__codeGenerator = CodeGenerator.nullGenerator();
     },
     handleIdent: function(id){
-        if (!this.__valueId)
-            this.__valueId = id;
-        else
-            this.__keyId = id;
+        if (!this.__keyId)
+                this.__keyId = id;
+            else
+                this.__valueId = id;
     },
     codeGenerator: function(){return this.__codeGenerator;},
     handleExpression: function(e){
         var type = e.type();
         if (!(type instanceof EberonMap.Type))
-            throw new Errors.Error("expression of type MAP is expected in FOREACH, got '" 
+            throw new Errors.Error("expression of type MAP is expected in FOR, got '" 
                                  + type.description() + "'");
 
         var scope = EberonScope.makeOperator(

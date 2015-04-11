@@ -209,7 +209,7 @@ END;
 
 PROCEDURE defineExports*(VAR m: CompiledModule; exports: Symbols.Map);
 BEGIN
-    FOREACH k, id IN exports DO
+    FOR id, k IN exports DO
         symbol <- k;
         info <- symbol.info();
         IF info IS Types.PVariable THEN

@@ -1432,29 +1432,29 @@ exports.suite = {
         pass(),
         fail(["PROCEDURE p(m: M); BEGIN m[\"abc\"] := 123; END;", "cannot assign to read-only MAP's element"])
         ),
-    "FOREACH": testWithContext(
+    "FOR": testWithContext(
         context(grammar.statement,
                 "TYPE T = RECORD END;"
               + "VAR m: MAP OF INTEGER; r: T;"),
-        pass("FOREACH v, k IN m DO END",
-             "FOREACH v, k IN m DO ASSERT(k # \"abc\"); END",
-             "FOREACH v, k IN m DO ASSERT(v # 123); END"
+        pass("FOR k, v IN m DO END",
+             "FOR k, v IN m DO ASSERT(k # \"abc\"); END",
+             "FOR k, v IN m DO ASSERT(v # 123); END"
             ),
-        fail(["FOREACH k, k IN m DO END", "'k' already declared"],
-             ["FOREACH m, k IN m DO END", "'m' already declared in module scope"],
-             ["FOREACH v, m IN m DO END", "'m' already declared in module scope"],
-             ["FOREACH v, k IN m DO k := \"\"; END", "cannot assign to FOREACH variable"],
-             ["FOREACH v, k IN m DO v := 0; END", "cannot assign to FOREACH variable"],
-             ["FOREACH v, k IN r DO END", "expression of type MAP is expected in FOREACH, got 'T'"],
-             ["FOREACH v, k IN T DO END", "expression of type MAP is expected in FOREACH, got 'type T'"]
+        fail(["FOR k, k IN m DO END", "'k' already declared"],
+             ["FOR m, v IN m DO END", "'m' already declared in module scope"],
+             ["FOR k, m IN m DO END", "'m' already declared in module scope"],
+             ["FOR k, v IN m DO k := \"\"; END", "cannot assign to FOR variable"],
+             ["FOR k, v IN m DO v := 0; END", "cannot assign to FOR variable"],
+             ["FOR k, v IN r DO END", "expression of type MAP is expected in FOR, got 'T'"],
+             ["FOR k, v IN T DO END", "expression of type MAP is expected in FOR, got 'type T'"]
             )
         ),
-    "FOREACH scope": testWithContext(
+    "FOR scope": testWithContext(
         context(grammar.declarationSequence,
                 "VAR m: MAP OF INTEGER;"),
         pass(),
-        fail(["PROCEDURE p(); BEGIN FOREACH k, v IN m DO END; ASSERT(k # \"abc\"); END;", "undeclared identifier: 'k'"],
-             ["PROCEDURE p(); BEGIN FOREACH k, v IN m DO END; ASSERT(v # 123); END;", "undeclared identifier: 'v'"]
+        fail(["PROCEDURE p(); BEGIN FOR k, v IN m DO END; ASSERT(k # \"abc\"); END;", "undeclared identifier: 'k'"],
+             ["PROCEDURE p(); BEGIN FOR k, v IN m DO END; ASSERT(v # 123); END;", "undeclared identifier: 'v'"]
              )
         ),
     "remove": testWithContext(

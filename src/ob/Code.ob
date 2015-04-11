@@ -279,7 +279,7 @@ PROCEDURE genCommaList(m: StringsMap; import: BOOLEAN): STRING;
 VAR
     result: STRING;
 BEGIN
-    FOREACH alias, name IN m DO;
+    FOR name, alias IN m DO;
         IF LEN(result) # 0 THEN
             result := result + ", ";
         END;
@@ -300,7 +300,7 @@ PROCEDURE ModuleGenerator.epilog(exports: Symbols.Map): STRING;
 VAR
     result: STRING;
 BEGIN
-    FOREACH s, k IN exports DO
+    FOR k, s IN exports DO
         code <- genExport(s^);
         IF LEN(code) # 0 THEN
             IF LEN(result) # 0 THEN
