@@ -11,7 +11,7 @@ TYPE
         PROCEDURE result*(): STRING;
     END;
 
-    PIGenerator = POINTER TO IGenerator;
+    PIGenerator* = POINTER TO IGenerator;
 
     NullGenerator = RECORD(IGenerator)
     END;

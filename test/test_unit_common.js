@@ -2,7 +2,7 @@
 
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
-var Context = require("context.js");
+var ContextHierarchy = require("js/ContextHierarchy.js");
 var Errors = require("js/Errors.js");
 var oc = require("oc.js");
 var makeRTL = require("rtl_code.js").makeRTL;
@@ -26,9 +26,9 @@ var TestModuleGenerator = Class.extend({
     epilog: function(){return undefined;}
 });
 
-var TestContext = Context.Context.extend({
+var TestContext = Class.extend.call(ContextHierarchy.Root, {
     init: function TestContext(language){
-        Context.Context.prototype.init.call(
+        ContextHierarchy.Root.call(
                 this,
                 { codeGenerator: language.codeGenerator.nil,
                   moduleGenerator: function(){return new TestModuleGenerator();},
@@ -39,7 +39,9 @@ var TestContext = Context.Context.extend({
         this.pushScope(new Scope.Module("test", language.stdSymbols));
     },
     qualifyScope: function(){return "";},
-    handleMessage: function(){}
+    handleMessage: function(){},
+    handleExpression: function(){},
+    handleLiteral: function(){}
 });
 
 function makeContext(language){return new TestContext(language);}

@@ -2,7 +2,7 @@
 
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
-var Context = require("context.js");
+var ContextHierarchy = require("js/ContextHierarchy.js");
 var oc = require("oc.js");
 var makeRTL = require("rtl_code.js").makeRTL;
 var Type = require("js/Types.js");
@@ -81,7 +81,7 @@ function compile(sources, language, handleErrors, includeDirs, outDir, importDir
                 return fs.readFileSync(readPath, "utf8");
             },
             language.grammar,
-            function(moduleResolver){return new Context.Context(
+            function(moduleResolver){return new ContextHierarchy.Root(
                 { codeGenerator: language.codeGenerator.make(),
                   moduleGenerator: moduleCode,
                   rtl: rtl,

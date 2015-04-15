@@ -17,11 +17,11 @@ var Type = require("js/Types.js");
 var basicTypes = Type.basic();
 var nullCodeGenerator = CodeGenerator.nullGenerator();
 var nilType = Type.nil();
-
+/*
 function log(s){
     console.info(s);
 }
-
+*/
 function getSymbolAndScope(context, id){
     var s = context.findSymbol(id);
     if (!s)
@@ -1914,11 +1914,12 @@ exports.ModuleDeclaration = ChainedContext.extend({
             scope.addSymbol(s);
             moduleAliases[name] = s.id();
         }
-        this.__moduleGen = this.parent().makeModuleGenerator(
+        this.__moduleGen = this.parent().language().moduleGenerator(
                 this.__name,
                 moduleAliases);
         this.codeGenerator().write(this.__moduleGen.prolog());
     },
+    handleLiteral: function(){},
     qualifyScope: function(scope){
         if (scope != this.__moduleScope && scope instanceof Scope.Module){
             var id = Scope.moduleSymbol(scope).id();
@@ -1986,49 +1987,6 @@ var ModuleImport = ChainedContext.extend({
     }
 });
 exports.ModuleImport = ModuleImport;
-
-exports.Context = Class.extend({
-    init: function Context(language){
-        this.__language = language;
-        this.__scopes = [];
-        this.__gen = 0;
-    },
-    language: function(){return this.__language;},
-    genTypeName: function(){
-        ++this.__gen;
-        return "anonymous$" + this.__gen;
-    },
-    findSymbol: function(ident){
-        for(var i = this.__scopes.length; i--;){
-            var scope = this.__scopes[i];
-            var s = scope.findSymbol(ident);
-
-            if (s)
-                return s;
-        }
-        return undefined;
-    },
-    currentScope: function(){
-        return this.__scopes[this.__scopes.length - 1];
-    },
-    pushScope: function(scope){this.__scopes.push(scope);},
-    popScope: function(){
-        var scope = this.__scopes.pop();
-        scope.close();
-    },
-    handleExpression: function(){},
-    handleLiteral: function(){},
-    codeGenerator: function(){return this.__language.codeGenerator;},
-    makeModuleGenerator: function(name, imports){
-        return this.__language.moduleGenerator(name, imports);
-    },
-    findModule: function(name){
-        if (name == "JS"){
-            return Module.makeJS();
-        }
-        return this.__language.moduleResolver ? this.__language.moduleResolver(name) : undefined;
-    }
-});
 
 function makeProcCall(context, type, info){
     assertProcType(type, info);

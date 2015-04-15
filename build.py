@@ -127,7 +127,8 @@ def run_tests(bin, unit_test=None, code_test=None):
 def recompile(bin):
     print('recompile oberon sources using "%s"...' % bin)
     compiler = os.path.join(root, 'src', 'oc_nodejs.js')
-    sources = ['EberonSymbols.ob', 'EberonCast.ob', 'EberonConstructor.ob', 'EberonOperator.ob', 'EberonScope.ob',
+    sources = ['ContextHierarchy.ob', 'EberonSymbols.ob', 'EberonCast.ob', 
+               'EberonConstructor.ob', 'EberonOperator.ob', 'EberonScope.ob',
                'OberonSymbols.ob', 'Lexer.ob', 'Module.ob']
     
     result = os.path.join(root, 'bin.recompile')

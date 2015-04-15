@@ -2,7 +2,7 @@
 
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
-var Context = require("context.js");
+var ContextHierarchy = require("js/ContextHierarchy.js");
 var Errors = require("js/Errors.js");
 var Lexer = require("js/Lexer.js");
 var makeRTL = require("rtl_code.js").makeRTL;
@@ -128,7 +128,7 @@ function compile(text, language, handleErrors){
     var resolver = makeResolver(
             language.grammar,
             function(moduleResolver){
-                return new Context.Context(
+                return new ContextHierarchy.Root(
                     { codeGenerator: language.codeGenerator.make(),
                       moduleGenerator: moduleCode,
                       rtl: rtl,

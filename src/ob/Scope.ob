@@ -22,7 +22,7 @@ TYPE
 
         PROCEDURE addSymbol*(s: Symbols.PSymbol; exported: BOOLEAN);
         PROCEDURE findSymbol*(id: STRING): Symbols.PFoundSymbol;
-        PROCEDURE close();
+        PROCEDURE close*();
         PROCEDURE generateTempVar*(pattern: STRING): STRING;
 
         stdSymbols: Symbols.Map;

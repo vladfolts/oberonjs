@@ -1,0 +1,111 @@
+MODULE ContextHierarchy;
+IMPORT CodeGenerator, Module, Scope, Symbols, String;
+TYPE
+    PRoot = POINTER TO Root;
+    PNode = POINTER TO Node;
+
+    Node* = RECORD
+        PROCEDURE root(): PRoot;
+        PROCEDURE parent(): PNode;
+
+        mParent: PNode;
+    END;
+
+    Language = RECORD
+        moduleResolver: PROCEDURE(name: STRING): Module.PType;
+        codeGenerator: CodeGenerator.PIGenerator;
+    END;
+    PLanguage = POINTER TO Language;
+
+    Root* = RECORD(Node)
+        PROCEDURE Root(language: PLanguage);
+
+        PROCEDURE language(): PLanguage;
+
+        PROCEDURE genTypeName(): STRING;
+        PROCEDURE findSymbol(ident: STRING): Symbols.PFoundSymbol;
+        PROCEDURE findModule(name: STRING): Module.PType;
+
+        PROCEDURE currentScope(): Scope.PType;
+        PROCEDURE pushScope(scope: Scope.PType);
+        PROCEDURE popScope();
+
+        PROCEDURE codeGenerator(): CodeGenerator.PIGenerator;
+
+        mLanguage: PLanguage;
+        scopes: ARRAY * OF Scope.PType;
+        gen: INTEGER;
+    END;
+
+PROCEDURE Node.root(): PRoot;
+    RETURN SELF.mParent.root();
+END;
+
+PROCEDURE Node.parent(): PNode;
+    RETURN SELF.mParent;
+END;
+
+PROCEDURE Root.Root(language: PLanguage)
+    | mLanguage(language);
+END;
+
+PROCEDURE Root.language(): PLanguage;
+    RETURN SELF.mLanguage;
+END;
+
+PROCEDURE Root.genTypeName(): STRING;
+BEGIN
+    INC(SELF.gen);
+    RETURN "anonymous$" + String.fromInt(SELF.gen);
+END;
+
+PROCEDURE Root.findSymbol(ident: STRING): Symbols.PFoundSymbol;
+VAR
+    result: Symbols.PFoundSymbol;
+BEGIN
+    i <- LEN(SELF.scopes);
+    WHILE (i # 0) & (result = NIL) DO
+        DEC(i);
+        scope <- SELF.scopes[i];
+        result := scope.findSymbol(ident);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Root.findModule(name: STRING): Module.PType;
+VAR
+    result: Module.PType;
+BEGIN
+    IF name = "JS" THEN
+        result := Module.makeJS();
+    ELSIF SELF.mLanguage.moduleResolver # NIL THEN
+        result := SELF.mLanguage.moduleResolver(name);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Root.currentScope(): Scope.PType;
+    RETURN SELF.scopes[LEN(SELF.scopes) - 1];
+END;
+
+PROCEDURE Root.pushScope(scope: Scope.PType);
+BEGIN
+    SELF.scopes.add(scope);
+END;
+
+PROCEDURE Root.popScope();
+BEGIN
+    i <- LEN(SELF.scopes) - 1;
+    SELF.scopes[i].close();
+    SELF.scopes.remove(i);
+END;
+
+PROCEDURE Root.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN SELF.mLanguage.codeGenerator;
+END;
+
+PROCEDURE Root.root(): PRoot;
+    RETURN SELF(POINTER);
+END;
+
+END ContextHierarchy.

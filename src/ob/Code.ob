@@ -86,7 +86,7 @@ TYPE
         imports: StringsMap;
     END;
 
-    PModuleGenerator = POINTER TO ModuleGenerator;
+    PModuleGenerator* = POINTER TO ModuleGenerator;
 
 PROCEDURE Expression.code(): STRING;
     RETURN SELF.mCode
