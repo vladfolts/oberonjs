@@ -239,6 +239,25 @@ exports.BaseType = ChainedContext.extend({
     }
 });
 
+exports.QualifiedIdentificatorModule = ChainedContext.extend({
+    init: function QualifiedIdentificatorModule(context){
+        ChainedContext.prototype.init.call(this, context);
+        this.__id = undefined;
+    },
+    handleIdent: function(id){
+        this.__id = id;
+    },
+    endParse: function(){
+        var found = this.findSymbol(this.__id);
+        if (!found)
+            return false;
+        var s = found.symbol();
+        if (!s || !s.isModule())
+            return false;
+        this.parent().handleModule(this.__id, s.info());
+    }
+});
+
 exports.QualifiedIdentificator = ChainedContext.extend({
     init: function QualifiedIdentificator(context){
         ChainedContext.prototype.init.call(this, context);
@@ -249,13 +268,9 @@ exports.QualifiedIdentificator = ChainedContext.extend({
     handleIdent: function(id){
         this.__id = id;
     },
-    handleLiteral: function(){
-        var s = getSymbol(this, this.__id);
-        if (!s.isModule())
-            return false; // stop parsing
-        this.__module = s.info();
-        this.__code = this.__id + ".";
-        return undefined;
+    handleModule: function(id, module){
+        this.__module = module;
+        this.__code = id + ".";
     },
     endParse: function(){
         var code = this.__code ? this.__code + Type.mangleJSProperty(this.__id) : this.__id;

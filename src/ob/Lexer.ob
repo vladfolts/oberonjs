@@ -1,5 +1,5 @@
 MODULE Lexer;
-IMPORT Context, JS, Errors, Stream, String;
+IMPORT Context, Errors, Stream, String;
 
 CONST
     quote = 22X; (* " *)
@@ -59,13 +59,6 @@ BEGIN
     RETURN result
 END hexDigit;
 
-PROCEDURE handleLiteral(context: Context.Type; s: STRING): BOOLEAN;
-VAR result: BOOLEAN;
-BEGIN
-    JS.do("var r = context.handleLiteral(s); result = (r === undefined || r)");
-    RETURN result
-END handleLiteral;
-
 PROCEDURE point*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR result: BOOLEAN;
 BEGIN
@@ -73,10 +66,11 @@ BEGIN
         & (Stream.getChar(stream) = ".")
         & (    Stream.eof(stream) 
             OR (Stream.peekChar(stream) # ".")) THEN (*not a diapason ".."*)        
-        result := handleLiteral(context, ".");
+        context.handleLiteral(".");
+        result := TRUE;
     END
-    RETURN result
-END point;
+    RETURN result;
+END;
 
 PROCEDURE string*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
@@ -212,10 +206,11 @@ BEGIN
             OR Stream.eof(stream)
             OR (~isLetter(Stream.peekChar(stream)) & ~isDigit(Stream.peekChar(stream)))
                 THEN
-            result := handleLiteral(context, l.s);
+            context.handleLiteral(l.s);
+            result := TRUE;
         END;
     END;
     RETURN result
-END literal;
+END;
 
 END Lexer.

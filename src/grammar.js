@@ -44,7 +44,7 @@ var ident = function(stream, context){
     return Lexer.ident(stream, context, reservedWords);
 };
 
-var qualident = context(and(optional(and(ident, ".")), ident),
+var qualident = context(and(optional(context(and(ident, "."), Context.QualifiedIdentificatorModule)), ident),
                         Context.QualifiedIdentificator);
 var identdef = makeIdentdef(ident);
 

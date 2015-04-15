@@ -3,7 +3,7 @@ IMPORT OberonRtl, Object, ScopeBase;
 TYPE
     Type* = RECORD
         handleChar*:    PROCEDURE(c: CHAR);
-        handleLiteral*: PROCEDURE(s: STRING): BOOLEAN;
+        handleLiteral*: PROCEDURE(s: STRING);
         handleString*:  PROCEDURE(s: STRING);
         handleIdent*:   PROCEDURE(s: STRING);
         isLexem*:       PROCEDURE(): BOOLEAN;
