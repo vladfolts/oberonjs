@@ -130,7 +130,10 @@ function checkTypeCast(fromInfo, fromType, toType, msg){
 }
 
 var ChainedContext = Class.extend({
-    init: function ChainedContext(parent){this.__parent = parent;},
+    init: function ChainedContext(parent){
+        this.__parent = parent;
+        this.attributes = parent.attributes;
+    },
     parent: function(){return this.__parent;},
     handleMessage: function(msg){return this.__parent.handleMessage(msg);},
     language: function(){return this.__parent.language();},
@@ -140,9 +143,8 @@ var ChainedContext = Class.extend({
     pushScope: function(scope){this.__parent.pushScope(scope);},
     popScope: function(){this.__parent.popScope();},
     setType: function(type){this.__parent.setType(type);},
-    setDesignator: function(d){this.__parent.setDesignator(d);},
     handleExpression: function(e){this.__parent.handleExpression(e);},
-    handleLiteral: function(s){this.__parent.handleLiteral(s);},
+    handleLiteral: function(s){},
     handleConst: function(type, value, code){this.__parent.handleConst(type, value, code);},
     genTypeName: function(){return this.__parent.genTypeName();},
     qualifyScope: function(scope){return this.__parent.qualifyScope(scope);}
@@ -470,8 +472,8 @@ exports.Designator = ChainedContext.extend({
     },
     endParse: function(){
         var code = this.__code;
-        this.parent().setDesignator(
-            new Code.Designator(code, this.__lval ? this.__lval : code, this.__currentType, this.__info, this.__scope));
+        this.parent().attributes.designator =
+            new Code.Designator(code, this.__lval ? this.__lval : code, this.__currentType, this.__info, this.__scope);
     }
 });
 
@@ -1070,27 +1072,14 @@ exports.MulOperator = ChainedContext.extend({
 exports.Term = ChainedContext.extend({
     init: function TermContext(context){
         ChainedContext.prototype.init.call(this, context);
+        this.attributes = {};
         this.__logicalNot = false;
         this.__operator = undefined;
         this.__expression = undefined;
     },
-    type: function(){return this.__expression.type();},
-    setDesignator: function(d){
-        var info = d.info();
-        if (info instanceof Type.ProcedureId){
-            var proc = Type.procedureType(info);
-            if (proc instanceof Procedure.Std)
-                throw new Errors.Error(proc.description() + " cannot be referenced");
-            var scope = d.scope();
-            if (scope instanceof Scope.Procedure)
-                throw new Errors.Error("local procedure '" + d.code() + "' cannot be referenced");
-        }
-
-        var value;
-        if (info instanceof Type.Const)
-            value = Type.constValue(info);
-        this.handleExpression(
-            Code.makeExpression(d.code(), d.type(), d, value));
+    type: function(){
+        return this.__expression ? this.__expression.type()
+                                 : this.attributes.designator.type();
     },
     handleLogicalNot: function(){
         this.__logicalNot = !this.__logicalNot;
@@ -1104,7 +1093,18 @@ exports.Term = ChainedContext.extend({
     handleFactor: function(e){
         this.handleExpression(e);
     },
-    endParse: function(){this.parent().handleTerm(this.__expression);},
+    endParse: function(){
+        var e = this.__expression;
+        if (!e){
+            var d = this.attributes.designator;
+            var value;
+            var info = d.info();
+            if (info instanceof Type.Const)
+                value = Type.constValue(info);
+            e = Code.makeExpression(d.code(), d.type(), d, value);
+        }
+        this.parent().handleTerm(e);
+    },
     handleExpression: function(e){
         promoteExpressionType(this, this.__expression, e);
         if (this.__logicalNot){
@@ -1137,6 +1137,23 @@ exports.Factor = ChainedContext.extend({
     handleFactor: function(e){this.parent().handleFactor(e);},
     handleLogicalNot: function(){this.parent().handleLogicalNot();}
 });
+
+function designatorAsExpression(d){
+    var info = d.info();
+    if (info instanceof Type.ProcedureId){
+        var proc = Type.procedureType(info);
+        if (proc instanceof Procedure.Std)
+            throw new Errors.Error(proc.description() + " cannot be referenced");
+        var scope = d.scope();
+        if (scope instanceof Scope.Procedure)
+            throw new Errors.Error("local procedure '" + d.code() + "' cannot be referenced");
+    }
+
+    var value;
+    if (info instanceof Type.Const)
+        value = Type.constValue(info);
+    return Code.makeExpression(d.code(), d.type(), d, value);
+}
 
 exports.Set = ChainedContext.extend({
     init: function SetContext(context){
@@ -2018,6 +2035,7 @@ exports.assertProcStatementResult = assertProcStatementResult;
 exports.beginCallMsg = beginCallMsg;
 exports.endCallMsg = endCallMsg;
 exports.Chained = ChainedContext;
+exports.designatorAsExpression = designatorAsExpression;
 exports.endParametersMsg = endParametersMsg;
 exports.getSymbolAndScope = getSymbolAndScope;
 exports.getQIdSymbolAndScope = getQIdSymbolAndScope;

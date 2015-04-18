@@ -432,33 +432,33 @@ var ExpressionProcedureCall = Context.Chained.extend({
     init: function EberonContext$init(context){
         Context.Chained.prototype.init.call(this, context);
     },
-    setDesignator: function(d){
-        var info = d.info();
+    endParse: function(){
         var parent = this.parent();
+        var d = this.attributes.designator;
+        var info = d.info();
+        var e;
         if (info instanceof ResultVariable){
-            var e = info.expression();
-            parent.handleExpression(new Code.Expression(d.code(), d.type(), undefined, e.constValue(), e.maxPrecedence()));
+            e = info.expression();
+            e = new Code.Expression(d.code(), d.type(), undefined, e.constValue(), e.maxPrecedence());
         }
         else
-            parent.setDesignator(d);
+            e = Context.designatorAsExpression(d);
+        parent.handleExpression(e);
     }
 });
 
 var AssignmentOrProcedureCall = Context.Chained.extend({
     init: function EberonContext$init(context){
         Context.Chained.prototype.init.call(this, context);
-        this.__left = undefined;
+        this.attributes = {};
         this.__right = undefined;
-    },
-    setDesignator: function(d){
-        this.__left = d;
     },
     handleExpression: function(e){
         this.__right = e;
     },
     codeGenerator: function(){return CodeGenerator.nullGenerator();},
     endParse: function(){
-        var d = this.__left;
+        var d = this.attributes.designator;
         var type = d.type();
         var code;
         if (this.__right){
