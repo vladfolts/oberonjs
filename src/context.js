@@ -142,12 +142,9 @@ var ChainedContext = Class.extend({
     currentScope: function(s){return this.__parent.currentScope();},
     pushScope: function(scope){this.__parent.pushScope(scope);},
     popScope: function(){this.__parent.popScope();},
-    setType: function(type){this.__parent.setType(type);},
-    handleExpression: function(e){this.__parent.handleExpression(e);},
+    qualifyScope: function(scope){return this.__parent.qualifyScope(scope);},
     handleLiteral: function(s){},
-    handleConst: function(type, value, code){this.__parent.handleConst(type, value, code);},
-    genTypeName: function(){return this.__parent.genTypeName();},
-    qualifyScope: function(scope){return this.__parent.qualifyScope(scope);}
+    genTypeName: function(){return this.__parent.genTypeName();}
 });
 
 exports.Integer = ChainedContext.extend({
@@ -1083,7 +1080,7 @@ exports.Term = ChainedContext.extend({
     },
     handleLogicalNot: function(){
         this.__logicalNot = !this.__logicalNot;
-        this.setType(basicTypes.bool);
+        this.parent().setType(basicTypes.bool);
     },
     handleOperator: function(o){this.__operator = o;},
     handleConst: function(type, value, code){
@@ -1124,17 +1121,24 @@ exports.Factor = ChainedContext.extend({
     },
     type: function(){return this.parent().type();},
     handleLiteral: function(s){
-        var parent = this.parent();
         if (s == "NIL")
-            parent.handleConst(nilType, undefined, "null");
+            this.handleConst(nilType, undefined, "null");
         else if (s == "TRUE")
-            parent.handleConst(basicTypes.bool, Code.makeIntConst(1), "true");
+            this.handleConst(basicTypes.bool, Code.makeIntConst(1), "true");
         else if (s == "FALSE")
-            parent.handleConst(basicTypes.bool, Code.makeIntConst(0), "false");
+            this.handleConst(basicTypes.bool, Code.makeIntConst(0), "false");
         else if (s == "~")
-            parent.handleLogicalNot();
+            this.parent().handleLogicalNot();
     },
-    handleFactor: function(e){this.parent().handleFactor(e);},
+    handleConst: function(type, value, code){
+        this.parent().handleConst(type, value, code);
+    },
+    handleFactor: function(e){
+        this.parent().handleFactor(e);
+    },
+    handleExpression: function(e){
+        this.parent().handleExpression(e);
+    },
     handleLogicalNot: function(){this.parent().handleLogicalNot();}
 });
 
@@ -1733,7 +1737,9 @@ exports.ActualParameters = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.handleMessage(beginCallMsg);
     },
-    handleLiteral: function(){}, // do not propagate ","
+    handleExpression: function(e){
+        this.parent().handleExpression(e);
+    },
     endParse: function(){
         this.handleMessage(endCallMsg);
     }
