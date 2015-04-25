@@ -102,7 +102,7 @@ var Assignment = Context.Chained.extend({
     handleExpression: function(e){
         var d = this.attributes.designator;
         var left = Code.makeExpression(d.code(), d.type(), d);
-        this.parent().codeGenerator().write(op.assign(left, e, this.language()));
+        this.parent().codeGenerator().write(op.assign(left, e, this.root().language()));
     }
 });
 

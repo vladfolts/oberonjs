@@ -37,7 +37,7 @@ function compileModule(grammar, stream, context, handleErrors){
             x.message = "internal compiler error while parsing line " + Stream.lineNumber(stream) + ": " + Stream.currentLine(stream) + "\n" + x.message;
         throw x;
     }
-    var scope = context.currentScope();
+    var scope = context.root().currentScope();
     return new CompiledModule(
             Scope.moduleSymbol(scope),
             context.codeGenerator().result(),

@@ -3,6 +3,7 @@
 var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
+var ContextHierarchy = require("js/ContextHierarchy.js");
 var Errors = require("js/Errors.js");
 var Module = require("js/Module.js");
 var op = require("js/Operator.js");
@@ -33,11 +34,11 @@ function getSymbolAndScope(context, id){
 }
 
 function getQIdSymbolAndScope(context, q){
-    return getSymbolAndScope(q.module ? q.module : context, q.id);
+    return getSymbolAndScope(q.module ? q.module : context.root(), q.id);
 }
 
 function getSymbol(context, id){
-    return getSymbolAndScope(context, id).symbol();
+    return getSymbolAndScope(context.root(), id).symbol();
 }
 
 function unwrapTypeId(type){
@@ -89,7 +90,7 @@ function promoteExpressionType(context, left, right){
     if (!rightType)
         return;
 
-    checkImplicitCast(context.language().types, rightType, leftType);
+    checkImplicitCast(context.root().language().types, rightType, leftType);
 }
 
 function checkTypeCast(fromInfo, fromType, toType, msg){
@@ -129,23 +130,9 @@ function checkTypeCast(fromInfo, fromType, toType, msg){
                              + "' is not an extension of '" + fromType.description() + "'");
 }
 
-var ChainedContext = Class.extend({
-    init: function ChainedContext(parent){
-        this.__parent = parent;
-        this.attributes = parent.attributes;
-    },
-    parent: function(){return this.__parent;},
-    handleMessage: function(msg){return this.__parent.handleMessage(msg);},
-    language: function(){return this.__parent.language();},
-    codeGenerator: function(){return this.__parent.codeGenerator();},
-    findSymbol: function(id){return this.__parent.findSymbol(id);},
-    currentScope: function(s){return this.__parent.currentScope();},
-    pushScope: function(scope){this.__parent.pushScope(scope);},
-    popScope: function(){this.__parent.popScope();},
-    qualifyScope: function(scope){return this.__parent.qualifyScope(scope);},
-    handleLiteral: function(s){},
-    genTypeName: function(){return this.__parent.genTypeName();}
-});
+var ChainedContext = ContextHierarchy.Node;
+ChainedContext.extend = Class.extend;
+ChainedContext.prototype.init = ContextHierarchy.Node;
 
 exports.Integer = ChainedContext.extend({
     init: function IntegerContext(context){
@@ -247,7 +234,7 @@ exports.QualifiedIdentificatorModule = ChainedContext.extend({
         this.__id = id;
     },
     endParse: function(){
-        var found = this.findSymbol(this.__id);
+        var found = this.root().findSymbol(this.__id);
         if (!found)
             return false;
         var s = found.symbol();
@@ -303,7 +290,7 @@ function castCode(type, context){
 }
 
 function makeContext(context){
-    var l = context.language();
+    var l = context.root().language();
     return {
         types: l.types, 
         rtl: l.rtl, 
@@ -356,7 +343,7 @@ exports.Designator = ChainedContext.extend({
         }
         var field = t.denote(id, isReadOnly);
         var currentType = field.type();
-        var language = this.language();
+        var language = this.root().language();
         var cx = makeContext(this);
         var fieldCode = field.designatorCode(this.__code, cx);
         this.__derefCode = fieldCode.derefCode;
@@ -426,7 +413,7 @@ exports.Designator = ChainedContext.extend({
 
         return { length: length,
                  type: indexType,
-                 info: new Type.PropertyVariable(indexType, leadCode, indexCode, info instanceof Type.Const || info.isReadOnly(), this.language().rtl),
+                 info: new Type.PropertyVariable(indexType, leadCode, indexCode, info instanceof Type.Const || info.isReadOnly(), this.root().language().rtl),
                  code: code,
                  lval: lval,
                  asProperty: indexCode
@@ -462,7 +449,7 @@ exports.Designator = ChainedContext.extend({
     handleTypeCast: function(type){
         checkTypeCast(this.__info, this.__currentType, type, "type cast");
 
-        var code = this.language().rtl.typeGuard(this.__code, castCode(type, this));
+        var code = this.root().language().rtl.typeGuard(this.__code, castCode(type, this));
         this.__code = code;
 
         this.__currentType = type;
@@ -500,7 +487,7 @@ exports.FormalType = HandleSymbolAsType.extend({
     },
     setType: function(type){           
         for(var i = 0; i < this.__arrayDimension; ++i)
-            type = new (this.language().types.OpenArray)(type);
+            type = new (this.root().language().types.OpenArray)(type);
         this.parent().setType(type);
 
     },
@@ -587,13 +574,14 @@ exports.ProcDecl = ChainedContext.extend({
         this.__firstArgument = true;
         this.__type = undefined;
         this.__returnParsed = false;
-        this.__outerScope = this.parent().currentScope();
-        this.__stdSymbols = this.language().stdSymbols;
+        var root = this.root();
+        this.__outerScope = root.currentScope();
+        this.__stdSymbols = root.language().stdSymbols;
     },
     handleIdentdef: function(id){
         this.__id = id;
         this.codeGenerator().write(this._prolog());
-        this.parent().pushScope(Scope.makeProcedure(this.__stdSymbols));
+        this.root().pushScope(Scope.makeProcedure(this.__stdSymbols));
     },
     handleIdent: function(id){
         if (this.__id.id() != id)
@@ -619,7 +607,7 @@ exports.ProcDecl = ChainedContext.extend({
             throw new Errors.Error("argument '" + name + "' has the same name as procedure");
         var v = this._makeArgumentVariable(arg, name);
         var s = new Symbol.Symbol(name, v);
-        this.currentScope().addSymbol(s);
+        this.root().currentScope().addSymbol(s);
 
         var code = this.codeGenerator();
         if (!this.__firstArgument)
@@ -647,7 +635,7 @@ exports.ProcDecl = ChainedContext.extend({
         if (!result)
             throw new Errors.Error("unexpected RETURN in PROCEDURE declared with no result type");
         
-        var language = this.language();
+        var language = this.root().language();
         var op;
         if (language.types.implicitCast(type, result, false, {set: function(v){op = v;}, get:function(){return op;}}))
             throw new Errors.Error(
@@ -660,7 +648,7 @@ exports.ProcDecl = ChainedContext.extend({
     },
     endParse: function(){
         this.codeGenerator().closeScope("");
-        this.parent().popScope();
+        this.root().popScope();
 
         var result = this.__type.result();
         if (result && !this.__returnParsed)
@@ -714,7 +702,7 @@ exports.PointerDecl = ChainedContext.extend({
         var id = q.id;
         var s = q.module
               ? getQIdSymbolAndScope(this, q)
-              : this.findSymbol(id);
+              : this.root().findSymbol(id);
         
         var info = s ? s.symbol().info()
                      : this.parent().handleMessage(new ForwardTypeMsg(id));
@@ -738,7 +726,7 @@ exports.PointerDecl = ChainedContext.extend({
     },
     setType: function(type){
         var typeId = new Type.TypeId(type);
-        this.currentScope().addFinalizer(function(){typeId.strip();});
+        this.root().currentScope().addFinalizer(function(){typeId.strip();});
         this.__setTypeId(typeId);
     },
     isAnonymousDeclaration: function(){return true;},
@@ -769,7 +757,7 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
     isAnonymousDeclaration: function(){return true;},
     endParse: function(){this.parent().setType(this.__type);},
     _makeInit: function(type, dimensions, length){
-        var rtl = this.language().rtl;
+        var rtl = this.root().language().rtl;
         if (type == basicTypes.ch)
             return rtl.makeCharArray(dimensions);
 
@@ -779,7 +767,7 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
         return rtl.makeArray(dimensions + ", " + initializer);
     },
     _makeType: function(elementsType, init, length){
-        return new (this.language().types.StaticArray)(init, elementsType, length);
+        return new (this.root().language().types.StaticArray)(init, elementsType, length);
     }
 });
 
@@ -941,7 +929,7 @@ function checkSetHasBit(leftType, rightType, context){
     if (!Type.isInt(leftType))
         throw new Errors.Error(
             Type.intsDescription() + " expected as an element of SET, got '" + Type.typeName(leftType) + "'");
-    checkImplicitCast(context.language().types, rightType, basicTypes.set);
+    checkImplicitCast(context.root().language().types, rightType, basicTypes.set);
 }
 
 function relationOp(leftType, rightType, literal, ops, context){
@@ -1187,7 +1175,7 @@ exports.Set = ChainedContext.extend({
         if (!this.__expr.length)
             parent.handleConst(basicTypes.set, Code.makeSetConst(this.__value), this.__value.toString());
         else{
-            var code = this.language().rtl.makeSet(this.__expr);
+            var code = this.root().language().rtl.makeSet(this.__expr);
             if (this.__value)
                 code += " | " + this.__value;
             var e = Code.makeExpression(code, basicTypes.set);
@@ -1264,7 +1252,7 @@ exports.SimpleExpression = ChainedContext.extend({
         if (type === undefined || this.__type === undefined)
             this.__type = type;
         else
-            checkImplicitCast(this.language().types, type, this.__type);
+            checkImplicitCast(this.root().language().types, type, this.__type);
     },
     handleBinaryOperator: function(o){this.__binaryOperator = o;},
     endParse: function(){
@@ -1291,7 +1279,7 @@ exports.Expression = ChainedContext.extend({
         rightExpression = promoteTypeInExpression(rightExpression, leftExpression.type());
 
         var o = this._relationOperation(leftExpression.type(), rightExpression.type(), this.__relation);
-        this.__expression = o(leftExpression, rightExpression, this.language());
+        this.__expression = o(leftExpression, rightExpression, this.root().language());
     },
     _relationOperation: function(left, right, relation){
         return relationOp(left, right, relation, this.__relOps, this);
@@ -1366,7 +1354,7 @@ exports.Case = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
         this.__type = undefined;
         this.__firstCase = true;
-        this.__var = this.currentScope().generateTempVar("case");
+        this.__var = this.root().currentScope().generateTempVar("case");
         this.codeGenerator().write("var " + this.__var + " = ");
     },
     caseVar: function(){return this.__var;},
@@ -1636,7 +1624,7 @@ exports.ConstDecl = ChainedContext.extend({
     },
     endParse: function(){
         var c = new Type.Const(this.__type, this.__value);
-        this.currentScope().addSymbol(new Symbol.Symbol(this.__id.id(), c), this.__id.exported());
+        this.root().currentScope().addSymbol(new Symbol.Symbol(this.__id.id(), c), this.__id.exported());
         this.codeGenerator().write(";\n");
     }
 });
@@ -1684,7 +1672,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
                 this.checkExport(varName);
 
             var v = new Type.DeclaredVariable(varName, this.__type);
-            this.currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
+            this.root().currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
             gen.write("var " + varName + " = " + this._initCode() + ";");
         }
 
@@ -1768,7 +1756,7 @@ exports.RecordDecl = ChainedContext.extend({
         var parent = this.parent();
         this.__cons = parent.genTypeName();
         var name = parent.isAnonymousDeclaration() ? "" : this.__cons;
-        this.__type = new RecordCons(name, this.__cons, context.currentScope());
+        this.__type = new RecordCons(name, this.__cons, context.root().currentScope());
         parent.setType(this.__type);
     },
     type: function(){return this.__type;},
@@ -1834,7 +1822,7 @@ exports.RecordDecl = ChainedContext.extend({
         if (!base)
             return "";
         var qualifiedBase = this.qualifyScope(Type.recordScope(base)) + Type.typeName(base); 
-        return this.language().rtl.extend(this.__cons, qualifiedBase) + ";\n";
+        return this.root().language().rtl.extend(this.__cons, qualifiedBase) + ";\n";
     },
     _makeField: function(field, type){
         return new Type.RecordField(field, type);
@@ -1850,15 +1838,16 @@ exports.TypeDeclaration = ChainedContext.extend({
     handleIdentdef: function(id){
         var typeId = new Type.LazyTypeId();
         var symbol = new Symbol.Symbol(id.id(), typeId);
-        this.currentScope().addSymbol(symbol, id.exported());
+        var scope = this.root().currentScope();
+        scope.addSymbol(symbol, id.exported());
         if (!id.exported())
-            this.currentScope().addFinalizer(function(){typeId.strip();});
+            scope.addFinalizer(function(){typeId.strip();});
         this.__id = id;
         this.__symbol = symbol;
     },
     setType: function(type){
         Type.defineTypeId(this.__symbol.info(), type);
-        Scope.resolve(this.currentScope(), this.__symbol);
+        Scope.resolve(this.root().currentScope(), this.__symbol);
     },
     typeName: function(){return this.__id.id();},
     id: function(){return this.__id;},
@@ -1876,7 +1865,7 @@ exports.TypeSection = ChainedContext.extend({
     },
     handleMessage: function(msg){
         if (msg instanceof ForwardTypeMsg){
-            var scope = this.currentScope();
+            var scope = this.root().currentScope();
             Scope.addUnresolved(scope, msg.id);
             var resolve = function(){return getSymbol(this, msg.id).info().type();}.bind(this);
 
@@ -1885,7 +1874,7 @@ exports.TypeSection = ChainedContext.extend({
         return ChainedContext.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
-        var unresolved = Scope.unresolved(this.currentScope());
+        var unresolved = Scope.unresolved(this.root().currentScope());
         if (unresolved.length)
             throw new Errors.Error("no declaration found for '" + unresolved.join("', '") + "'");
     }
@@ -1918,17 +1907,16 @@ exports.ModuleDeclaration = ChainedContext.extend({
         this.__imports = {};
         this.__moduleScope = undefined;
         this.__moduleGen = undefined;
-        this.__stdSymbols = this.language().stdSymbols;
+        this.__stdSymbols = this.root().language().stdSymbols;
     },
     handleIdent: function(id){
-        var parent = this.parent();
         if (this.__name === undefined ) {
             this.__name = id;
             this.__moduleScope = new Scope.Module(id, this.__stdSymbols);
-            parent.pushScope(this.__moduleScope);
+            this.root().pushScope(this.__moduleScope);
         }
         else if (id === this.__name){
-            var scope = parent.currentScope();
+            var scope = this.root().currentScope();
             scope.close();
             var exports = scope.exports;
             Scope.defineExports(Scope.moduleSymbol(scope).info(), exports);
@@ -1943,7 +1931,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
         return this.parent().findModule(name);
     },
     handleImport: function(modules){
-        var scope = this.currentScope();
+        var scope = this.root().currentScope();
         var moduleAliases = {};
         for(var i = 0; i < modules.length; ++i){
             var s = modules[i];
@@ -1952,7 +1940,7 @@ exports.ModuleDeclaration = ChainedContext.extend({
             scope.addSymbol(s);
             moduleAliases[name] = s.id();
         }
-        this.__moduleGen = this.parent().language().moduleGenerator(
+        this.__moduleGen = this.root().language().moduleGenerator(
                 this.__name,
                 moduleAliases);
         this.codeGenerator().write(this.__moduleGen.prolog());
@@ -2028,7 +2016,7 @@ exports.ModuleImport = ModuleImport;
 
 function makeProcCall(context, type, info){
     assertProcType(type, info);
-    var l = context.language();
+    var l = context.root().language();
     return type.callGenerator(
         { types: l.types, 
           rtl: l.rtl, 

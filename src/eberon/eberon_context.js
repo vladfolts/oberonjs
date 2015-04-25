@@ -46,13 +46,13 @@ var ProcOrMethodId = Context.Chained.extend({
     },
     handleIdent: function(id){this.__maybeTypeId = id;},
     handleLiteral: function(s){
-        var ss = Context.getSymbolAndScope(this, this.__maybeTypeId);
+        var ss = Context.getSymbolAndScope(this.root(), this.__maybeTypeId);
         var type = Context.unwrapType(ss.symbol().info());
         if (!(type instanceof Type.Record))
             throw new Errors.Error(
                   "RECORD type expected in method declaration, got '"
                 + type.description() + "'");
-        if (ss.scope() != this.currentScope())
+        if (ss.scope() != this.root().currentScope())
             throw new Errors.Error(
                   "method should be defined in the same scope as its bound type '"
                 + this.__maybeTypeId
@@ -248,7 +248,7 @@ var Designator = Context.Designator.extend({
 
         if (currentType instanceof EberonMap.Type){
             var indexType = currentType.valueType;
-            var rval = this.language().rtl.getMappedValue(code, indexCode);
+            var rval = this.root().language().rtl.getMappedValue(code, indexCode);
             return { length: undefined, 
                      type: indexType,
                      info: new MapElementVariable(indexType, info.isReadOnly(), rval),
@@ -390,7 +390,7 @@ var InPlaceVariableInit = Context.Chained.extend({
         if (type instanceof Type.Record){
             EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForCopy);
             if (e.designator()){
-                var l = this.language();
+                var l = this.root().language();
                 this._code += l.rtl.clone(e.code(), l.types.typeInfo(type));
             }
             else // do not clone if it is temporary, e.g. constructor call
@@ -400,7 +400,7 @@ var InPlaceVariableInit = Context.Chained.extend({
             if (type instanceof Type.OpenArray)
                 throw new Errors.Error("cannot initialize variable '" + this.__id + "' with open array");
           
-            var language = this.language();
+            var language = this.root().language();
             var cloneOp;
             language.types.implicitCast(type, type, false, {set: function(v){cloneOp = v;}, get:function(){return cloneOp;}});
             this._code += cloneOp.clone(language, e);
@@ -413,7 +413,7 @@ var InPlaceVariableInit = Context.Chained.extend({
         if (!this._symbol)
             return false;
 
-        this.currentScope().addSymbol(this._symbol);
+        this.root().currentScope().addSymbol(this._symbol);
         this._onParsed();
         return true;
     }
@@ -1068,12 +1068,13 @@ var OperatorScopes = Class.extend({
         this.__ignorePromotions = true;
     },
     alternate: function(){
+        var root = this.__context.root();
         if (this.__scope)
-            this.__context.popScope();
+            root.popScope();
         this.__scope = EberonScope.makeOperator(
-            this.__context.currentScope(),
-            this.__context.language().stdSymbols);
-        this.__context.pushScope(this.__scope);
+            root.currentScope(),
+            root.language().stdSymbols);
+        root.pushScope(this.__scope);
 
         if (this.__typePromotion){
             this.__typePromotion.reset();
@@ -1083,7 +1084,7 @@ var OperatorScopes = Class.extend({
         this.__ignorePromotions = false;
     },
     reset: function(){
-        this.__context.popScope();
+        this.__context.root().popScope();
         for(var i = 0; i < this.__typePromotions.length; ++i){
             this.__typePromotions[i].reset();
         }
@@ -1144,14 +1145,15 @@ var CaseLabel = Context.CaseLabel.extend({
     },
     handleLiteral: function(s){
         if (s == ':'){ // statement sequence is expected now
+            var root = this.root();
             var scope = EberonScope.makeOperator(
-                this.parent().currentScope(),
-                this.language().stdSymbols);
-            this.pushScope(scope);
+                root.currentScope(),
+                root.language().stdSymbols);
+            root.pushScope(scope);
         }
     },
     endParse: function(){
-        this.popScope();
+        this.root().popScope();
         Context.CaseLabel.prototype.endParse.call(this);
     }
 });
@@ -1159,13 +1161,14 @@ var CaseLabel = Context.CaseLabel.extend({
 var Repeat = Context.Repeat.extend({
     init: function EberonContext$Repeat(context){
         Context.Repeat.prototype.init.call(this, context);
+        var root = this.root();
         var scope = EberonScope.makeOperator(
-            this.parent().currentScope(),
-            this.language().stdSymbols);
-        this.pushScope(scope);
+            root.currentScope(),
+            root.language().stdSymbols);
+        root.pushScope(scope);
     },
     endParse: function(){
-        this.popScope();
+        this.root().popScope();
         //Context.Repeat.prototype.endParse.call(this);
     }
 });
@@ -1175,17 +1178,18 @@ var Return = Context.Return;
 var For = Context.For.extend({
     init: function EberonContext$Repeat(context){
         Context.For.prototype.init.call(this, context);
+        var root = this.root();
         var scope = EberonScope.makeOperator(
-            this.parent().currentScope(),
-            this.language().stdSymbols);
-        this.pushScope(scope);
+            root.currentScope(),
+            root.language().stdSymbols);
+        root.pushScope(scope);
     },
     handleInPlaceInit: function(symbol, code){
         this._handleInitCode(symbol.id(), "for (" + code);
         this._handleInitExpression(symbol.info().type());
     },
     endParse: function(){
-        this.popScope();
+        this.root().popScope();
         Context.For.prototype.endParse.call(this);
     }
 });
@@ -1246,14 +1250,15 @@ var ForEach = Context.Chained.extend({
             throw new Errors.Error("expression of type MAP is expected in FOR, got '" 
                                  + type.description() + "'");
 
+        var root = this.root();
         var scope = EberonScope.makeOperator(
-            this.parent().currentScope(),
-            this.language().stdSymbols);
-        this.pushScope(scope);
+            root.currentScope(),
+            root.language().stdSymbols);
+        root.pushScope(scope);
         this.__scopeWasCreated = true;
 
         var code = this.parent().codeGenerator();
-        var mapVar = this.currentScope().generateTempVar("map");
+        var mapVar = root.currentScope().generateTempVar("map");
         code.write("var " + mapVar + " = " + e.code() + ";\n");
         code.write("for(var " + this.__keyId + " in " + mapVar + ")");
         code.openScope();
@@ -1266,7 +1271,7 @@ var ForEach = Context.Chained.extend({
     endParse: function(){
         this.__codeGenerator.closeScope("");
         if (this.__scopeWasCreated)
-            this.popScope();
+            this.root().popScope();
     },
     __makeVariable: function(id, type, scope){
         var v = new ForEachVariable(type);
@@ -1335,7 +1340,7 @@ var FormalType = Context.HandleSymbolAsType.extend({
         for(var i = this.__arrayDimensions.length; i--;){
             var Cons = this.__arrayDimensions[i]
                 ? EberonDynamicArray.DynamicArray
-                : this.language().types.OpenArray;
+                : this.root().language().types.OpenArray;
             type = new Cons(type);
         }
         this.parent().setType(type);

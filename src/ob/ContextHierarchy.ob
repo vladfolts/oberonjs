@@ -4,25 +4,41 @@ TYPE
     PRoot = POINTER TO Root;
     PNode = POINTER TO Node;
 
-    Node* = RECORD
-        PROCEDURE root(): PRoot;
-        PROCEDURE parent(): PNode;
-
-        mParent: PNode;
-    END;
-
     Language = RECORD
         moduleResolver: PROCEDURE(name: STRING): Module.PType;
         codeGenerator: CodeGenerator.PIGenerator;
     END;
     PLanguage = POINTER TO Language;
 
+    Message = RECORD
+    END;
+
+    PMessageResult = POINTER TO RECORD
+    END;
+
+    Attributes = POINTER TO RECORD
+    END;
+
+    Node* = RECORD
+        PROCEDURE Node(parent: PNode);
+
+        PROCEDURE root(): PRoot;
+        PROCEDURE parent(): PNode;
+        PROCEDURE handleMessage(VAR msg: Message): PMessageResult;
+        PROCEDURE codeGenerator(): CodeGenerator.PIGenerator;
+        PROCEDURE qualifyScope(scope: Scope.PType): STRING;
+        PROCEDURE handleLiteral(s: STRING);
+        PROCEDURE genTypeName(): STRING;
+
+        mParent: PNode;
+        attributes: Attributes;
+    END;
+
     Root* = RECORD(Node)
         PROCEDURE Root(language: PLanguage);
 
         PROCEDURE language(): PLanguage;
 
-        PROCEDURE genTypeName(): STRING;
         PROCEDURE findSymbol(ident: STRING): Symbols.PFoundSymbol;
         PROCEDURE findModule(name: STRING): Module.PType;
 
@@ -30,12 +46,18 @@ TYPE
         PROCEDURE pushScope(scope: Scope.PType);
         PROCEDURE popScope();
 
-        PROCEDURE codeGenerator(): CodeGenerator.PIGenerator;
-
         mLanguage: PLanguage;
         scopes: ARRAY * OF Scope.PType;
         gen: INTEGER;
     END;
+
+PROCEDURE Node.Node(parent: PNode)
+    | mParent(parent);
+BEGIN
+    IF parent # NIL THEN
+        SELF.attributes := parent.attributes;
+    END;
+END;
 
 PROCEDURE Node.root(): PRoot;
     RETURN SELF.mParent.root();
@@ -45,8 +67,28 @@ PROCEDURE Node.parent(): PNode;
     RETURN SELF.mParent;
 END;
 
+PROCEDURE Node.handleMessage(VAR msg: Message): PMessageResult;
+    RETURN SELF.mParent.handleMessage(msg);
+END;
+
+PROCEDURE Node.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN SELF.mParent.codeGenerator();
+END;
+
+PROCEDURE Node.qualifyScope(scope: Scope.PType): STRING;
+    RETURN SELF.mParent.qualifyScope(scope);
+END;
+
+PROCEDURE Node.handleLiteral(s: STRING);
+END;
+
+PROCEDURE Node.genTypeName(): STRING;
+    RETURN SELF.mParent.genTypeName();
+END;
+
 PROCEDURE Root.Root(language: PLanguage)
-    | mLanguage(language);
+    | SUPER(NIL),
+      mLanguage(language);
 END;
 
 PROCEDURE Root.language(): PLanguage;
