@@ -809,7 +809,20 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     }
 });
 
-var Factor = Context.Factor;
+var Factor = Context.Factor.extend({
+    init: function EberonContext$Factor(context){
+        Context.Factor.prototype.init.call(this, context);
+    },
+    handleLogicalNot: function(){
+        Context.Factor.prototype.handleLogicalNot.call(this);
+        var p = this.getCurrentPromotion();
+        if (p)
+            p.invert();
+    },
+    getCurrentPromotion: function(){
+        return this.parent().getCurrentPromotion();
+    }
+});
 
 var AddOperator = Context.AddOperator.extend({
     init: function EberonContext$AddOperator(context){
@@ -916,13 +929,13 @@ var Term = Context.Term.extend({
     handleMessage: function(msg){
         if (msg instanceof PromoteTypeMsg) {
             var promoted = msg.info;
-            var p = this.__getCurrentPromotion();
+            var p = this.getCurrentPromotion();
             if (p)
                 p.promote(promoted, msg.type);
             return;
         }
         if (msg instanceof BeginTypePromotionOrMsg){
-            var cp = this.__getCurrentPromotion();
+            var cp = this.getCurrentPromotion();
             if (cp)
                 msg.result = cp.makeOr();
             return;
@@ -935,13 +948,7 @@ var Term = Context.Term.extend({
         else
             this.__andHandled = true;
     },
-    handleLogicalNot: function(){
-        Context.Term.prototype.handleLogicalNot.call(this);
-        var p = this.__getCurrentPromotion();
-        if (p)
-            p.invert();
-    },
-    __getCurrentPromotion: function(){
+    getCurrentPromotion: function(){
         if (!this.__currentPromotion){
             var msg = new BeginTypePromotionAndMsg();
             this.parent().handleMessage(msg);

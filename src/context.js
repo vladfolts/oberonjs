@@ -1058,7 +1058,6 @@ exports.Term = ChainedContext.extend({
     init: function TermContext(context){
         ChainedContext.prototype.init.call(this, context);
         this.attributes = {};
-        this.__logicalNot = false;
         this.__operator = undefined;
         this.__expression = undefined;
     },
@@ -1066,15 +1065,7 @@ exports.Term = ChainedContext.extend({
         return this.__expression ? this.__expression.type()
                                  : this.attributes.designator.type();
     },
-    handleLogicalNot: function(){
-        this.__logicalNot = !this.__logicalNot;
-        this.parent().setType(basicTypes.bool);
-    },
     handleOperator: function(o){this.__operator = o;},
-    handleConst: function(type, value, code){
-        this.handleExpression(Code.makeExpression(
-            code, type, undefined, value));
-    },
     handleFactor: function(e){
         this.handleExpression(e);
     },
@@ -1092,10 +1083,6 @@ exports.Term = ChainedContext.extend({
     },
     handleExpression: function(e){
         promoteExpressionType(this, this.__expression, e);
-        if (this.__logicalNot){
-            e = op.not(e);
-            this.__logicalNot = false;
-        }
         if (this.__operator)
             e = this.__expression ? this.__operator(this.__expression, e)
                                   : this.__operator(e);
@@ -1106,6 +1093,8 @@ exports.Term = ChainedContext.extend({
 exports.Factor = ChainedContext.extend({
     init: function FactorContext(context){
         ChainedContext.prototype.init.call(this, context);
+        this.__logicalNot = false;
+        this.__factor = undefined;
     },
     type: function(){return this.parent().type();},
     handleLiteral: function(s){
@@ -1116,18 +1105,28 @@ exports.Factor = ChainedContext.extend({
         else if (s == "FALSE")
             this.handleConst(basicTypes.bool, Code.makeIntConst(0), "false");
         else if (s == "~")
-            this.parent().handleLogicalNot();
+            this.handleLogicalNot();
     },
     handleConst: function(type, value, code){
-        this.parent().handleConst(type, value, code);
+        this.__factor = Code.makeExpression(
+            code, type, undefined, value);
     },
     handleFactor: function(e){
-        this.parent().handleFactor(e);
+        this.__factor = e;
     },
     handleExpression: function(e){
-        this.parent().handleExpression(e);
+        this.__factor = e;
     },
-    handleLogicalNot: function(){this.parent().handleLogicalNot();}
+    handleLogicalNot: function(){
+        this.__logicalNot = true;
+    },
+    endParse: function(){
+        if (this.__logicalNot){
+            checkTypeMatch(this.__factor.type(), basicTypes.bool);
+            this.__factor = op.not(this.__factor);
+        }
+        this.parent().handleFactor(this.__factor);
+    }
 });
 
 function designatorAsExpression(d){
