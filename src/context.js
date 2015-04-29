@@ -23,53 +23,6 @@ function log(s){
     console.info(s);
 }
 */
-function getSymbolAndScope(context, id){
-    var s = context.findSymbol(id);
-    if (!s)
-        throw new Errors.Error(
-            context instanceof Type.Module
-                ? "identifier '" + id + "' is not exported by module '" + Type.moduleName(context) + "'"
-                : "undeclared identifier: '" + id + "'");
-    return s;
-}
-
-function getQIdSymbolAndScope(context, q){
-    return getSymbolAndScope(q.module ? q.module : context.root(), q.id);
-}
-
-function getSymbol(context, id){
-    return getSymbolAndScope(context.root(), id).symbol();
-}
-
-function unwrapTypeId(type){
-    if (!(type instanceof Type.TypeId))
-        throw new Errors.Error("type name expected");
-    return type;
-}
-
-function unwrapType(type){
-    return unwrapTypeId(type).type();
-}
-
-function getTypeSymbol(context, id){
-    return unwrapType(getSymbol(context, id).info());
-}
-
-function throwTypeMismatch(from, to){
-    throw new Errors.Error("type mismatch: expected '" + to.description() +
-                           "', got '" + from.description() + "'");
-}
-
-function checkTypeMatch(from, to){
-    if (!Cast.areTypesMatch(from, to))
-        throwTypeMismatch(from, to);
-}
-
-function checkImplicitCast(types, from, to){
-    var op;
-    if (types.implicitCast(from, to, false, {set: function(v){op = v;}, get:function(){return op;}}))
-        throwTypeMismatch(from, to);
-}
 
 function promoteTypeInExpression(e, type){
     var fromType = e.type();
@@ -90,7 +43,7 @@ function promoteExpressionType(context, left, right){
     if (!rightType)
         return;
 
-    checkImplicitCast(context.root().language().types, rightType, leftType);
+    ContextHierarchy.checkImplicitCast(context.root(), rightType, leftType);
 }
 
 function checkTypeCast(fromInfo, fromType, toType, msg){
@@ -220,8 +173,8 @@ exports.BaseType = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
     },
     handleQIdent: function(q){
-        var s = getQIdSymbolAndScope(this, q);
-        this.parent().setBaseType(unwrapType(s.symbol().info()));
+        var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
+        this.parent().setBaseType(ContextHierarchy.unwrapType(s.symbol().info()));
     }
 });
 
@@ -311,7 +264,7 @@ exports.Designator = ChainedContext.extend({
         this.__propCode = undefined;
     },
     handleQIdent: function(q){
-        var found = getQIdSymbolAndScope(this, q);
+        var found = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
         this.__scope = found.scope();
         var s = found.symbol();
         var info = s.info();
@@ -475,8 +428,8 @@ var HandleSymbolAsType = ChainedContext.extend({
         ChainedContext.prototype.init.call(this, context);
     },
     handleQIdent: function(q){
-        var s = getQIdSymbolAndScope(this, q);
-        this.setType(unwrapType(s.symbol().info()));
+        var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
+        this.setType(ContextHierarchy.unwrapType(s.symbol().info()));
     }
 });
 
@@ -533,8 +486,8 @@ exports.FormalParameters = ChainedContext.extend({
         return ChainedContext.prototype.handleMessage.call(this, msg);
     },
     handleQIdent: function(q){
-        var s = getQIdSymbolAndScope(this, q);
-        var resultType = unwrapType(s.symbol().info());
+        var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
+        var resultType = ContextHierarchy.unwrapType(s.symbol().info());
         this._checkResultType(resultType);
         this.__result = resultType;
     },
@@ -701,12 +654,12 @@ exports.PointerDecl = ChainedContext.extend({
     handleQIdent: function(q){
         var id = q.id;
         var s = q.module
-              ? getQIdSymbolAndScope(this, q)
+              ? ContextHierarchy.getModuleSymbolAndScope(q.module, q.id)
               : this.root().findSymbol(id);
         
         var info = s ? s.symbol().info()
                      : this.parent().handleMessage(new ForwardTypeMsg(id));
-        var typeId = unwrapTypeId(info);
+        var typeId = ContextHierarchy.unwrapTypeId(info);
         this.__setTypeId(typeId);
     },
     __setTypeId: function(typeId){
@@ -917,7 +870,7 @@ var RelationOps = Class.extend({
         // special case for strings
         var isStrings = Type.isString(leftType) && Type.isString(rightType);
         if (!isStrings)
-            checkTypeMatch(rightType, leftType);
+            ContextHierarchy.checkTypeMatch(rightType, leftType);
 
         return leftType;
     }
@@ -929,12 +882,12 @@ function checkSetHasBit(leftType, rightType, context){
     if (!Type.isInt(leftType))
         throw new Errors.Error(
             Type.intsDescription() + " expected as an element of SET, got '" + Type.typeName(leftType) + "'");
-    checkImplicitCast(context.root().language().types, rightType, basicTypes.set);
+    ContextHierarchy.checkImplicitCast(context.root(), rightType, basicTypes.set);
 }
 
 function relationOp(leftType, rightType, literal, ops, context){
     var type = 
-          literal == "IS" ? unwrapType(rightType)
+          literal == "IS" ? ContextHierarchy.unwrapType(rightType)
         : literal == "IN" ? checkSetHasBit(leftType, rightType, context)
                           : ops.coalesceType(leftType, rightType);
     var o;
@@ -1122,7 +1075,7 @@ exports.Factor = ChainedContext.extend({
     },
     endParse: function(){
         if (this.__logicalNot){
-            checkTypeMatch(this.__factor.type(), basicTypes.bool);
+            ContextHierarchy.checkTypeMatch(this.__factor.type(), basicTypes.bool);
             this.__factor = op.not(this.__factor);
         }
         this.parent().handleFactor(this.__factor);
@@ -1251,7 +1204,7 @@ exports.SimpleExpression = ChainedContext.extend({
         if (type === undefined || this.__type === undefined)
             this.__type = type;
         else
-            checkImplicitCast(this.root().language().types, type, this.__type);
+            ContextHierarchy.checkImplicitCast(this.root(), type, this.__type);
     },
     handleBinaryOperator: function(o){this.__binaryOperator = o;},
     endParse: function(){
@@ -1450,7 +1403,7 @@ exports.CaseRange = ChainedContext.extend({
         this.handleLabel(type, value);
     },
     handleIdent: function(id){
-        var s = getSymbol(this.parent(), id);
+        var s = ContextHierarchy.getSymbol(this.root(), id);
         if (!s.isConst())
             throw new Errors.Error("'" + id + "' is not a constant");
         
@@ -1526,7 +1479,7 @@ exports.For = ChainedContext.extend({
         this.__by = undefined;
     },
     handleIdent: function(id){
-        var s = getSymbol(this.parent(), id);
+        var s = ContextHierarchy.getSymbol(this.root(), id);
         if (!s.isVariable())
             throw new Errors.Error("'" + s.id() + "' is not a variable");
         var type = s.info().type();
@@ -1866,7 +1819,9 @@ exports.TypeSection = ChainedContext.extend({
         if (msg instanceof ForwardTypeMsg){
             var scope = this.root().currentScope();
             Scope.addUnresolved(scope, msg.id);
-            var resolve = function(){return getSymbol(this, msg.id).info().type();}.bind(this);
+            var resolve = function(){
+                return ContextHierarchy.getSymbol(this.root(), msg.id).info().type();
+            }.bind(this);
 
             return new Type.ForwardTypeId(resolve);
         }
@@ -1885,7 +1840,7 @@ exports.TypeCast = ChainedContext.extend({
         this.__type = undefined;
     },
     handleQIdent: function(q){
-        var s = getQIdSymbolAndScope(this, q);
+        var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
         s = s.symbol();
         if (!s.isType())
             return; // this is not a type cast, may be procedure call
@@ -2030,10 +1985,7 @@ exports.endCallMsg = endCallMsg;
 exports.Chained = ChainedContext;
 exports.designatorAsExpression = designatorAsExpression;
 exports.endParametersMsg = endParametersMsg;
-exports.getSymbolAndScope = getSymbolAndScope;
-exports.getQIdSymbolAndScope = getQIdSymbolAndScope;
 exports.makeProcCall = makeProcCall;
-exports.unwrapType = unwrapType;
 exports.RelationOps = RelationOps;
 exports.HandleSymbolAsType = HandleSymbolAsType;
 exports.makeContext = makeContext;

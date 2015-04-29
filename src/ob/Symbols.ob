@@ -22,7 +22,7 @@ TYPE
     FoundSymbol* = RECORD
         PROCEDURE FoundSymbol*(s: PSymbol; scope: ScopeBase.PType);
 
-        PROCEDURE symbol(): PSymbol;
+        PROCEDURE symbol*(): PSymbol;
         PROCEDURE scope*(): ScopeBase.PType;
 
         mSymbol: PSymbol;

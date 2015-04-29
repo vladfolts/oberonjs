@@ -252,7 +252,7 @@ TYPE
     Module* = RECORD(Id)
         PROCEDURE Module*(name: STRING);
 
-        name: STRING
+        name-: STRING
     END;
 
     PModule* = POINTER TO Module;

@@ -1,19 +1,19 @@
 MODULE ContextHierarchy;
-IMPORT CodeGenerator, Module, Scope, Symbols, String;
+IMPORT Cast, CodeGenerator, Errors, LanguageContext, Module, Scope, Symbols, String, Types;
 TYPE
     PRoot = POINTER TO Root;
     PNode = POINTER TO Node;
-
-    Language = RECORD
-        moduleResolver: PROCEDURE(name: STRING): Module.PType;
-        codeGenerator: CodeGenerator.PIGenerator;
-    END;
-    PLanguage = POINTER TO Language;
 
     Message = RECORD
     END;
 
     PMessageResult = POINTER TO RECORD
+    END;
+
+    QIdent = RECORD
+        module: Module.PType;
+        id: STRING;
+        code: STRING;
     END;
 
     Attributes = POINTER TO RECORD
@@ -35,18 +35,18 @@ TYPE
     END;
 
     Root* = RECORD(Node)
-        PROCEDURE Root(language: PLanguage);
+        PROCEDURE Root(language: LanguageContext.PType);
 
-        PROCEDURE language(): PLanguage;
+        PROCEDURE language(): LanguageContext.PType;
 
         PROCEDURE findSymbol(ident: STRING): Symbols.PFoundSymbol;
-        PROCEDURE findModule(name: STRING): Module.PType;
+        PROCEDURE findModule(name: STRING): Types.PModule;
 
         PROCEDURE currentScope(): Scope.PType;
         PROCEDURE pushScope(scope: Scope.PType);
         PROCEDURE popScope();
 
-        mLanguage: PLanguage;
+        mLanguage: LanguageContext.PType;
         scopes: ARRAY * OF Scope.PType;
         gen: INTEGER;
     END;
@@ -86,12 +86,12 @@ PROCEDURE Node.genTypeName(): STRING;
     RETURN SELF.mParent.genTypeName();
 END;
 
-PROCEDURE Root.Root(language: PLanguage)
+PROCEDURE Root.Root(language: LanguageContext.PType)
     | SUPER(NIL),
       mLanguage(language);
 END;
 
-PROCEDURE Root.language(): PLanguage;
+PROCEDURE Root.language(): LanguageContext.PType;
     RETURN SELF.mLanguage;
 END;
 
@@ -114,9 +114,9 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Root.findModule(name: STRING): Module.PType;
+PROCEDURE Root.findModule(name: STRING): Types.PModule;
 VAR
-    result: Module.PType;
+    result: Types.PModule;
 BEGIN
     IF name = "JS" THEN
         result := Module.makeJS();
@@ -148,6 +148,78 @@ END;
 
 PROCEDURE Root.root(): PRoot;
     RETURN SELF(POINTER);
+END;
+
+PROCEDURE getSymbolAndScope*(cx: Root; id: STRING): Symbols.PFoundSymbol;
+BEGIN
+    s <- cx.findSymbol(id);
+    IF s = NIL THEN
+        Errors.raise("undeclared identifier: '" + id + "'");
+    END;
+    RETURN s;
+END;
+
+PROCEDURE getModuleSymbolAndScope*(m: Module.Type; id: STRING): Symbols.PFoundSymbol;
+BEGIN
+    s <- m.findSymbol(id);
+    IF s = NIL THEN
+        Errors.raise("identifier '" + id + "' is not exported by module '" + m.name + "'");
+    END;
+    RETURN s;
+END;
+
+PROCEDURE getQIdSymbolAndScope*(cx: Root; q: QIdent): Symbols.PFoundSymbol;
+VAR 
+    result: Symbols.PFoundSymbol;
+BEGIN
+    IF q.module # NIL THEN
+        result := getModuleSymbolAndScope(q.module^, q.id);
+    ELSE
+        result := getSymbolAndScope(cx, q.id);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE getSymbol*(cx: Root; id: STRING): Symbols.PSymbol;
+    RETURN getSymbolAndScope(cx, id).symbol();
+END;
+
+PROCEDURE unwrapTypeId*(id: Types.PId): Types.PTypeId;
+VAR
+    result: Types.PTypeId;
+BEGIN
+    IF ~(id IS Types.PTypeId) THEN
+        Errors.raise("type name expected");
+    ELSE
+        result := id;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE unwrapType*(id: Types.PId): Types.PType;
+    RETURN unwrapTypeId(id).type();
+END;
+
+PROCEDURE throwTypeMismatch(from, to: Types.PType);
+BEGIN
+    Errors.raise("type mismatch: expected '" + to.description() 
+               + "', got '" + from.description() + "'");
+END;
+
+PROCEDURE checkTypeMatch*(from, to: Types.PType);
+BEGIN
+    IF ~Cast.areTypesMatch(from, to) THEN
+        throwTypeMismatch(from, to);
+    END;
+END;
+
+PROCEDURE checkImplicitCast*(cx: Root; from, to: Types.PType);
+VAR
+    op: LanguageContext.PCastOp;
+BEGIN
+    IF cx.language().types.implicitCast(from, to, FALSE, op) # Cast.errNo THEN
+        throwTypeMismatch(from, to);
+    END;
 END;
 
 END ContextHierarchy.

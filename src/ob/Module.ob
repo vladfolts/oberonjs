@@ -2,7 +2,7 @@ MODULE Module;
 IMPORT Code, Context, Errors, LanguageContext, Procedure, Symbols, Types;
 TYPE
     Type* = RECORD(Types.Module)
-        PROCEDURE findSymbol(id: STRING): Symbols.PFoundSymbol
+        PROCEDURE findSymbol*(id: STRING): Symbols.PFoundSymbol
     END;
     PType* = POINTER TO Type;
 

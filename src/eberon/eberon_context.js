@@ -5,6 +5,7 @@ var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var ContextHierarchy = require("js/ContextHierarchy.js");
 var EberonConstructor= require("js/EberonConstructor.js");
 var EberonContext= require("js/EberonContext.js");
 var EberonDynamicArray = require("js/EberonDynamicArray.js");
@@ -46,8 +47,8 @@ var ProcOrMethodId = Context.Chained.extend({
     },
     handleIdent: function(id){this.__maybeTypeId = id;},
     handleLiteral: function(s){
-        var ss = Context.getSymbolAndScope(this.root(), this.__maybeTypeId);
-        var type = Context.unwrapType(ss.symbol().info());
+        var ss = ContextHierarchy.getSymbolAndScope(this.root(), this.__maybeTypeId);
+        var type = ContextHierarchy.unwrapType(ss.symbol().info());
         if (!(type instanceof Type.Record))
             throw new Errors.Error(
                   "RECORD type expected in method declaration, got '"
@@ -331,7 +332,7 @@ var OperatorNew = Context.Chained.extend({
         this.__call = undefined;
     },
     handleQIdent: function(q){
-        var found = Context.getQIdSymbolAndScope(this, q);
+        var found = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
         var s = found.symbol();
         var info = s.info();
 
@@ -1221,8 +1222,8 @@ var MapDecl = Context.Chained.extend({
         this.__type = undefined;
     },
     handleQIdent: function(q){
-        var s = Context.getQIdSymbolAndScope(this, q);
-        var type = Context.unwrapType(s.symbol().info());
+        var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
+        var type = ContextHierarchy.unwrapType(s.symbol().info());
         this.setType(type);
     },
     // anonymous types can be used in map declaration

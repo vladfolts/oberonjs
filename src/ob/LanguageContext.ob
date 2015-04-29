@@ -1,5 +1,5 @@
 MODULE LanguageContext;
-IMPORT Code, Context, T := Types;
+IMPORT Code, Context, CodeGenerator, T := Types;
 
 TYPE
     PType* = POINTER TO Type;
@@ -19,6 +19,8 @@ TYPE
     PTypes* = POINTER TO Types;
 
     Type* = RECORD(Context.Type)
+        moduleResolver*: PROCEDURE(name: STRING): T.PModule;
+        codeGenerator*: CodeGenerator.PIGenerator;
         types*: PTypes;
     END;
 
