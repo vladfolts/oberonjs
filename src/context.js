@@ -24,65 +24,6 @@ function log(s){
 }
 */
 
-function promoteTypeInExpression(e, type){
-    var fromType = e.type();
-    if (type == basicTypes.ch && fromType instanceof Type.String){
-        var v;
-        if (Type.stringAsChar(fromType, {set: function(value){v = value;}}))
-            return Code.makeExpression(v, type);
-    }
-    return e;
-}
-
-function promoteExpressionType(context, left, right){
-    var rightType = right.type();
-    if (!left)
-        return;
-
-    var leftType = left.type();
-    if (!rightType)
-        return;
-
-    ContextHierarchy.checkImplicitCast(context.root(), rightType, leftType);
-}
-
-function checkTypeCast(fromInfo, fromType, toType, msg){
-    var prefix = "invalid " + msg;
-
-    var pointerExpected = fromType instanceof Type.Pointer;
-    if (!pointerExpected && !(fromType instanceof Type.Record))
-        throw new Errors.Error(
-            prefix + ": POINTER to type or RECORD expected, got '"
-            + fromType.description() + "'");
-
-    if (fromType instanceof Type.Record){
-        if (!fromInfo.isReference())
-            throw new Errors.Error(
-                prefix + ": a value variable cannot be used");
-        if (!(toType instanceof Type.Record))
-            throw new Errors.Error(
-                prefix + ": RECORD type expected as an argument of RECORD " + msg + ", got '"
-              + toType.description() + "'");
-    }
-    else if (fromType instanceof Type.Pointer)
-        if (!(toType instanceof Type.Pointer))
-            throw new Errors.Error(
-                prefix + ": POINTER type expected as an argument of POINTER " + msg + ", got '"
-              + toType.description() + "'");
-
-    if (fromType instanceof Type.Pointer)
-        fromType = Type.pointerBase(fromType);
-    if (toType instanceof Type.Pointer)
-        toType = Type.pointerBase(toType);
-
-    var t = Type.recordBase(toType);
-    while (t && t != fromType)
-        t = Type.recordBase(t);
-    if (!t)
-        throw new Errors.Error(prefix + ": '" + toType.description()
-                             + "' is not an extension of '" + fromType.description() + "'");
-}
-
 var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
@@ -400,7 +341,7 @@ exports.Designator = ChainedContext.extend({
         this.__lval = undefined;
     },
     handleTypeCast: function(type){
-        checkTypeCast(this.__info, this.__currentType, type, "type cast");
+        ContextHierarchy.checkTypeCast(this.__info, this.__currentType, type, "type cast");
 
         var code = this.root().language().rtl.typeGuard(this.__code, castCode(type, this));
         this.__code = code;
@@ -851,7 +792,7 @@ var RelationOps = Class.extend({
     is: function(type, context){
         return function(left, right){
                 var d = left.designator();
-                checkTypeCast(d ? d.info() : undefined, left.type(), type, "type test");
+                ContextHierarchy.checkTypeCast(d ? d.info() : undefined, left.type(), type, "type test");
                 return op.is(left, Code.makeExpression(castCode(type, context)));
             };
     },
@@ -1035,7 +976,7 @@ exports.Term = ChainedContext.extend({
         this.parent().handleTerm(e);
     },
     handleExpression: function(e){
-        promoteExpressionType(this, this.__expression, e);
+        ContextHierarchy.promoteExpressionType(this.root(), this.__expression, e);
         if (this.__operator)
             e = this.__expression ? this.__operator(this.__expression, e)
                                   : this.__operator(e);
@@ -1227,8 +1168,8 @@ exports.Expression = ChainedContext.extend({
 
         var leftExpression = this.__expression;
         var rightExpression = e;
-        leftExpression = promoteTypeInExpression(leftExpression, rightExpression.type());
-        rightExpression = promoteTypeInExpression(rightExpression, leftExpression.type());
+        leftExpression = ContextHierarchy.promoteTypeInExpression(leftExpression, rightExpression.type());
+        rightExpression = ContextHierarchy.promoteTypeInExpression(rightExpression, leftExpression.type());
 
         var o = this._relationOperation(leftExpression.type(), rightExpression.type(), this.__relation);
         this.__expression = o(leftExpression, rightExpression, this.root().language());

@@ -1,5 +1,5 @@
 MODULE ContextHierarchy;
-IMPORT Cast, CodeGenerator, Errors, LanguageContext, Module, Scope, Symbols, String, Types;
+IMPORT Cast, Code, CodeGenerator, Errors, LanguageContext, Module, Scope, Symbols, String, Types;
 TYPE
     PRoot = POINTER TO Root;
     PNode = POINTER TO Node;
@@ -221,5 +221,80 @@ BEGIN
         throwTypeMismatch(from, to);
     END;
 END;
+
+PROCEDURE promoteTypeInExpression*(e: Code.PExpression; type: Types.PType): Code.PExpression;
+VAR
+    v: CHAR;
+    result: Code.PExpression;
+BEGIN
+    fromType <- e.type();
+    IF (type = Types.basic.ch) & (fromType IS Types.PString) & Types.stringAsChar(fromType^, v) THEN
+        result := Code.makeSimpleExpression(String.fromInt(ORD(v)), type);
+    ELSE
+        result := e;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE promoteExpressionType*(cx: Root; left, right: Code.PExpression);
+BEGIN
+    IF left # NIL THEN
+        rightType <- right.type();
+        leftType <- left.type();
+        IF (leftType # NIL) & (rightType # NIL) THEN
+            checkImplicitCast(cx, rightType, leftType);
+        END;
+    END;
+END;
+
+PROCEDURE checkTypeCast*(fromInfo: Types.Variable; fromType, toType: Types.PType; msg: STRING);
+VAR
+    PROCEDURE checkCommonBase(from, to: Types.PRecord; prefix: STRING);
+    BEGIN
+        t <- to.base;
+        WHILE (t # NIL) & (t # from) DO
+            t := t.base;
+        END;
+        IF t = NIL THEN
+            Errors.raise(prefix + ": '" + to.description()
+                       + "' is not an extension of '" + from.description() + "'");
+        END;
+    END;
+
+BEGIN
+    prefix <- "invalid " + msg;
+
+    pointerExpected <- fromType IS Types.PPointer;
+    IF ~pointerExpected & ~(fromType IS Types.PRecord) THEN
+        Errors.raise(
+            prefix + ": POINTER to type or RECORD expected, got '"
+            + fromType.description() + "'");
+    END;
+
+    IF ~pointerExpected THEN
+        IF ~fromInfo.isReference() THEN
+            Errors.raise(
+                prefix + ": a value variable cannot be used");
+        ELSIF ~(toType IS Types.PRecord) THEN
+            Errors.raise(
+                prefix + ": RECORD type expected as an argument of RECORD " + msg + ", got '"
+              + toType.description() + "'");
+        END;
+    ELSIF ~(toType IS Types.PPointer) THEN
+        Errors.raise(
+            prefix + ": POINTER type expected as an argument of POINTER " + msg + ", got '"
+          + toType.description() + "'");
+    END;
+
+    IF pointerExpected THEN
+        checkCommonBase(Types.pointerBase(fromType(Types.PPointer)^), 
+                        Types.pointerBase(toType(Types.PPointer)^), 
+                        prefix);
+    ELSE
+        checkCommonBase(fromType(Types.PRecord), 
+                        toType(Types.PRecord), 
+                        prefix);
+    END;
+END checkTypeCast;
 
 END ContextHierarchy.
