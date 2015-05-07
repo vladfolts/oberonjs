@@ -41,7 +41,7 @@ function p3(i/*VAR INTEGER*/, byte/*VAR BYTE*/, b/*VAR BOOLEAN*/){
 	j = i.get() + 1 | 0;
 	j = 2 * i.get() | 0;
 	j = i.get() / 2 | 0;
-	j = -i.get();
+	j = -i.get() | 0;
 	b.set(!b.get());
 	a[i.get()] = i.get();
 	p1({set: function($v){j = $v;}, get: function(){return j;}}, i, byte);

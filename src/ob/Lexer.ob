@@ -46,6 +46,55 @@ BEGIN
     RETURN result
 END digit;
 
+PROCEDURE integer*(VAR stream: Stream.Type; VAR context: Context.Type): BOOLEAN;
+VAR
+    hexDetected: BOOLEAN;
+    dec, hex: INTEGER;
+
+    PROCEDURE collect(c: CHAR): BOOLEAN;
+    BEGIN
+        d <- -1;
+        IF (c >= "0") & (c <= "9") THEN
+            d := ORD(c) - ORD("0");
+        ELSIF (c >= "A") & (c <= "F") THEN
+            d := ORD(c) - ORD("A") + 10;
+            hexDetected := TRUE;
+        END;
+        IF d # -1 THEN
+            hex := hex * 16 + d;
+            IF ~hexDetected THEN
+                dec := dec * 10 + d;
+            END;
+        END;
+        RETURN d # -1;
+    END;
+
+BEGIN
+    result <- FALSE;
+    IF ~Stream.eof(stream) & collect(Stream.getChar(stream)) & ~hexDetected THEN
+        WHILE ~Stream.eof(stream) & collect(Stream.peekChar(stream)) DO
+            Stream.next(stream, 1);
+        END;
+        IF ~Stream.eof(stream) & (Stream.peekChar(stream) = "H") THEN
+            hexDetected := TRUE;
+            Stream.next(stream, 1);
+        ELSIF hexDetected THEN
+            Errors.raise("integer constant looks like having hexadecimal format but 'H' suffix is missing");
+        END;
+
+        IF Stream.eof(stream) OR ~isLetter(Stream.peekChar(stream)) THEN
+            IF hexDetected THEN
+                context.attributes["int"] := hex;
+            ELSE
+                context.attributes["int"] := dec;
+            END;
+        
+            result := TRUE;
+        END;
+    END
+    RETURN result;
+END;
+
 PROCEDURE hexDigit*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
     result: BOOLEAN;
@@ -186,10 +235,6 @@ BEGIN
             & skipComment(stream, context) DO END;
     END
 END skipSpaces;
-
-PROCEDURE separator*(stream: Stream.Type; context: Context.Type): BOOLEAN;
-    RETURN Stream.eof(stream) OR ~isLetter(Stream.peekChar(stream))
-END separator;
 
 PROCEDURE Literal.Literal(s: STRING)
     | s(s);

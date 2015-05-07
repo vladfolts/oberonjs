@@ -9,6 +9,7 @@ TYPE
         isLexem*:       PROCEDURE(): BOOLEAN;
         qualifyScope*:  PROCEDURE(scope: ScopeBase.PType): STRING;
         
+        attributes*: MAP OF INTEGER;
         rtl*: OberonRtl.PType;
     END;
     PType* = POINTER TO Type;

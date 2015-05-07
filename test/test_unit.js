@@ -560,7 +560,7 @@ return {
          ["1HH", "not parsed"],
          ["1H0", "not parsed"],
          ["1 23", "not parsed"],
-         ["1F FH", "not parsed"])
+         ["1F FH", "integer constant looks like having hexadecimal format but 'H' suffix is missing"])
     ),
 "SET statement": testWithContext(
     context(grammar.statement, "VAR s: SET;"),

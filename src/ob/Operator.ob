@@ -221,8 +221,8 @@ BEGIN
     END;
     resultCode <- code 
                 + Code.adjustPrecedence(Code.derefExpression(e), Precedence.unary);
-    RETURN Code.makeExpression(resultCode, e.type(), NIL, value)
-END unary;
+    RETURN NEW Code.Expression(resultCode, e.type(), NIL, value, Precedence.unary)
+END;
 
 PROCEDURE castToStr(e: Code.PExpression; cx: LanguageContext.PType): STRING;
 VAR
@@ -681,8 +681,20 @@ PROCEDURE not*(x: Code.PExpression; cx: LanguageContext.PType): Code.PExpression
 END not;
 
 PROCEDURE negateInt*(x: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
-    RETURN promoteToWideIfNeeded(unary(x, opNegateInt, "-"))
-END negateInt;
+VAR
+    result: Code.PExpression;
+BEGIN
+    overflowCheck <- TRUE;
+    c <- x.constValue();
+    IF c # NIL THEN
+        value <- -c^(Code.IntConst).value;
+        result := NEW Code.Expression(String.fromInt(value), Types.basic.integer, NIL, Code.makeIntConst(value), Precedence.unary);
+    ELSE
+        result := promoteToWideIfNeeded(unary(x, opNegateInt, "-"));
+        result := NEW Code.Expression(result.code() + " | 0", result.type(), result.designator(), result.constValue(), Precedence.bitOr);
+    END;
+    RETURN result;
+END;
 
 PROCEDURE negateReal*(x: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     RETURN promoteToWideIfNeeded(unary(x, opNegateReal, "-"))

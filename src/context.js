@@ -31,24 +31,12 @@ ChainedContext.prototype.init = ContextHierarchy.Node;
 exports.Integer = ChainedContext.extend({
     init: function IntegerContext(context){
         ChainedContext.prototype.init.call(this, context);
-        this.__result = "";
-        this.__isHex = false;
+        this.attributes = {};
     },
-    isLexem: function(){return true;},
-    handleChar: function(c){this.__result += String.fromCharCode(c);},
-    handleLiteral: function(){this.__isHex = true;},
-    toInt: function(s){return parseInt(this.__result, 10);},
     endParse: function(){
-        var n = this.toInt();
+        var n = this.attributes.int;
         this.parent().handleConst(basicTypes.integer, Code.makeIntConst(n), n.toString());
     }
-});
-
-exports.HexInteger = exports.Integer.extend({
-    init: function HexIntegerContext(context){
-        exports.Integer.prototype.init.call(this, context);
-    },
-    toInt: function(s){return parseInt(this.__result, 16);}
 });
 
 exports.Real = ChainedContext.extend({

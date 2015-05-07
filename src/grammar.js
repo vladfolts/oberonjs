@@ -9,7 +9,6 @@ var literal = Parser.literal;
 var digit = Lexer.digit;
 var hexDigit = Lexer.hexDigit;
 var point = Lexer.point;
-var separator = Lexer.separator;
 
 var and = Parser.and;
 var or = Parser.or;
@@ -67,8 +66,7 @@ var type = or(context(qualident, Context.Type),
 var identList = and(identdef, repeat(and(",", identdef)));
 var variableDeclaration = context(and(identList, ":", type), contexts.variableDeclaration);
 
-var integer = or(context(and(digit, repeat(hexDigit), "H", separator), Context.HexInteger)
-               , context(and(digit, repeat(digit), separator), Context.Integer));
+var integer = context(Lexer.integer, Context.Integer);
 
 var scaleFactor = and(or("E", "D"), optional(or("+", "-")), digit, repeat(digit));
 var real = context(and(digit, repeat(digit), point, repeat(digit), optional(scaleFactor))

@@ -582,9 +582,14 @@ PROCEDURE makeFloor(): Symbols.PSymbol;
         arg: Code.PExpression;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
-        RETURN Code.makeSimpleExpression(
-            "Math.floor(" + arg.code() + ")",
-            Types.basic.integer)
+        code <- Code.adjustPrecedence(arg, Precedence.bitOr) + " | 0";
+        RETURN NEW Code.Expression(
+            code,
+            Types.basic.integer,
+            NIL,
+            NIL,
+            Precedence.bitOr
+            )
     END CallImpl.make;
 BEGIN
     call <- NEW CallImpl();
