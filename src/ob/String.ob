@@ -17,6 +17,14 @@ BEGIN
     RETURN result
 END fromInt;
 
+PROCEDURE parseReal*(s: STRING): REAL;
+VAR 
+    result: REAL;
+BEGIN
+    JS.do("result = JS.Number(s)");
+    RETURN result
+END;
+
 PROCEDURE indexOf*(self: STRING; c: CHAR): INTEGER;
 VAR 
     result: INTEGER;

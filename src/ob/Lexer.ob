@@ -1,5 +1,5 @@
 MODULE Lexer;
-IMPORT Context, Errors, Stream, String;
+IMPORT Context, ContextHierarchy, Errors, Stream, String;
 
 CONST
     quote = 22X; (* " *)
@@ -29,7 +29,7 @@ END isDigit;
 
 PROCEDURE isLetter(c: CHAR): BOOLEAN;
     RETURN ((c >= "a") & (c <= "z")) OR ((c >= "A") & (c <= "Z"))
-END isLetter;
+END;
 
 PROCEDURE digit*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR
@@ -46,7 +46,21 @@ BEGIN
     RETURN result
 END digit;
 
-PROCEDURE integer*(VAR stream: Stream.Type; VAR context: Context.Type): BOOLEAN;
+PROCEDURE peekSeparator(VAR stream: Stream.Type): BOOLEAN;
+BEGIN
+    result <- TRUE;
+    IF ~Stream.eof(stream) THEN
+        c <- Stream.peekChar(stream);
+        IF isLetter(c) THEN
+            result := FALSE;
+        ELSIF c = "." THEN
+            result := Stream.peekStr(stream, "..");
+        END;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE integer*(VAR stream: Stream.Type; VAR context: ContextHierarchy.Node): BOOLEAN;
 VAR
     hexDetected: BOOLEAN;
     dec, hex: INTEGER;
@@ -54,7 +68,7 @@ VAR
     PROCEDURE collect(c: CHAR): BOOLEAN;
     BEGIN
         d <- -1;
-        IF (c >= "0") & (c <= "9") THEN
+        IF isDigit(c) THEN
             d := ORD(c) - ORD("0");
         ELSIF (c >= "A") & (c <= "F") THEN
             d := ORD(c) - ORD("A") + 10;
@@ -82,16 +96,103 @@ BEGIN
             Errors.raise("integer constant looks like having hexadecimal format but 'H' suffix is missing");
         END;
 
-        IF Stream.eof(stream) OR ~isLetter(Stream.peekChar(stream)) THEN
+        IF peekSeparator(stream) THEN
             IF hexDetected THEN
-                context.attributes["int"] := hex;
+                context.attributes.int := hex;
             ELSE
-                context.attributes["int"] := dec;
+                context.attributes.int := dec;
             END;
         
             result := TRUE;
         END;
     END
+    RETURN result;
+END;
+
+PROCEDURE real*(VAR stream: Stream.Type; VAR context: ContextHierarchy.Node): BOOLEAN;
+VAR 
+    c: CHAR;
+    s: STRING;
+
+    PROCEDURE peekChar(): BOOLEAN;
+    BEGIN
+        result <- FALSE;
+        IF ~Stream.eof(stream) THEN
+            c := Stream.peekChar(stream);
+            result := TRUE;
+        END;
+        RETURN result;
+    END;
+
+    PROCEDURE getChar(): BOOLEAN;
+    BEGIN
+        result <- FALSE;
+        IF ~Stream.eof(stream) THEN
+            c := Stream.getChar(stream);
+            result := TRUE;
+        END;
+        RETURN result;
+    END;
+
+    PROCEDURE next();
+    BEGIN
+        Stream.next(stream, 1);
+    END;
+
+    PROCEDURE collectOptionalDigits();
+    BEGIN
+        WHILE peekChar() & isDigit(c) DO
+            s := s + String.fromChar(c);
+            next();
+        END;
+    END;
+
+    PROCEDURE collectDigits(): BOOLEAN;
+    BEGIN
+        result <- FALSE;
+        IF getChar() & isDigit(c) THEN
+            s := s + String.fromChar(c);
+            collectOptionalDigits();
+            result := TRUE;
+        END;
+        RETURN result;
+    END;
+
+    PROCEDURE collectScale(): BOOLEAN;
+        
+        PROCEDURE collectPlusOrMinus();
+        BEGIN
+            IF peekChar() THEN
+                IF c = "-" THEN
+                    s := s + "-";
+                    next();
+                ELSIF c = "+" THEN
+                    next();
+                END;
+            END;
+        END;
+    
+    BEGIN
+        result <- TRUE;
+        IF peekChar() & ((c = "E") OR (c = "D")) THEN
+            s := s + "E";
+            next();
+            collectPlusOrMinus();
+            result := collectDigits();
+        END;
+        RETURN result;
+    END;
+
+BEGIN
+    result <- FALSE;
+    IF collectDigits() & getChar() & (c = ".") THEN
+        s := s + ".";
+        collectOptionalDigits();
+        IF collectScale() & peekSeparator(stream) THEN
+            context.attributes.real := String.parseReal(s);
+            result := TRUE;
+        END
+    END;
     RETURN result;
 END;
 
@@ -230,11 +331,10 @@ END readSpaces;
 
 PROCEDURE skipSpaces*(VAR stream: Stream.Type; context: Context.Type);
 BEGIN
-    IF (context.isLexem = NIL) OR ~context.isLexem() THEN
-        WHILE Stream.read(stream, readSpaces)
-            & skipComment(stream, context) DO END;
-    END
-END skipSpaces;
+    WHILE Stream.read(stream, readSpaces)
+        & skipComment(stream, context) DO 
+    END;
+END;
 
 PROCEDURE Literal.Literal(s: STRING)
     | s(s);
@@ -246,8 +346,7 @@ VAR
 BEGIN
     IF Stream.peekStr(stream, l.s) THEN
         Stream.next(stream, LEN(l.s));
-        IF ((context.isLexem # NIL) & context.isLexem())
-            OR ~isLetter(l.s[LEN(l.s) - 1])
+        IF     ~isLetter(l.s[LEN(l.s) - 1])
             OR Stream.eof(stream)
             OR (~isLetter(Stream.peekChar(stream)) & ~isDigit(Stream.peekChar(stream)))
                 THEN

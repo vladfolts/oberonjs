@@ -560,7 +560,14 @@ return {
          ["1HH", "not parsed"],
          ["1H0", "not parsed"],
          ["1 23", "not parsed"],
-         ["1F FH", "integer constant looks like having hexadecimal format but 'H' suffix is missing"])
+         ["1F FH", "integer constant looks like having hexadecimal format but 'H' suffix is missing"]
+         )
+    ),
+"INTEGER number in statement": testWithGrammar(
+    grammar.statement,
+    pass("IF 1 < 2345 THEN END"),
+    fail(["IF 1 < 2345THEN END", "'BOOLEAN' expression expected, got 'INTEGER'"],
+         ["IF 1 < 2345HTHEN END", "'BOOLEAN' expression expected, got 'INTEGER'"])
     ),
 "SET statement": testWithContext(
     context(grammar.statement, "VAR s: SET;"),
@@ -577,7 +584,9 @@ return {
          "1.2345E6",
          "1.2345E+6",
          "1.2345E-12"),
-    fail(["1. 2345E-12", "not parsed"],
+    fail(["1..", "not parsed"],
+         ["1..2", "not parsed"],
+         ["1. 2345E-12", "not parsed"],
          ["1.23 45E-12", "not parsed"],
          ["1.2345 E-12", "not parsed"],
          ["1.2345E-1 2", "not parsed"])
@@ -587,6 +596,11 @@ return {
     pass("1.2345D6",
          "1.2345D+6",
          "1.2345D-6")
+    ),
+"REAL number in statement": testWithGrammar(
+    grammar.statement,
+    pass("IF 1. < 1.2345 THEN END"),
+    fail(["IF 1. < 1.2345THEN END", "'BOOLEAN' expression expected, got 'REAL'"])
     ),
 "IF statement": testWithContext(
     context(grammar.statement,

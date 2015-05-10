@@ -67,11 +67,7 @@ var identList = and(identdef, repeat(and(",", identdef)));
 var variableDeclaration = context(and(identList, ":", type), contexts.variableDeclaration);
 
 var integer = context(Lexer.integer, Context.Integer);
-
-var scaleFactor = and(or("E", "D"), optional(or("+", "-")), digit, repeat(digit));
-var real = context(and(digit, repeat(digit), point, repeat(digit), optional(scaleFactor))
-                 , Context.Real);
-
+var real = context(Lexer.real, Context.Real);
 var number = or(real, integer);
 
 var string = or(context(Lexer.string, Context.String)

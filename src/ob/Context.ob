@@ -6,10 +6,8 @@ TYPE
         handleLiteral*: PROCEDURE(s: STRING);
         handleString*:  PROCEDURE(s: STRING);
         handleIdent*:   PROCEDURE(s: STRING);
-        isLexem*:       PROCEDURE(): BOOLEAN;
         qualifyScope*:  PROCEDURE(scope: ScopeBase.PType): STRING;
         
-        attributes*: MAP OF INTEGER;
         rtl*: OberonRtl.PType;
     END;
     PType* = POINTER TO Type;

@@ -31,7 +31,6 @@ ChainedContext.prototype.init = ContextHierarchy.Node;
 exports.Integer = ChainedContext.extend({
     init: function IntegerContext(context){
         ChainedContext.prototype.init.call(this, context);
-        this.attributes = {};
     },
     endParse: function(){
         var n = this.attributes.int;
@@ -42,17 +41,9 @@ exports.Integer = ChainedContext.extend({
 exports.Real = ChainedContext.extend({
     init: function RealContext(context){
         ChainedContext.prototype.init.call(this, context);
-        this.__result = "";
-    },
-    isLexem: function(){return true;},
-    handleChar: function(c){this.__result += String.fromCharCode(c);},
-    handleLiteral: function(s){
-        if (s == "D") // LONGREAL
-            s = "E";
-        this.__result += s;
     },
     endParse: function(){
-        var n = Number(this.__result);
+        var n = this.attributes.real;
         this.parent().handleConst(basicTypes.real, Code.makeRealConst(n), n.toString());
     }
 });

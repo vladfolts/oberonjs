@@ -16,7 +16,9 @@ TYPE
         code: STRING;
     END;
 
-    Attributes = POINTER TO RECORD
+    Attributes* = RECORD
+        int*: INTEGER;
+        real*: REAL;
     END;
 
     Node* = RECORD
@@ -31,7 +33,7 @@ TYPE
         PROCEDURE genTypeName(): STRING;
 
         mParent: PNode;
-        attributes: Attributes;
+        attributes*: Attributes;
     END;
 
     Root* = RECORD(Node)
