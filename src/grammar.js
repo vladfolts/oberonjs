@@ -6,8 +6,6 @@ var Parser = require("parser.js");
 var Class = require("rtl.js").Class;
 
 var literal = Parser.literal;
-var digit = Lexer.digit;
-var hexDigit = Lexer.hexDigit;
 var point = Lexer.point;
 
 var and = Parser.and;
@@ -69,9 +67,7 @@ var variableDeclaration = context(and(identList, ":", type), contexts.variableDe
 var integer = context(Lexer.integer, Context.Integer);
 var real = context(Lexer.real, Context.Real);
 var number = or(real, integer);
-
-var string = or(context(Lexer.string, Context.String)
-              , context(and(digit, repeat(hexDigit), "X"), Context.Char));
+var string = context(Lexer.string, Context.String);
 
 var factor = context(
     or(string, 

@@ -19,6 +19,7 @@ TYPE
     Attributes* = RECORD
         int*: INTEGER;
         real*: REAL;
+        str*: STRING;
     END;
 
     Node* = RECORD

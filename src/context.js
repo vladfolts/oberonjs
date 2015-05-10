@@ -69,23 +69,11 @@ function escapeString(s){
 exports.String = ChainedContext.extend({
     init: function StringContext(context){
         ChainedContext.prototype.init.call(this, context);
-        this.__result = undefined;
     },
-    handleString: function(s){this.__result = s;},
-    toStr: function(s){return s;},
     endParse: function(){
-        var s = this.toStr(this.__result);
+        var s = this.attributes.str;
         this.parent().handleConst(new Type.String(s), Code.makeStringConst(s), escapeString(s));
-        }
-});
-
-exports.Char = exports.String.extend({
-    init: function CharContext(context){
-        exports.String.prototype.init.call(this, context);
-        this.__result = "";
-    },
-    handleChar: function(c){this.__result += String.fromCharCode(c);},
-    toStr: function(s){return String.fromCharCode(parseInt(s, 16));}
+    }
 });
 
 exports.BaseType = ChainedContext.extend({

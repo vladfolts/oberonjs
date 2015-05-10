@@ -22,7 +22,15 @@ VAR
     result: REAL;
 BEGIN
     JS.do("result = JS.Number(s)");
-    RETURN result
+    RETURN result;
+END;
+
+PROCEDURE parseHex*(s: STRING): INTEGER;
+VAR 
+    result: INTEGER;
+BEGIN
+    JS.do("result = JS.parseInt(s, 16)");
+    RETURN result;
 END;
 
 PROCEDURE indexOf*(self: STRING; c: CHAR): INTEGER;

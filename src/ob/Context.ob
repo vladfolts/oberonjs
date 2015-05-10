@@ -2,9 +2,7 @@ MODULE Context;
 IMPORT OberonRtl, Object, ScopeBase;
 TYPE
     Type* = RECORD
-        handleChar*:    PROCEDURE(c: CHAR);
         handleLiteral*: PROCEDURE(s: STRING);
-        handleString*:  PROCEDURE(s: STRING);
         handleIdent*:   PROCEDURE(s: STRING);
         qualifyScope*:  PROCEDURE(scope: ScopeBase.PType): STRING;
         

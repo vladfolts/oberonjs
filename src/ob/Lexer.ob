@@ -25,26 +25,11 @@ TYPE
 
 PROCEDURE isDigit(c: CHAR): BOOLEAN;
     RETURN (c >= "0") & (c <= "9")
-END isDigit;
+END;
 
 PROCEDURE isLetter(c: CHAR): BOOLEAN;
     RETURN ((c >= "a") & (c <= "z")) OR ((c >= "A") & (c <= "Z"))
 END;
-
-PROCEDURE digit*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
-VAR
-    result: BOOLEAN;
-    c: CHAR;
-BEGIN
-    IF ~Stream.eof(stream) THEN
-        c := Stream.getChar(stream);
-        IF isDigit(c) THEN
-            context.handleChar(c);
-            result := TRUE;
-        END
-    END
-    RETURN result
-END digit;
 
 PROCEDURE peekSeparator(VAR stream: Stream.Type): BOOLEAN;
 BEGIN
@@ -196,18 +181,9 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE hexDigit*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
-VAR
-    result: BOOLEAN;
-    c: CHAR;
-BEGIN
-    c := Stream.getChar(stream);
-    IF isDigit(c) OR ((c >= "A") & (c <= "F")) THEN
-        context.handleChar(c);
-        result := TRUE;
-    END
-    RETURN result
-END hexDigit;
+PROCEDURE isHexDigit(c: CHAR): BOOLEAN;
+    RETURN isDigit(c) OR ((c >= "A") & (c <= "F"));
+END;
 
 PROCEDURE point*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
 VAR result: BOOLEAN;
@@ -222,31 +198,55 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE string*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
-VAR
-    result: BOOLEAN;
-    c: CHAR;
-    s: STRING;
-BEGIN
-    IF ~Stream.eof(stream) THEN
-        c := Stream.getChar(stream);
-        IF c = quote THEN
-            IF ~Stream.eof(stream) THEN
-                c := Stream.getChar(stream);
-                WHILE (c # quote) & ~Stream.eof(stream) DO
-                    IF c # quote THEN
-                        s := s + String.fromChar(c);
-                    END;
-                    c := Stream.getChar(stream);
+PROCEDURE string*(VAR stream: Stream.Type; VAR context: ContextHierarchy.Node): BOOLEAN;
+
+    PROCEDURE quotedString();
+    VAR
+        c: CHAR;
+        s: STRING;
+    BEGIN
+        IF ~Stream.eof(stream) THEN
+            c := Stream.getChar(stream);
+            WHILE (c # quote) & ~Stream.eof(stream) DO
+                IF c # quote THEN
+                    s := s + String.fromChar(c);
                 END;
-            ELSE
-                c := 0X;
+                c := Stream.getChar(stream);
             END;
-            IF c # quote THEN
-                Errors.raise("unexpected end of string");
-            END;
-            context.handleString(s);
+        ELSE
+            c := 0X;
+        END;
+        
+        IF c # quote THEN
+            Errors.raise("unexpected end of string");
+        END;
+        
+        context.attributes.str := s;
+    END;    
+
+    PROCEDURE hexString(firstChar: CHAR): BOOLEAN;
+    BEGIN
+        result <- FALSE;
+        s <- String.fromChar(firstChar);
+        WHILE ~Stream.eof(stream) & isHexDigit(Stream.peekChar(stream)) DO
+            s := s + String.fromChar(Stream.getChar(stream));
+        END;
+        IF ~Stream.eof(stream) & (Stream.getChar(stream) = "X") THEN
+            context.attributes.str := String.fromChar(CHR(String.parseHex(s)));
             result := TRUE;
+        END;
+        RETURN result;
+    END;
+
+BEGIN
+    result <- FALSE;
+    IF ~Stream.eof(stream) THEN
+        c <- Stream.getChar(stream);
+        IF c = quote THEN
+            quotedString();
+            result := TRUE;
+        ELSIF isDigit(c) THEN
+            result := hexString(c);
         END
     END
     RETURN result
