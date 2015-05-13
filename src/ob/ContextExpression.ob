@@ -1,0 +1,91 @@
+MODULE ContextExpression;
+IMPORT 
+    Chars, Code, ContextHierarchy, String, Types;
+TYPE
+    Factor* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleConst(type: Types.PType; value: Code.PConst; code: STRING);
+    END;
+    PFactor = POINTER TO Factor;
+
+    Const = RECORD(ContextHierarchy.Node)
+        PROCEDURE Const(factor: PFactor);
+
+        factor: PFactor;
+    END;
+
+    Integer* = RECORD(Const)
+        PROCEDURE handleInt*(n: INTEGER);
+    END;
+
+    Real* = RECORD(Const)
+        PROCEDURE handleReal*(r: REAL);
+    END;
+
+    Str* = RECORD(Const)
+        PROCEDURE handleStr*(s: STRING);
+    END;
+
+PROCEDURE Const.Const(factor: PFactor)
+    | SUPER(factor),
+      factor(factor);
+END;
+
+PROCEDURE Integer.handleInt(n: INTEGER);
+BEGIN
+    SELF.factor.handleConst(
+        Types.basic.integer, 
+        Code.makeIntConst(n), 
+        String.fromInt(n));
+END;
+
+PROCEDURE Real.handleReal(r: REAL);
+BEGIN
+    SELF.factor.handleConst(
+        Types.basic.real, 
+        Code.makeRealConst(r), 
+        String.fromReal(r));
+END;
+
+PROCEDURE escapeString(s: STRING): STRING;
+CONST
+    doubleQuote = Chars.doubleQuote;
+    ln          = Chars.ln;
+    cr          = Chars.cr;
+    tab         = Chars.tab;
+    backspace   = Chars.backspace;
+    feed        = Chars.feed;
+    backslash   = Chars.backslash;
+VAR
+    result: STRING;
+BEGIN
+    result := doubleQuote;
+    from <- 0;
+    FOR i <- 0 TO LEN(s) - 1 DO
+        escape <- CHR(0);
+        CASE s[i] OF
+              backslash:    escape := backslash;
+            | doubleQuote:  escape := doubleQuote;
+            | ln:           escape := "n";
+            | cr:           escape := "r";
+            | tab:          escape := "t";
+            | backspace:    escape := "b";
+            | feed:         escape := "f";
+        END;
+
+        IF ORD(escape) # 0 THEN
+            result := result + String.substr(s, from, i - from) + backslash + String.fromChar(escape);
+            from := i + 1; 
+        END;
+    END;
+    RETURN result + String.substr(s, from, LEN(s) - from) + doubleQuote;
+END;
+
+PROCEDURE Str.handleStr(s: STRING);
+BEGIN
+    SELF.factor.handleConst(
+        NEW Types.String(s), 
+        Code.makeStringConst(s), 
+        escapeString(s));
+END;
+
+END ContextExpression.

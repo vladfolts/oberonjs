@@ -1,5 +1,5 @@
 MODULE Lexer;
-IMPORT Chars, Context, ContextHierarchy, Errors, Stream, String;
+IMPORT Chars, Context, ContextExpression, ContextHierarchy, Errors, Stream, String;
 
 CONST
     doubleQuote = Chars.doubleQuote;
@@ -45,7 +45,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE integer*(VAR stream: Stream.Type; VAR context: ContextHierarchy.Node): BOOLEAN;
+PROCEDURE integer*(VAR stream: Stream.Type; VAR cx: ContextExpression.Integer): BOOLEAN;
 VAR
     hexDetected: BOOLEAN;
     dec, hex: INTEGER;
@@ -83,9 +83,9 @@ BEGIN
 
         IF peekSeparator(stream) THEN
             IF hexDetected THEN
-                context.attributes.int := hex;
+                cx.handleInt(hex);
             ELSE
-                context.attributes.int := dec;
+                cx.handleInt(dec);
             END;
         
             result := TRUE;
@@ -94,7 +94,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE real*(VAR stream: Stream.Type; VAR context: ContextHierarchy.Node): BOOLEAN;
+PROCEDURE real*(VAR stream: Stream.Type; VAR cx: ContextExpression.Real): BOOLEAN;
 VAR 
     c: CHAR;
     s: STRING;
@@ -174,7 +174,7 @@ BEGIN
         s := s + ".";
         collectOptionalDigits();
         IF collectScale() & peekSeparator(stream) THEN
-            context.attributes.real := String.parseReal(s);
+            cx.handleReal(String.parseReal(s));
             result := TRUE;
         END
     END;
@@ -198,7 +198,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE string*(VAR stream: Stream.Type; VAR context: ContextHierarchy.Node): BOOLEAN;
+PROCEDURE string*(VAR stream: Stream.Type; VAR cx: ContextExpression.Str): BOOLEAN;
 
     PROCEDURE quotedString();
     VAR
@@ -221,7 +221,7 @@ PROCEDURE string*(VAR stream: Stream.Type; VAR context: ContextHierarchy.Node): 
             Errors.raise("unexpected end of string");
         END;
         
-        context.attributes.str := s;
+        cx.handleStr(s);
     END;    
 
     PROCEDURE hexString(firstChar: CHAR): BOOLEAN;
@@ -232,7 +232,7 @@ PROCEDURE string*(VAR stream: Stream.Type; VAR context: ContextHierarchy.Node): 
             s := s + String.fromChar(Stream.getChar(stream));
         END;
         IF ~Stream.eof(stream) & (Stream.getChar(stream) = "X") THEN
-            context.attributes.str := String.fromChar(CHR(String.parseHex(s)));
+            cx.handleStr(String.fromChar(CHR(String.parseHex(s))));
             result := TRUE;
         END;
         RETURN result;

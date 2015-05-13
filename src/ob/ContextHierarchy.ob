@@ -1,5 +1,5 @@
 MODULE ContextHierarchy;
-IMPORT Cast, Chars, Code, CodeGenerator, Errors, LanguageContext, Module, Scope, Symbols, String, Types;
+IMPORT Cast, Code, CodeGenerator, Errors, LanguageContext, Module, Scope, Symbols, String, Types;
 TYPE
     PRoot = POINTER TO Root;
     PNode = POINTER TO Node;
@@ -17,13 +17,10 @@ TYPE
     END;
 
     Attributes* = RECORD
-        int*: INTEGER;
-        real*: REAL;
-        str*: STRING;
     END;
 
     Node* = RECORD
-        PROCEDURE Node(parent: PNode);
+        PROCEDURE Node*(parent: PNode);
 
         PROCEDURE root(): PRoot;
         PROCEDURE parent(): PNode;
@@ -52,28 +49,6 @@ TYPE
         mLanguage: LanguageContext.PType;
         scopes: ARRAY * OF Scope.PType;
         gen: INTEGER;
-    END;
-
-    Factor* = RECORD(Node)
-        PROCEDURE handleConst(type: Types.PType; value: Code.PConst; code: STRING);
-    END;
-    PFactor = POINTER TO Factor;
-
-    Const = RECORD(Node)
-        PROCEDURE Const(factor: PFactor);
-
-        PROCEDURE endParse();
-
-        factor: PFactor;
-    END;
-
-    Integer* = RECORD(Const)
-    END;
-
-    Real* = RECORD(Const)
-    END;
-
-    Str* = RECORD(Const)
     END;
 
 PROCEDURE Node.Node(parent: PNode)
@@ -173,72 +148,6 @@ END;
 
 PROCEDURE Root.root(): PRoot;
     RETURN SELF(POINTER);
-END;
-
-PROCEDURE Const.Const(factor: PFactor)
-    | SUPER(factor),
-      factor(factor);
-END;
-
-PROCEDURE Integer.endParse();
-BEGIN
-    n <- SELF.attributes.int;
-    SELF.factor.handleConst(
-        Types.basic.integer, 
-        Code.makeIntConst(n), 
-        String.fromInt(n));
-END;
-
-PROCEDURE Real.endParse();
-BEGIN
-    r <- SELF.attributes.real;
-    SELF.factor.handleConst(
-        Types.basic.real, 
-        Code.makeRealConst(r), 
-        String.fromReal(r));
-END;
-
-PROCEDURE escapeString(s: STRING): STRING;
-CONST
-    doubleQuote = Chars.doubleQuote;
-    ln          = Chars.ln;
-    cr          = Chars.cr;
-    tab         = Chars.tab;
-    backspace   = Chars.backspace;
-    feed        = Chars.feed;
-    backslash   = Chars.backslash;
-VAR
-    result: STRING;
-BEGIN
-    result := doubleQuote;
-    from <- 0;
-    FOR i <- 0 TO LEN(s) - 1 DO
-        escape <- CHR(0);
-        CASE s[i] OF
-              backslash:    escape := backslash;
-            | doubleQuote:  escape := doubleQuote;
-            | ln:           escape := "n";
-            | cr:           escape := "r";
-            | tab:          escape := "t";
-            | backspace:    escape := "b";
-            | feed:         escape := "f";
-        END;
-
-        IF ORD(escape) # 0 THEN
-            result := result + String.substr(s, from, i - from) + backslash + String.fromChar(escape);
-            from := i + 1; 
-        END;
-    END;
-    RETURN result + String.substr(s, from, LEN(s) - from) + doubleQuote;
-END;
-
-PROCEDURE Str.endParse();
-BEGIN
-    s <- SELF.attributes.str;
-    SELF.factor.handleConst(
-        NEW Types.String(s), 
-        Code.makeStringConst(s), 
-        escapeString(s));
 END;
 
 PROCEDURE getSymbolAndScope*(cx: Root; id: STRING): Symbols.PFoundSymbol;
