@@ -1,8 +1,8 @@
 MODULE Lexer;
-IMPORT Context, ContextHierarchy, Errors, Stream, String;
+IMPORT Chars, Context, ContextHierarchy, Errors, Stream, String;
 
 CONST
-    quote = 22X; (* " *)
+    doubleQuote = Chars.doubleQuote;
     commentBegin = "(*";
     commentEnd = "*)";
 
@@ -207,8 +207,8 @@ PROCEDURE string*(VAR stream: Stream.Type; VAR context: ContextHierarchy.Node): 
     BEGIN
         IF ~Stream.eof(stream) THEN
             c := Stream.getChar(stream);
-            WHILE (c # quote) & ~Stream.eof(stream) DO
-                IF c # quote THEN
+            WHILE (c # doubleQuote) & ~Stream.eof(stream) DO
+                IF c # doubleQuote THEN
                     s := s + String.fromChar(c);
                 END;
                 c := Stream.getChar(stream);
@@ -217,7 +217,7 @@ PROCEDURE string*(VAR stream: Stream.Type; VAR context: ContextHierarchy.Node): 
             c := 0X;
         END;
         
-        IF c # quote THEN
+        IF c # doubleQuote THEN
             Errors.raise("unexpected end of string");
         END;
         
@@ -242,7 +242,7 @@ BEGIN
     result <- FALSE;
     IF ~Stream.eof(stream) THEN
         c <- Stream.getChar(stream);
-        IF c = quote THEN
+        IF c = doubleQuote THEN
             quotedString();
             result := TRUE;
         ELSIF isDigit(c) THEN

@@ -15,7 +15,15 @@ VAR
 BEGIN
     JS.do("result = '' + i");
     RETURN result
-END fromInt;
+END;
+
+PROCEDURE fromReal*(r: REAL): STRING;
+VAR 
+    result: STRING;
+BEGIN
+    JS.do("result = '' + r");
+    RETURN result
+END;
 
 PROCEDURE parseReal*(s: STRING): REAL;
 VAR 

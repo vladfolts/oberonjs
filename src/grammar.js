@@ -1,6 +1,7 @@
 "use strict";
 
 var Context = require("context.js");
+var ContextHierarchy = require("js/ContextHierarchy.js");
 var Lexer = require("js/Lexer.js");
 var Parser = require("parser.js");
 var Class = require("rtl.js").Class;
@@ -64,10 +65,10 @@ var type = or(context(qualident, Context.Type),
 var identList = and(identdef, repeat(and(",", identdef)));
 var variableDeclaration = context(and(identList, ":", type), contexts.variableDeclaration);
 
-var integer = context(Lexer.integer, Context.Integer);
-var real = context(Lexer.real, Context.Real);
+var integer = context(Lexer.integer, ContextHierarchy.Integer);
+var real = context(Lexer.real, ContextHierarchy.Real);
 var number = or(real, integer);
-var string = context(Lexer.string, Context.String);
+var string = context(Lexer.string, ContextHierarchy.Str);
 
 var factor = context(
     or(string, 

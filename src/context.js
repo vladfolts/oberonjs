@@ -28,54 +28,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-exports.Integer = ChainedContext.extend({
-    init: function IntegerContext(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    endParse: function(){
-        var n = this.attributes.int;
-        this.parent().handleConst(basicTypes.integer, Code.makeIntConst(n), n.toString());
-    }
-});
-
-exports.Real = ChainedContext.extend({
-    init: function RealContext(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    endParse: function(){
-        var n = this.attributes.real;
-        this.parent().handleConst(basicTypes.real, Code.makeRealConst(n), n.toString());
-    }
-});
-
-function escapeString(s){
-    var escapeChars = {"\\": "\\\\",
-                       "\"": "\\\"",
-                       "\n": "\\n",
-                       "\r": "\\r",
-                       "\t": "\\t",
-                       "\b": "\\b",
-                       "\f": "\\f"
-                      };
-    var result = "\"";
-    for(var i = 0; i < s.length; ++i){
-        var c = s[i];
-        var escape = escapeChars[c];
-        result += escape !== undefined ? escape : c;
-    }
-    return result + "\"";
-}
-
-exports.String = ChainedContext.extend({
-    init: function StringContext(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    endParse: function(){
-        var s = this.attributes.str;
-        this.parent().handleConst(new Type.String(s), Code.makeStringConst(s), escapeString(s));
-    }
-});
-
 exports.BaseType = ChainedContext.extend({
     init: function BaseTypeContext(context){
         ChainedContext.prototype.init.call(this, context);
@@ -1071,12 +1023,6 @@ exports.SetElement = ChainedContext.extend({
         this.parent().handleElement(this.__from, this.__fromValue, this.__to, this.__toValue);
     }
 });
-
-function constValueCode(value){
-    if (typeof value == "string")
-        return escapeString(value);
-    return value.toString();
-}
 
 exports.SimpleExpression = ChainedContext.extend({
     init: function SimpleExpressionContext(context){

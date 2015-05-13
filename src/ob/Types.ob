@@ -1,6 +1,6 @@
 MODULE Types;
 IMPORT
-    Context, Errors, JS, OberonRtl, Object, ScopeBase, Str := String;
+    Chars, Context, Errors, JS, OberonRtl, Object, ScopeBase, Str := String;
 TYPE
     Id* = RECORD(Object.Type)
         PROCEDURE idType*(): STRING
@@ -487,14 +487,13 @@ PROCEDURE FieldVariable.type(): PStorageType;
 END;
 
 PROCEDURE FieldVariable.referenceCode(): STRING;
-CONST
-    kQuote = 22X;
 VAR
     result: STRING;
 BEGIN
     codeId <- mangleField(SELF.field.mIdentdef.id());
     IF SELF.type().isScalar() THEN
-        result := SELF.rtl.makeRef(SELF.leadCode, kQuote + codeId + kQuote);
+        result := SELF.rtl.makeRef(SELF.leadCode, 
+                                   Chars.doubleQuote + codeId + Chars.doubleQuote);
     ELSE
         result := SELF.leadCode + "." + codeId;
     END;
@@ -944,11 +943,11 @@ PROCEDURE RecordField.identdef(): Context.PIdentdefInfo;
 END;
 
 PROCEDURE RecordField.designatorCode(leadCode: STRING; cx: Context.Type): PFieldCode;
-CONST
-    kQuote = 22X;
 BEGIN
     codeId <- mangleField(SELF.mIdentdef.id());
-    RETURN NEW FieldCode(leadCode + "." + codeId, leadCode, kQuote + codeId + kQuote);
+    RETURN NEW FieldCode(leadCode + "." + codeId, 
+                         leadCode, 
+                         Chars.doubleQuote + codeId + Chars.doubleQuote);
 END;
 
 PROCEDURE RecordField.type(): PType;

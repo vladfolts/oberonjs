@@ -1,0 +1,10 @@
+MODULE Chars;
+CONST
+    doubleQuote* = 22X;
+    backspace* = 08X;
+    tab* = 09X;
+    ln* = 0AX;
+    feed* = 0CX;
+    cr* = 0DX;
+    backslash* = "\";
+END Chars.
