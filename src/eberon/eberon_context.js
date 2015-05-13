@@ -713,6 +713,11 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                                    : Type.typeName(this.__boundType) + ".prototype." + this.__methodId.id() + " = function("
             : Context.ProcDecl.prototype._prolog.call(this);
     },
+    _epilog: function(){
+        return this.__boundType && !this.__isConstructor
+            ? ";\n"
+            : Context.ProcDecl.prototype._epilog.call(this);
+    },
     _beginBody: function(){
         Context.ProcDecl.prototype._beginBody.call(this);
         if (this.__isConstructor)

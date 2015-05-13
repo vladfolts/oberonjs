@@ -404,6 +404,9 @@ exports.ProcDecl = ChainedContext.extend({
     _prolog: function(){
         return "\nfunction " + this.__id.id() + "(";
     },
+    _epilog: function(){
+        return "";
+    },
     _beginBody: function(){
         this.codeGenerator().openScope();
     },
@@ -460,7 +463,7 @@ exports.ProcDecl = ChainedContext.extend({
         this.__returnParsed = true;
     },
     endParse: function(){
-        this.codeGenerator().closeScope("");
+        this.codeGenerator().closeScope(this._epilog());
         this.root().popScope();
 
         var result = this.__type.result();
