@@ -8,6 +8,9 @@ IMPORT
     Precedence := CodePrecedence,
     String,
     Types;
+CONST
+    equalCode* = " == ";
+    notEqualCode* = " != ";
 TYPE
     BinaryProc* = PROCEDURE(left, right: Code.PExpression): Code.PExpression;
 
@@ -38,7 +41,6 @@ TYPE
 
     CastToUint8* = RECORD (Cast.CastOpDoNothing)
     END;
-
 VAR
     openArrayChar: Types.PType;
     castOperations*: Cast.Operations;
@@ -593,35 +595,35 @@ PROCEDURE and*(left, right: Code.PExpression): Code.PExpression;
 END and;
 
 PROCEDURE equalInt*(left, right: Code.PExpression): Code.PExpression;
-    RETURN equal(left, right, opEqualInt, " == ")
+    RETURN equal(left, right, opEqualInt, equalCode)
 END equalInt;
 
 PROCEDURE equalReal*(left, right: Code.PExpression): Code.PExpression;
-    RETURN equal(left, right, opEqualReal, " == ")
+    RETURN equal(left, right, opEqualReal, equalCode)
 END equalReal;
 
 PROCEDURE equalSet*(left, right: Code.PExpression): Code.PExpression;
-    RETURN equal(left, right, opEqualSet, " == ")
+    RETURN equal(left, right, opEqualSet, equalCode)
 END equalSet;
 
 PROCEDURE equalStr*(left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
-    RETURN strCmp(" == ", left, right, cx)
+    RETURN strCmp(equalCode, left, right, cx)
 END equalStr;
 
 PROCEDURE notEqualInt*(left, right: Code.PExpression): Code.PExpression;
-    RETURN equal(left, right, opNotEqualInt, " != ")
+    RETURN equal(left, right, opNotEqualInt, notEqualCode)
 END notEqualInt;
 
 PROCEDURE notEqualReal*(left, right: Code.PExpression): Code.PExpression;
-    RETURN equal(left, right, opNotEqualReal, " != ")
+    RETURN equal(left, right, opNotEqualReal, notEqualCode)
 END notEqualReal;
 
 PROCEDURE notEqualSet*(left, right: Code.PExpression): Code.PExpression;
-    RETURN equal(left, right, opNotEqualSet, " != ")
+    RETURN equal(left, right, opNotEqualSet, notEqualCode)
 END notEqualSet;
 
 PROCEDURE notEqualStr*(left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
-    RETURN strCmp(" != ", left, right, cx)
+    RETURN strCmp(notEqualCode, left, right, cx)
 END notEqualStr;
 
 PROCEDURE is*(left, right: Code.PExpression): Code.PExpression;

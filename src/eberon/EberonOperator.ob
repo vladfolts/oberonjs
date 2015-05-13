@@ -46,11 +46,11 @@ PROCEDURE addStr*(left, right: Code.PExpression): Code.PExpression;
 END addStr;
 
 PROCEDURE equalStr*(left, right: Code.PExpression): Code.PExpression;
-    RETURN Operator.equal(left, right, opEqualStr, " == ")
+    RETURN Operator.equal(left, right, opEqualStr, Operator.equalCode)
 END equalStr;
 
 PROCEDURE notEqualStr*(left, right: Code.PExpression): Code.PExpression;
-    RETURN Operator.equal(left, right, opNotEqualStr, " != ")
+    RETURN Operator.equal(left, right, opNotEqualStr, Operator.notEqualCode)
 END notEqualStr;
 
 PROCEDURE lessStr*(left, right: Code.PExpression): Code.PExpression;
