@@ -23,7 +23,7 @@ TYPE
         PROCEDURE Node*(parent: PNode);
 
         PROCEDURE root(): PRoot;
-        PROCEDURE parent(): PNode;
+        PROCEDURE parent*(): PNode;
         PROCEDURE handleMessage(VAR msg: Message): PMessageResult;
         PROCEDURE codeGenerator(): CodeGenerator.PIGenerator;
         PROCEDURE qualifyScope(scope: Scope.PType): STRING;

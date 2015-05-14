@@ -89,7 +89,7 @@ var ExpressionProcedureCall = ProcedureCall.extend({
         var e = this.__hasActualParameters 
               ? this.callExpression()
               : Context.designatorAsExpression(this.attributes.designator); 
-        this.parent().handleFactor(e);
+        this.parent().handleExpression(e);
     }
 });
 

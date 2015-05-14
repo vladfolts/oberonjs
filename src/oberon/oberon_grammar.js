@@ -3,6 +3,7 @@
 var Cast = require("js/Cast.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var ContextExpression = require("js/ContextExpression.js");
 var Grammar = require("grammar.js");
 var ObContext = require("oberon/oberon_context.js");
 var ObRtl = require("js/OberonRtl.js");
@@ -109,7 +110,7 @@ exports.language = {
             recordDecl:         ObContext.RecordDecl,
             variableDeclaration: ObContext.VariableDeclaration,
             ArrayDecl:          Context.ArrayDecl,
-            Factor:             Context.Factor,
+            Factor:             ContextExpression.Factor,
             FormalParameters:   Context.FormalParameters,
             FormalType:         Context.FormalType,
             Term:               Context.Term,

@@ -5,6 +5,7 @@ var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var ContextExpression = require("js/ContextExpression.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var EberonConstructor= require("js/EberonConstructor.js");
 var EberonContext= require("js/EberonContext.js");
@@ -815,12 +816,12 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
     }
 });
 
-var Factor = Context.Factor.extend({
+var Factor = Class.extend.call(ContextExpression.Factor, {
     init: function EberonContext$Factor(context){
-        Context.Factor.prototype.init.call(this, context);
+        ContextExpression.Factor.call(this, context);
     },
     handleLogicalNot: function(){
-        Context.Factor.prototype.handleLogicalNot.call(this);
+        ContextExpression.Factor.prototype.handleLogicalNot.call(this);
         var p = this.getCurrentPromotion();
         if (p)
             p.invert();

@@ -678,7 +678,7 @@ PROCEDURE eqGreaterStr*(left, right: Code.PExpression; cx: LanguageContext.PType
     RETURN strCmp(" >= ", left, right, cx)
 END eqGreaterStr;
 
-PROCEDURE not*(x: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE not*(x: Code.PExpression): Code.PExpression;
     RETURN unary(x, opNot, "!")
 END not;
 

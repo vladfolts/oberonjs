@@ -882,9 +882,6 @@ exports.Term = ChainedContext.extend({
                                  : this.attributes.designator.type();
     },
     handleOperator: function(o){this.__operator = o;},
-    handleFactor: function(e){
-        this.handleExpression(e);
-    },
     endParse: function(){
         var e = this.__expression;
         if (!e){
@@ -903,45 +900,6 @@ exports.Term = ChainedContext.extend({
             e = this.__expression ? this.__operator(this.__expression, e)
                                   : this.__operator(e);
         this.__expression = e;
-    }
-});
-
-exports.Factor = ChainedContext.extend({
-    init: function FactorContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__logicalNot = false;
-        this.__factor = undefined;
-    },
-    type: function(){return this.parent().type();},
-    handleLiteral: function(s){
-        if (s == "NIL")
-            this.handleConst(nilType, undefined, "null");
-        else if (s == "TRUE")
-            this.handleConst(basicTypes.bool, Code.makeIntConst(1), "true");
-        else if (s == "FALSE")
-            this.handleConst(basicTypes.bool, Code.makeIntConst(0), "false");
-        else if (s == "~")
-            this.handleLogicalNot();
-    },
-    handleConst: function(type, value, code){
-        this.__factor = Code.makeExpression(
-            code, type, undefined, value);
-    },
-    handleFactor: function(e){
-        this.__factor = e;
-    },
-    handleExpression: function(e){
-        this.__factor = e;
-    },
-    handleLogicalNot: function(){
-        this.__logicalNot = true;
-    },
-    endParse: function(){
-        if (this.__logicalNot){
-            ContextHierarchy.checkTypeMatch(this.__factor.type(), basicTypes.bool);
-            this.__factor = op.not(this.__factor);
-        }
-        this.parent().handleFactor(this.__factor);
     }
 });
 
@@ -994,7 +952,7 @@ exports.Set = ChainedContext.extend({
             if (this.__value)
                 code += " | " + this.__value;
             var e = Code.makeExpression(code, basicTypes.set);
-            parent.handleFactor(e);
+            parent.handleExpression(e);
         }
     }
 });

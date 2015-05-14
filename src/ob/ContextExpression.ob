@@ -1,11 +1,23 @@
 MODULE ContextExpression;
 IMPORT 
-    Chars, Code, ContextHierarchy, String, Types;
+    Chars, Code, ContextHierarchy, Operator, String, Types;
 TYPE
-    Factor* = RECORD(ContextHierarchy.Node)
-        PROCEDURE handleConst(type: Types.PType; value: Code.PConst; code: STRING);
-    END;
     PFactor = POINTER TO Factor;
+
+    Factor* = RECORD(ContextHierarchy.Node)
+        PROCEDURE Factor(parent: PFactor);
+
+        PROCEDURE handleConst(type: Types.PType; value: Code.PConst; code: STRING);
+        PROCEDURE handleLiteral(s: STRING);
+        PROCEDURE handleLogicalNot();
+        PROCEDURE handleExpression(e: Code.PExpression);
+
+        PROCEDURE endParse();
+
+        factorParent: PFactor;
+        logicalNot: BOOLEAN;
+        e: Code.PExpression;
+    END;
 
     Const = RECORD(ContextHierarchy.Node)
         PROCEDURE Const(factor: PFactor);
@@ -24,6 +36,48 @@ TYPE
     Str* = RECORD(Const)
         PROCEDURE handleStr*(s: STRING);
     END;
+
+PROCEDURE Factor.Factor(parent: PFactor)
+    | SUPER(parent),
+      factorParent(parent);
+END;
+
+PROCEDURE Factor.handleConst(type: Types.PType; value: Code.PConst; code: STRING);
+BEGIN
+    SELF.e := Code.makeExpression(code, type, NIL, value);
+END;
+
+PROCEDURE Factor.handleLiteral(s: STRING);
+BEGIN
+    IF s = "NIL" THEN
+        SELF.handleConst(Types.nil, NIL, "null");
+    ELSIF s = "TRUE" THEN
+        SELF.handleConst(Types.basic.bool, Code.makeIntConst(1), "true");
+    ELSIF s = "FALSE" THEN
+        SELF.handleConst(Types.basic.bool, Code.makeIntConst(0), "false");
+    ELSIF s = "~" THEN
+        SELF.handleLogicalNot();
+    END;
+END;
+
+PROCEDURE Factor.handleLogicalNot();
+BEGIN
+    SELF.logicalNot := TRUE;
+END;
+
+PROCEDURE Factor.handleExpression(e: Code.PExpression);
+BEGIN
+    SELF.e := e;
+END;
+
+PROCEDURE Factor.endParse();
+BEGIN
+    IF SELF.logicalNot THEN
+        ContextHierarchy.checkTypeMatch(SELF.e.type(), Types.basic.bool);
+        SELF.e := Operator.not(SELF.e);
+    END;
+    SELF.factorParent.handleExpression(SELF.e);
+END;
 
 PROCEDURE Const.Const(factor: PFactor)
     | SUPER(factor),
