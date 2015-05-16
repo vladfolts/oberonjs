@@ -1,0 +1,47 @@
+MODULE ConstValue;
+TYPE
+    Type* = RECORD
+    END;
+    PType* = POINTER TO Type;
+
+    Int* = RECORD (Type)
+        PROCEDURE Int*(n: INTEGER);
+
+        value-: INTEGER;
+    END;
+
+    Real* = RECORD (Type)
+        PROCEDURE Real*(r: REAL);
+
+        value-: REAL;
+    END;
+
+    Set* = RECORD (Type)
+        PROCEDURE Set*(s: SET);
+
+        value-: SET
+    END;
+
+    String* = RECORD (Type)
+        PROCEDURE String*(s: STRING);
+
+        value-: STRING
+    END;
+
+PROCEDURE Int.Int(n: INTEGER)
+    | value(n);
+END;
+
+PROCEDURE Real.Real(r: REAL)
+    | value(r);
+END;
+
+PROCEDURE Set.Set(s: SET)
+    | value(s);
+END;
+
+PROCEDURE String.String(s: STRING)
+    | value(s);
+END;
+
+END ConstValue.

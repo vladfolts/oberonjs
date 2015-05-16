@@ -926,9 +926,9 @@ function BeginTypePromotionOrMsg(){
     this.result = undefined;
 }
 
-var Term = Context.Term.extend({
+var Term = Class.extend.call(ContextExpression.Term, {
     init: function EberonContext$Term(context){
-        Context.Term.prototype.init.call(this, context);
+        ContextExpression.Term.call(this, context);
         this.__typePromotion = undefined;
         this.__currentPromotion = undefined;
         this.__andHandled = false;
@@ -947,7 +947,7 @@ var Term = Context.Term.extend({
                 msg.result = cp.makeOr();
             return;
         }
-        return Context.Term.prototype.handleMessage.call(this, msg);
+        return ContextExpression.Term.prototype.handleMessage.call(this, msg);
     },
     handleLogicalAnd: function(){
         if (this.__typePromotion)

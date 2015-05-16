@@ -3,6 +3,7 @@ IMPORT
     Cast,
     Code, 
     Context, 
+    ConstValue,
     Errors, 
     LanguageContext,
     OberonRtl,
@@ -362,15 +363,15 @@ PROCEDURE makeOdd(): Symbols.PSymbol;
     VAR
         arg: Code.PExpression;
         code: STRING;
-        constValue: Code.PConst;
+        constValue: ConstValue.PType;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
         code := Code.adjustPrecedence(arg, Precedence.bitAnd);
         
         constValue := arg.constValue();
         IF constValue # NIL THEN
-            constValue := Code.makeIntConst(
-                ORD(ODD(constValue^(Code.IntConst).value)));
+            constValue := NEW ConstValue.Int(
+                ORD(ODD(constValue^(ConstValue.Int).value)));
         END;
 
         RETURN NEW Code.Expression(
@@ -417,7 +418,7 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
     VAR
         x, y: Code.PExpression;
         yValue: INTEGER;
-        value: Code.PConst;
+        value: ConstValue.PType;
         valueCodeExp: Code.PExpression;
         valueCode: STRING;
         comment: STRING;
@@ -433,11 +434,11 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
                     "1", 
                     Types.basic.integer,
                     NIL,
-                    Code.makeIntConst(1)), 
+                    NEW ConstValue.Int(1)), 
                 y);
             valueCode := valueCodeExp.code();
         ELSE
-            yValue := value^(Code.IntConst).value;
+            yValue := value^(ConstValue.Int).value;
             IF (yValue < 0) OR (yValue > 31) THEN
                 Errors.raise("value (0..31) expected as a second argument of " 
                              + SELF.name + ", got " + String.fromInt(yValue));
@@ -490,7 +491,7 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr; incRefOp: Ope
     VAR
         x, y: Code.PExpression;
         code: STRING;
-        value: Code.PConst;
+        value: ConstValue.PType;
         valueCode: STRING;
     BEGIN
         checkVariableArgumentsCount(1, 2, args);
@@ -512,7 +513,7 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr; incRefOp: Ope
             IF value = NIL THEN
                 valueCode := y.code();
             ELSE
-                valueCode := String.fromInt(value^(Code.IntConst).value);
+                valueCode := String.fromInt(value^(ConstValue.Int).value);
                 IF ~y.isTerm() THEN
                     valueCode := valueCode + "/*" + y.code() + "*/";
                 END;
@@ -605,12 +606,12 @@ PROCEDURE makeFlt(): Symbols.PSymbol;
     PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
     VAR
         arg: Code.PExpression;
-        value: Code.PConst;
+        value: ConstValue.PType;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
         value := arg.constValue();
         IF value # NIL THEN
-            value := Code.makeRealConst(FLT(value^(Code.IntConst).value));
+            value := NEW ConstValue.Real(FLT(value^(ConstValue.Int).value));
         END;
         RETURN NEW Code.Expression(
                 arg.code(), 
@@ -656,7 +657,7 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
     VAR
         arg: Code.PExpression;
         argType: Types.PType;
-        value: Code.PConst;
+        value: ConstValue.PType;
         code: STRING;
         ch: CHAR;
         result: Code.PExpression;
@@ -666,7 +667,7 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
         IF (argType = Types.basic.ch) OR (argType = Types.basic.set) THEN
             value := arg.constValue();
             IF (value # NIL) & (argType = Types.basic.set) THEN
-                value := Code.makeIntConst(ORD(value^(Code.SetConst).value));
+                value := NEW ConstValue.Int(ORD(value^(ConstValue.Set).value));
             END;
             result := Code.makeExpression(arg.code(), Types.basic.integer, NIL, value);
         ELSIF argType = Types.basic.bool THEN
@@ -684,7 +685,7 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
                 String.fromInt(ORD(ch)), 
                 Types.basic.integer,
                 NIL,
-                Code.makeIntConst(ORD(ch)));
+                NEW ConstValue.Int(ORD(ch)));
         ELSE
             Errors.raise(
                 "ORD function expects CHAR or BOOLEAN or SET as an argument, got '"

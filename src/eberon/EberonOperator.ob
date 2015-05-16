@@ -1,44 +1,44 @@
 MODULE EberonOperator;
-IMPORT Cast, Code, CodePrecedence, EberonMap, LanguageContext, OberonRtl, Operator, Types;
+IMPORT Cast, Code, CodePrecedence, ConstValue, EberonMap, LanguageContext, OberonRtl, Operator, Types;
 TYPE
     CastOpRecord = RECORD(Cast.CastOpRecord)
     END;
 VAR
     castOperations*: Cast.Operations;
 
-PROCEDURE opAddStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeStringConst(left^(Code.StringConst).value
-                              + right^(Code.StringConst).value)
+PROCEDURE opAddStr(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.String(left^(ConstValue.String).value
+                               + right^(ConstValue.String).value)
 END opAddStr;
 
-PROCEDURE opEqualStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
-                                 = right^(Code.StringConst).value))
+PROCEDURE opEqualStr(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.String).value
+                                  = right^(ConstValue.String).value))
 END opEqualStr;
 
-PROCEDURE opNotEqualStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
-                                 # right^(Code.StringConst).value))
+PROCEDURE opNotEqualStr(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.String).value
+                                  # right^(ConstValue.String).value))
 END opNotEqualStr;
 
-PROCEDURE opLessStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
-                               < right^(Code.StringConst).value))
+PROCEDURE opLessStr(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.String).value
+                                < right^(ConstValue.String).value))
 END opLessStr;
 
-PROCEDURE opGreaterStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
-                               > right^(Code.StringConst).value))
+PROCEDURE opGreaterStr(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.String).value
+                                > right^(ConstValue.String).value))
 END opGreaterStr;
 
-PROCEDURE opLessEqualStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
-                              <= right^(Code.StringConst).value))
+PROCEDURE opLessEqualStr(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.String).value
+                               <= right^(ConstValue.String).value))
 END opLessEqualStr;
 
-PROCEDURE opGraterEqualStr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.StringConst).value
-                              >= right^(Code.StringConst).value))
+PROCEDURE opGraterEqualStr(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.String).value
+                               >= right^(ConstValue.String).value))
 END opGraterEqualStr;
 
 PROCEDURE addStr*(left, right: Code.PExpression): Code.PExpression;

@@ -113,7 +113,7 @@ exports.language = {
             Factor:             ContextExpression.Factor,
             FormalParameters:   Context.FormalParameters,
             FormalType:         Context.FormalType,
-            Term:               Context.Term,
+            Term:               ContextExpression.Term,
             AddOperator:        Context.AddOperator,
             MulOperator:        Context.MulOperator,
             SimpleExpression:   Context.SimpleExpression, 

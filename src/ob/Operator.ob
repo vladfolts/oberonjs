@@ -1,7 +1,8 @@
 MODULE Operator;
 IMPORT 
     Cast, 
-    Code, 
+    Code,
+    ConstValue, 
     Errors, 
     LanguageContext, 
     OberonRtl, 
@@ -14,10 +15,10 @@ CONST
 TYPE
     BinaryProc* = PROCEDURE(left, right: Code.PExpression): Code.PExpression;
 
-    BinaryOp = PROCEDURE(left, right: Code.PConst): Code.PConst;
+    BinaryOp = PROCEDURE(left, right: ConstValue.PType): ConstValue.PType;
     CodePredicate = PROCEDURE(left, right: STRING; rtl: OberonRtl.PType): STRING;
 
-    UnaryOp = PROCEDURE(value: Code.PConst): Code.PConst;
+    UnaryOp = PROCEDURE(value: ConstValue.PType): ConstValue.PType;
 
     CodeMaker = RECORD
         PROCEDURE make(left, right: STRING; rtl: OberonRtl.PType): STRING
@@ -56,7 +57,7 @@ PROCEDURE binary(
     ): Code.PExpression;
 VAR
     result: Code.PExpression;
-    leftValue, rightValue, resultValue: Code.PConst;
+    leftValue, rightValue, resultValue: ConstValue.PType;
     leftCode, rightCode, resultCode: STRING;
     resultType: Types.PType;
     resultPrecedence: INTEGER;
@@ -215,7 +216,7 @@ END binaryPred;
 
 PROCEDURE unary(e: Code.PExpression; op: UnaryOp; code: STRING): Code.PExpression;
 VAR
-    value: Code.PConst;
+    value: ConstValue.PType;
 BEGIN
     value := e.constValue();
     IF value # NIL THEN
@@ -241,194 +242,194 @@ BEGIN
     RETURN resultExpression.code()
 END castToStr;
 
-PROCEDURE opAddReal(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeRealConst(left^(Code.RealConst).value 
-                            + right^(Code.RealConst).value)
+PROCEDURE opAddReal(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Real(left^(ConstValue.Real).value 
+                             + right^(ConstValue.Real).value)
 END opAddReal;
 
-PROCEDURE opAddInt(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(left^(Code.IntConst).value 
-                           + right^(Code.IntConst).value)
+PROCEDURE opAddInt(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(left^(ConstValue.Int).value 
+                           + right^(ConstValue.Int).value)
 END opAddInt;
 
-PROCEDURE opSubReal(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeRealConst(left^(Code.RealConst).value 
-                            - right^(Code.RealConst).value)
+PROCEDURE opSubReal(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Real(left^(ConstValue.Real).value 
+                            - right^(ConstValue.Real).value)
 END opSubReal;
 
-PROCEDURE opSubInt(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(left^(Code.IntConst).value 
-                           - right^(Code.IntConst).value)
+PROCEDURE opSubInt(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(left^(ConstValue.Int).value 
+                            - right^(ConstValue.Int).value)
 END opSubInt;
 
-PROCEDURE opMulReal(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeRealConst(left^(Code.RealConst).value 
-                            * right^(Code.RealConst).value)
+PROCEDURE opMulReal(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Real(left^(ConstValue.Real).value 
+                             * right^(ConstValue.Real).value)
 END opMulReal;
 
-PROCEDURE opMulInt(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(left^(Code.IntConst).value 
-                           * right^(Code.IntConst).value)
+PROCEDURE opMulInt(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(left^(ConstValue.Int).value 
+                           * right^(ConstValue.Int).value)
 END opMulInt;
 
-PROCEDURE opDivReal(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeRealConst(left^(Code.RealConst).value 
-                            / right^(Code.RealConst).value)
+PROCEDURE opDivReal(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Real(left^(ConstValue.Real).value 
+                             / right^(ConstValue.Real).value)
 END opDivReal;
 
-PROCEDURE opDivInt(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(left^(Code.IntConst).value 
-                         DIV right^(Code.IntConst).value)
+PROCEDURE opDivInt(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(left^(ConstValue.Int).value 
+                          DIV right^(ConstValue.Int).value)
 END opDivInt;
 
-PROCEDURE opMod(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(left^(Code.IntConst).value 
-                         MOD right^(Code.IntConst).value)
+PROCEDURE opMod(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(left^(ConstValue.Int).value 
+                          MOD right^(ConstValue.Int).value)
 END opMod;
 
-PROCEDURE opSetUnion(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeSetConst(left^(Code.SetConst).value 
-                           + right^(Code.SetConst).value)
+PROCEDURE opSetUnion(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Set(left^(ConstValue.Set).value 
+                            + right^(ConstValue.Set).value)
 END opSetUnion;
 
-PROCEDURE opSetDiff(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeSetConst(left^(Code.SetConst).value 
-                           - right^(Code.SetConst).value)
+PROCEDURE opSetDiff(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Set(left^(ConstValue.Set).value 
+                            - right^(ConstValue.Set).value)
 END opSetDiff;
 
-PROCEDURE opSetIntersection(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeSetConst(left^(Code.SetConst).value 
-                           * right^(Code.SetConst).value)
+PROCEDURE opSetIntersection(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Set(left^(ConstValue.Set).value 
+                            * right^(ConstValue.Set).value)
 END opSetIntersection;
 
-PROCEDURE opSetSymmetricDiff(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeSetConst(left^(Code.SetConst).value 
-                           / right^(Code.SetConst).value)
+PROCEDURE opSetSymmetricDiff(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Set(left^(ConstValue.Set).value 
+                            / right^(ConstValue.Set).value)
 END opSetSymmetricDiff;
 
-PROCEDURE opSetInclL(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.SetConst).value 
-                              <= right^(Code.SetConst).value))
+PROCEDURE opSetInclL(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Set).value 
+                               <= right^(ConstValue.Set).value))
 END opSetInclL;
 
-PROCEDURE opSetInclR(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.SetConst).value 
-                              >= right^(Code.SetConst).value))
+PROCEDURE opSetInclR(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Set).value 
+                               >= right^(ConstValue.Set).value))
 END opSetInclR;
 
-PROCEDURE opOr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD((left^(Code.IntConst).value # 0)
-                              OR (right^(Code.IntConst).value # 0)))
+PROCEDURE opOr(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD((left^(ConstValue.Int).value # 0)
+                               OR (right^(ConstValue.Int).value # 0)))
 END opOr;
 
-PROCEDURE opAnd(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD((left^(Code.IntConst).value # 0)
-                               & (right^(Code.IntConst).value # 0)))
+PROCEDURE opAnd(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD((left^(ConstValue.Int).value # 0)
+                                & (right^(ConstValue.Int).value # 0)))
 END opAnd;
 
-PROCEDURE opEqualInt(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
-                               = right^(Code.IntConst).value))
+PROCEDURE opEqualInt(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Int).value
+                                = right^(ConstValue.Int).value))
 END opEqualInt;
 
-PROCEDURE opEqualReal(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
-                               = right^(Code.RealConst).value))
+PROCEDURE opEqualReal(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Real).value
+                                = right^(ConstValue.Real).value))
 END opEqualReal;
 
-PROCEDURE opEqualSet(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.SetConst).value
-                               = right^(Code.SetConst).value))
+PROCEDURE opEqualSet(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Set).value
+                                = right^(ConstValue.Set).value))
 END opEqualSet;
 
-PROCEDURE opNotEqualInt(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
-                               # right^(Code.IntConst).value))
+PROCEDURE opNotEqualInt(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Int).value
+                                # right^(ConstValue.Int).value))
 END opNotEqualInt;
 
-PROCEDURE opNotEqualReal(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
-                               # right^(Code.RealConst).value))
+PROCEDURE opNotEqualReal(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Real).value
+                                # right^(ConstValue.Real).value))
 END opNotEqualReal;
 
-PROCEDURE opNotEqualSet(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.SetConst).value
-                               # right^(Code.SetConst).value))
+PROCEDURE opNotEqualSet(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Set).value
+                                # right^(ConstValue.Set).value))
 END opNotEqualSet;
 
-PROCEDURE opLessInt(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
-                               < right^(Code.IntConst).value))
+PROCEDURE opLessInt(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Int).value
+                                < right^(ConstValue.Int).value))
 END opLessInt;
 
-PROCEDURE opLessReal(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
-                               < right^(Code.RealConst).value))
+PROCEDURE opLessReal(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Real).value
+                                < right^(ConstValue.Real).value))
 END opLessReal;
 
-PROCEDURE opGreaterInt(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
-                               > right^(Code.IntConst).value))
+PROCEDURE opGreaterInt(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Int).value
+                                > right^(ConstValue.Int).value))
 END opGreaterInt;
 
-PROCEDURE opGreaterReal(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
-                               > right^(Code.RealConst).value))
+PROCEDURE opGreaterReal(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Real).value
+                                > right^(ConstValue.Real).value))
 END opGreaterReal;
 
-PROCEDURE opEqLessInt(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
-                              <= right^(Code.IntConst).value))
+PROCEDURE opEqLessInt(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Int).value
+                               <= right^(ConstValue.Int).value))
 END opEqLessInt;
 
-PROCEDURE opEqLessReal(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
-                              <= right^(Code.RealConst).value))
+PROCEDURE opEqLessReal(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Real).value
+                               <= right^(ConstValue.Real).value))
 END opEqLessReal;
 
-PROCEDURE opEqGreaterInt(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.IntConst).value
-                              >= right^(Code.IntConst).value))
+PROCEDURE opEqGreaterInt(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Int).value
+                               >= right^(ConstValue.Int).value))
 END opEqGreaterInt;
 
-PROCEDURE opEqGreaterReal(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(left^(Code.RealConst).value
-                              >= right^(Code.RealConst).value))
+PROCEDURE opEqGreaterReal(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(left^(ConstValue.Real).value
+                               >= right^(ConstValue.Real).value))
 END opEqGreaterReal;
 
-PROCEDURE opNot(x: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ORD(~(x^(Code.IntConst).value # 0)))
+PROCEDURE opNot(x: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ORD(~(x^(ConstValue.Int).value # 0)))
 END opNot;
 
-PROCEDURE opNegateInt(x: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(-x^(Code.IntConst).value)
+PROCEDURE opNegateInt(x: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(-x^(ConstValue.Int).value)
 END opNegateInt;
 
-PROCEDURE opNegateReal(x: Code.PConst): Code.PConst;
-    RETURN Code.makeRealConst(-x^(Code.RealConst).value)
+PROCEDURE opNegateReal(x: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Real(-x^(ConstValue.Real).value)
 END opNegateReal;
 
-PROCEDURE opUnaryPlus(x: Code.PConst): Code.PConst;
+PROCEDURE opUnaryPlus(x: ConstValue.PType): ConstValue.PType;
     RETURN x
 END opUnaryPlus;
 
-PROCEDURE opSetComplement(x: Code.PConst): Code.PConst;
-    RETURN Code.makeSetConst(-x^(Code.SetConst).value)
+PROCEDURE opSetComplement(x: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Set(-x^(ConstValue.Set).value)
 END opSetComplement;
 
-PROCEDURE opLsl(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(LSL(left^(Code.IntConst).value,
-                                 right^(Code.IntConst).value))
+PROCEDURE opLsl(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(LSL(left^(ConstValue.Int).value,
+                                  right^(ConstValue.Int).value))
 END opLsl;
 
-PROCEDURE opAsr(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ASR(left^(Code.IntConst).value,
-                                 right^(Code.IntConst).value))
+PROCEDURE opAsr(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ASR(left^(ConstValue.Int).value,
+                                  right^(ConstValue.Int).value))
 END opAsr;
 
-PROCEDURE opRor(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(ROR(left^(Code.IntConst).value,
-                                 right^(Code.IntConst).value))
+PROCEDURE opRor(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(ROR(left^(ConstValue.Int).value,
+                                  right^(ConstValue.Int).value))
 END opRor;
 
 PROCEDURE codeSetInclL(left, right: STRING; rtl: OberonRtl.PType): STRING;
@@ -689,8 +690,8 @@ BEGIN
     overflowCheck <- TRUE;
     c <- x.constValue();
     IF c # NIL THEN
-        value <- -c^(Code.IntConst).value;
-        result := NEW Code.Expression(String.fromInt(value), Types.basic.integer, NIL, Code.makeIntConst(value), Precedence.unary);
+        value <- -c^(ConstValue.Int).value;
+        result := NEW Code.Expression(String.fromInt(value), Types.basic.integer, NIL, NEW ConstValue.Int(value), Precedence.unary);
     ELSE
         result := promoteToWideIfNeeded(unary(x, opNegateInt, "-"));
         result := NEW Code.Expression(result.code() + " | 0", result.type(), result.designator(), result.constValue(), Precedence.bitOr);
@@ -752,9 +753,9 @@ BEGIN
             Precedence.bitOr)
 END log2;
 
-PROCEDURE opCastToUint8(left, right: Code.PConst): Code.PConst;
-    RETURN Code.makeIntConst(left^(Code.IntConst).value 
-                           * right^(Code.IntConst).value)
+PROCEDURE opCastToUint8(left, right: ConstValue.PType): ConstValue.PType;
+    RETURN NEW ConstValue.Int(left^(ConstValue.Int).value 
+                            * right^(ConstValue.Int).value)
 END opCastToUint8;
 
 PROCEDURE CastToUint8.make(cx: LanguageContext.PType; e: Code.PExpression): Code.PExpression;
@@ -763,7 +764,7 @@ PROCEDURE CastToUint8.make(cx: LanguageContext.PType; e: Code.PExpression): Code
         Code.makeExpression("0xFF", 
                             Types.basic.integer, 
                             NIL, 
-                            Code.makeIntConst(0FFH)), 
+                            NEW ConstValue.Int(0FFH)), 
         opCastToUint8, 
         " & ", 
         Precedence.bitAnd)

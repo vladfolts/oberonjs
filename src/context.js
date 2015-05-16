@@ -3,6 +3,7 @@
 var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
+var ConstValue = require("js/ConstValue.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var Errors = require("js/Errors.js");
 var Module = require("js/Module.js");
@@ -870,39 +871,6 @@ exports.MulOperator = ChainedContext.extend({
     }
 });
 
-exports.Term = ChainedContext.extend({
-    init: function TermContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.attributes = {};
-        this.__operator = undefined;
-        this.__expression = undefined;
-    },
-    type: function(){
-        return this.__expression ? this.__expression.type()
-                                 : this.attributes.designator.type();
-    },
-    handleOperator: function(o){this.__operator = o;},
-    endParse: function(){
-        var e = this.__expression;
-        if (!e){
-            var d = this.attributes.designator;
-            var value;
-            var info = d.info();
-            if (info instanceof Type.Const)
-                value = Type.constValue(info);
-            e = Code.makeExpression(d.code(), d.type(), d, value);
-        }
-        this.parent().handleTerm(e);
-    },
-    handleExpression: function(e){
-        ContextHierarchy.promoteExpressionType(this.root(), this.__expression, e);
-        if (this.__operator)
-            e = this.__expression ? this.__operator(this.__expression, e)
-                                  : this.__operator(e);
-        this.__expression = e;
-    }
-});
-
 function designatorAsExpression(d){
     var info = d.info();
     if (info instanceof Type.ProcedureId){
@@ -916,7 +884,7 @@ function designatorAsExpression(d){
 
     var value;
     if (info instanceof Type.Const)
-        value = Type.constValue(info);
+        value = info.value;
     return Code.makeExpression(d.code(), d.type(), d, value);
 }
 
@@ -946,7 +914,7 @@ exports.Set = ChainedContext.extend({
     endParse: function(){
         var parent = this.parent();
         if (!this.__expr.length)
-            parent.handleConst(basicTypes.set, Code.makeSetConst(this.__value), this.__value.toString());
+            parent.handleConst(basicTypes.set, new ConstValue.Set(this.__value), this.__value.toString());
         else{
             var code = this.root().language().rtl.makeSet(this.__expr);
             if (this.__value)
@@ -1213,7 +1181,7 @@ exports.CaseRange = ChainedContext.extend({
             if (!Type.stringAsChar(type, {set: function(v){value = v;}}))
                 throw new Errors.Error("single-character string expected");
             type = basicTypes.ch;
-            value = Code.makeIntConst(value);
+            value = new ConstValue.Int(value);
         }
         this.handleLabel(type, value);
     },
@@ -1226,7 +1194,7 @@ exports.CaseRange = ChainedContext.extend({
         if (type instanceof Type.String)
             this.handleConst(type, undefined);
         else
-            this.handleLabel(type, Type.constValue(s.info()));
+            this.handleLabel(type, s.info().value);
     },
     endParse: function(){this.parent().handleRange(this.__from, this.__to);}
 });

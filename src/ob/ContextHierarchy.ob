@@ -17,12 +17,13 @@ TYPE
     END;
 
     Attributes* = RECORD
+        designator*: Code.PDesignator;
     END;
 
     Node* = RECORD
         PROCEDURE Node*(parent: PNode);
 
-        PROCEDURE root(): PRoot;
+        PROCEDURE root*(): PRoot;
         PROCEDURE parent*(): PNode;
         PROCEDURE handleMessage(VAR msg: Message): PMessageResult;
         PROCEDURE codeGenerator(): CodeGenerator.PIGenerator;

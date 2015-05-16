@@ -1,5 +1,5 @@
 MODULE EberonDynamicArray;
-IMPORT Cast, Code, Context, EberonArray, EberonOperator, EberonRecord, EberonTypes, Errors, LanguageContext, Procedure, Types;
+IMPORT Cast, Code, ConstValue, Context, EberonArray, EberonOperator, EberonRecord, EberonTypes, Errors, LanguageContext, Procedure, Types;
 CONST
     methodNameAdd = "add";
     methodNameClear = "clear";
@@ -184,7 +184,7 @@ BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
     arg <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
     value <- arg.constValue();
-    IF (value # NIL) & (value^ IS Code.IntConst) THEN
+    IF (value # NIL) & (value^ IS ConstValue.Int) THEN
         Code.checkIndex(value.value);
     END;
     RETURN Code.makeSimpleExpression("(" + argCode.result() + ", 1)", NIL)

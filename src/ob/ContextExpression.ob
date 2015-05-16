@@ -1,22 +1,42 @@
 MODULE ContextExpression;
 IMPORT 
-    Chars, Code, ContextHierarchy, Operator, String, Types;
+    Chars, Code, ConstValue, ContextHierarchy, Operator, String, Types;
 TYPE
+    ExpressionHandler = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleExpression(e: Code.PExpression);
+        PROCEDURE endParse();
+
+        expression: Code.PExpression;
+    END;
+
+    SimpleExpression = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleTerm(e: Code.PExpression);
+    END;
+    PSimpleExpression = POINTER TO SimpleExpression;
+
     PFactor = POINTER TO Factor;
 
-    Factor* = RECORD(ContextHierarchy.Node)
+    Factor* = RECORD(ExpressionHandler)
         PROCEDURE Factor(parent: PFactor);
 
-        PROCEDURE handleConst(type: Types.PType; value: Code.PConst; code: STRING);
+        PROCEDURE handleConst(type: Types.PType; value: ConstValue.PType; code: STRING);
         PROCEDURE handleLiteral(s: STRING);
         PROCEDURE handleLogicalNot();
-        PROCEDURE handleExpression(e: Code.PExpression);
-
-        PROCEDURE endParse();
 
         factorParent: PFactor;
         logicalNot: BOOLEAN;
-        e: Code.PExpression;
+    END;
+
+    BinaryOperator = PROCEDURE(l, r: Code.PExpression): Code.PExpression;
+
+    Term* = RECORD(ExpressionHandler)
+        PROCEDURE Term(parent: PSimpleExpression);
+
+        PROCEDURE type(): Types.PType;
+        PROCEDURE handleOperator(op: BinaryOperator);
+
+        simpleExpression: PSimpleExpression;
+        operator: BinaryOperator;
     END;
 
     Const = RECORD(ContextHierarchy.Node)
@@ -42,9 +62,9 @@ PROCEDURE Factor.Factor(parent: PFactor)
       factorParent(parent);
 END;
 
-PROCEDURE Factor.handleConst(type: Types.PType; value: Code.PConst; code: STRING);
+PROCEDURE Factor.handleConst(type: Types.PType; value: ConstValue.PType; code: STRING);
 BEGIN
-    SELF.e := Code.makeExpression(code, type, NIL, value);
+    SELF.expression := Code.makeExpression(code, type, NIL, value);
 END;
 
 PROCEDURE Factor.handleLiteral(s: STRING);
@@ -52,9 +72,9 @@ BEGIN
     IF s = "NIL" THEN
         SELF.handleConst(Types.nil, NIL, "null");
     ELSIF s = "TRUE" THEN
-        SELF.handleConst(Types.basic.bool, Code.makeIntConst(1), "true");
+        SELF.handleConst(Types.basic.bool, NEW ConstValue.Int(1), "true");
     ELSIF s = "FALSE" THEN
-        SELF.handleConst(Types.basic.bool, Code.makeIntConst(0), "false");
+        SELF.handleConst(Types.basic.bool, NEW ConstValue.Int(0), "false");
     ELSIF s = "~" THEN
         SELF.handleLogicalNot();
     END;
@@ -67,16 +87,67 @@ END;
 
 PROCEDURE Factor.handleExpression(e: Code.PExpression);
 BEGIN
-    SELF.e := e;
+    SELF.expression := e;
 END;
 
 PROCEDURE Factor.endParse();
 BEGIN
     IF SELF.logicalNot THEN
-        ContextHierarchy.checkTypeMatch(SELF.e.type(), Types.basic.bool);
-        SELF.e := Operator.not(SELF.e);
+        ContextHierarchy.checkTypeMatch(SELF.expression.type(), Types.basic.bool);
+        SELF.expression := Operator.not(SELF.expression);
     END;
-    SELF.factorParent.handleExpression(SELF.e);
+    SELF.factorParent.handleExpression(SELF.expression);
+END;
+
+PROCEDURE Term.Term(parent: PSimpleExpression)
+    | SUPER(parent),
+      simpleExpression(parent);
+END;
+
+
+PROCEDURE Term.type(): Types.PType;
+VAR
+    result: Types.PType;
+BEGIN
+    IF SELF.expression # NIL THEN
+        result := SELF.expression.type();
+    ELSE
+        result := SELF.attributes.designator.type();
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Term.handleOperator(op: BinaryOperator);
+BEGIN
+    SELF.operator := op;
+END;
+
+PROCEDURE Term.handleExpression(e: Code.PExpression);
+BEGIN
+    ContextHierarchy.promoteExpressionType(SELF.root()^, SELF.expression, e);
+    IF SELF.operator = NIL THEN
+        SELF.expression := e;
+    ELSIF SELF.expression # NIL THEN
+        SELF.expression := SELF.operator(SELF.expression, e);
+    ELSE
+        SELF.expression := SELF.operator(e, NIL);
+    END;
+END;
+
+PROCEDURE Term.endParse();
+VAR
+    const: ConstValue.PType;
+BEGIN
+    e <- SELF.expression;
+    IF e = NIL THEN
+        d <- SELF.attributes.designator;
+        info <- d.info();
+        IF info IS Types.PConst THEN
+            const := info.value;
+        END;
+        e := Code.makeExpression(d.code(), d.type(), d, const);
+    END;
+    SELF.simpleExpression.handleTerm(e);
 END;
 
 PROCEDURE Const.Const(factor: PFactor)
@@ -88,7 +159,7 @@ PROCEDURE Integer.handleInt(n: INTEGER);
 BEGIN
     SELF.factor.handleConst(
         Types.basic.integer, 
-        Code.makeIntConst(n), 
+        NEW ConstValue.Int(n), 
         String.fromInt(n));
 END;
 
@@ -96,7 +167,7 @@ PROCEDURE Real.handleReal(r: REAL);
 BEGIN
     SELF.factor.handleConst(
         Types.basic.real, 
-        Code.makeRealConst(r), 
+        NEW ConstValue.Real(r), 
         String.fromReal(r));
 END;
 
@@ -138,7 +209,7 @@ PROCEDURE Str.handleStr(s: STRING);
 BEGIN
     SELF.factor.handleConst(
         NEW Types.String(s), 
-        Code.makeStringConst(s), 
+        NEW ConstValue.String(s), 
         escapeString(s));
 END;
 

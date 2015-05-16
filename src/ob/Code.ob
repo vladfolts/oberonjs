@@ -1,6 +1,7 @@
 MODULE Code;
 IMPORT 
     CodeGenerator,
+    ConstValue,
     Errors,
     Object, 
     Stream, 
@@ -14,9 +15,9 @@ TYPE
     Designator* = RECORD
         PROCEDURE Designator*(code: STRING; lval: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType);
 
-        PROCEDURE code(): STRING;
+        PROCEDURE code*(): STRING;
         PROCEDURE lval(): STRING;
-        PROCEDURE type(): Types.PType;
+        PROCEDURE type*(): Types.PType;
         PROCEDURE info*(): Types.PId;
         PROCEDURE scope(): ScopeBase.PType;
 
@@ -29,46 +30,26 @@ TYPE
 
     PDesignator* = POINTER TO Designator;
 
-    Const* = RECORD
-    END;
-    PConst* = POINTER TO Const;
-
-    IntConst* = RECORD (Const)
-        value*: INTEGER
-    END;
-
-    RealConst* = RECORD (Const)
-        value*: REAL
-    END;
-
-    SetConst* = RECORD (Const)
-        value*: SET
-    END;
-
-    StringConst* = RECORD (Const)
-        value*: STRING
-    END;
-
     Expression* = RECORD(Object.Type)
         PROCEDURE Expression*(
             code: STRING; 
             type: Types.PType; 
             designator: PDesignator; 
-            constValue: PConst; 
+            constValue: ConstValue.PType; 
             maxPrecedence: INTEGER);
 
         PROCEDURE code*(): STRING;
         PROCEDURE lval*(): STRING;
         PROCEDURE type*(): Types.PType;
         PROCEDURE designator*(): PDesignator;
-        PROCEDURE constValue*(): PConst;
+        PROCEDURE constValue*(): ConstValue.PType;
         PROCEDURE maxPrecedence*(): INTEGER;
         PROCEDURE isTerm*(): BOOLEAN;
 
         mCode: STRING;
         mType: Types.PType;
         mDesignator: PDesignator;
-        mConstValue: PConst;
+        mConstValue: ConstValue.PType;
         mMaxPrecedence: INTEGER
     END;
 
@@ -112,7 +93,7 @@ PROCEDURE Expression.designator(): PDesignator;
     RETURN SELF.mDesignator
 END Expression.designator;
 
-PROCEDURE Expression.constValue(): PConst;
+PROCEDURE Expression.constValue(): ConstValue.PType;
     RETURN SELF.mConstValue
 END Expression.constValue;
 
@@ -124,39 +105,11 @@ PROCEDURE Expression.isTerm(): BOOLEAN;
     RETURN (SELF.mDesignator = NIL) & (SELF.mMaxPrecedence = Precedence.none)
 END Expression.isTerm;
 
-PROCEDURE makeIntConst*(n: INTEGER): PConst;
-BEGIN
-    result <- NEW IntConst();
-    result.value := n;
-    RETURN result
-END;
-
-PROCEDURE makeRealConst*(n: REAL): PConst;
-BEGIN
-    result <- NEW RealConst();
-    result.value := n;
-    RETURN result
-END;
-
-PROCEDURE makeSetConst*(s: SET): PConst;
-BEGIN
-    result <- NEW SetConst();
-    result.value := s;
-    RETURN result
-END;
-
-PROCEDURE makeStringConst*(s: STRING): PConst;
-BEGIN
-    result <- NEW StringConst();
-    result.value := s;
-    RETURN result
-END;
-
 PROCEDURE Expression.Expression(
     code: STRING; 
     type: Types.PType; 
     designator: PDesignator; 
-    constValue: PConst; 
+    constValue: ConstValue.PType; 
     maxPrecedence: INTEGER)
   | mCode(code),
     mType(type),
@@ -169,7 +122,7 @@ PROCEDURE makeExpression*(
     code: STRING; 
     type: Types.PType; 
     designator: PDesignator; 
-    constValue: PConst)
+    constValue: ConstValue.PType)
     : PExpression;
     RETURN NEW Expression(code, type, designator, constValue, Precedence.none)
 END makeExpression;

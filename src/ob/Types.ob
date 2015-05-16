@@ -1,6 +1,6 @@
 MODULE Types;
 IMPORT
-    Chars, Context, Errors, JS, OberonRtl, Object, ScopeBase, Str := String;
+    Chars, ConstValue, Context, Errors, OberonRtl, Object, ScopeBase, Str := String;
 TYPE
     Id* = RECORD(Object.Type)
         PROCEDURE idType*(): STRING
@@ -41,10 +41,10 @@ TYPE
     PLazyTypeId = POINTER TO LazyTypeId;
 
     Const* = RECORD(Id)
-        PROCEDURE Const*(type: PType; value: JS.var);
+        PROCEDURE Const*(type: PType; value: ConstValue.PType);
 
         type: PType;
-        value: JS.var
+        value-: ConstValue.PType;
     END;
 
     PConst* = POINTER TO Const;
@@ -396,10 +396,6 @@ END Const.idType;
 PROCEDURE constType*(c: Const): PType;
     RETURN c.type
 END constType;
-
-PROCEDURE constValue*(c: Const): JS.var;
-    RETURN c.value
-END constValue;
 
 PROCEDURE Variable.idType(): STRING;
     RETURN "variable"
@@ -875,7 +871,7 @@ PROCEDURE Pointer.Pointer(name: STRING; base: PTypeId)
       base(base);
 END;
 
-PROCEDURE Const.Const(type: PType; value: JS.var)
+PROCEDURE Const.Const(type: PType; value: ConstValue.PType)
     | type(type),
       value(value);
 END;
