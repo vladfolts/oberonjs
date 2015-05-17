@@ -202,9 +202,16 @@ PROCEDURE unwrapType*(id: Types.PId): Types.PType;
 END;
 
 PROCEDURE throwTypeMismatch(from, to: Types.PType);
+VAR
+    fromDescription: STRING;
 BEGIN
+    IF from # NIL THEN
+        fromDescription := "'" + from.description() + "'";
+    ELSE
+        fromDescription := "no type (proper procedure call)";
+    END;
     Errors.raise("type mismatch: expected '" + to.description() 
-               + "', got '" + from.description() + "'");
+               + "', got " + fromDescription);
 END;
 
 PROCEDURE checkTypeMatch*(from, to: Types.PType);

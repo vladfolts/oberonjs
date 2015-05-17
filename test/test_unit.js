@@ -848,7 +848,9 @@ return {
          ["p2(TRUE, 1)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
          ["p2(1, 1)", "type mismatch for argument 2: 'INTEGER' cannot be converted to 'BOOLEAN'"],
          ["p3", "procedure returning a result cannot be used as a statement"],
-         ["p3()", "procedure returning a result cannot be used as a statement"]
+         ["p3()", "procedure returning a result cannot be used as a statement"],
+         ["IF p() THEN END", "procedure returning no result cannot be used in an expression"],
+         ["IF ~p() THEN END", "type mismatch: expected 'BOOLEAN', got no type (proper procedure call)"]
          )
 ),
 "procedure assignment": testWithContext(

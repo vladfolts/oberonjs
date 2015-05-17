@@ -1,6 +1,6 @@
 MODULE ContextExpression;
 IMPORT 
-    Chars, Code, ConstValue, ContextHierarchy, Operator, String, Types;
+    Chars, Code, ConstValue, ContextHierarchy, Errors, Operator, String, Types;
 TYPE
     ExpressionHandler = RECORD(ContextHierarchy.Node)
         PROCEDURE handleExpression(e: Code.PExpression);
@@ -38,6 +38,11 @@ TYPE
         simpleExpression: PSimpleExpression;
         operator: BinaryOperator;
     END;
+    PTerm = POINTER TO Term;
+
+    MulOperator* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleLiteral(s: STRING);
+    END;
 
     Const = RECORD(ContextHierarchy.Node)
         PROCEDURE Const(factor: PFactor);
@@ -56,6 +61,25 @@ TYPE
     Str* = RECORD(Const)
         PROCEDURE handleStr*(s: STRING);
     END;
+
+    OpTypeCheck = RECORD
+        PROCEDURE expect(): STRING;
+        PROCEDURE check(t: Types.PType): BOOLEAN;
+    END;
+
+    IntOpTypeCheck = RECORD(OpTypeCheck)
+    END;
+
+    NumericOpTypeCheck = RECORD(OpTypeCheck)
+    END;
+
+    NumericOrSetOpTypeCheck = RECORD(NumericOpTypeCheck)
+    END;
+
+VAR
+    intOpTypeCheck: IntOpTypeCheck;
+    numericOpTypeCheck: NumericOpTypeCheck;
+    numericOrSetOpTypeCheck: NumericOrSetOpTypeCheck;
 
 PROCEDURE Factor.Factor(parent: PFactor)
     | SUPER(parent),
@@ -150,6 +174,85 @@ BEGIN
     SELF.simpleExpression.handleTerm(e);
 END;
 
+PROCEDURE throwOperatorTypeMismatch*(op, expect: STRING; type: Types.PType);
+BEGIN
+    Errors.raise(
+        "operator '" + op +
+        "' type mismatch: " + expect + " expected, got '" +
+        type.description() + "'");
+END;
+
+PROCEDURE assertOpType(type: Types.PType; check: OpTypeCheck; literal: STRING);
+BEGIN
+    IF ~check.check(type) THEN
+        throwOperatorTypeMismatch(literal, check.expect(), type);
+    END;
+END;
+
+PROCEDURE assertNumericOp*(type: Types.PType; literal: STRING; op, intOp: BinaryOperator): BinaryOperator;
+VAR
+    result: BinaryOperator;
+BEGIN
+    assertOpType(type, numericOpTypeCheck, literal);
+    IF (intOp # NIL) & Types.isInt(type) THEN
+        result := intOp;
+    ELSE
+        result := op;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE assertNumericOrSetOp*(type: Types.PType; literal: STRING; op: BinaryOperator; intOp, setOp: BinaryOperator): BinaryOperator;
+VAR
+    result: BinaryOperator;
+BEGIN
+    assertOpType(type, numericOrSetOpTypeCheck, literal);
+    IF Types.isInt(type) THEN
+        result := intOp;
+    ELSIF type = Types.basic.set THEN
+        result := setOp;
+    ELSE
+        result := op;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE assertIntOp(type: Types.PType; literal: STRING; op: BinaryOperator): BinaryOperator;
+BEGIN
+    assertOpType(type, intOpTypeCheck, literal);
+    RETURN op;
+END;
+
+PROCEDURE MulOperator.handleLiteral(s: STRING);
+VAR
+    o: BinaryOperator;
+BEGIN
+    parent <- SELF.parent()(PTerm);
+    type <- parent.type();
+    IF s = "*" THEN
+        o := assertNumericOrSetOp(type, s, Operator.mulReal, Operator.mulInt, Operator.setIntersection);
+    ELSIF s = "/" THEN
+        IF Types.isInt(type) THEN
+            Errors.raise("operator DIV expected for integer division");
+        END;
+        o := assertNumericOrSetOp(type, s, Operator.divReal, NIL, Operator.setSymmetricDiff);
+    ELSIF s = "DIV" THEN
+        o := assertIntOp(type, s, Operator.divInt);
+    ELSIF s = "MOD" THEN
+        o := assertIntOp(type, s, Operator.mod);
+    ELSIF s = "&" THEN
+        IF type # Types.basic.bool THEN
+            Errors.raise("BOOLEAN expected as operand of '&', got '"
+                                 + type.description() + "'");
+        END;
+        o := Operator.and;
+    ELSE
+        ASSERT(FALSE);
+    END;
+
+    parent.handleOperator(o);
+END;
+
 PROCEDURE Const.Const(factor: PFactor)
     | SUPER(factor),
       factor(factor);
@@ -211,6 +314,30 @@ BEGIN
         NEW Types.String(s), 
         NEW ConstValue.String(s), 
         escapeString(s));
+END;
+
+PROCEDURE IntOpTypeCheck.expect(): STRING;
+    RETURN Types.intsDescription();
+END;
+
+PROCEDURE IntOpTypeCheck.check(t: Types.PType): BOOLEAN;
+    RETURN Types.isInt(t);
+END;
+
+PROCEDURE NumericOpTypeCheck.expect(): STRING;
+    RETURN "numeric type";
+END;
+
+PROCEDURE NumericOpTypeCheck.check(t: Types.PType): BOOLEAN;
+    RETURN Types.numeric.indexOf(t) # -1;
+END;
+
+PROCEDURE NumericOrSetOpTypeCheck.expect(): STRING;
+    RETURN SUPER() + " or SET";
+END;
+
+PROCEDURE NumericOrSetOpTypeCheck.check(t: Types.PType): BOOLEAN;
+    RETURN SUPER(t) OR (t = Types.basic.set);
 END;
 
 END ContextExpression.

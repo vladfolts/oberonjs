@@ -846,9 +846,9 @@ var AddOperator = Context.AddOperator.extend({
     }
 });
 
-var MulOperator = Context.MulOperator.extend({
+var MulOperator = Class.extend.call(ContextExpression.MulOperator, {
     init: function EberonContext$MulOperator(context){
-        Context.MulOperator.prototype.init.call(this, context);
+        ContextExpression.MulOperator.call(this, context);
     },
     endParse: function(s){
         this.parent().handleLogicalAnd();

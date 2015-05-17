@@ -4,6 +4,7 @@ var Cast = require("js/Cast.js");
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var ConstValue = require("js/ConstValue.js");
+var ContextExpression = require("js/ContextExpression.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var Errors = require("js/Errors.js");
 var Module = require("js/Module.js");
@@ -613,49 +614,6 @@ exports.ArrayDimensions = ChainedContext.extend({
     }
 });
 
-var numericOpTypeCheck = {
-    expect: "numeric type",
-    check: function(t){return Type.numeric().indexOf(t) != -1;}
-};
-
-var numericOrSetOpTypeCheck = {
-    expect: numericOpTypeCheck.expect + " or SET",
-    check: function(t){return numericOpTypeCheck.check(t) || t == basicTypes.set;}
-};
-
-var intOpTypeCheck = {
-    expect: Type.intsDescription(),
-    check: Type.isInt
-};
-
-function throwOperatorTypeMismatch(op, expect, type){
-    throw new Errors.Error(
-        "operator '" + op +
-        "' type mismatch: " + expect + " expected, got '" +
-        type.description() + "'");
-}
-
-function assertOpType(type, check, literal){
-    if (!check.check(type))
-        throwOperatorTypeMismatch(literal, check.expect, type);
-}
-
-function assertNumericOp(type, literal, op, intOp){
-    assertOpType(type, numericOpTypeCheck, literal);
-    return (intOp && Type.isInt(type))
-           ? intOp : op;
-}
-
-function assertNumericOrSetOp(type, literal, op, intOp, setOp){
-    assertOpType(type, numericOrSetOpTypeCheck, literal);
-    return Type.isInt(type) ? intOp : type == basicTypes.set ? setOp : op;
-}
-
-function assertIntOp(type, literal, op){
-    assertOpType(type, intOpTypeCheck, literal);
-    return op;
-}
-
 function useIntOrderOp(t){
     return Type.isInt(t) || t == basicTypes.ch;
 }
@@ -795,7 +753,7 @@ function relationOp(leftType, rightType, literal, ops, context){
             break;
         }
     if (mismatch)
-        throwOperatorTypeMismatch(literal, mismatch, type);
+        ContextExpression.throwOperatorTypeMismatch(literal, mismatch, type);
     return o;
 }
 
@@ -816,10 +774,10 @@ exports.AddOperator = ChainedContext.extend({
             case "+":
                 result = this._matchPlusOperator(type);
                 if (!result)
-                    throwOperatorTypeMismatch(s, this._expectPlusOperator(), type);
+                    ContextExpression.throwOperatorTypeMismatch(s, this._expectPlusOperator(), type);
                 break;
             case "-":
-                return assertNumericOrSetOp(type, s, op.subReal, op.subInt, op.setDiff);
+                return ContextExpression.assertNumericOrSetOp(type, s, op.subReal, op.subInt, op.setDiff);
             case "OR":
                 if (type != basicTypes.bool)
                     throw new Errors.Error("BOOLEAN expected as operand of 'OR', got '"
@@ -838,37 +796,6 @@ exports.AddOperator = ChainedContext.extend({
         return undefined;
     },
     _expectPlusOperator: function(){return "numeric type or SET";}
-});
-
-exports.MulOperator = ChainedContext.extend({
-    init: function MulOperatorContext(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    handleLiteral: function(s){
-        var parent = this.parent();
-        var type = parent.type();
-        var o;
-        if (s == "*")
-            o = assertNumericOrSetOp(type, s, op.mulReal, op.mulInt, op.setIntersection);
-        else if (s == "/"){
-            if (Type.isInt(type))
-                throw new Errors.Error("operator DIV expected for integer division");
-            o = assertNumericOrSetOp(type, s, op.divReal, undefined, op.setSymmetricDiff);
-        }
-        else if (s == "DIV")
-            o = assertIntOp(type, s, op.divInt);
-        else if (s == "MOD")
-            o = assertIntOp(type, s, op.mod);
-        else if (s == "&"){
-            if (type != basicTypes.bool)
-                throw new Errors.Error("BOOLEAN expected as operand of '&', got '"
-                                     + type.description() + "'");
-            o = op.and;
-        }
-
-        if (o)
-            parent.handleOperator(o);
-    }
 });
 
 function designatorAsExpression(d){
@@ -968,10 +895,10 @@ exports.SimpleExpression = ChainedContext.extend({
         var o;
         switch(this.__unaryOperator){
             case "-":
-                o = assertNumericOrSetOp(type, this.__unaryOperator, op.negateReal, op.negateInt, op.setComplement);
+                o = ContextExpression.assertNumericOrSetOp(type, this.__unaryOperator, op.negateReal, op.negateInt, op.setComplement);
                 break;
             case "+":
-                o = assertNumericOp(type, this.__unaryOperator, op.unaryPlus);
+                o = ContextExpression.assertNumericOp(type, this.__unaryOperator, op.unaryPlus);
                 break;
             }
         if (o){
