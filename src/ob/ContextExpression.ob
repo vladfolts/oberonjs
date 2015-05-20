@@ -20,7 +20,6 @@ TYPE
         PROCEDURE Factor(parent: PFactor);
 
         PROCEDURE handleConst(type: Types.PType; value: ConstValue.PType; code: STRING);
-        PROCEDURE handleLiteral(s: STRING);
         PROCEDURE handleLogicalNot();
 
         factorParent: PFactor;
@@ -41,7 +40,6 @@ TYPE
     PTerm = POINTER TO Term;
 
     MulOperator* = RECORD(ContextHierarchy.Node)
-        PROCEDURE handleLiteral(s: STRING);
     END;
 
     Const = RECORD(ContextHierarchy.Node)

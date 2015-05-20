@@ -175,6 +175,18 @@ exports.suite = {
           "cannot declare field, record already has method 'm'"]
          )
     ),
+"method is not exported in base record": testWithModule(
+      "MODULE test;"    
+    + "TYPE Base* = RECORD PROCEDURE method(); END;"
+    + "END test.",
+    pass(),
+    fail(["MODULE m; IMPORT test; TYPE D = RECORD(test.Base) PROCEDURE method(); END; END m.", 
+          "cannot declare a new method 'method': method already was declared in the base record (but was not exported)"],
+         ["MODULE m; IMPORT test; TYPE D = RECORD(test.Base) method: INTEGER; END; END m.", 
+          "cannot declare field, record already has method 'method' in the base record (was not exported)"],
+         ["MODULE m; IMPORT test; TYPE D = RECORD(test.Base) END; PROCEDURE D.method(); END; END m.", 
+          "'D' has no declaration for method 'method'"])
+    ),
 "overridden method declaration": testWithContext(
     context(grammar.declarationSequence,
               "TYPE Base = RECORD PROCEDURE p() END; T = RECORD (Base) END;"
