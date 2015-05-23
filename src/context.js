@@ -766,7 +766,7 @@ exports.AddOperator = ChainedContext.extend({
         var type = parent.type();
         var o = this.__matchOperator(s, type);
         if (o)
-            parent.handleBinaryOperator(o);
+            parent.handleOperator(o);
     },
     __matchOperator: function(s, type){
         var result;
@@ -877,48 +877,6 @@ exports.SetElement = ChainedContext.extend({
     },
     endParse: function(){
         this.parent().handleElement(this.__from, this.__fromValue, this.__to, this.__toValue);
-    }
-});
-
-exports.SimpleExpression = ChainedContext.extend({
-    init: function SimpleExpressionContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__unaryOperator = undefined;
-        this.__binaryOperator = undefined;
-        this.__type = undefined;
-        this.__exp = undefined;
-    },
-    handleTerm: function(e){
-        var type = e.type();
-        this.setType(type);
-
-        var o;
-        switch(this.__unaryOperator){
-            case "-":
-                o = ContextExpression.assertNumericOrSetOp(type, this.__unaryOperator, op.negateReal, op.negateInt, op.setComplement);
-                break;
-            case "+":
-                o = ContextExpression.assertNumericOp(type, this.__unaryOperator, op.unaryPlus);
-                break;
-            }
-        if (o){
-            this.__exp = o(e);
-            this.__unaryOperator = undefined;
-        }
-        else
-            this.__exp = this.__exp ? this.__binaryOperator(this.__exp, e) : e;
-    },
-    handleLiteral: function(s){this.__unaryOperator = s;},
-    type: function(){return this.__type;},
-    setType: function(type){
-        if (type === undefined || this.__type === undefined)
-            this.__type = type;
-        else
-            ContextHierarchy.checkImplicitCast(this.root(), type, this.__type);
-    },
-    handleBinaryOperator: function(o){this.__binaryOperator = o;},
-    endParse: function(){
-        this.parent().handleSimpleExpression(this.__exp);
     }
 });
 

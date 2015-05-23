@@ -970,9 +970,9 @@ var Term = Class.extend.call(ContextExpression.Term, {
     }
 });
 
-var SimpleExpression = Context.SimpleExpression.extend({
+var SimpleExpression = Class.extend.call(ContextExpression.SimpleExpression, {
     init: function EberonContext$SimpleExpression(context){
-        Context.SimpleExpression.prototype.init.call(this, context);
+        ContextExpression.SimpleExpression.call(this, context);
         this.__typePromotion = undefined;
         this.__currentTypePromotion = undefined;
         this.__orHandled = false;
@@ -990,12 +990,12 @@ var SimpleExpression = Context.SimpleExpression.extend({
                 msg.result = p.makeAnd();
             return;
         }
-        return Context.SimpleExpression.prototype.handleMessage.call(this, msg);
+        return ContextExpression.SimpleExpression.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
         if (this.__typePromotion)
             this.parent().handleTypePromotion(this.__typePromotion);
-        Context.SimpleExpression.prototype.endParse.call(this);
+        ContextExpression.SimpleExpression.prototype.endParse.call(this);
     },
     __getCurrentPromotion: function(){
         if (!this.__currentPromotion){

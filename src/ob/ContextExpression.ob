@@ -4,13 +4,30 @@ IMPORT
 TYPE
     ExpressionHandler = RECORD(ContextHierarchy.Node)
         PROCEDURE handleExpression(e: Code.PExpression);
-        PROCEDURE endParse();
 
         expression: Code.PExpression;
     END;
 
-    SimpleExpression = RECORD(ContextHierarchy.Node)
+    BinaryOperator = PROCEDURE(l, r: Code.PExpression): Code.PExpression;
+
+    Expression = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleSimpleExpression(e: Code.PExpression);
+    END;
+    PExpression = POINTER TO Expression;
+
+    SimpleExpression* = RECORD(ContextHierarchy.Node)
+        PROCEDURE SimpleExpression(parent: PExpression);
+
         PROCEDURE handleTerm(e: Code.PExpression);
+        PROCEDURE type(): Types.PType;
+        PROCEDURE setType(type: Types.PType);
+        PROCEDURE handleOperator(op: BinaryOperator);
+
+        parentExpression: PExpression;  
+        mType: Types.PType;
+        unaryOperator: STRING;
+        binaryOperator: BinaryOperator;
+        expression: Code.PExpression;
     END;
     PSimpleExpression = POINTER TO SimpleExpression;
 
@@ -25,8 +42,6 @@ TYPE
         factorParent: PFactor;
         logicalNot: BOOLEAN;
     END;
-
-    BinaryOperator = PROCEDURE(l, r: Code.PExpression): Code.PExpression;
 
     Term* = RECORD(ExpressionHandler)
         PROCEDURE Term(parent: PSimpleExpression);
@@ -78,6 +93,120 @@ VAR
     intOpTypeCheck: IntOpTypeCheck;
     numericOpTypeCheck: NumericOpTypeCheck;
     numericOrSetOpTypeCheck: NumericOrSetOpTypeCheck;
+
+PROCEDURE throwOperatorTypeMismatch*(op, expect: STRING; type: Types.PType);
+BEGIN
+    Errors.raise(
+        "operator '" + op +
+        "' type mismatch: " + expect + " expected, got '" +
+        type.description() + "'");
+END;
+
+PROCEDURE assertOpType(type: Types.PType; check: OpTypeCheck; literal: STRING);
+BEGIN
+    IF ~check.check(type) THEN
+        throwOperatorTypeMismatch(literal, check.expect(), type);
+    END;
+END;
+
+PROCEDURE assertNumericOp*(type: Types.PType; literal: STRING; op, intOp: BinaryOperator): BinaryOperator;
+VAR
+    result: BinaryOperator;
+BEGIN
+    assertOpType(type, numericOpTypeCheck, literal);
+    IF (intOp # NIL) & Types.isInt(type) THEN
+        result := intOp;
+    ELSE
+        result := op;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE assertNumericOrSetOp*(type: Types.PType; literal: STRING; op: BinaryOperator; intOp, setOp: BinaryOperator): BinaryOperator;
+VAR
+    result: BinaryOperator;
+BEGIN
+    assertOpType(type, numericOrSetOpTypeCheck, literal);
+    IF Types.isInt(type) THEN
+        result := intOp;
+    ELSIF type = Types.basic.set THEN
+        result := setOp;
+    ELSE
+        result := op;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE assertIntOp(type: Types.PType; literal: STRING; op: BinaryOperator): BinaryOperator;
+BEGIN
+    assertOpType(type, intOpTypeCheck, literal);
+    RETURN op;
+END;
+
+PROCEDURE SimpleExpression.SimpleExpression(parent: PExpression)
+    | SUPER(parent),
+      parentExpression(parent);
+END;
+
+PROCEDURE SimpleExpression.handleTerm(e: Code.PExpression);
+VAR
+    o: PROCEDURE(e: Code.PExpression): Code.PExpression;
+BEGIN
+    type <- e.type();
+    SELF.setType(type);
+    
+    IF SELF.unaryOperator = "-" THEN
+        IF Types.isInt(type) THEN
+            o := Operator.negateInt;
+        ELSIF type = Types.basic.set THEN
+            o := Operator.setComplement;
+        ELSIF type = Types.basic.real THEN
+            o := Operator.negateReal;
+        ELSE
+            throwOperatorTypeMismatch(SELF.unaryOperator, numericOrSetOpTypeCheck.expect(), type);
+        END;
+    ELSIF SELF.unaryOperator = "+" THEN
+        assertOpType(type, numericOpTypeCheck, SELF.unaryOperator);
+        o := Operator.unaryPlus;
+    END;
+
+    IF o # NIL THEN
+        SELF.expression := o(e);
+        SELF.unaryOperator := "";
+    ELSIF SELF.expression # NIL THEN
+        SELF.expression := SELF.binaryOperator(SELF.expression, e);
+    ELSE
+        SELF.expression := e;
+    END;
+END;
+
+PROCEDURE SimpleExpression.handleLiteral(s: STRING);
+BEGIN
+    SELF.unaryOperator := s;
+END;
+
+PROCEDURE SimpleExpression.type(): Types.PType;
+    RETURN SELF.mType;
+END;
+
+PROCEDURE SimpleExpression.setType(type: Types.PType);
+BEGIN
+    IF (type = NIL) OR (SELF.mType = NIL) THEN
+        SELF.mType := type;
+    ELSE
+        ContextHierarchy.checkImplicitCast(SELF.root()^, type, SELF.mType);
+    END;
+END;
+
+PROCEDURE SimpleExpression.handleOperator(o: BinaryOperator);
+BEGIN
+    SELF.binaryOperator := o;
+END;
+
+PROCEDURE SimpleExpression.endParse();
+BEGIN
+    SELF.parentExpression.handleSimpleExpression(SELF.expression);
+END;
 
 PROCEDURE Factor.Factor(parent: PFactor)
     | SUPER(parent),
@@ -170,55 +299,6 @@ BEGIN
         e := Code.makeExpression(d.code(), d.type(), d, const);
     END;
     SELF.simpleExpression.handleTerm(e);
-END;
-
-PROCEDURE throwOperatorTypeMismatch*(op, expect: STRING; type: Types.PType);
-BEGIN
-    Errors.raise(
-        "operator '" + op +
-        "' type mismatch: " + expect + " expected, got '" +
-        type.description() + "'");
-END;
-
-PROCEDURE assertOpType(type: Types.PType; check: OpTypeCheck; literal: STRING);
-BEGIN
-    IF ~check.check(type) THEN
-        throwOperatorTypeMismatch(literal, check.expect(), type);
-    END;
-END;
-
-PROCEDURE assertNumericOp*(type: Types.PType; literal: STRING; op, intOp: BinaryOperator): BinaryOperator;
-VAR
-    result: BinaryOperator;
-BEGIN
-    assertOpType(type, numericOpTypeCheck, literal);
-    IF (intOp # NIL) & Types.isInt(type) THEN
-        result := intOp;
-    ELSE
-        result := op;
-    END;
-    RETURN result;
-END;
-
-PROCEDURE assertNumericOrSetOp*(type: Types.PType; literal: STRING; op: BinaryOperator; intOp, setOp: BinaryOperator): BinaryOperator;
-VAR
-    result: BinaryOperator;
-BEGIN
-    assertOpType(type, numericOrSetOpTypeCheck, literal);
-    IF Types.isInt(type) THEN
-        result := intOp;
-    ELSIF type = Types.basic.set THEN
-        result := setOp;
-    ELSE
-        result := op;
-    END;
-    RETURN result;
-END;
-
-PROCEDURE assertIntOp(type: Types.PType; literal: STRING; op: BinaryOperator): BinaryOperator;
-BEGIN
-    assertOpType(type, intOpTypeCheck, literal);
-    RETURN op;
 END;
 
 PROCEDURE MulOperator.handleLiteral(s: STRING);

@@ -683,7 +683,7 @@ PROCEDURE not*(x: Code.PExpression): Code.PExpression;
     RETURN unary(x, opNot, "!")
 END not;
 
-PROCEDURE negateInt*(x: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE negateInt*(x: Code.PExpression): Code.PExpression;
 VAR
     result: Code.PExpression;
 BEGIN
@@ -699,15 +699,15 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE negateReal*(x: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE negateReal*(x: Code.PExpression): Code.PExpression;
     RETURN promoteToWideIfNeeded(unary(x, opNegateReal, "-"))
 END negateReal;
 
-PROCEDURE unaryPlus*(x: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE unaryPlus*(x: Code.PExpression): Code.PExpression;
     RETURN unary(x, opUnaryPlus, "")
 END unaryPlus;
 
-PROCEDURE setComplement*(x: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE setComplement*(x: Code.PExpression): Code.PExpression;
     RETURN unary(x, opSetComplement, "~")
 END setComplement;
 
