@@ -1,6 +1,6 @@
 MODULE Lexer;
-IMPORT Chars, Context, ContextExpression, ContextHierarchy, Errors, Stream, String;
-
+IMPORT 
+    Chars, ContextExpression, ContextHierarchy, Errors, Stream, String;
 CONST
     doubleQuote = Chars.doubleQuote;
     commentBegin = "(*";
@@ -185,7 +185,7 @@ PROCEDURE isHexDigit(c: CHAR): BOOLEAN;
     RETURN isDigit(c) OR ((c >= "A") & (c <= "F"));
 END;
 
-PROCEDURE point*(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
+PROCEDURE point*(VAR stream: Stream.Type; context: ContextHierarchy.Node): BOOLEAN;
 VAR result: BOOLEAN;
 BEGIN
     IF    ~Stream.eof(stream)
@@ -270,7 +270,7 @@ BEGIN
     RETURN i = LEN(s)
 END isReservedWord;
 
-PROCEDURE ident*(VAR stream: Stream.Type; context: Context.Type; reservedWords: STRING): BOOLEAN;
+PROCEDURE ident*(VAR stream: Stream.Type; context: ContextHierarchy.Node; reservedWords: STRING): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;
@@ -301,7 +301,7 @@ BEGIN
     RETURN result
 END ident;
 
-PROCEDURE skipComment(VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
+PROCEDURE skipComment(VAR stream: Stream.Type; context: ContextHierarchy.Node): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN
@@ -329,7 +329,7 @@ PROCEDURE readSpaces(c: CHAR): BOOLEAN;
         OR (c = 0DX)
 END readSpaces;
 
-PROCEDURE skipSpaces*(VAR stream: Stream.Type; context: Context.Type);
+PROCEDURE skipSpaces*(VAR stream: Stream.Type; context: ContextHierarchy.Node);
 BEGIN
     WHILE Stream.read(stream, readSpaces)
         & skipComment(stream, context) DO 
@@ -340,7 +340,7 @@ PROCEDURE Literal.Literal(s: STRING)
     | s(s);
 END;
 
-PROCEDURE literal*(l: Literal; VAR stream: Stream.Type; context: Context.Type): BOOLEAN;
+PROCEDURE literal*(l: Literal; VAR stream: Stream.Type; context: ContextHierarchy.Node): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN

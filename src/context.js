@@ -6,16 +6,21 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var ConstValue = require("js/ConstValue.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
+var Designator = require("js/Designator.js");
 var Errors = require("js/Errors.js");
+var Expression = require("js/Expression.js");
 var Module = require("js/Module.js");
 var op = require("js/Operator.js");
 var ObContext = require("js/Context.js");
 var Parser = require("parser.js");
 var Procedure = require("js/Procedure.js");
+var Record = require("js/Record.js");
 var Class = require("rtl.js").Class;
 var Scope = require("js/Scope.js");
 var Symbol = require("js/Symbols.js");
 var Type = require("js/Types.js");
+var TypeId = require("js/TypeId.js");
+var Variable = require("js/Variable.js");
 
 var basicTypes = Type.basic();
 var nullCodeGenerator = CodeGenerator.nullGenerator();
@@ -36,7 +41,7 @@ exports.BaseType = ChainedContext.extend({
     },
     handleQIdent: function(q){
         var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        this.parent().setBaseType(ContextHierarchy.unwrapType(s.symbol().info()));
+        this.parent().setBaseType(ContextExpression.unwrapType(s.symbol().info()));
     }
 });
 
@@ -74,7 +79,7 @@ exports.QualifiedIdentificator = ChainedContext.extend({
         this.__code = id + ".";
     },
     endParse: function(){
-        var code = this.__code ? this.__code + Type.mangleJSProperty(this.__id) : this.__id;
+        var code = this.__code ? this.__code + Record.mangleJSProperty(this.__id) : this.__id;
         this.parent().handleQIdent({
             module: this.__module,
             id: this.__id,
@@ -98,11 +103,6 @@ exports.Identdef = ChainedContext.extend({
         return new ObContext.IdentdefInfo(this._id, this._export);
     }
 });
-
-function castCode(type, context){
-    var baseType = type instanceof Type.Pointer ? Type.pointerBase(type) : type;
-    return Type.recordConstructor(context, baseType);
-}
 
 function makeContext(context){
     var l = context.root().language();
@@ -152,7 +152,7 @@ exports.Designator = ChainedContext.extend({
         var t = this.__currentType;
         var isReadOnly = this.__info instanceof Type.Variable 
                       && this.__info.isReadOnly();
-        if (t instanceof Type.Pointer){
+        if (t instanceof Record.Pointer){
             this.__handleDeref();
             isReadOnly = false;
         }
@@ -170,13 +170,13 @@ exports.Designator = ChainedContext.extend({
     _currentInfo: function(){return this.__info;},
     _discardCode: function(){this.__code = "";},
     _makeDerefVar: function(info){
-        return new Type.DerefVariable(this.__currentType, this.__code);
+        return new Variable.DerefVariable(this.__currentType, this.__code);
     },
     handleExpression: function(e){this.__indexExpression = e;},
     __handleIndexExpression: function(){
         var e = this.__indexExpression;
         this._checkIndexType(e.type());
-        var index = this._indexSequence(this.__info, this.__derefCode, Code.derefExpression(e).code());
+        var index = this._indexSequence(this.__info, this.__derefCode, Expression.deref(e).code());
         this._checkIndexValue(index, e.constValue());  
         return index;
     },
@@ -228,14 +228,14 @@ exports.Designator = ChainedContext.extend({
 
         return { length: length,
                  type: indexType,
-                 info: new Type.PropertyVariable(indexType, leadCode, indexCode, info instanceof Type.Const || info.isReadOnly(), this.root().language().rtl),
+                 info: new Variable.PropertyVariable(indexType, leadCode, indexCode, info instanceof Type.Const || info.isReadOnly(), this.root().language().rtl),
                  code: code,
                  lval: lval,
                  asProperty: indexCode
                };
     },
     _stringIndexCode: function(){
-        return this.__derefCode + ".charCodeAt(" + Code.derefExpression(this.__indexExpression).code() + ")";
+        return this.__derefCode + ".charCodeAt(" + Expression.deref(this.__indexExpression).code() + ")";
     },
     handleLiteral: function(s){
         if (s == "]" || s == ","){
@@ -253,18 +253,18 @@ exports.Designator = ChainedContext.extend({
         }
     },
     __handleDeref: function(){
-        if (!(this.__currentType instanceof Type.Pointer))
+        if (!(this.__currentType instanceof Record.Pointer))
             throw new Errors.Error("POINTER TO type expected, got '"
                                  + this.__currentType.description() + "'");
-        this.__currentType = Type.pointerBase(this.__currentType);
-        if (this.__currentType instanceof Type.NonExportedRecord)
+        this.__currentType = Record.pointerBase(this.__currentType);
+        if (this.__currentType instanceof Record.NonExported)
             throw new Errors.Error("POINTER TO non-exported RECORD type cannot be dereferenced");
         this.__lval = undefined;
     },
     handleTypeCast: function(type){
-        ContextHierarchy.checkTypeCast(this.__info, this.__currentType, type, "type cast");
+        ContextExpression.checkTypeCast(this.__info, this.__currentType, type, "type cast");
 
-        var code = this.root().language().rtl.typeGuard(this.__code, castCode(type, this));
+        var code = this.root().language().rtl.typeGuard(this.__code, ContextExpression.castCode(type, this));
         this.__code = code;
 
         this.__currentType = type;
@@ -272,7 +272,7 @@ exports.Designator = ChainedContext.extend({
     endParse: function(){
         var code = this.__code;
         this.parent().attributes.designator =
-            new Code.Designator(code, this.__lval ? this.__lval : code, this.__currentType, this.__info, this.__scope);
+            new Designator.Type(code, this.__lval ? this.__lval : code, this.__currentType, this.__info, this.__scope);
     }
 });
 
@@ -291,7 +291,7 @@ var HandleSymbolAsType = ChainedContext.extend({
     },
     handleQIdent: function(q){
         var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        this.setType(ContextHierarchy.unwrapType(s.symbol().info()));
+        this.setType(ContextExpression.unwrapType(s.symbol().info()));
     }
 });
 
@@ -349,7 +349,7 @@ exports.FormalParameters = ChainedContext.extend({
     },
     handleQIdent: function(q){
         var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        var resultType = ContextHierarchy.unwrapType(s.symbol().info());
+        var resultType = ContextExpression.unwrapType(s.symbol().info());
         this._checkResultType(resultType);
         this.__result = resultType;
     },
@@ -435,7 +435,7 @@ exports.ProcDecl = ChainedContext.extend({
         code.write(name + "/*" + arg.description() + "*/");
     },
     _makeArgumentVariable: function(arg, name){
-        return new Type.ArgumentVariable(name, arg.type, arg.isVar);
+        return new Variable.ArgumentVariable(name, arg.type, arg.isVar);
     },
     handleMessage: function(msg){
         if (msg == endParametersMsg){
@@ -524,11 +524,11 @@ exports.PointerDecl = ChainedContext.extend({
         
         var info = s ? s.symbol().info()
                      : this.parent().handleMessage(new ForwardTypeMsg(id));
-        var typeId = ContextHierarchy.unwrapTypeId(info);
+        var typeId = ContextExpression.unwrapTypeId(info);
         this.__setTypeId(typeId);
     },
     __setTypeId: function(typeId){
-        if (!(typeId instanceof Type.ForwardTypeId)){
+        if (!(typeId instanceof TypeId.Forward)){
             var type = typeId.type();
             if (!(type instanceof Type.Record))
                 throw new Errors.Error(
@@ -539,12 +539,12 @@ exports.PointerDecl = ChainedContext.extend({
         var name = parent.isAnonymousDeclaration() 
             ? ""
             : parent.genTypeName();
-        var pointerType = new Type.Pointer(name, typeId);
+        var pointerType = new Record.Pointer(name, typeId);
         parent.setType(pointerType);
     },
     setType: function(type){
-        var typeId = new Type.TypeId(type);
-        this.root().currentScope().addFinalizer(function(){typeId.strip();});
+        var typeId = new TypeId.Type(type);
+        this.root().currentScope().addFinalizer(function(){Record.stripTypeId(typeId);});
         this.__setTypeId(typeId);
     },
     isAnonymousDeclaration: function(){return true;},
@@ -614,102 +614,18 @@ exports.ArrayDimensions = ChainedContext.extend({
     }
 });
 
-function useIntOrderOp(t){
-    return Type.isInt(t) || t == basicTypes.ch;
-}
-
-function useIntEqOp(t){
-    return Type.isInt(t)
-        || t == basicTypes.bool
-        || t == basicTypes.ch
-        || t instanceof Type.Pointer
-        || t instanceof Type.Procedure
-        || t == nilType;
-}
-
-var RelationOps = Class.extend({
-    init: function RelationOps(){
-    },
-    eq: function(type){
-        return useIntEqOp(type)         ? op.equalInt 
-             : Type.isString(type)      ? op.equalStr
-             : type == basicTypes.real  ? op.equalReal
-             : type == basicTypes.set   ? op.equalSet
-                                        : undefined;
-    },
-    notEq: function(type){
-        return useIntEqOp(type)         ? op.notEqualInt 
-             : Type.isString(type)      ? op.notEqualStr
-             : type == basicTypes.real  ? op.notEqualReal
-             : type == basicTypes.set   ? op.notEqualSet
-                                        : undefined;
-    },
-    less: function(type){
-        return useIntOrderOp(type) ?    op.lessInt
-             : Type.isString(type)      ? op.lessStr 
-             : type == basicTypes.real  ? op.lessReal
-                                        : undefined;
-    },
-    greater: function(type){
-        return useIntOrderOp(type) ?    op.greaterInt
-             : Type.isString(type)      ? op.greaterStr 
-             : type == basicTypes.real  ? op.greaterReal
-                                        : undefined;
-    },
-    lessEq: function(type){
-        return useIntOrderOp(type) ?    op.eqLessInt
-             : Type.isString(type)      ? op.eqLessStr 
-             : type == basicTypes.real  ? op.eqLessReal
-             : type == basicTypes.set   ? op.setInclL
-                                        : undefined;
-    },
-    greaterEq: function(type){
-        return useIntOrderOp(type)      ? op.eqGreaterInt
-             : Type.isString(type)      ? op.eqGreaterStr 
-             : type == basicTypes.real  ? op.eqGreaterReal
-             : type == basicTypes.set   ? op.setInclR
-                                        : undefined;
-    },
-    is: function(type, context){
-        return function(left, right){
-                var d = left.designator();
-                ContextHierarchy.checkTypeCast(d ? d.info() : undefined, left.type(), type, "type test");
-                return op.is(left, Code.makeExpression(castCode(type, context)));
-            };
-    },
-    eqExpect: function(){return "numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE";},
-    strongRelExpect: function(){return "numeric type or CHAR or character array";},
-    relExpect: function(){return "numeric type or SET or CHAR or character array";},
-    coalesceType: function(leftType, rightType){
-        if (leftType instanceof Type.Pointer && rightType instanceof Type.Pointer){
-            var type = Cast.findPointerBaseType(leftType, rightType);
-            if (!type)
-                type = Cast.findPointerBaseType(rightType, leftType);
-            if (type)
-                return type;
-        }
-
-        // special case for strings
-        var isStrings = Type.isString(leftType) && Type.isString(rightType);
-        if (!isStrings)
-            ContextHierarchy.checkTypeMatch(rightType, leftType);
-
-        return leftType;
-    }
-});
-
-var relationOps = new RelationOps();
+var relationOps = new ContextExpression.RelationOps();
 
 function checkSetHasBit(leftType, rightType, context){
     if (!Type.isInt(leftType))
         throw new Errors.Error(
             Type.intsDescription() + " expected as an element of SET, got '" + Type.typeName(leftType) + "'");
-    ContextHierarchy.checkImplicitCast(context.root(), rightType, basicTypes.set);
+    ContextExpression.checkImplicitCast(context.root(), rightType, basicTypes.set);
 }
 
 function relationOp(leftType, rightType, literal, ops, context){
     var type = 
-          literal == "IS" ? ContextHierarchy.unwrapType(rightType)
+          literal == "IS" ? ContextExpression.unwrapType(rightType)
         : literal == "IN" ? checkSetHasBit(leftType, rightType, context)
                           : ops.coalesceType(leftType, rightType);
     var o;
@@ -812,7 +728,7 @@ function designatorAsExpression(d){
     var value;
     if (info instanceof Type.Const)
         value = info.value;
-    return Code.makeExpression(d.code(), d.type(), d, value);
+    return Expression.make(d.code(), d.type(), d, value);
 }
 
 exports.Set = ChainedContext.extend({
@@ -846,7 +762,7 @@ exports.Set = ChainedContext.extend({
             var code = this.root().language().rtl.makeSet(this.__expr);
             if (this.__value)
                 code += " | " + this.__value;
-            var e = Code.makeExpression(code, basicTypes.set);
+            var e = Expression.make(code, basicTypes.set);
             parent.handleExpression(e);
         }
     }
@@ -895,11 +811,12 @@ exports.Expression = ChainedContext.extend({
 
         var leftExpression = this.__expression;
         var rightExpression = e;
-        leftExpression = ContextHierarchy.promoteTypeInExpression(leftExpression, rightExpression.type());
-        rightExpression = ContextHierarchy.promoteTypeInExpression(rightExpression, leftExpression.type());
+        leftExpression = ContextExpression.promoteTypeInExpression(leftExpression, rightExpression.type());
+        rightExpression = ContextExpression.promoteTypeInExpression(rightExpression, leftExpression.type());
 
         var o = this._relationOperation(leftExpression.type(), rightExpression.type(), this.__relation);
-        this.__expression = o(leftExpression, rightExpression, this.root().language());
+        var language = this.root().language();
+        this.__expression = o(leftExpression, rightExpression, language);
     },
     _relationOperation: function(left, right, relation){
         return relationOp(left, right, relation, this.__relOps, this);
@@ -1291,7 +1208,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
             if (id.exported())
                 this.checkExport(varName);
 
-            var v = new Type.DeclaredVariable(varName, this.__type);
+            var v = new Variable.DeclaredVariable(varName, this.__type);
             this.root().currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
             gen.write("var " + varName + " = " + this._initCode() + ";");
         }
@@ -1357,9 +1274,9 @@ function isTypeRecursive(type, base){
     if (type == base)
         return true;
     if (type instanceof Type.Record){
-        if (isTypeRecursive(Type.recordBase(type), base))
+        if (isTypeRecursive(type.base, base))
             return true;
-        var fields = Type.recordOwnFields(type);
+        var fields = type.fields;
         for(var fieldName in fields){
             if (isTypeRecursive(fields[fieldName].type(), base))
                 return true;
@@ -1417,35 +1334,35 @@ exports.RecordDecl = ChainedContext.extend({
         return gen.result();
     },
     _qualifiedBaseConstructor: function(){
-        var baseType = Type.recordBase(this.__type);
+        var baseType = this.__type.base;
         if (!baseType)
             return "";
-        return this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType);
+        return this.qualifyScope(baseType.scope) + Type.typeName(baseType);
     },
     _generateBaseConstructorCallCode: function(){
-        var baseType = Type.recordBase(this.__type);
-        var qualifiedBase = baseType ? this.qualifyScope(Type.recordScope(baseType)) + Type.typeName(baseType) : undefined; 
+        var baseType = this.__type.base;
+        var qualifiedBase = baseType ? this.qualifyScope(baseType.scope) + Type.typeName(baseType) : undefined; 
         var result = this._qualifiedBaseConstructor();
         return result ? result + ".call(this);\n" : "";
     },
     __generateFieldsInitializationCode: function(){
         var result = "";
-        var ownFields = Type.recordOwnFields(this.__type);
+        var ownFields = this.__type.fields;
         for(var f in ownFields){
             var fieldType = ownFields[f].type();
-            result += "this." + Type.mangleField(f) + " = " + fieldType.initializer(this) + ";\n";
+            result += "this." + Record.mangleField(f) + " = " + fieldType.initializer(this) + ";\n";
         }
         return result;
     },
     _generateInheritance: function(){
-        var base = Type.recordBase(this.__type);
+        var base = this.__type.base;
         if (!base)
             return "";
-        var qualifiedBase = this.qualifyScope(Type.recordScope(base)) + Type.typeName(base); 
+        var qualifiedBase = this.qualifyScope(base.scope) + Type.typeName(base); 
         return this.root().language().rtl.extend(this.__cons, qualifiedBase) + ";\n";
     },
     _makeField: function(field, type){
-        return new Type.RecordField(field, type);
+        return new Record.Field(field, type);
     }
 });
 
@@ -1456,17 +1373,17 @@ exports.TypeDeclaration = ChainedContext.extend({
         this.__symbol = undefined;
     },
     handleIdentdef: function(id){
-        var typeId = new Type.LazyTypeId();
+        var typeId = new TypeId.Lazy();
         var symbol = new Symbol.Symbol(id.id(), typeId);
         var scope = this.root().currentScope();
         scope.addSymbol(symbol, id.exported());
         if (!id.exported())
-            scope.addFinalizer(function(){typeId.strip();});
+            scope.addFinalizer(function(){Record.stripTypeId(typeId);});
         this.__id = id;
         this.__symbol = symbol;
     },
     setType: function(type){
-        Type.defineTypeId(this.__symbol.info(), type);
+        TypeId.define(this.__symbol.info(), type);
         Scope.resolve(this.root().currentScope(), this.__symbol);
     },
     typeName: function(){return this.__id.id();},
@@ -1491,7 +1408,7 @@ exports.TypeSection = ChainedContext.extend({
                 return ContextHierarchy.getSymbol(this.root(), msg.id).info().type();
             }.bind(this);
 
-            return new Type.ForwardTypeId(resolve);
+            return new TypeId.Forward(resolve);
         }
         return ChainedContext.prototype.handleMessage.call(this, msg);
     },
@@ -1654,6 +1571,5 @@ exports.Chained = ChainedContext;
 exports.designatorAsExpression = designatorAsExpression;
 exports.endParametersMsg = endParametersMsg;
 exports.makeProcCall = makeProcCall;
-exports.RelationOps = RelationOps;
 exports.HandleSymbolAsType = HandleSymbolAsType;
 exports.makeContext = makeContext;

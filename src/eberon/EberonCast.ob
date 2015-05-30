@@ -1,5 +1,8 @@
 MODULE EberonCast;
-IMPORT Cast, Code, Context, EberonMap, EberonString, EberonOperator, EberonDynamicArray, LanguageContext, OberonRtl, Types;
+IMPORT 
+    Cast, Code, Context, 
+    EberonMap, EberonString, EberonOperator, EberonDynamicArray, Expression, 
+    LanguageContext, OberonRtl, Types;
 TYPE
     CastOpToDynamicArray = RECORD (Cast.CastOpArray)
     END;
@@ -11,8 +14,8 @@ VAR
     castOpToDynamicArray: POINTER TO CastOpToDynamicArray;
     castOpToMap: POINTER TO CastOpToMap;
 
-PROCEDURE CastOpToDynamicArray.make(cx: LanguageContext.PType; e: Code.PExpression): Code.PExpression;
-    RETURN Code.makeSimpleExpression(Cast.cloneArray(e.type()(Types.PArray), e.code(), cx), NIL)
+PROCEDURE CastOpToDynamicArray.make(cx: LanguageContext.PType; e: Expression.PType): Expression.PType;
+    RETURN Expression.makeSimple(Cast.cloneArray(e.type()(Types.PArray), e.code(), cx), NIL)
 END;
 
 PROCEDURE copyArray(t: Types.PArray; leftCode, rightCode: STRING; rtl: OberonRtl.Type): STRING;
@@ -27,19 +30,19 @@ BEGIN
     RETURN result
 END;
 
-PROCEDURE CastOpToDynamicArray.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpToDynamicArray.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
     RETURN copyArray(left.type()(Types.PArray), left.code(), right.code(), cx.rtl^)
 END;
 
-PROCEDURE CastOpToMap.make(cx: LanguageContext.PType; e: Code.PExpression): Code.PExpression;
+PROCEDURE CastOpToMap.make(cx: LanguageContext.PType; e: Expression.PType): Expression.PType;
     RETURN e;
 END;
 
-PROCEDURE CastOpToMap.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpToMap.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
     RETURN cx.rtl.copy(right.code(), left.code(), EberonOperator.generateTypeInfo(left.type()));
 END;
 
-PROCEDURE CastOpToMap.clone(cx: LanguageContext.PType; e: Code.PExpression): STRING;
+PROCEDURE CastOpToMap.clone(cx: LanguageContext.PType; e: Expression.PType): STRING;
     RETURN cx.rtl.clone(e.code(), EberonOperator.generateTypeInfo(e.type()), "undefined");
 END;
 

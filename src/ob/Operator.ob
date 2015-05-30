@@ -3,7 +3,9 @@ IMPORT
     Cast, 
     Code,
     ConstValue, 
+    Designator,
     Errors, 
+    Expression,
     LanguageContext, 
     OberonRtl, 
     Precedence := CodePrecedence,
@@ -13,7 +15,7 @@ CONST
     equalCode* = " == ";
     notEqualCode* = " != ";
 TYPE
-    BinaryProc* = PROCEDURE(left, right: Code.PExpression): Code.PExpression;
+    BinaryProc* = PROCEDURE(left, right: Expression.PType): Expression.PType;
 
     BinaryOp = PROCEDURE(left, right: ConstValue.PType): ConstValue.PType;
     CodePredicate = PROCEDURE(left, right: STRING; rtl: OberonRtl.PType): STRING;
@@ -47,21 +49,21 @@ VAR
     castOperations*: Cast.Operations;
 
 PROCEDURE binary(
-    left, right: Code.PExpression; 
+    left, right: Expression.PType; 
     rtl: OberonRtl.PType;
     op: BinaryOp;
     code: PCodeMaker;
     precedence: INTEGER;
     optResultType: Types.PType;
     optResultPrecedence: INTEGER
-    ): Code.PExpression;
+    ): Expression.PType;
 VAR
-    result: Code.PExpression;
+    result: Expression.PType;
     leftValue, rightValue, resultValue: ConstValue.PType;
     leftCode, rightCode, resultCode: STRING;
     resultType: Types.PType;
     resultPrecedence: INTEGER;
-    rightExpDeref: Code.PExpression;
+    rightExpDeref: Expression.PType;
 BEGIN
     leftValue := left.constValue();
     rightValue := right.constValue();
@@ -69,10 +71,10 @@ BEGIN
         resultValue := op(leftValue, rightValue);
     END;
 
-    leftCode := Code.adjustPrecedence(Code.derefExpression(left), precedence);
+    leftCode := Code.adjustPrecedence(Expression.deref(left), precedence);
 
     (* right code needs parentheses even if it has the same percedence *)
-    rightExpDeref := Code.derefExpression(right);
+    rightExpDeref := Expression.deref(right);
     IF precedence # Precedence.none THEN
         rightCode := Code.adjustPrecedence(rightExpDeref, precedence - 1);
     ELSE
@@ -92,7 +94,7 @@ BEGIN
     ELSE
         resultPrecedence := precedence;
     END;
-    RETURN NEW Code.Expression(resultCode, resultType, NIL, resultValue, resultPrecedence)
+    RETURN NEW Expression.Type(resultCode, resultType, NIL, resultValue, resultPrecedence)
 END binary;
 
 PROCEDURE SimpleCodeMaker.make(left, right: STRING; rtl: OberonRtl.PType): STRING;
@@ -118,13 +120,13 @@ PROCEDURE PredCodeMaker.PredCodeMaker(pred: CodePredicate)
 END;
 
 PROCEDURE binaryWithCodeEx(
-    left, right: Code.PExpression; 
+    left, right: Expression.PType; 
     op: BinaryOp;
     code: STRING;
     precedence: INTEGER;
     optResultType: Types.PType;
     optResultPrecedence: INTEGER
-    ): Code.PExpression;
+    ): Expression.PType;
     RETURN binary(
         left, 
         right, 
@@ -137,38 +139,38 @@ PROCEDURE binaryWithCodeEx(
 END;
 
 PROCEDURE binaryWithCode*(
-    left, right: Code.PExpression; 
+    left, right: Expression.PType; 
     op: BinaryOp;
     code: STRING;
     precedence: INTEGER
-    ): Code.PExpression;
+    ): Expression.PType;
     RETURN binaryWithCodeEx(left, right, op, code, precedence, NIL, Precedence.none)
 END binaryWithCode;
 
 PROCEDURE relational*(
-    left, right: Code.PExpression; 
+    left, right: Expression.PType; 
     op: BinaryOp;
     code: STRING
-    ): Code.PExpression;
+    ): Expression.PType;
     RETURN binaryWithCodeEx(left, right, op, code, Precedence.relational, Types.basic.bool, Precedence.none)
 END;
 
 PROCEDURE equal*(
-    left, right: Code.PExpression; 
+    left, right: Expression.PType; 
     op: BinaryOp;
     code: STRING
-    ): Code.PExpression;
+    ): Expression.PType;
     RETURN binaryWithCodeEx(left, right, op, code, Precedence.equal, Types.basic.bool, Precedence.none)
 END;
 
-PROCEDURE promoteToWideIfNeeded(e: Code.PExpression): Code.PExpression;
+PROCEDURE promoteToWideIfNeeded(e: Expression.PType): Expression.PType;
 VAR
-    result: Code.PExpression;
+    result: Expression.PType;
 BEGIN
     IF e.type() # Types.basic.uint8 THEN
         result := e;
     ELSE
-        result := NEW Code.Expression(
+        result := NEW Expression.Type(
                 e.code(),
                 Types.basic.integer,
                 e.designator(),
@@ -179,11 +181,11 @@ BEGIN
 END promoteToWideIfNeeded;
 
 PROCEDURE binaryInt(
-    left, right: Code.PExpression; 
+    left, right: Expression.PType; 
     op: BinaryOp;
     code: STRING;
     precedence: INTEGER
-    ): Code.PExpression;
+    ): Expression.PType;
     RETURN promoteToWideIfNeeded(binary(
         left, 
         right, 
@@ -197,11 +199,11 @@ PROCEDURE binaryInt(
 END binaryInt;
 
 PROCEDURE binaryPred(
-    left, right: Code.PExpression; 
+    left, right: Expression.PType; 
     rtl: OberonRtl.PType;
     op: BinaryOp;
     pred: CodePredicate
-    ): Code.PExpression;
+    ): Expression.PType;
     RETURN binary(
         left, 
         right, 
@@ -214,7 +216,7 @@ PROCEDURE binaryPred(
         )
 END binaryPred;
 
-PROCEDURE unary(e: Code.PExpression; op: UnaryOp; code: STRING): Code.PExpression;
+PROCEDURE unary(e: Expression.PType; op: UnaryOp; code: STRING): Expression.PType;
 VAR
     value: ConstValue.PType;
 BEGIN
@@ -223,13 +225,13 @@ BEGIN
         value := op(value);
     END;
     resultCode <- code 
-                + Code.adjustPrecedence(Code.derefExpression(e), Precedence.unary);
-    RETURN NEW Code.Expression(resultCode, e.type(), NIL, value, Precedence.unary)
+                + Code.adjustPrecedence(Expression.deref(e), Precedence.unary);
+    RETURN NEW Expression.Type(resultCode, e.type(), NIL, value, Precedence.unary)
 END;
 
-PROCEDURE castToStr(e: Code.PExpression; cx: LanguageContext.PType): STRING;
+PROCEDURE castToStr(e: Expression.PType; cx: LanguageContext.PType): STRING;
 VAR
-    resultExpression: Code.PExpression;
+    resultExpression: Expression.PType;
     op: LanguageContext.PCastOp;
     ignored: INTEGER;
 BEGIN
@@ -441,15 +443,15 @@ PROCEDURE codeSetInclR(left, right: STRING; rtl: OberonRtl.PType): STRING;
     RETURN rtl.setInclR(left, right)
 END codeSetInclR;
 
-PROCEDURE strCmp(op: STRING; left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
-    RETURN Code.makeSimpleExpression(
+PROCEDURE strCmp(op: STRING; left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
+    RETURN Expression.makeSimple(
             cx.rtl.strCmp(castToStr(left, cx), castToStr(right, cx)) + op + "0",
             Types.basic.bool)
 END;
 
-PROCEDURE assign*(left, right: Code.PExpression; cx: LanguageContext.PType): STRING;
+PROCEDURE assign*(left, right: Expression.PType; cx: LanguageContext.PType): STRING;
 VAR
-    designator: Code.PDesignator;
+    designator: Designator.PType;
     leftCode, rightCode: STRING;
     isArray: BOOLEAN;
     castOperation: LanguageContext.PCastOp;
@@ -500,10 +502,10 @@ BEGIN
     RETURN result
 END assign;
     
-PROCEDURE inplace(left, right: Code.PExpression; cx: LanguageContext.PType; code: STRING; altOp: BinaryProc): STRING;
+PROCEDURE inplace(left, right: Expression.PType; cx: LanguageContext.PType; code: STRING; altOp: BinaryProc): STRING;
 VAR
-    designator: Code.PDesignator;
-    rightExp: Code.PExpression;
+    designator: Designator.PType;
+    rightExp: Expression.PType;
     result: STRING;
 BEGIN
     designator := left.designator();
@@ -511,241 +513,241 @@ BEGIN
     IF (info IS Types.PVariable) & info.isReference() THEN
         result := assign(left, altOp(left, right), cx);
     ELSE
-        rightExp := Code.derefExpression(right);
+        rightExp := Expression.deref(right);
         result := left.code() + code + rightExp.code();
     END;
     RETURN result
 END inplace;
 
-PROCEDURE addReal*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE addReal*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opAddReal, " + ", Precedence.addSub)
 END addReal;
 
-PROCEDURE addInt*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE addInt*(left, right: Expression.PType): Expression.PType;
     RETURN binaryInt(left, right, opAddInt, " + ", Precedence.addSub)
 END addInt;
 
-PROCEDURE subReal*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE subReal*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opSubReal, " - ", Precedence.addSub)
 END subReal;
 
-PROCEDURE subInt*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE subInt*(left, right: Expression.PType): Expression.PType;
     RETURN binaryInt(left, right, opSubInt, " - ", Precedence.addSub)
 END subInt;
 
-PROCEDURE mulReal*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE mulReal*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opMulReal, " * ", Precedence.mulDivMod)
 END mulReal;
 
-PROCEDURE mulInt*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE mulInt*(left, right: Expression.PType): Expression.PType;
     RETURN binaryInt(left, right, opMulInt, " * ", Precedence.mulDivMod)
 END mulInt;
 
-PROCEDURE divReal*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE divReal*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opDivReal, " / ", Precedence.mulDivMod)
 END divReal;
 
-PROCEDURE divInt*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE divInt*(left, right: Expression.PType): Expression.PType;
     RETURN binaryInt(left, right, opDivInt, " / ", Precedence.mulDivMod)
 END divInt;
 
-PROCEDURE mod*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE mod*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opMod, " % ", Precedence.mulDivMod)
 END mod;
 
-PROCEDURE setUnion*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE setUnion*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opSetUnion, " | ", Precedence.bitOr)
 END setUnion;
 
-PROCEDURE setDiff*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE setDiff*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opSetDiff, " & ~", Precedence.bitAnd)
 END setDiff;
 
-PROCEDURE setIntersection*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE setIntersection*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opSetIntersection, " & ", Precedence.bitAnd)
 END setIntersection;
 
-PROCEDURE setSymmetricDiff*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE setSymmetricDiff*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opSetSymmetricDiff, " ^ ", Precedence.bitXor)
 END setSymmetricDiff;
 
-PROCEDURE setHasBit*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN NEW Code.Expression(
-            "1 << " + Code.adjustPrecedence(Code.derefExpression(left), Precedence.shift) 
-            + " & " + Code.adjustPrecedence(Code.derefExpression(right), Precedence.bitAnd),
+PROCEDURE setHasBit*(left, right: Expression.PType; rtl: OberonRtl.PType): Expression.PType;
+    RETURN NEW Expression.Type(
+            "1 << " + Code.adjustPrecedence(Expression.deref(left), Precedence.shift) 
+            + " & " + Code.adjustPrecedence(Expression.deref(right), Precedence.bitAnd),
             Types.basic.bool,
             NIL,
             NIL,
             Precedence.bitAnd)
 END setHasBit;
 
-PROCEDURE setInclL*(left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE setInclL*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN binaryPred(left, right, cx.rtl, opSetInclL, codeSetInclL)
 END setInclL;
 
-PROCEDURE setInclR*(left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE setInclR*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN binaryPred(left, right, cx.rtl, opSetInclR, codeSetInclR)
 END setInclR;
 
-PROCEDURE or*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE or*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opOr, " || ", Precedence.or)
 END or;
 
-PROCEDURE and*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE and*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opAnd, " && ", Precedence.and)
 END and;
 
-PROCEDURE equalInt*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE equalInt*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN equal(left, right, opEqualInt, equalCode)
 END equalInt;
 
-PROCEDURE equalReal*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE equalReal*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN equal(left, right, opEqualReal, equalCode)
 END equalReal;
 
-PROCEDURE equalSet*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE equalSet*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN equal(left, right, opEqualSet, equalCode)
 END equalSet;
 
-PROCEDURE equalStr*(left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE equalStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN strCmp(equalCode, left, right, cx)
 END equalStr;
 
-PROCEDURE notEqualInt*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE notEqualInt*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN equal(left, right, opNotEqualInt, notEqualCode)
 END notEqualInt;
 
-PROCEDURE notEqualReal*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE notEqualReal*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN equal(left, right, opNotEqualReal, notEqualCode)
 END notEqualReal;
 
-PROCEDURE notEqualSet*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE notEqualSet*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN equal(left, right, opNotEqualSet, notEqualCode)
 END notEqualSet;
 
-PROCEDURE notEqualStr*(left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE notEqualStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN strCmp(notEqualCode, left, right, cx)
 END notEqualStr;
 
-PROCEDURE is*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE is*(left, right: Expression.PType): Expression.PType;
     RETURN relational(left, right, NIL, " instanceof ")
 END is;
 
-PROCEDURE lessInt*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE lessInt*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN relational(left, right, opLessInt, " < ")
 END lessInt;
 
-PROCEDURE lessReal*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE lessReal*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN relational(left, right, opLessReal, " < ")
 END lessReal;
 
-PROCEDURE lessStr*(left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE lessStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN strCmp(" < ", left, right, cx)
 END lessStr;
 
-PROCEDURE greaterInt*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE greaterInt*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN relational(left, right, opGreaterInt, " > ")
 END greaterInt;
 
-PROCEDURE greaterReal*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE greaterReal*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN relational(left, right, opGreaterReal, " > ")
 END greaterReal;
 
-PROCEDURE greaterStr*(left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE greaterStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN strCmp(" > ", left, right, cx)
 END greaterStr;
 
-PROCEDURE eqLessInt*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE eqLessInt*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN relational(left, right, opEqLessInt, " <= ")
 END eqLessInt;
 
-PROCEDURE eqLessReal*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE eqLessReal*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN relational(left, right, opEqLessReal, " <= ")
 END eqLessReal;
 
-PROCEDURE eqLessStr*(left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE eqLessStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN strCmp(" <= ", left, right, cx)
 END eqLessStr;
 
-PROCEDURE eqGreaterInt*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE eqGreaterInt*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN relational(left, right, opEqGreaterInt, " >= ")
 END eqGreaterInt;
 
-PROCEDURE eqGreaterReal*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE eqGreaterReal*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN relational(left, right, opEqGreaterReal, " >= ")
 END eqGreaterReal;
 
-PROCEDURE eqGreaterStr*(left, right: Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE eqGreaterStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN strCmp(" >= ", left, right, cx)
 END eqGreaterStr;
 
-PROCEDURE not*(x: Code.PExpression): Code.PExpression;
+PROCEDURE not*(x: Expression.PType): Expression.PType;
     RETURN unary(x, opNot, "!")
 END not;
 
-PROCEDURE negateInt*(x: Code.PExpression): Code.PExpression;
+PROCEDURE negateInt*(x: Expression.PType): Expression.PType;
 VAR
-    result: Code.PExpression;
+    result: Expression.PType;
 BEGIN
     overflowCheck <- TRUE;
     c <- x.constValue();
     IF c # NIL THEN
         value <- -c^(ConstValue.Int).value;
-        result := NEW Code.Expression(String.fromInt(value), Types.basic.integer, NIL, NEW ConstValue.Int(value), Precedence.unary);
+        result := NEW Expression.Type(String.fromInt(value), Types.basic.integer, NIL, NEW ConstValue.Int(value), Precedence.unary);
     ELSE
         result := promoteToWideIfNeeded(unary(x, opNegateInt, "-"));
-        result := NEW Code.Expression(result.code() + " | 0", result.type(), result.designator(), result.constValue(), Precedence.bitOr);
+        result := NEW Expression.Type(result.code() + " | 0", result.type(), result.designator(), result.constValue(), Precedence.bitOr);
     END;
     RETURN result;
 END;
 
-PROCEDURE negateReal*(x: Code.PExpression): Code.PExpression;
+PROCEDURE negateReal*(x: Expression.PType): Expression.PType;
     RETURN promoteToWideIfNeeded(unary(x, opNegateReal, "-"))
 END negateReal;
 
-PROCEDURE unaryPlus*(x: Code.PExpression): Code.PExpression;
+PROCEDURE unaryPlus*(x: Expression.PType): Expression.PType;
     RETURN unary(x, opUnaryPlus, "")
 END unaryPlus;
 
-PROCEDURE setComplement*(x: Code.PExpression): Code.PExpression;
+PROCEDURE setComplement*(x: Expression.PType): Expression.PType;
     RETURN unary(x, opSetComplement, "~")
 END setComplement;
 
-PROCEDURE lsl*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE lsl*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opLsl, " << ", Precedence.shift)
 END lsl;
 
-PROCEDURE asr*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE asr*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opAsr, " >> ", Precedence.shift)
 END asr;
 
-PROCEDURE ror*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE ror*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opRor, " >>> ", Precedence.shift)
 END ror;
 
-PROCEDURE mulInplace*(left, right: Code.PExpression; cx: LanguageContext.PType): STRING;
+PROCEDURE mulInplace*(left, right: Expression.PType; cx: LanguageContext.PType): STRING;
     RETURN inplace(left, right, cx, " *= ", mulReal)
 END mulInplace;
 
-PROCEDURE divInplace*(left, right: Code.PExpression; cx: LanguageContext.PType): STRING;
+PROCEDURE divInplace*(left, right: Expression.PType; cx: LanguageContext.PType): STRING;
     RETURN inplace(left, right, cx, " /= ", divReal)
 END divInplace;
 
-PROCEDURE pow2*(e: Code.PExpression): Code.PExpression;
+PROCEDURE pow2*(e: Expression.PType): Expression.PType;
 VAR
-    derefExp: Code.PExpression;
+    derefExp: Expression.PType;
 BEGIN
-    derefExp := Code.derefExpression(e);
-    RETURN Code.makeSimpleExpression("Math.pow(2, " + derefExp.code() + ")",
-                                     Types.basic.real)
+    derefExp := Expression.deref(e);
+    RETURN Expression.makeSimple("Math.pow(2, " + derefExp.code() + ")",
+                                 Types.basic.real)
 END pow2;
 
-PROCEDURE log2*(e: Code.PExpression): Code.PExpression;
+PROCEDURE log2*(e: Expression.PType): Expression.PType;
 VAR
-    derefExp: Code.PExpression;
+    derefExp: Expression.PType;
 BEGIN
-    derefExp := Code.derefExpression(e);
-    RETURN NEW Code.Expression(
+    derefExp := Expression.deref(e);
+    RETURN NEW Expression.Type(
             "(Math.log(" + derefExp.code() + ") / Math.LN2) | 0",
             Types.basic.integer,
             NIL,
@@ -758,19 +760,19 @@ PROCEDURE opCastToUint8(left, right: ConstValue.PType): ConstValue.PType;
                             * right^(ConstValue.Int).value)
 END opCastToUint8;
 
-PROCEDURE CastToUint8.make(cx: LanguageContext.PType; e: Code.PExpression): Code.PExpression;
+PROCEDURE CastToUint8.make(cx: LanguageContext.PType; e: Expression.PType): Expression.PType;
     RETURN binaryWithCode(
         e, 
-        Code.makeExpression("0xFF", 
-                            Types.basic.integer, 
-                            NIL, 
-                            NEW ConstValue.Int(0FFH)), 
+        Expression.make("0xFF", 
+                        Types.basic.integer, 
+                        NIL, 
+                        NEW ConstValue.Int(0FFH)), 
         opCastToUint8, 
         " & ", 
         Precedence.bitAnd)
 END;
 
-PROCEDURE CastToUint8.clone(cx: LanguageContext.PType; e: Code.PExpression): STRING;
+PROCEDURE CastToUint8.clone(cx: LanguageContext.PType; e: Expression.PType): STRING;
     RETURN SELF.make(cx, e).code();
 END;
 

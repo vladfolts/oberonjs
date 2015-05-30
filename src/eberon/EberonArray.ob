@@ -1,5 +1,5 @@
 MODULE EberonArray;
-IMPORT Code, EberonTypes, Errors, LanguageContext, Procedure, Types;
+IMPORT EberonTypes, Errors, Expression, LanguageContext, Procedure, Types;
 CONST
     methodNameIndexOf = "indexOf";
 TYPE
@@ -39,11 +39,11 @@ BEGIN
     RETURN Procedure.makeCallGenerator(call, cx)
 END MethodIndexOf.callGenerator;
 
-PROCEDURE MethodCallIndexOf.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE MethodCallIndexOf.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
     argType <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode).type();
-    RETURN Code.makeSimpleExpression("(" + argCode.result() + ")", Types.basic.integer)
+    RETURN Expression.makeSimple("(" + argCode.result() + ")", Types.basic.integer)
 END MethodCallIndexOf.make;
 
 PROCEDURE denoteMethod*(id: STRING; elementsType: Types.PType): Types.PField;

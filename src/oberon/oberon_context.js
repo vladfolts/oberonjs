@@ -1,15 +1,16 @@
 "use strict";
 
-var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var Errors = require("js/Errors.js");
+var Expression = require("js/Expression.js");
 var op = require("js/Operator.js");
+var Record = require("js/Record.js");
 var Type = require("js/Types.js");
 
 var RecordDecl = Context.RecordDecl.extend({
     init: function OberonContext$RecordDecl(context){
-        Context.RecordDecl.prototype.init.call(this, context, Type.Record);
+        Context.RecordDecl.prototype.init.call(this, context, Record.Type);
     }
 });
 
@@ -56,7 +57,7 @@ var ProcedureCall = Context.Chained.extend({
     callExpression: function(){
         if (!this.__callExpression){
             var e = this.procCall().end();
-            this.__callExpression = new Code.Expression(this.__id + e.code(), e.type(), undefined, e.constValue(), e.maxPrecedence());
+            this.__callExpression = new Expression.Type(this.__id + e.code(), e.type(), undefined, e.constValue(), e.maxPrecedence());
         }
         return this.__callExpression;
     }
@@ -101,7 +102,7 @@ var Assignment = Context.Chained.extend({
     codeGenerator: function(){return CodeGenerator.nullGenerator();},
     handleExpression: function(e){
         var d = this.attributes.designator;
-        var left = Code.makeExpression(d.code(), d.type(), d);
+        var left = Expression.make(d.code(), d.type(), d);
         this.parent().codeGenerator().write(op.assign(left, e, this.root().language()));
     }
 });

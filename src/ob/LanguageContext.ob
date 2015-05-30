@@ -1,13 +1,13 @@
 MODULE LanguageContext;
-IMPORT Code, Context, CodeGenerator, T := Types;
+IMPORT Context, CodeGenerator, Expression, T := Types;
 
 TYPE
     PType* = POINTER TO Type;
 
     CastOp* = RECORD
-        PROCEDURE make*(cx: PType; e: Code.PExpression): Code.PExpression;
-        PROCEDURE assign*(cx: PType; left, right: Code.PExpression): STRING;
-        PROCEDURE clone*(cx: PType; e: Code.PExpression): STRING;
+        PROCEDURE make*(cx: PType; e: Expression.PType): Expression.PType;
+        PROCEDURE assign*(cx: PType; left, right: Expression.PType): STRING;
+        PROCEDURE clone*(cx: PType; e: Expression.PType): STRING;
     END;
 
     PCastOp* = POINTER TO CastOp;

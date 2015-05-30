@@ -1,5 +1,6 @@
 MODULE Module;
-IMPORT Code, Context, Errors, LanguageContext, Procedure, Symbols, Types;
+IMPORT 
+    Context, Errors, Expression, LanguageContext, Procedure, Symbols, TypeId, Types;
 TYPE
     Type* = RECORD(Types.Module)
         PROCEDURE findSymbol*(id: STRING): Symbols.PFoundSymbol
@@ -86,13 +87,13 @@ PROCEDURE AnyTypeProc.callGenerator(cx: LanguageContext.PType): Procedure.PCallG
     RETURN makeCallGenerator(cx)
 END AnyTypeProc.callGenerator;
 
-PROCEDURE AnyProcCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE AnyProcCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
     FOR i <- 0 TO LEN(args) - 1 DO
         argCode.write(args[i], NIL, NIL);
     END;
-    RETURN Code.makeSimpleExpression("(" + argCode.result() + ")", any)
+    RETURN Expression.makeSimple("(" + argCode.result() + ")", any)
 END AnyProcCall.make;
 
 PROCEDURE JS.findSymbol(id: STRING): Symbols.PFoundSymbol;
@@ -110,7 +111,7 @@ BEGIN
 END JS.findSymbol;
 
 PROCEDURE makeVarTypeSymbol(): Symbols.PSymbol;
-    RETURN NEW Symbols.Symbol(varTypeId, NEW Types.TypeId(any))
+    RETURN NEW Symbols.Symbol(varTypeId, NEW TypeId.Type(any))
 END makeVarTypeSymbol;
 
 PROCEDURE makeDoProcSymbol(): Symbols.PSymbol;
@@ -122,9 +123,9 @@ TYPE
 VAR
     description: STRING;
 
-    PROCEDURE Call.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE Call.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        arg: Code.PExpression;
+        arg: Expression.PType;
         type: Types.PType;
     BEGIN
         arg := Procedure.checkSingleArgument(args, SELF, cx.types, NIL);
@@ -133,7 +134,7 @@ VAR
             Errors.raise("string is expected as an argument of "
                        + description + ", got " + type.description());
         END;
-        RETURN Code.makeSimpleExpression(Types.stringValue(type(Types.PString)^), NIL)
+        RETURN Expression.makeSimple(Types.stringValue(type(Types.PString)^), NIL)
     END Call.make;
 
     PROCEDURE Proc.description(): STRING;
@@ -152,7 +153,7 @@ PROCEDURE makeJS*(): PType;
 END;
 
 PROCEDURE AnyType.AnyType()
-    | asVar(NEW Types.TypeId(SELF(POINTER)));
+    | asVar(NEW TypeId.Type(SELF(POINTER)));
 END;
 
 PROCEDURE AnyField.AnyField(id: STRING)

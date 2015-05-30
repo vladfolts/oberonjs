@@ -4,18 +4,22 @@ IMPORT
     Code, 
     Context, 
     ConstValue,
+    Designator,
     Errors, 
+    Expression,
     LanguageContext,
     OberonRtl,
     Object, 
     Operator, 
     Precedence := CodePrecedence, 
+    Record,
     String,
     Symbols, 
+    TypeId,
     Types;
 TYPE
     Call* = RECORD
-        PROCEDURE make*(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression
+        PROCEDURE make*(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType
     END;
     PCall = POINTER TO Call;
 
@@ -30,13 +34,13 @@ TYPE
     END;
 
     CallGenerator* = RECORD
-        PROCEDURE handleArgument*(e: Code.PExpression);
-        PROCEDURE end*(): Code.PExpression;
+        PROCEDURE handleArgument*(e: Expression.PType);
+        PROCEDURE end*(): Expression.PType;
     END;
     PCallGenerator* = POINTER TO CallGenerator;
 
     CallGeneratorImpl = RECORD(CallGenerator)
-        args: ARRAY * OF Code.PExpression;
+        args: ARRAY * OF Expression.PType;
         cx: LanguageContext.PType;
         call: PCall
     END;
@@ -59,7 +63,7 @@ TYPE
     END;
 
     ArgumentsCode* = RECORD
-        PROCEDURE write*(actual: Code.PExpression; 
+        PROCEDURE write*(actual: Expression.PType; 
                          expected: Types.PProcedureArgument; 
                          cast: LanguageContext.PCastOp
                          );
@@ -77,7 +81,7 @@ VAR
     predefined*: ARRAY * OF Symbols.PSymbol;
 
 PROCEDURE checkArgument*(
-    actual: Code.PExpression; 
+    actual: Expression.PType; 
     expected: Types.PProcedureArgument; 
     pos: INTEGER;
     code: PArgumentsCode;
@@ -85,7 +89,7 @@ PROCEDURE checkArgument*(
     );
 VAR
     actualType, expectType: Types.PType;
-    designator: Code.PDesignator;
+    designator: Designator.PType;
     result: LanguageContext.PCastOp;
     castErr: INTEGER;
 BEGIN
@@ -119,7 +123,7 @@ BEGIN
 END checkArgument;
 
 PROCEDURE checkArgumentsType(
-    actual: ARRAY OF Code.PExpression;
+    actual: ARRAY OF Expression.PType;
     expected: ARRAY OF Types.PProcedureArgument; 
     code: PArgumentsCode;
     types: LanguageContext.PTypes
@@ -140,7 +144,7 @@ BEGIN
 END checkArgumentsCount;
 
 PROCEDURE processArguments*(
-    actual: ARRAY OF Code.PExpression;
+    actual: ARRAY OF Expression.PType;
     expected: ARRAY OF Types.PProcedureArgument; 
     code: PArgumentsCode;
     types: LanguageContext.PTypes
@@ -150,7 +154,7 @@ BEGIN
     checkArgumentsType(actual, expected, code, types);
 END processArguments;
 
-PROCEDURE checkArguments(actual: ARRAY OF Code.PExpression; expected: ARRAY OF Types.PProcedureArgument; types: LanguageContext.PTypes);
+PROCEDURE checkArguments(actual: ARRAY OF Expression.PType; expected: ARRAY OF Types.PProcedureArgument; types: LanguageContext.PTypes);
 BEGIN
     processArguments(actual, expected, NIL, types);
 END checkArguments;
@@ -161,12 +165,12 @@ BEGIN
     SELF.call := call;
 END;
 
-PROCEDURE CallGeneratorImpl.handleArgument(e: Code.PExpression);
+PROCEDURE CallGeneratorImpl.handleArgument(e: Expression.PType);
 BEGIN
     SELF.args.add(e);
 END;
 
-PROCEDURE CallGeneratorImpl.end(): Code.PExpression;
+PROCEDURE CallGeneratorImpl.end(): Expression.PType;
     RETURN SELF.call.make(SELF.args, SELF.cx)
 END;
 
@@ -179,16 +183,16 @@ BEGIN
     RETURN result
 END;
 
-PROCEDURE GenArgCode.write(actual: Code.PExpression; expected: Types.PProcedureArgument; cast: LanguageContext.PCastOp);
+PROCEDURE GenArgCode.write(actual: Expression.PType; expected: Types.PProcedureArgument; cast: LanguageContext.PCastOp);
 VAR
-    e: Code.PExpression;
-    coercedArg: Code.PExpression;
+    e: Expression.PType;
+    coercedArg: Expression.PType;
 BEGIN
     IF (expected # NIL) & expected.isVar THEN
         referenceCode <- actual.designator().info()(Types.PVariable).referenceCode();
-        coercedArg := Code.makeSimpleExpression(referenceCode, actual.type());
+        coercedArg := Expression.makeSimple(referenceCode, actual.type());
     ELSE
-        coercedArg := Code.derefExpression(actual);
+        coercedArg := Expression.deref(actual);
     END;
     IF LEN(SELF.code) # 0 THEN
         SELF.code := SELF.code + ", ";
@@ -217,10 +221,10 @@ TYPE
         argumentsCode: PArgumentsCode
     END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     BEGIN
         processArguments(args, SELF.args, SELF.argumentsCode, cx.types);
-        RETURN Code.makeSimpleExpression(
+        RETURN Expression.makeSimple(
                 "(" + SELF.argumentsCode.result() + ")",
                 SELF.result
                 )
@@ -284,11 +288,11 @@ BEGIN
 END hasVarArgumnetWithCustomType;
 
 PROCEDURE checkSingleArgument*(
-    actual: ARRAY OF Code.PExpression; 
+    actual: ARRAY OF Expression.PType; 
     call: StdCall; 
     types: LanguageContext.PTypes; 
     code: PArgumentsCode
-    ): Code.PExpression;
+    ): Expression.PType;
 BEGIN
     ASSERT(LEN(call.args) = 1);
     processArguments(actual, call.args, code, types);
@@ -301,22 +305,22 @@ PROCEDURE makeNew(): Symbols.PSymbol;
         CallImpl = RECORD(StdCall)
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        result: Code.PExpression;
+        result: Expression.PType;
     BEGIN
         arg <- checkSingleArgument(args, SELF, cx.types, NIL);
         argType <- arg.type();
-        IF ~(argType IS Types.PPointer) THEN
+        IF ~(argType IS Record.PPointer) THEN
             Errors.raise("POINTER variable expected, got '" 
                          + argType.description() + "'");
         ELSE
-            baseType <- Types.pointerBase(argType^);
-            IF baseType IS Types.PNonExportedRecord THEN
+            baseType <- Record.pointerBase(argType^);
+            IF baseType IS Record.PNonExported THEN
                 Errors.raise("non-exported RECORD type cannot be used in NEW");
             END;
-            right <- Code.makeSimpleExpression(baseType.codeForNew(cx^), argType);
-            result := Code.makeSimpleExpression(Operator.assign(arg, right, cx), NIL);
+            right <- Expression.makeSimple(baseType.codeForNew(cx^), argType);
+            result := Expression.makeSimple(Operator.assign(arg, right, cx), NIL);
         END;
         RETURN result;
     END;
@@ -330,9 +334,9 @@ PROCEDURE lenArgumentCheck*(argType: Types.PType): BOOLEAN;
     RETURN (argType IS Types.PArray) OR (argType IS Types.PString)
 END lenArgumentCheck;
 
-PROCEDURE CallLen.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE CallLen.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 VAR
-    arg: Code.PExpression;
+    arg: Expression.PType;
     argType: Types.PType;
 BEGIN
     arg := checkSingleArgument(args, SELF, cx.types, NIL);
@@ -341,7 +345,7 @@ BEGIN
         Errors.raise("ARRAY or string is expected as an argument of LEN, got '"
                      + argType.description() + "'");
     END;
-    RETURN Code.makeSimpleExpression(
+    RETURN Expression.makeSimple(
         arg.code() + ".length",
         Types.basic.integer)
 END CallLen.make;
@@ -359,9 +363,9 @@ PROCEDURE makeOdd(): Symbols.PSymbol;
         CallImpl = RECORD(StdCall)
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        arg: Code.PExpression;
+        arg: Expression.PType;
         code: STRING;
         constValue: ConstValue.PType;
     BEGIN
@@ -374,7 +378,7 @@ PROCEDURE makeOdd(): Symbols.PSymbol;
                 ORD(ODD(constValue^(ConstValue.Int).value)));
         END;
 
-        RETURN NEW Code.Expression(
+        RETURN NEW Expression.Type(
             code + " & 1",
             Types.basic.bool,
             NIL,
@@ -392,12 +396,12 @@ PROCEDURE makeAssert(): Symbols.PSymbol;
         CallImpl = RECORD(StdCall)
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        arg: Code.PExpression;
+        arg: Expression.PType;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
-        RETURN Code.makeSimpleExpression(
+        RETURN Expression.makeSimple(
                 cx.rtl.assertId() + "(" + arg.code() + ")",
                 NIL)
     END CallImpl.make;
@@ -414,12 +418,12 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
             bitOp: BinaryOpStr
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        x, y: Code.PExpression;
+        x, y: Expression.PType;
         yValue: INTEGER;
         value: ConstValue.PType;
-        valueCodeExp: Code.PExpression;
+        valueCodeExp: Expression.PType;
         valueCode: STRING;
         comment: STRING;
     BEGIN
@@ -430,7 +434,7 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
         value := y.constValue();
         IF value = NIL THEN
             valueCodeExp := Operator.lsl(
-                Code.makeExpression(
+                Expression.make(
                     "1", 
                     Types.basic.integer,
                     NIL,
@@ -453,7 +457,7 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
             valueCode := String.fromInt(yValue) + "/*" + comment + "*/";
         END;
 
-        RETURN Code.makeSimpleExpression(
+        RETURN Expression.makeSimple(
             SELF.bitOp(Code.adjustPrecedence(x, Precedence.assignment), valueCode),
             NIL)
     END CallImpl.make;
@@ -466,7 +470,7 @@ BEGIN
     RETURN makeSymbol(NEW Std(call.name, call))
 END setBitImpl;
 
-PROCEDURE checkVariableArgumentsCount(min, max: INTEGER; actual: ARRAY OF Code.PExpression);
+PROCEDURE checkVariableArgumentsCount(min, max: INTEGER; actual: ARRAY OF Expression.PType);
 BEGIN
     len <- LEN(actual);
     IF len < min THEN
@@ -487,9 +491,9 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr; incRefOp: Ope
             incRefOp: Operator.BinaryProc;
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        x, y: Code.PExpression;
+        x, y: Expression.PType;
         code: STRING;
         value: ConstValue.PType;
         valueCode: STRING;
@@ -499,7 +503,7 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr; incRefOp: Ope
         x := args[0];
         IF Cast.passedByReference(x) THEN
             IF LEN(args) = 1 THEN
-                y := Code.makeSimpleExpression("1", NIL);
+                y := Expression.makeSimple("1", NIL);
             ELSE
                 y := args[1];
             END;
@@ -520,7 +524,7 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr; incRefOp: Ope
             END;
             code := SELF.incOp(x.code(), valueCode);
         END;
-        RETURN Code.makeSimpleExpression(code, NIL)
+        RETURN Expression.makeSimple(code, NIL)
     END CallImpl.make;
 BEGIN
     call <- NEW CallImpl();
@@ -554,9 +558,9 @@ PROCEDURE makeAbs(): Symbols.PSymbol;
         CallImpl = RECORD(StdCall)
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        arg: Code.PExpression;
+        arg: Expression.PType;
         argType: Types.PType;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
@@ -565,7 +569,7 @@ PROCEDURE makeAbs(): Symbols.PSymbol;
             Errors.raise("type mismatch: expected numeric type, got '"
                          + argType.description() + "'");
         END;
-        RETURN Code.makeSimpleExpression("Math.abs(" + arg.code() + ")", argType)
+        RETURN Expression.makeSimple("Math.abs(" + arg.code() + ")", argType)
     END CallImpl.make;
 BEGIN
     call <- NEW CallImpl();
@@ -578,13 +582,13 @@ PROCEDURE makeFloor(): Symbols.PSymbol;
         CallImpl = RECORD(StdCall)
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        arg: Code.PExpression;
+        arg: Expression.PType;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
         code <- Code.adjustPrecedence(arg, Precedence.bitOr) + " | 0";
-        RETURN NEW Code.Expression(
+        RETURN NEW Expression.Type(
             code,
             Types.basic.integer,
             NIL,
@@ -603,9 +607,9 @@ PROCEDURE makeFlt(): Symbols.PSymbol;
         CallImpl = RECORD(StdCall)
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        arg: Code.PExpression;
+        arg: Expression.PType;
         value: ConstValue.PType;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
@@ -613,7 +617,7 @@ PROCEDURE makeFlt(): Symbols.PSymbol;
         IF value # NIL THEN
             value := NEW ConstValue.Real(FLT(value^(ConstValue.Int).value));
         END;
-        RETURN NEW Code.Expression(
+        RETURN NEW Expression.Type(
                 arg.code(), 
                 Types.basic.real,
                 NIL,
@@ -633,7 +637,7 @@ PROCEDURE bitShiftImpl(name: STRING; op: Operator.BinaryProc): Symbols.PSymbol;
             op: Operator.BinaryProc
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     BEGIN
         checkArguments(args, SELF.args, cx.types);
         ASSERT(LEN(args) = 2);
@@ -653,14 +657,14 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
         CallImpl = RECORD(StdCall)
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        arg: Code.PExpression;
+        arg: Expression.PType;
         argType: Types.PType;
         value: ConstValue.PType;
         code: STRING;
         ch: CHAR;
-        result: Code.PExpression;
+        result: Expression.PType;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
         argType := arg.type();
@@ -669,11 +673,11 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
             IF (value # NIL) & (argType = Types.basic.set) THEN
                 value := NEW ConstValue.Int(ORD(value^(ConstValue.Set).value));
             END;
-            result := Code.makeExpression(arg.code(), Types.basic.integer, NIL, value);
+            result := Expression.make(arg.code(), Types.basic.integer, NIL, value);
         ELSIF argType = Types.basic.bool THEN
             code := Code.adjustPrecedence(arg, Precedence.conditional) 
                   + " ? 1 : 0";
-            result := NEW Code.Expression(
+            result := NEW Expression.Type(
                 code, 
                 Types.basic.integer, 
                 NIL, 
@@ -681,7 +685,7 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
                 Precedence.conditional);
         ELSIF (argType IS Types.PString) 
             & (Types.stringAsChar(argType(Types.PString)^, ch)) THEN
-            result := Code.makeExpression(
+            result := Expression.make(
                 String.fromInt(ORD(ch)), 
                 Types.basic.integer,
                 NIL,
@@ -704,12 +708,12 @@ PROCEDURE makeChr(): Symbols.PSymbol;
         CallImpl = RECORD(StdCall)
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        arg: Code.PExpression;
+        arg: Expression.PType;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
-        RETURN Code.makeSimpleExpression(arg.code(), Types.basic.ch)
+        RETURN Expression.makeSimple(arg.code(), Types.basic.ch)
     END CallImpl.make;
 BEGIN
     call <- NEW CallImpl();
@@ -722,14 +726,14 @@ PROCEDURE makePack(): Symbols.PSymbol;
         CallImpl = RECORD(StdCall)
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        x, y: Code.PExpression;
+        x, y: Expression.PType;
     BEGIN
         checkArguments(args, SELF.args, cx.types);
         x := args[0];
         y := args[1];
-        RETURN Code.makeSimpleExpression(
+        RETURN Expression.makeSimple(
             Operator.mulInplace(x, Operator.pow2(y), cx),
             NIL)
     END CallImpl.make;
@@ -745,14 +749,14 @@ PROCEDURE makeUnpk(): Symbols.PSymbol;
         CallImpl = RECORD(StdCall)
         END;
 
-    PROCEDURE CallImpl.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+    PROCEDURE CallImpl.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
     VAR
-        x, y: Code.PExpression;
+        x, y: Expression.PType;
     BEGIN
         checkArguments(args, SELF.args, cx.types);
         x := args[0];
         y := args[1];
-        RETURN Code.makeSimpleExpression(
+        RETURN Expression.makeSimple(
                 Operator.assign(y, Operator.log2(x), cx) 
                 + "; "
                 + Operator.divInplace(x, Operator.pow2(y), cx),

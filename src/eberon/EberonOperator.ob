@@ -1,5 +1,5 @@
 MODULE EberonOperator;
-IMPORT Cast, Code, CodePrecedence, ConstValue, EberonMap, LanguageContext, OberonRtl, Operator, Types;
+IMPORT Cast, CodePrecedence, ConstValue, EberonMap, Expression, LanguageContext, OberonRtl, Operator, Record, Types;
 TYPE
     CastOpRecord = RECORD(Cast.CastOpRecord)
     END;
@@ -41,37 +41,37 @@ PROCEDURE opGraterEqualStr(left, right: ConstValue.PType): ConstValue.PType;
                                >= right^(ConstValue.String).value))
 END opGraterEqualStr;
 
-PROCEDURE addStr*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE addStr*(left, right: Expression.PType): Expression.PType;
     RETURN Operator.binaryWithCode(left, right, opAddStr, " + ", CodePrecedence.addSub)
 END addStr;
 
-PROCEDURE equalStr*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE equalStr*(left, right: Expression.PType): Expression.PType;
     RETURN Operator.equal(left, right, opEqualStr, Operator.equalCode)
 END equalStr;
 
-PROCEDURE notEqualStr*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE notEqualStr*(left, right: Expression.PType): Expression.PType;
     RETURN Operator.equal(left, right, opNotEqualStr, Operator.notEqualCode)
 END notEqualStr;
 
-PROCEDURE lessStr*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE lessStr*(left, right: Expression.PType): Expression.PType;
     RETURN Operator.relational(left, right, opLessStr, " < ")
 END lessStr;
 
-PROCEDURE greaterStr*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE greaterStr*(left, right: Expression.PType): Expression.PType;
     RETURN Operator.relational(left, right, opGreaterStr, " > ")
 END greaterStr;
 
-PROCEDURE lessEqualStr*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE lessEqualStr*(left, right: Expression.PType): Expression.PType;
     RETURN Operator.relational(left, right, opLessEqualStr, " <= ")
 END lessEqualStr;
 
-PROCEDURE greaterEqualStr*(left, right: Code.PExpression): Code.PExpression;
+PROCEDURE greaterEqualStr*(left, right: Expression.PType): Expression.PType;
     RETURN Operator.relational(left, right, opGraterEqualStr, " >= ")
 END greaterEqualStr;
 
-PROCEDURE inMap*(left, right: Code.PExpression; rtl: OberonRtl.PType): Code.PExpression;
-    RETURN Code.makeSimpleExpression("Object.prototype.hasOwnProperty.call(" + right.code() + ", " + left.code() + ")",
-                                     Types.basic.bool);
+PROCEDURE inMap*(left, right: Expression.PType; rtl: OberonRtl.PType): Expression.PType;
+    RETURN Expression.makeSimple("Object.prototype.hasOwnProperty.call(" + right.code() + ", " + left.code() + ")",
+                                 Types.basic.bool);
 END;
 
 PROCEDURE generateTypeInfo*(type: Types.PType): STRING;
@@ -81,12 +81,12 @@ BEGIN
     IF type IS EberonMap.PType THEN
         result := "{map: " + generateTypeInfo(type.valueType) + "}";
     ELSE
-        result := Types.generateTypeInfo(type);
+        result := Record.generateTypeInfo(type);
     END;
     RETURN result;
 END;
 
-PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
 VAR
     result: STRING;
 BEGIN
@@ -100,7 +100,7 @@ BEGIN
         ELSE
             result := leftLval + " = " + cx.rtl.clone(right.code(), 
                                                       generateTypeInfo(left.type()), 
-                                                      Types.recordConstructor(cx^, left.type()(Types.PRecord)^));
+                                                      Record.constructor(cx^, left.type()(Record.PType)^));
         END;
     ELSE
         result := SUPER(cx, left, right);

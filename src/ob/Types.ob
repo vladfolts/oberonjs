@@ -1,6 +1,6 @@
 MODULE Types;
 IMPORT
-    Chars, ConstValue, Context, Errors, OberonRtl, Object, ScopeBase, Str := String;
+    Chars, ConstValue, Context, Errors, OberonRtl, Object, Str := String;
 TYPE
     Id* = RECORD(Object.Type)
         PROCEDURE idType*(): STRING
@@ -12,33 +12,6 @@ TYPE
         PROCEDURE description*(): STRING
     END;
     PType* = POINTER TO Type;
-
-    TypeId* = RECORD(Id)
-        PROCEDURE TypeId*(type: PType);
-
-        PROCEDURE type*(): PType;
-        PROCEDURE description(): STRING;
-        PROCEDURE strip();
-
-        mType: PType
-    END;
-    PTypeId* = POINTER TO TypeId;
-
-    ResolveTypeCallback = PROCEDURE(): PType;
-
-    ForwardTypeId* = RECORD(TypeId)
-        PROCEDURE ForwardTypeId(resolve: ResolveTypeCallback);
-
-        resolve: ResolveTypeCallback
-    END;
-
-    PForwardTypeId = POINTER TO ForwardTypeId;
-
-    LazyTypeId* = RECORD(TypeId)
-        PROCEDURE LazyTypeId*();
-    END;
-
-    PLazyTypeId = POINTER TO LazyTypeId;
 
     Const* = RECORD(Id)
         PROCEDURE Const*(type: PType; value: ConstValue.PType);
@@ -59,54 +32,6 @@ TYPE
     END;
 
     PVariable* = POINTER TO Variable;
-
-    TypedVariable = RECORD(Variable)
-        PROCEDURE TypedVariable(type: PStorageType);
-
-        mType: PStorageType;
-    END;
-
-    DeclaredVariable* = RECORD(TypedVariable)
-        PROCEDURE DeclaredVariable(id: STRING; type: PStorageType);
-
-        id: STRING;
-    END;
-
-    ArgumentVariable* = RECORD(DeclaredVariable)
-        PROCEDURE ArgumentVariable(id: STRING; type: PStorageType; var: BOOLEAN);
-
-        var: BOOLEAN;
-    END;
-
-    PRecordField* = POINTER TO RecordField;
-
-    FieldVariable* = RECORD(Variable)
-        PROCEDURE FieldVariable(f: PRecordField; leadCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType);
-
-        field: PRecordField;
-        leadCode: STRING;
-        readOnly: BOOLEAN;
-        rtl: OberonRtl.PType;
-    END;
-
-    PropertyVariable* = RECORD(TypedVariable)
-        PROCEDURE PropertyVariable(type: PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType);
-
-        leadCode, propCode: STRING;
-        readOnly: BOOLEAN;
-        rtl: OberonRtl.PType;
-    END;
-
-    DerefVariable* = RECORD(TypedVariable)
-        PROCEDURE DerefVariable(type: PStorageType; code: STRING);
-
-        code: STRING;
-    END;
-
-    ExportedVariable = RECORD(TypedVariable)
-    END;
-
-    PExportedVariable = POINTER TO ExportedVariable;
 
     ProcedureId* = RECORD(Id)
         PROCEDURE ProcedureId*(type: PType);
@@ -140,15 +65,6 @@ TYPE
     END;
     PField* = POINTER TO Field;
 
-    RecordField* = RECORD(Field)
-        PROCEDURE RecordField*(identdef: Context.PIdentdefInfo; type: PStorageType);
-
-        PROCEDURE identdef*(): Context.PIdentdefInfo;
-
-        mIdentdef: Context.PIdentdefInfo;
-        mType: PStorageType;
-    END;
-
     StorageType* = RECORD(Type)    
         PROCEDURE initializer*(cx: Context.Type): STRING;
         PROCEDURE denote*(id: STRING; isReadObly: BOOLEAN): PField;
@@ -156,10 +72,14 @@ TYPE
     END;
 
     NamedType* = RECORD(StorageType)
-        PROCEDURE NamedType(name: STRING);
+        PROCEDURE NamedType*(name: STRING);
 
         name*: STRING
     END;
+
+    Record* = RECORD(NamedType)
+    END;
+    PRecord* = POINTER TO Record;
 
     Array* = RECORD(NamedType)
         PROCEDURE Array*(elementsType: PStorageType);
@@ -181,16 +101,6 @@ TYPE
         len: INTEGER
     END;
     PStaticArray* = POINTER TO StaticArray;
-
-    PRecord* = POINTER TO Record;
-
-    Pointer* = RECORD(NamedType)
-        PROCEDURE Pointer*(name: STRING; base: PTypeId);
-
-        base: PTypeId
-    END;
-
-    PPointer* = POINTER TO Pointer;
 
     Procedure* = RECORD(NamedType)
         PROCEDURE designatorCode*(id: STRING): STRING
@@ -223,29 +133,6 @@ TYPE
 
     PBasicType* = POINTER TO BasicType;
 
-    FieldsMap = MAP OF PField;
-
-    Record* = RECORD(NamedType)
-        PROCEDURE Record*(name: STRING; cons: STRING; scope: ScopeBase.PType);
-
-        PROCEDURE setBase*(type: PRecord);
-        PROCEDURE addField*(f: PField);
-        PROCEDURE findSymbol*(id: STRING): PField;
-        PROCEDURE codeForNew*(cx: Context.Type): STRING;
-        PROCEDURE finalize*();
-
-        fields-: FieldsMap;
-        base-:   PRecord;
-        cons-:   STRING;
-        scope-:  ScopeBase.PType;
-        notExported: ARRAY * OF STRING
-    END;
-    
-    NonExportedRecord* = RECORD(Record)
-        PROCEDURE NonExportedRecord(cons: STRING; scope: ScopeBase.PType; base: PRecord);
-    END;
-    PNonExportedRecord* = POINTER TO NonExportedRecord;
-
     Nil = RECORD(Type)
     END;
 
@@ -266,89 +153,6 @@ VAR
 
     numeric*: ARRAY * OF PType;
     nil*: POINTER TO Nil;
-
-    pGenerateTypeInfo: PROCEDURE(type: PType): STRING;
-
-PROCEDURE TypeId.description(): STRING;
-VAR
-    t: PType;
-BEGIN
-    t := SELF.type();
-    RETURN "type " + t.description()
-END TypeId.description;
-
-PROCEDURE TypeId.type(): PType;
-    RETURN SELF.mType
-END TypeId.type;
-
-PROCEDURE finalizeRecord(closure: Object.PType);
-BEGIN
-    closure(PRecord).finalize();
-END finalizeRecord;
-
-PROCEDURE Record.codeForNew(cx: Context.Type): STRING;
-    RETURN SELF.initializer(cx);
-END;
-
-PROCEDURE Record.finalize();
-BEGIN
-    FOR i <- 0 TO LEN(SELF.notExported) - 1 DO
-        SELF.fields.remove(SELF.notExported[i])
-    END;
-    SELF.notExported.clear();
-END Record.finalize;
-
-PROCEDURE Record.isScalar(): BOOLEAN;
-    RETURN FALSE;
-END;
-
-PROCEDURE recordOwnFields*(r: Record): FieldsMap;
-    RETURN r.fields;
-END;
-
-PROCEDURE Record.Record(name: STRING; cons: STRING; scope: ScopeBase.PType)
-    | SUPER(name),
-      cons(cons),
-      scope(scope);
-BEGIN
-    scope.addFinalizer(finalizeRecord, SELF(POINTER));
-END;
-
-PROCEDURE NonExportedRecord.NonExportedRecord(cons: STRING; scope: ScopeBase.PType; base: PRecord)
-    | SUPER("", cons, scope);
-BEGIN
-    SELF.base := base;
-END;    
-
-PROCEDURE TypeId.strip();
-VAR
-    r: PRecord;
-BEGIN
-    IF SELF.mType IS PRecord THEN
-        r := SELF.mType(PRecord);
-        SELF.mType := NEW NonExportedRecord(r.cons, r.scope, r.base);
-    ELSE
-        SELF.mType := NIL;
-    END;
-END TypeId.strip;
-
-PROCEDURE ForwardTypeId.ForwardTypeId(resolve: ResolveTypeCallback)
-    | SUPER(NIL),
-      resolve(resolve);
-END;
-
-PROCEDURE ForwardTypeId.type(): PType;
-BEGIN
-    IF SELF.mType = NIL THEN
-        SELF.mType := SELF.resolve();
-    END;
-    RETURN SELF.mType
-END ForwardTypeId.type;
-
-PROCEDURE defineTypeId*(VAR tId: LazyTypeId; t: PType);
-BEGIN
-    tId.mType := t;
-END defineTypeId;
 
 PROCEDURE typeName*(type: NamedType): STRING;
     RETURN type.name
@@ -401,176 +205,9 @@ PROCEDURE Variable.idType(): STRING;
     RETURN "variable"
 END Variable.idType;
 
-PROCEDURE TypedVariable.type(): PStorageType;
-    RETURN SELF.mType
-END;
-
-PROCEDURE DeclaredVariable.referenceCode(): STRING;
-BEGIN
-    result <- SELF.id;
-    IF SELF.mType.isScalar() THEN
-        result := "{set: function($v){" + result + " = $v;}, get: function(){return " + result + ";}}";
-    END;
-    RETURN result;
-END;
-
-PROCEDURE DeclaredVariable.isReference(): BOOLEAN;
-    RETURN FALSE;
-END;
-
-PROCEDURE DeclaredVariable.isReadOnly(): BOOLEAN;
-    RETURN FALSE;
-END;
-
-PROCEDURE ArgumentVariable.idType(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    result := "formal parameter";
-    IF ~SELF.var THEN
-        result := "non-VAR " + result;
-    END;
-    RETURN result;
-END;
-
-PROCEDURE ArgumentVariable.isReference(): BOOLEAN;
-    RETURN SELF.var;
-END;
-
-PROCEDURE ArgumentVariable.isReadOnly(): BOOLEAN;
-    RETURN ~SELF.var 
-        & ((SELF.mType IS PArray) OR (SELF.mType IS PRecord));
-END;
-
-PROCEDURE ArgumentVariable.referenceCode(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    IF SELF.var THEN
-        result := SELF.id;
-    ELSE
-        result := SUPER();
-    END;
-    RETURN result;
-END;
-
-PROCEDURE mangleJSProperty*(id: STRING): STRING;
-BEGIN
-    result <- id;
-    IF (id = "constructor") OR (id = "prototype") THEN
-        result := result + "$";
-    END;
-    RETURN result;
-END;
-
-PROCEDURE mangleField*(id: STRING): STRING;
-    RETURN mangleJSProperty(id);
-END;
-
-PROCEDURE FieldVariable.idType(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    result := "record's field";
-    IF SELF.readOnly THEN
-        result := "read-only " + result; 
-    END;
-    RETURN result;
-END;
-
-PROCEDURE FieldVariable.type(): PStorageType;
-    RETURN SELF.field.mType;
-END;
-
-PROCEDURE FieldVariable.referenceCode(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    codeId <- mangleField(SELF.field.mIdentdef.id());
-    IF SELF.type().isScalar() THEN
-        result := SELF.rtl.makeRef(SELF.leadCode, 
-                                   Chars.doubleQuote + codeId + Chars.doubleQuote);
-    ELSE
-        result := SELF.leadCode + "." + codeId;
-    END;
-    RETURN result;
-END;
-
-PROCEDURE FieldVariable.isReference(): BOOLEAN;
-    RETURN FALSE;
-END;
-
-PROCEDURE FieldVariable.isReadOnly(): BOOLEAN;
-    RETURN SELF.readOnly;
-END;
-
-PROCEDURE PropertyVariable.idType(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    result := "array's element";
-    IF SELF.readOnly THEN
-        result := "read-only " + result; 
-    END;
-    RETURN result;
-END;
-
-PROCEDURE PropertyVariable.referenceCode(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    IF SELF.type().isScalar() THEN
-        result := SELF.rtl.makeRef(SELF.leadCode, SELF.propCode);
-    ELSE
-        result := SELF.leadCode + "[" + SELF.propCode + "]";
-    END;
-    RETURN result;
-END;
-
-PROCEDURE PropertyVariable.isReference(): BOOLEAN;
-    RETURN FALSE;
-END;
-
-PROCEDURE PropertyVariable.isReadOnly(): BOOLEAN;
-    RETURN SELF.readOnly;
-END;
-
-PROCEDURE DerefVariable.referenceCode(): STRING;
-    RETURN SELF.code;
-END;
-
-PROCEDURE DerefVariable.isReference(): BOOLEAN;
-    RETURN TRUE;
-END;
-
-PROCEDURE DerefVariable.isReadOnly(): BOOLEAN;
-    RETURN FALSE;
-END;
-
 PROCEDURE procedureType*(p: ProcedureId): PType;
     RETURN p.type
 END procedureType;
-
-PROCEDURE ExportedVariable.idType(): STRING;
-    RETURN "imported variable"
-END ExportedVariable.idType;
-
-PROCEDURE ExportedVariable.isReference(): BOOLEAN;
-    RETURN FALSE;
-END;
-
-PROCEDURE ExportedVariable.isReadOnly(): BOOLEAN;
-    RETURN TRUE;
-END;
-
-PROCEDURE ExportedVariable.referenceCode(): STRING;
-BEGIN
-    RETURN "";
-END;
-
-PROCEDURE TypeId.idType(): STRING;
-    RETURN "type"
-END TypeId.idType;
 
 PROCEDURE BasicType.description(): STRING;
     RETURN SELF.name
@@ -608,126 +245,6 @@ END moduleName;
 PROCEDURE BasicType.BasicType(name: STRING; initializer: STRING)
     | SUPER(name),
       mInitializer(initializer);
-END;
-
-PROCEDURE Record.description(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    IF LEN(SELF.name) # 0 THEN
-        result := SELF.name;
-    ELSE
-        result := "anonymous RECORD";
-    END;
-    RETURN result
-END Record.description;
-
-PROCEDURE recordConstructor*(cx: Context.Type; r: Record): STRING;
-    RETURN cx.qualifyScope(r.scope) + r.cons;
-END;
-
-PROCEDURE recordInitializer*(cx: Context.Type; r: Record; args: STRING): STRING;
-    RETURN "new " + recordConstructor(cx, r)  + "(" + args + ")";
-END;
-
-PROCEDURE Record.initializer(cx: Context.Type): STRING;
-    RETURN recordInitializer(cx, SELF, "");
-END;
-
-PROCEDURE Record.addField(f: PField);
-BEGIN
-    IF f.id() IN SELF.fields THEN
-        Errors.raise("duplicated field: '" + f.id() + "'");
-    END;
-    IF (SELF.base # NIL) & (SELF.base.findSymbol(f.id()) # NIL) THEN
-        Errors.raise("base record already has field: '" + f.id() + "'");
-    END;
-    SELF.fields[f.id()] := f;
-    IF ~f.exported() THEN
-        SELF.notExported.add(f.id());
-    END;
-END Record.addField;
-
-PROCEDURE Record.findSymbol(id: STRING): PField;
-VAR
-    result: PField;
-BEGIN
-    IF id IN SELF.fields THEN
-        result := SELF.fields[id];
-    ELSIF SELF.base # NIL THEN
-        result := SELF.base.findSymbol(id);
-    END;
-    RETURN result;
-END;
-
-PROCEDURE existingField(r: Record; id: STRING; d: NamedType): PField;
-BEGIN
-    result <- r.findSymbol(id);
-    IF result = NIL THEN
-        Errors.raise("type '" + d.description() + "' has no '" + id + "' field");
-    END;
-    RETURN result
-END existingField;
-
-PROCEDURE Record.denote(id: STRING; isReadObly: BOOLEAN): PField;
-BEGIN
-    RETURN existingField(SELF, id, SELF)
-END;
-
-PROCEDURE recordBase*(r: Record): PRecord;
-    RETURN r.base
-END recordBase;
-
-PROCEDURE Record.setBase(type: PRecord);
-BEGIN
-    SELF.base := type;
-END;
-
-PROCEDURE recordScope*(r: Record): ScopeBase.PType;
-    RETURN r.scope
-END recordScope;
-
-PROCEDURE pointerBase*(p: Pointer): PRecord;
-VAR
-    result: PType;
-BEGIN
-    result := p.base.type();
-    RETURN result(PRecord)
-END pointerBase;
-
-PROCEDURE Pointer.description(): STRING;
-VAR
-    base: PRecord;
-    result: STRING;
-BEGIN
-    IF LEN(SELF.name) # 0 THEN
-        result := SELF.name;
-    ELSE
-        base := pointerBase(SELF);
-        result := "POINTER TO " + base.description();
-    END;
-    RETURN result
-END Pointer.description;
-
-PROCEDURE Pointer.initializer(cx: Context.Type): STRING;
-    RETURN "null"
-END Pointer.initializer;
-
-PROCEDURE Pointer.denote(id: STRING; isReadObly: BOOLEAN): PField;
-VAR
-    d: POINTER TO NamedType;
-BEGIN
-    base <- pointerBase(SELF);
-    IF (LEN(SELF.name) = 0) OR (LEN(base.name) # 0) THEN
-        d := base;
-    ELSE
-        d := SELF(POINTER);
-    END;
-    RETURN existingField(base^, id, d^)
-END;
-
-PROCEDURE Pointer.isScalar(): BOOLEAN;
-    RETURN TRUE;
 END;
 
 PROCEDURE foldArrayDimensions(VAR a: Array; dimToStr: ArrayDimensionDescriptionCallback; VAR sizes, of: STRING);
@@ -835,14 +352,6 @@ PROCEDURE Module.idType(): STRING;
     RETURN "MODULE"
 END Module.idType;
 
-PROCEDURE TypeId.TypeId(type: PType)
-    | mType(type);
-END;
-
-PROCEDURE LazyTypeId.LazyTypeId()
-    | SUPER(NIL);
-END;
-
 PROCEDURE String.String(s: STRING)
     | s(s);
 END;
@@ -866,52 +375,9 @@ PROCEDURE StaticArray.StaticArray(
     len(len);
 END;
 
-PROCEDURE Pointer.Pointer(name: STRING; base: PTypeId)
-    | SUPER(name),
-      base(base);
-END;
-
 PROCEDURE Const.Const(type: PType; value: ConstValue.PType)
     | type(type),
       value(value);
-END;
-
-PROCEDURE TypedVariable.TypedVariable(type: PStorageType)
-    | mType(type);
-END;
-
-PROCEDURE DeclaredVariable.DeclaredVariable(id: STRING; type: PStorageType)
-    | SUPER(type),
-      id(id);
-END;
-
-PROCEDURE ArgumentVariable.ArgumentVariable(id: STRING; type: PStorageType; var: BOOLEAN)
-    | SUPER(id, type),
-      var(var);
-END;
-
-PROCEDURE FieldVariable.FieldVariable(f: PRecordField; leadCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType)
-    | field(f),
-      leadCode(leadCode),
-      readOnly(isReadOnly),
-      rtl(rtl);
-END;
-
-PROCEDURE PropertyVariable.PropertyVariable(type: PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType)
-    | SUPER(type),
-      leadCode(leadCode),
-      propCode(propCode),
-      readOnly(isReadOnly),
-      rtl(rtl);
-END;
-
-PROCEDURE DerefVariable.DerefVariable(type: PStorageType; code: STRING)
-    | SUPER(type),
-      code(code);
-      END;
-
-PROCEDURE makeExportedVariable*(v: Variable): PVariable;
-    RETURN NEW ExportedVariable(v.type());
 END;
 
 PROCEDURE ProcedureId.ProcedureId(type: PType)
@@ -924,69 +390,6 @@ END;
 
 PROCEDURE FieldCode.FieldCode(code, derefCode, propCode: STRING)
     | code(code), derefCode(derefCode), propCode(propCode);
-END;
-
-PROCEDURE RecordField.id(): STRING;
-    RETURN SELF.mIdentdef.id();
-END;
-
-PROCEDURE RecordField.exported(): BOOLEAN;
-    RETURN SELF.mIdentdef.exported();
-END;
-
-PROCEDURE RecordField.identdef(): Context.PIdentdefInfo;
-    RETURN SELF.mIdentdef;
-END;
-
-PROCEDURE RecordField.designatorCode(leadCode: STRING; cx: Context.Type): PFieldCode;
-BEGIN
-    codeId <- mangleField(SELF.mIdentdef.id());
-    RETURN NEW FieldCode(leadCode + "." + codeId, 
-                         leadCode, 
-                         Chars.doubleQuote + codeId + Chars.doubleQuote);
-END;
-
-PROCEDURE RecordField.type(): PType;
-    RETURN SELF.mType;
-END;
-
-PROCEDURE RecordField.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): PId;
-    RETURN NEW FieldVariable(SELF(POINTER), leadCode, isReadOnly, cx.rtl);
-END;
-
-PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: PStorageType)
-    | mIdentdef(identdef),
-      mType(type);
-END;
-
-PROCEDURE dumpRecordFields*(type: PRecord): STRING;
-VAR
-    result: STRING;
-BEGIN
-    IF type.base # NIL THEN
-        result := dumpRecordFields(type.base);
-    END;
-    FOR k, v IN type.fields DO
-        IF LEN(result) # 0 THEN
-            result := result + ", ";
-        END;
-        result := result + mangleField(k) + ": " + pGenerateTypeInfo(v.type());
-    END;
-    RETURN result;
-END;
-
-PROCEDURE generateTypeInfo*(type: PType): STRING;
-VAR
-    result: STRING;
-BEGIN
-    IF type IS PRecord THEN
-        result := "{record: {" + dumpRecordFields(type) + "}}";
-    ELSIF type IS PArray THEN
-        result := "{array: " + generateTypeInfo(type.elementsType) + "}";
-    ELSE
-        result := "null";
-    END;
-    RETURN result;
 END;
 
 BEGIN
@@ -1002,6 +405,4 @@ BEGIN
     numeric.add(basic.real);
 
     NEW(nil);
-
-    pGenerateTypeInfo := generateTypeInfo;
 END Types.

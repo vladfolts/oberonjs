@@ -5,7 +5,7 @@ var Code = require("js/Code.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var oc = require("oc.js");
 var makeRTL = require("rtl_code.js").makeRTL;
-var Type = require("js/Types.js");
+var Record = require("js/Record.js");
 
 var fs = require("fs");
 var path = require("path");
@@ -35,7 +35,7 @@ var ModuleGenerator = Class.extend({
             var e = exports[access];
             var code = Code.genExport(e);
             if (code){
-                var id = Type.mangleJSProperty(e.id());
+                var id = Record.mangleJSProperty(e.id());
                 result += "exports." + id + " = " + code + ";\n";
             }
         }

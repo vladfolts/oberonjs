@@ -1,0 +1,75 @@
+MODULE TypeId;
+IMPORT
+    Types;
+TYPE
+    PType* = POINTER TO Type;
+    Type* = RECORD(Types.Id)
+        PROCEDURE Type*(type: Types.PType);
+
+        PROCEDURE type*(): Types.PType;
+        PROCEDURE reset*(type: Types.PType);
+        PROCEDURE description(): STRING;
+
+        mType: Types.PType
+    END;
+
+    ResolveTypeCallback = PROCEDURE(): Types.PType;
+
+    Forward* = RECORD(Type)
+        PROCEDURE Forward(resolve: ResolveTypeCallback);
+
+        resolve: ResolveTypeCallback
+    END;
+
+    PForward = POINTER TO Forward;
+
+    Lazy* = RECORD(Type)
+        PROCEDURE Lazy*();
+    END;
+
+    PLazy = POINTER TO Lazy;
+
+PROCEDURE Type.description(): STRING;
+    RETURN "type " + SELF.type().description()
+END;
+
+PROCEDURE Type.type(): Types.PType;
+    RETURN SELF.mType
+END;
+
+PROCEDURE Type.reset(type: Types.PType);
+BEGIN
+    SELF.mType := type;
+END;
+
+PROCEDURE Forward.Forward(resolve: ResolveTypeCallback)
+    | SUPER(NIL),
+      resolve(resolve);
+END;
+
+PROCEDURE Forward.type(): Types.PType;
+BEGIN
+    IF SELF.mType = NIL THEN
+        SELF.mType := SELF.resolve();
+    END;
+    RETURN SELF.mType
+END;
+
+PROCEDURE define*(VAR tId: Lazy; t: Types.PType);
+BEGIN
+    tId.mType := t;
+END;
+
+PROCEDURE Type.idType(): STRING;
+    RETURN "type"
+END Type.idType;
+
+PROCEDURE Type.Type(type: Types.PType)
+    | mType(type);
+END;
+
+PROCEDURE Lazy.Lazy()
+    | SUPER(NIL);
+END;
+
+END TypeId.

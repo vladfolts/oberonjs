@@ -1,5 +1,5 @@
 MODULE EberonTypes;
-IMPORT Context, LanguageContext, Procedure, Types;
+IMPORT Context, LanguageContext, Procedure, Record, Types;
 
 TYPE
     CallGenerator = PROCEDURE(cx: LanguageContext.PType; type: Types.DefinedProcedure): Procedure.PCallGenerator;
@@ -73,7 +73,7 @@ PROCEDURE MethodField.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.T
 END;
 
 PROCEDURE MethodField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
-    RETURN NEW Types.FieldCode(leadCode + "." + Types.mangleField(SELF.method.name), "", "");
+    RETURN NEW Types.FieldCode(leadCode + "." + Record.mangleField(SELF.method.name), "", "");
 END;
 
 END EberonTypes.

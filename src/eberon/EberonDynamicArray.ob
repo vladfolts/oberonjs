@@ -1,5 +1,8 @@
 MODULE EberonDynamicArray;
-IMPORT Cast, Code, ConstValue, Context, EberonArray, EberonOperator, EberonRecord, EberonTypes, Errors, LanguageContext, Procedure, Types;
+IMPORT 
+    Cast, Code, ConstValue, Context, 
+    EberonArray, EberonOperator, EberonRecord, EberonTypes, Errors, Expression, 
+    LanguageContext, Procedure, Record, Types;
 CONST
     methodNameAdd = "add";
     methodNameClear = "clear";
@@ -104,7 +107,7 @@ BEGIN
     RETURN result
 END;
 
-PROCEDURE AddCallGenerator.handleArgument(e: Code.PExpression);
+PROCEDURE AddCallGenerator.handleArgument(e: Expression.PType);
 BEGIN
     IF SELF.code # "" THEN
         Errors.raise("method 'add' expects one argument, got many");
@@ -122,17 +125,17 @@ BEGIN
     t <- e.type();
     IF t IS Types.PArray THEN
         SELF.code := Cast.cloneArray(t, SELF.code, SELF.cx);
-    ELSIF t IS Types.PRecord THEN
-        SELF.code := SELF.cx.rtl.clone(SELF.code, EberonOperator.generateTypeInfo(t), Types.recordConstructor(SELF.cx^, t^));
+    ELSIF t IS Record.PType THEN
+        SELF.code := SELF.cx.rtl.clone(SELF.code, EberonOperator.generateTypeInfo(t), Record.constructor(SELF.cx^, t^));
     END;
 END AddCallGenerator.handleArgument;
 
-PROCEDURE AddCallGenerator.end(): Code.PExpression;
+PROCEDURE AddCallGenerator.end(): Expression.PType;
 BEGIN
     IF SELF.code = "" THEN
         Errors.raise("method 'add' expects one argument, got nothing");
     END;
-    RETURN Code.makeSimpleExpression(
+    RETURN Expression.makeSimple(
             "(" + SELF.code + ")",
             NIL)
 END AddCallGenerator.end;
@@ -173,13 +176,13 @@ PROCEDURE MethodRemoveField.MethodRemoveField()
     | SUPER(NEW MethodRemove(methodNameRemove, NIL));
 END;
 
-PROCEDURE MethodCallClear.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE MethodCallClear.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     Procedure.processArguments(args, SELF.args, NIL, cx.types);
-    RETURN Code.makeSimpleExpression("(0, Number.MAX_VALUE)", NIL)
+    RETURN Expression.makeSimple("(0, Number.MAX_VALUE)", NIL)
 END MethodCallClear.make;
 
-PROCEDURE MethodCallRemove.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE MethodCallRemove.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
     arg <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
@@ -187,7 +190,7 @@ BEGIN
     IF (value # NIL) & (value^ IS ConstValue.Int) THEN
         Code.checkIndex(value.value);
     END;
-    RETURN Code.makeSimpleExpression("(" + argCode.result() + ", 1)", NIL)
+    RETURN Expression.makeSimple("(" + argCode.result() + ", 1)", NIL)
 END MethodCallRemove.make;
 
 PROCEDURE MethodClear.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;

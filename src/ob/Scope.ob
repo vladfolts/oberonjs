@@ -3,10 +3,13 @@ IMPORT
     Errors, 
     Object, 
     Procedures := Procedure, 
+    Record,
     ScopeBase,
     String,
     Symbols, 
-    Types;
+    TypeId,
+    Types,
+    Variable;
 TYPE
     Unresolved = ARRAY * OF STRING;
 
@@ -53,7 +56,7 @@ TYPE
 
 PROCEDURE addSymbolForType*(t: Types.PBasicType; VAR result: Symbols.Map);
 BEGIN
-    result[t.name] := NEW Symbols.Symbol(t.name, NEW Types.TypeId(t));
+    result[t.name] := NEW Symbols.Symbol(t.name, NEW TypeId.Type(t));
 END;
 
 PROCEDURE makeStdSymbols*(): Symbols.Map;
@@ -108,8 +111,8 @@ BEGIN
     i := s.unresolved.indexOf(id);
     IF i # -1 THEN
         info := symbol.info();
-        type := info(Types.PTypeId).type();
-        IF (type # NIL) & ~(type IS Types.PRecord) THEN
+        type := info(TypeId.PType).type();
+        IF (type # NIL) & ~(type IS Record.PType) THEN
             Errors.raise(
                 "'" 
                 + id
@@ -213,7 +216,7 @@ BEGIN
         symbol <- k;
         info <- symbol.info();
         IF info IS Types.PVariable THEN
-            symbol := NEW Symbols.Symbol(id, Types.makeExportedVariable(info^));
+            symbol := NEW Symbols.Symbol(id, Variable.makeExportedVariable(info^));
         END;
         m.exports[id] := symbol;
     END;

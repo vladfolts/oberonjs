@@ -1,6 +1,6 @@
 MODULE EberonRecord;
 IMPORT 
-    Cast, Context, EberonContext, EberonTypes, Errors, JS, Object, Scope, ScopeBase, Stream, String, Types;
+    Cast, Chars, Context, EberonContext, EberonTypes, Errors, JS, Object, Base := Record, Scope, ScopeBase, String, Types;
 CONST
     instantiateForVar* = 0;    
     instantiateForNew* = 1;    
@@ -13,7 +13,7 @@ TYPE
     MapOfMethodIds = MAP OF PMethodIds;
     MapOfFields = MAP OF Types.PField;
 
-    Record* = RECORD(Types.Record)
+    Record* = RECORD(Base.Type)
         PROCEDURE Record(name: STRING; cons: STRING; scope: ScopeBase.PType);
 
         PROCEDURE declareConstructor(type: Types.PDefinedProcedure; exported: BOOLEAN);
@@ -45,15 +45,15 @@ TYPE
     END;
     PRecord* = POINTER TO Record;
 
-    RecordField* = RECORD(Types.RecordField)
-        PROCEDURE RecordField*(identdef: Context.PIdentdefInfo; type: Types.PStorageType; record: PRecord);
+    Field* = RECORD(Base.Field)
+        PROCEDURE Field*(identdef: Context.PIdentdefInfo; type: Types.PStorageType; record: PRecord);
 
         record: PRecord;
     END;
 
-    RecordFieldAsMethod = RECORD(Types.RecordField)
+    FieldAsMethod = RECORD(Base.Field)
     END;
-    PRecordFieldAsMethod = POINTER TO RecordFieldAsMethod;
+    PFieldAsMethod = POINTER TO FieldAsMethod;
 
 PROCEDURE assertNotReadOnly*(isReadObly: BOOLEAN; method: STRING; class: STRING);
 BEGIN
@@ -202,7 +202,7 @@ BEGIN
     END;
 END;
 
-PROCEDURE RecordFieldAsMethod.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
+PROCEDURE FieldAsMethod.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
     RETURN NEW EberonTypes.MethodVariable(SELF.type()); 
 END;
 
@@ -230,7 +230,7 @@ PROCEDURE canBeCreatedInContext(cx: Context.Type; r: Record): BOOLEAN;
         OR canBeCreatedInAnotherModule(r);
 END;
 
-PROCEDURE Record.setBase(type: Types.PRecord);
+PROCEDURE Record.setBase(type: Base.PType);
 BEGIN
     IF (type.scope # SELF.scope) & (SELF.scope^ IS Scope.Module) 
         & ~canBeCreatedInAnotherModule(type(PRecord)^) THEN
@@ -323,7 +323,7 @@ BEGIN
                    + "method already was declared in the base record (but was not exported)");
     END;
 
-    SELF.declaredMethods[id] := NEW RecordFieldAsMethod(methodId, type);
+    SELF.declaredMethods[id] := NEW FieldAsMethod(methodId, type);
     IF ~methodId.exported() THEN
         SELF.nonExportedMethods.add(id);
     END;
@@ -492,10 +492,10 @@ BEGIN
     SUPER();
 END;
 
-PROCEDURE RecordField.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
+PROCEDURE Field.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
 BEGIN
     actualReadOnly <- isReadOnly;
-    IF ~actualReadOnly & (LEN(cx.qualifyScope(Types.recordScope(SELF.record^))) # 0) THEN
+    IF ~actualReadOnly & (LEN(cx.qualifyScope(SELF.record.scope)) # 0) THEN
         actualReadOnly := SELF.identdef()(EberonContext.PIdentdefInfo).isReadOnly();
     END;
     RETURN SUPER(leadCode, actualReadOnly, cx); 
@@ -516,15 +516,15 @@ BEGIN
         IF key IN r.fieldsInit THEN
             code := r.fieldsInit[key];
         ELSE
-            code := "this." + Types.mangleField(key) 
+            code := "this." + Base.mangleField(key) 
                     + " = " + type.initializer(cx^);
         END;
-        result := result + code + ";" + Stream.kCR;
+        result := result + code + ";" + Chars.ln;
     END;
     RETURN result;
 END;
 
-PROCEDURE RecordField.RecordField(identdef: Context.PIdentdefInfo; type: Types.PStorageType; record: PRecord)
+PROCEDURE Field.Field(identdef: Context.PIdentdefInfo; type: Types.PStorageType; record: PRecord)
     | SUPER(identdef, type),
       record(record);
 END;

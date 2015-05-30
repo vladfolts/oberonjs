@@ -1,0 +1,342 @@
+MODULE Record;
+IMPORT
+    Chars, Context, Errors, OberonRtl, Object, ScopeBase, TypeId, Types;
+TYPE
+    FieldsMap = MAP OF Types.PField;
+
+    PType* = POINTER TO Type;
+    Type* = RECORD(Types.Record)
+        PROCEDURE Type*(name: STRING; cons: STRING; scope: ScopeBase.PType);
+
+        PROCEDURE setBase*(type: PType);
+        PROCEDURE addField*(f: Types.PField);
+        PROCEDURE findSymbol*(id: STRING): Types.PField;
+        PROCEDURE codeForNew*(cx: Context.Type): STRING;
+        PROCEDURE finalize*();
+
+        fields-: FieldsMap;
+        base-:   PType;
+        cons-:   STRING;
+        scope-:  ScopeBase.PType;
+        notExported: ARRAY * OF STRING
+    END;
+
+    NonExported* = RECORD(Type)
+        PROCEDURE NonExported(cons: STRING; scope: ScopeBase.PType; base: PType);
+    END;
+    PNonExported* = POINTER TO NonExported;
+
+    Field* = RECORD(Types.Field)
+        PROCEDURE Field*(identdef: Context.PIdentdefInfo; type: Types.PStorageType);
+
+        PROCEDURE identdef*(): Context.PIdentdefInfo;
+
+        mIdentdef: Context.PIdentdefInfo;
+        mType: Types.PStorageType;
+    END;
+    PField* = POINTER TO Field;
+
+    Pointer* = RECORD(Types.NamedType)
+        PROCEDURE Pointer*(name: STRING; base: TypeId.PType);
+
+        base: TypeId.PType;
+    END;
+
+    PPointer* = POINTER TO Pointer;
+
+    FieldVariable* = RECORD(Types.Variable)
+        PROCEDURE FieldVariable(f: PField; leadCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType);
+
+        field: PField;
+        leadCode: STRING;
+        readOnly: BOOLEAN;
+        rtl: OberonRtl.PType;
+    END;
+
+VAR
+    pGenerateTypeInfo: PROCEDURE(type: Types.PType): STRING;
+
+PROCEDURE finalizeRecord(closure: Object.PType);
+BEGIN
+    closure(PType).finalize();
+END;
+
+PROCEDURE Type.codeForNew(cx: Context.Type): STRING;
+    RETURN SELF.initializer(cx);
+END;
+
+PROCEDURE Type.finalize();
+BEGIN
+    FOR i <- 0 TO LEN(SELF.notExported) - 1 DO
+        SELF.fields.remove(SELF.notExported[i])
+    END;
+    SELF.notExported.clear();
+END Type.finalize;
+
+PROCEDURE Type.isScalar(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE recordOwnFields*(r: Type): FieldsMap;
+    RETURN r.fields;
+END;
+
+PROCEDURE Type.Type(name: STRING; cons: STRING; scope: ScopeBase.PType)
+    | SUPER(name),
+      cons(cons),
+      scope(scope);
+BEGIN
+    scope.addFinalizer(finalizeRecord, SELF(POINTER));
+END;
+
+PROCEDURE NonExported.NonExported(cons: STRING; scope: ScopeBase.PType; base: PType)
+    | SUPER("", cons, scope);
+BEGIN
+    SELF.base := base;
+END;    
+
+PROCEDURE Type.description(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF LEN(SELF.name) # 0 THEN
+        result := SELF.name;
+    ELSE
+        result := "anonymous RECORD";
+    END;
+    RETURN result
+END;
+
+PROCEDURE constructor*(cx: Context.Type; r: Type): STRING;
+    RETURN cx.qualifyScope(r.scope) + r.cons;
+END;
+
+PROCEDURE initializer*(cx: Context.Type; r: Type; args: STRING): STRING;
+    RETURN "new " + constructor(cx, r)  + "(" + args + ")";
+END;
+
+PROCEDURE Type.initializer(cx: Context.Type): STRING;
+    RETURN initializer(cx, SELF, "");
+END;
+
+PROCEDURE Type.addField(f: Types.PField);
+BEGIN
+    IF f.id() IN SELF.fields THEN
+        Errors.raise("duplicated field: '" + f.id() + "'");
+    END;
+    IF (SELF.base # NIL) & (SELF.base.findSymbol(f.id()) # NIL) THEN
+        Errors.raise("base record already has field: '" + f.id() + "'");
+    END;
+    SELF.fields[f.id()] := f;
+    IF ~f.exported() THEN
+        SELF.notExported.add(f.id());
+    END;
+END;
+
+PROCEDURE Type.findSymbol(id: STRING): Types.PField;
+VAR
+    result: Types.PField;
+BEGIN
+    IF id IN SELF.fields THEN
+        result := SELF.fields[id];
+    ELSIF SELF.base # NIL THEN
+        result := SELF.base.findSymbol(id);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE existingField(r: Type; id: STRING; d: Types.NamedType): Types.PField;
+BEGIN
+    result <- r.findSymbol(id);
+    IF result = NIL THEN
+        Errors.raise("type '" + d.description() + "' has no '" + id + "' field");
+    END;
+    RETURN result
+END;
+
+PROCEDURE Type.denote(id: STRING; isReadObly: BOOLEAN): Types.PField;
+BEGIN
+    RETURN existingField(SELF, id, SELF)
+END;
+
+PROCEDURE Type.setBase(type: PType);
+BEGIN
+    SELF.base := type;
+END;
+
+PROCEDURE mangleJSProperty*(id: STRING): STRING;
+BEGIN
+    result <- id;
+    IF (id = "constructor") OR (id = "prototype") THEN
+        result := result + "$";
+    END;
+    RETURN result;
+END;
+
+PROCEDURE mangleField*(id: STRING): STRING;
+    RETURN mangleJSProperty(id);
+END;
+
+PROCEDURE dumpFields*(type: PType): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF type.base # NIL THEN
+        result := dumpFields(type.base);
+    END;
+    FOR k, v IN type.fields DO
+        IF LEN(result) # 0 THEN
+            result := result + ", ";
+        END;
+        result := result + mangleField(k) + ": " + pGenerateTypeInfo(v.type());
+    END;
+    RETURN result;
+END;
+
+PROCEDURE generateTypeInfo*(type: Types.PType): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF type IS PType THEN
+        result := "{record: {" + dumpFields(type) + "}}";
+    ELSIF type IS Types.PArray THEN
+        result := "{array: " + generateTypeInfo(type.elementsType) + "}";
+    ELSE
+        result := "null";
+    END;
+    RETURN result;
+END;
+
+PROCEDURE stripTypeId*(VAR id: TypeId.Type);
+BEGIN
+    r <- id.type();
+    IF r IS PType THEN
+        id.reset(NEW NonExported(r.cons, r.scope, r.base));
+    ELSE
+        id.reset(NIL);
+    END;
+END;
+
+PROCEDURE Field.id(): STRING;
+    RETURN SELF.mIdentdef.id();
+END;
+
+PROCEDURE Field.exported(): BOOLEAN;
+    RETURN SELF.mIdentdef.exported();
+END;
+
+PROCEDURE Field.identdef(): Context.PIdentdefInfo;
+    RETURN SELF.mIdentdef;
+END;
+
+PROCEDURE Field.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
+BEGIN
+    codeId <- mangleField(SELF.mIdentdef.id());
+    RETURN NEW Types.FieldCode(
+        leadCode + "." + codeId, 
+        leadCode, 
+        Chars.doubleQuote + codeId + Chars.doubleQuote);
+END;
+
+PROCEDURE Field.type(): Types.PType;
+    RETURN SELF.mType;
+END;
+
+PROCEDURE Field.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
+    RETURN NEW FieldVariable(SELF(POINTER), leadCode, isReadOnly, cx.rtl);
+END;
+
+PROCEDURE Field.Field(identdef: Context.PIdentdefInfo; type: Types.PStorageType)
+    | mIdentdef(identdef),
+      mType(type);
+END;
+
+PROCEDURE pointerBase*(p: Pointer): PType;
+    RETURN p.base.type()(PType);
+END;
+
+PROCEDURE Pointer.Pointer(name: STRING; base: TypeId.PType)
+    | SUPER(name),
+      base(base);
+END;
+
+PROCEDURE Pointer.description(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF LEN(SELF.name) # 0 THEN
+        result := SELF.name;
+    ELSE
+        result := "POINTER TO " + pointerBase(SELF).description();
+    END;
+    RETURN result
+END;
+
+PROCEDURE Pointer.initializer(cx: Context.Type): STRING;
+    RETURN "null"
+END Pointer.initializer;
+
+PROCEDURE Pointer.denote(id: STRING; isReadObly: BOOLEAN): Types.PField;
+VAR
+    d: POINTER TO Types.NamedType;
+BEGIN
+    base <- pointerBase(SELF);
+    IF (LEN(SELF.name) = 0) OR (LEN(base.name) # 0) THEN
+        d := base;
+    ELSE
+        d := SELF(POINTER);
+    END;
+    RETURN existingField(base^, id, d^)
+END;
+
+PROCEDURE Pointer.isScalar(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE FieldVariable.FieldVariable(f: PField; leadCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType)
+    | field(f),
+      leadCode(leadCode),
+      readOnly(isReadOnly),
+      rtl(rtl);
+END;
+
+PROCEDURE FieldVariable.idType(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    result := "record's field";
+    IF SELF.readOnly THEN
+        result := "read-only " + result; 
+    END;
+    RETURN result;
+END;
+
+PROCEDURE FieldVariable.type(): Types.PStorageType;
+    RETURN SELF.field.mType;
+END;
+
+PROCEDURE FieldVariable.referenceCode(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    codeId <- mangleField(SELF.field.mIdentdef.id());
+    IF SELF.type().isScalar() THEN
+        result := SELF.rtl.makeRef(SELF.leadCode, 
+                                   Chars.doubleQuote + codeId + Chars.doubleQuote);
+    ELSE
+        result := SELF.leadCode + "." + codeId;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE FieldVariable.isReference(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE FieldVariable.isReadOnly(): BOOLEAN;
+    RETURN SELF.readOnly;
+END;
+
+BEGIN
+    pGenerateTypeInfo := generateTypeInfo;
+END Record.

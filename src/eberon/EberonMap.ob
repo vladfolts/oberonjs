@@ -1,5 +1,6 @@
 MODULE EberonMap;
-IMPORT Code, Context, EberonRtl, EberonString, EberonRecord, EberonTypes, Errors, LanguageContext, Procedure, Types;
+IMPORT 
+    Context, EberonRtl, Expression, EberonString, EberonRecord, EberonTypes, Errors, LanguageContext, Procedure, Record, Types;
 CONST
     removeMethodName = "remove";
     clearMethodName = "clear";
@@ -76,17 +77,17 @@ PROCEDURE Type.isScalar(): BOOLEAN;
     RETURN FALSE;
 END;
 
-PROCEDURE MethodCallRemove.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE MethodCallRemove.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
     arg <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
-    RETURN Code.makeSimpleExpression("[" + argCode.result() + "]", NIL)
+    RETURN Expression.makeSimple("[" + argCode.result() + "]", NIL)
 END;        
 
-PROCEDURE MethodCallClear.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE MethodCallClear.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     Procedure.checkArgumentsCount(LEN(args), 0);
-    RETURN Code.makeSimpleExpression("", NIL);
+    RETURN Expression.makeSimple("", NIL);
 END;
 
 PROCEDURE MapMethod.description(): STRING;

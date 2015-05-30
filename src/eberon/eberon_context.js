@@ -16,12 +16,16 @@ var EberonScope = require("js/EberonScope.js");
 var EberonString = require("js/EberonString.js");
 var EberonTypes = require("js/EberonTypes.js");
 var Errors = require("js/Errors.js");
+var Expression = require("js/Expression.js");
 var op = require("js/Operator.js");
 var eOp = require("js/EberonOperator.js");
 var Symbol = require("js/Symbols.js");
 var Procedure = require("js/Procedure.js");
+var Record = require("js/Record.js");
 var Type = require("js/Types.js");
+var TypeId = require("js/TypeId.js");
 var TypePromotion = require("eberon/eberon_type_promotion.js");
+var Variable = require("js/Variable.js");
 
 /*
 function log(s){
@@ -31,7 +35,7 @@ function log(s){
 
 function superMethodCallGenerator(context, type){
     var args = Procedure.makeArgumentsCode(context);
-    args.write(Code.makeExpression("this"));
+    args.write(Expression.make("this"));
     return Procedure.makeProcCallGeneratorWithCustomArgs(context, type, args);
 }
 
@@ -49,7 +53,7 @@ var ProcOrMethodId = Context.Chained.extend({
     handleIdent: function(id){this.__maybeTypeId = id;},
     handleLiteral: function(s){
         var ss = ContextHierarchy.getSymbolAndScope(this.root(), this.__maybeTypeId);
-        var type = ContextHierarchy.unwrapType(ss.symbol().info());
+        var type = ContextExpression.unwrapType(ss.symbol().info());
         if (!(type instanceof Type.Record))
             throw new Errors.Error(
                   "RECORD type expected in method declaration, got '"
@@ -292,12 +296,12 @@ var Designator = Context.Designator.extend({
     handleLiteral: function(s){
         if (s == "SELF"){
             var type = this.handleMessage(getMethodSelf);
-            var info = new Type.DeclaredVariable("this", type);
+            var info = new Variable.DeclaredVariable("this", type);
             this._advance(type, info, "this");
         } 
         else if (s == "POINTER"){
-            var typeId = new Type.TypeId(this.handleMessage(getSelfAsPointerMsg));
-            var pointerType = new Type.Pointer("", typeId);
+            var typeId = new TypeId.Type(this.handleMessage(getSelfAsPointerMsg));
+            var pointerType = new Record.Pointer("", typeId);
             this._advance(pointerType, new SelfAsPointer(), "");
         }
         else if (s == "SUPER"){
@@ -309,7 +313,7 @@ var Designator = Context.Designator.extend({
     },
     __beginCall: function(){
         var type = this._currentType();
-        if (type instanceof Type.TypeId && type.type() instanceof Type.Record){
+        if (type instanceof TypeId.Type && type.type() instanceof Type.Record){
             this.__procCall = makeContextCall(
                 this, 
                 function(cx){ return EberonConstructor.makeConstructorCall(type, cx, false); }
@@ -337,7 +341,7 @@ var OperatorNew = Context.Chained.extend({
         var s = found.symbol();
         var info = s.info();
 
-        if (!(info instanceof Type.TypeId))
+        if (!(info instanceof TypeId.Type))
             throw new Errors.Error("record type is expected in operator NEW, got '" + info.idType() + "'");
 
         var type = info.type();
@@ -441,7 +445,7 @@ var ExpressionProcedureCall = Context.Chained.extend({
         var e;
         if (info instanceof ResultVariable){
             e = info.expression();
-            e = new Code.Expression(d.code(), d.type(), undefined, e.constValue(), e.maxPrecedence());
+            e = new Expression.Type(d.code(), d.type(), undefined, e.constValue(), e.maxPrecedence());
         }
         else
             e = Context.designatorAsExpression(d);
@@ -464,7 +468,7 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
         var type = d.type();
         var code;
         if (this.__right){
-            var left = Code.makeExpression(d.code(), type, d);
+            var left = Expression.make(d.code(), type, d);
             code = op.assign(left, this.__right, Context.makeContext(this));
         }
         else if (!(d.info() instanceof ResultVariable)){
@@ -553,10 +557,10 @@ var RecordDecl = Context.RecordDecl.extend({
         return Context.RecordDecl.prototype.handleMessage.call(this, msg);
     },
     _makeField: function(field, type){
-        return new EberonRecord.RecordField(field, type, this.__type);
+        return new EberonRecord.Field(field, type, this.__type);
     },
     _generateBaseConstructorCallCode: function(){
-        var base = Type.recordBase(this.type());
+        var base = this.type().base;
         if (!base)
             return "";
         var baseConstructor = EberonRecord.constructor$(base);
@@ -642,7 +646,7 @@ var BaseInit = Context.Chained.extend({
                 this,
                 function(cx){ 
                     return EberonConstructor.makeBaseConstructorCall(
-                        Type.recordBase(this.type()), 
+                        this.type().base, 
                         cx);
                     }.bind(this)
                 );
@@ -768,7 +772,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
             if (this.__isConstructor){
                 this.__boundType.defineConstructor(this.__methodType.procType());
 
-                var base = Type.recordBase(this.__boundType);
+                var base = this.__boundType.base;
                 var baseConstructor = base && EberonRecord.constructor$(base);
                 if (!this.__baseConstructorWasCalled && baseConstructor && baseConstructor.args().length)
                     throw new Errors.Error("base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)");
@@ -783,7 +787,7 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         if (!this.__methodId)
             throw new Errors.Error("SUPER can be used only in methods");
 
-        var baseType = Type.recordBase(this.__boundType);
+        var baseType = this.__boundType.base;
         if (!baseType)
             throw new Errors.Error(
                   "'" + Type.typeName(this.__boundType)
@@ -796,12 +800,12 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
         return {
             info: this.__isConstructor ? undefined
                                        : new Type.ProcedureId(new EberonTypes.MethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
-            code: this.qualifyScope(Type.recordScope(baseType))
+            code: this.qualifyScope(baseType.scope)
                 + Type.typeName(baseType) + ".prototype." + id + ".call"
         };
     },
     __handleFieldInit: function(id){
-        var fields = Type.recordOwnFields(this.__boundType);
+        var fields = this.__boundType.fields;
         if (!fields.hasOwnProperty(id))
             throw new Errors.Error("'" + id + "' is not record '" + Type.typeName(this.__boundType) + "' own field");
         
@@ -864,42 +868,42 @@ function TransferPromotedTypesMsg(promotion){
     this.promotion = promotion;
 }
 
-var RelationOps = Context.RelationOps.extend({
+var RelationOps = Class.extend.call(ContextExpression.RelationOps, {
     init: function EberonContext$RelationOps(){
-        Context.RelationOps.prototype.init.call(this);
+        ContextExpression.RelationOps.call(this);
     },
     eq: function(type){
         return type == EberonString.string() 
             ? eOp.equalStr
-            : Context.RelationOps.prototype.eq.call(this, type);
+            : ContextExpression.RelationOps.prototype.eq.call(this, type);
     },
     notEq: function(type){
         return type == EberonString.string() 
             ? eOp.notEqualStr
-            : Context.RelationOps.prototype.notEq.call(this, type);
+            : ContextExpression.RelationOps.prototype.notEq.call(this, type);
     },
     less: function(type){
         return type == EberonString.string() 
             ? eOp.lessStr
-            : Context.RelationOps.prototype.less.call(this, type);
+            : ContextExpression.RelationOps.prototype.less.call(this, type);
     },
     greater: function(type){
         return type == EberonString.string() 
             ? eOp.greaterStr
-            : Context.RelationOps.prototype.greater.call(this, type);
+            : ContextExpression.RelationOps.prototype.greater.call(this, type);
     },
     lessEq: function(type){
         return type == EberonString.string() 
             ? eOp.lessEqualStr
-            : Context.RelationOps.prototype.lessEq.call(this, type);
+            : ContextExpression.RelationOps.prototype.lessEq.call(this, type);
     },
     greaterEq: function(type){
         return type == EberonString.string() 
             ? eOp.greaterEqualStr
-            : Context.RelationOps.prototype.greaterEq.call(this, type);
+            : ContextExpression.RelationOps.prototype.greaterEq.call(this, type);
     },
     is: function(type, context){
-        var impl = Context.RelationOps.prototype.is.call(this, type, context);
+        var impl = ContextExpression.RelationOps.prototype.is.call(this, type, context);
         return function(left, right){
             var d = left.designator();
             if (d){
@@ -914,7 +918,7 @@ var RelationOps = Context.RelationOps.extend({
         if ((leftType == EberonString.string() && rightType instanceof Type.String)
             || (rightType == EberonString.string() && leftType instanceof Type.String))
             return EberonString.string();
-        return Context.RelationOps.prototype.coalesceType.call(this, leftType, rightType);
+        return ContextExpression.RelationOps.prototype.coalesceType.call(this, leftType, rightType);
     }
 });
 
@@ -1014,7 +1018,7 @@ var SimpleExpression = Class.extend.call(ContextExpression.SimpleExpression, {
 
 var relationOps = new RelationOps();
 
-var Expression = Context.Expression.extend({
+var ExpressionContext = Context.Expression.extend({
     init: function EberonContext$Expression(context){
         Context.Expression.prototype.init.call(this, context, relationOps);
         this.__typePromotion = undefined;
@@ -1229,7 +1233,7 @@ var MapDecl = Context.Chained.extend({
     },
     handleQIdent: function(q){
         var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        var type = ContextHierarchy.unwrapType(s.symbol().info());
+        var type = ContextExpression.unwrapType(s.symbol().info());
         this.setType(type);
     },
     // anonymous types can be used in map declaration
@@ -1402,7 +1406,7 @@ exports.BaseInit = BaseInit;
 exports.CaseLabel = CaseLabel;
 exports.ConstDecl = ConstDecl;
 exports.Designator = Designator;
-exports.Expression = Expression;
+exports.Expression = ExpressionContext;
 exports.ExpressionProcedureCall = ExpressionProcedureCall;
 exports.For = For;
 exports.ForEach = ForEach;

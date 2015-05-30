@@ -1,0 +1,108 @@
+MODULE Expression;
+IMPORT
+    ConstValue, Designator, Precedence := CodePrecedence, Types;
+TYPE
+    Type* = RECORD
+        PROCEDURE Type*(
+            code: STRING; 
+            type: Types.PType; 
+            designator: Designator.PType; 
+            constValue: ConstValue.PType; 
+            maxPrecedence: INTEGER);
+
+        PROCEDURE code*(): STRING;
+        PROCEDURE lval*(): STRING;
+        PROCEDURE type*(): Types.PType;
+        PROCEDURE designator*(): Designator.PType;
+        PROCEDURE constValue*(): ConstValue.PType;
+        PROCEDURE maxPrecedence*(): INTEGER;
+        PROCEDURE isTerm*(): BOOLEAN;
+
+        mCode: STRING;
+        mType: Types.PType;
+        mDesignator: Designator.PType;
+        mConstValue: ConstValue.PType;
+        mMaxPrecedence: INTEGER
+    END;
+
+    PType* = POINTER TO Type;
+
+PROCEDURE Type.code(): STRING;
+    RETURN SELF.mCode
+END;
+
+PROCEDURE Type.lval(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF SELF.mDesignator # NIL THEN
+        result := SELF.mDesignator.lval();
+    ELSE
+        result := SELF.mCode;
+    END;
+    RETURN result
+END;
+
+PROCEDURE Type.type(): Types.PType;
+    RETURN SELF.mType
+END;
+
+PROCEDURE Type.designator(): Designator.PType;
+    RETURN SELF.mDesignator
+END;
+
+PROCEDURE Type.constValue(): ConstValue.PType;
+    RETURN SELF.mConstValue
+END;
+
+PROCEDURE Type.maxPrecedence(): INTEGER;
+    RETURN SELF.mMaxPrecedence
+END;
+
+PROCEDURE Type.isTerm(): BOOLEAN;
+    RETURN (SELF.mDesignator = NIL) & (SELF.mMaxPrecedence = Precedence.none)
+END;
+
+PROCEDURE Type.Type(
+    code: STRING; 
+    type: Types.PType; 
+    designator: Designator.PType; 
+    constValue: ConstValue.PType; 
+    maxPrecedence: INTEGER)
+  | mCode(code),
+    mType(type),
+    mDesignator(designator),
+    mConstValue(constValue),
+    mMaxPrecedence(maxPrecedence);
+END;
+
+PROCEDURE make*(
+    code: STRING; 
+    type: Types.PType; 
+    designator: Designator.PType; 
+    constValue: ConstValue.PType)
+    : PType;
+    RETURN NEW Type(code, type, designator, constValue, Precedence.none)
+END;
+
+PROCEDURE makeSimple*(code: STRING; type: Types.PType): PType;
+    RETURN make(code, type, NIL, NIL)
+END;
+
+PROCEDURE deref*(e: PType): PType;
+BEGIN
+    result <- e;
+    designator <- e.mDesignator;
+    type <- e.mType;
+    IF    (designator # NIL)
+      & ~((type IS Types.PArray) OR (type IS Types.PRecord)) THEN
+        
+        info <- designator.info();
+        IF ((info IS Types.PVariable) & info.isReference()) THEN
+            result := makeSimple(e.code() + ".get()", type);
+        END;
+    END;
+    RETURN result
+END;
+
+END Expression.

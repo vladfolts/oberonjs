@@ -1,5 +1,6 @@
 MODULE Cast;
-IMPORT Code, LanguageContext, OberonRtl, String, Types;
+IMPORT 
+    Expression, LanguageContext, OberonRtl, Record, String, TypeId, Types;
 CONST
     errNo* = 0;
     err* = 1;
@@ -30,28 +31,28 @@ VAR
     castOpStrToChar: POINTER TO CastOpStrToChar;
     castOpArray: POINTER TO CastOpArray;
 
-PROCEDURE findBaseType(base: Types.PRecord; type: Types.PRecord): Types.PRecord;
+PROCEDURE findBaseType(base: Record.PType; type: Record.PType): Record.PType;
 BEGIN
     result <- type;
     WHILE (result # NIL) & (result # base) DO
-        result := Types.recordBase(result^);
+        result := result.base;
     END;
     RETURN result
 END findBaseType;
 
-PROCEDURE findPointerBaseType*(base: Types.PPointer; type: Types.Pointer): Types.PPointer;
+PROCEDURE findPointerBaseType*(base: Record.PPointer; type: Record.Pointer): Record.PPointer;
 VAR
-    result: Types.PPointer;
+    result: Record.PPointer;
 BEGIN
-    IF findBaseType(Types.pointerBase(base^), Types.pointerBase(type)) # NIL THEN
+    IF findBaseType(Record.pointerBase(base^), Record.pointerBase(type)) # NIL THEN
         result := base;
     END;
     RETURN result
-END findPointerBaseType;
+END;
 
 PROCEDURE matchesToNIL(VAR t: Types.Type): BOOLEAN;
-    RETURN (t IS Types.Pointer) OR (t IS Types.Procedure)
-END matchesToNIL;
+    RETURN (t IS Record.Pointer) OR (t IS Types.Procedure)
+END;
 
 PROCEDURE areTypesMatch*(t1: Types.PType; t2: Types.PType): BOOLEAN;
     RETURN areTypesExactlyMatch(t1, t2)
@@ -101,30 +102,30 @@ BEGIN
         result := (t1.length() = t2.length()) 
                 & (areTypesMatch(Types.arrayElementsType(t1^), 
                                  Types.arrayElementsType(t2^)));
-    ELSIF (t1 IS Types.PPointer) & (t2 IS Types.PPointer) THEN
-        result := areTypesMatch(Types.pointerBase(t1^), 
-                                Types.pointerBase(t2^));
+    ELSIF (t1 IS Record.PPointer) & (t2 IS Record.PPointer) THEN
+        result := areTypesMatch(Record.pointerBase(t1^), 
+                                Record.pointerBase(t2^));
     ELSIF (t1 IS Types.PDefinedProcedure) & (t2 IS Types.PDefinedProcedure) THEN
         result := areProceduresMatch(t1, t2);
     END;
     RETURN result
 END areTypesExactlyMatchImpl;
 
-PROCEDURE CastOpDoNothing.make(cx: LanguageContext.PType; e: Code.PExpression): Code.PExpression;
+PROCEDURE CastOpDoNothing.make(cx: LanguageContext.PType; e: Expression.PType): Expression.PType;
     RETURN e
 END;
 
-PROCEDURE passedByReference*(e: Code.PExpression): BOOLEAN;
+PROCEDURE passedByReference*(e: Expression.PType): BOOLEAN;
 BEGIN
     info <- e.designator().info();
     RETURN (info IS Types.PVariable) & info.isReference();
 END;
 
-PROCEDURE assignByReference*(left, right: Code.PExpression): STRING;
-    RETURN left.code() + ".set(" + Code.derefExpression(right).code() + ")";
+PROCEDURE assignByReference*(left, right: Expression.PType): STRING;
+    RETURN left.code() + ".set(" + Expression.deref(right).code() + ")";
 END;
 
-PROCEDURE CastOpDoNothing.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpDoNothing.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
 VAR
     result: STRING;
 BEGIN
@@ -132,13 +133,13 @@ BEGIN
     IF passedByReference(left) THEN
         result := assignByReference(left, rightConverted);
     ELSE
-        result := left.lval() + " = " + Code.derefExpression(rightConverted).code();
+        result := left.lval() + " = " + Expression.deref(rightConverted).code();
     END;
     RETURN result;
 END;
 
-PROCEDURE CastOpDoNothing.clone(cx: LanguageContext.PType; e: Code.PExpression): STRING;
-    RETURN Code.derefExpression(e).code();
+PROCEDURE CastOpDoNothing.clone(cx: LanguageContext.PType; e: Expression.PType): STRING;
+    RETURN Expression.deref(e).code();
 END;
 
 PROCEDURE cloneArray*(t: Types.PArray; code: STRING; cx: LanguageContext.PType): STRING;
@@ -153,26 +154,26 @@ BEGIN
     RETURN result
 END;
 
-PROCEDURE CastOpArray.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
+PROCEDURE CastOpArray.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
     RETURN left.code() + " = " + cloneArray(right.type()(Types.PArray), right.code(), cx)
 END;
 
-PROCEDURE CastOpArray.clone(cx: LanguageContext.PType; e: Code.PExpression): STRING;
+PROCEDURE CastOpArray.clone(cx: LanguageContext.PType; e: Expression.PType): STRING;
     RETURN cloneArray(e.type()(Types.PArray), e.code(), cx);
 END;
 
-PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left, right: Code.PExpression): STRING;
-    RETURN cx.rtl.copy(right.code(), left.lval(), Types.generateTypeInfo(left.type()));
+PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
+    RETURN cx.rtl.copy(right.code(), left.lval(), Record.generateTypeInfo(left.type()));
 END;
 
-PROCEDURE CastOpStrToChar.make(cx: LanguageContext.PType; e: Code.PExpression): Code.PExpression;
+PROCEDURE CastOpStrToChar.make(cx: LanguageContext.PType; e: Expression.PType): Expression.PType;
 BEGIN
     s <- e.type()(Types.PString);
     ASSERT(LEN(s.s) = 1);
     c <- s.s[0];
     code <- String.fromInt(ORD(c))
-    RETURN Code.makeSimpleExpression(code, Types.basic.ch)
-END CastOpStrToChar.make;
+    RETURN Expression.makeSimple(code, Types.basic.ch)
+END;
 
 PROCEDURE implicit*(from, to: Types.PType; toVar: BOOLEAN; ops: Operations; VAR op: LanguageContext.PCastOp): INTEGER;
 VAR
@@ -181,7 +182,7 @@ BEGIN
     result <- err;
     op := NIL;
     IF from = to THEN
-        IF from IS Types.PRecord THEN
+        IF from IS Record.PType THEN
             op := ops.castToRecord;
         ELSIF from IS Types.PArray THEN
             op := castOpArray;
@@ -219,7 +220,7 @@ BEGIN
                                Types.arrayElementsType(to^)) THEN
             op := castOpArray;
             result := errNo;
-    ELSIF (from IS Types.PPointer) & (to IS Types.PPointer) THEN
+    ELSIF (from IS Record.PPointer) & (to IS Record.PPointer) THEN
         IF ~toVar THEN
             IF findPointerBaseType(to, from^) # NIL THEN
                 result := errNo;
@@ -229,7 +230,7 @@ BEGIN
         ELSE
             result := errVarParameter;
         END;
-    ELSIF (from IS Types.PRecord) & (to IS Types.PRecord) THEN
+    ELSIF (from IS Record.PType) & (to IS Record.PType) THEN
         IF findBaseType(to, from) # NIL THEN
             op := ops.castToRecord;
             result := errNo;

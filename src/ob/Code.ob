@@ -2,59 +2,20 @@ MODULE Code;
 IMPORT 
     CodeGenerator,
     ConstValue,
+    Designator,
     Errors,
+    Expression,
     Object, 
     Stream, 
     ScopeBase, 
     Symbols, 
     Precedence := CodePrecedence, 
-    String, 
+    Record,
+    String,
+    TypeId, 
     Types;
 
 TYPE
-    Designator* = RECORD
-        PROCEDURE Designator*(code: STRING; lval: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType);
-
-        PROCEDURE code*(): STRING;
-        PROCEDURE lval(): STRING;
-        PROCEDURE type*(): Types.PType;
-        PROCEDURE info*(): Types.PId;
-        PROCEDURE scope(): ScopeBase.PType;
-
-        mCode: STRING;
-        mLval: STRING;
-        mType: Types.PType;
-        mInfo: Types.PId;
-        mScope: ScopeBase.PType
-    END;
-
-    PDesignator* = POINTER TO Designator;
-
-    Expression* = RECORD(Object.Type)
-        PROCEDURE Expression*(
-            code: STRING; 
-            type: Types.PType; 
-            designator: PDesignator; 
-            constValue: ConstValue.PType; 
-            maxPrecedence: INTEGER);
-
-        PROCEDURE code*(): STRING;
-        PROCEDURE lval*(): STRING;
-        PROCEDURE type*(): Types.PType;
-        PROCEDURE designator*(): PDesignator;
-        PROCEDURE constValue*(): ConstValue.PType;
-        PROCEDURE maxPrecedence*(): INTEGER;
-        PROCEDURE isTerm*(): BOOLEAN;
-
-        mCode: STRING;
-        mType: Types.PType;
-        mDesignator: PDesignator;
-        mConstValue: ConstValue.PType;
-        mMaxPrecedence: INTEGER
-    END;
-
-    PExpression* = POINTER TO Expression;
-
     StringsMap = MAP OF STRING;
 
     ModuleGenerator* = RECORD
@@ -69,150 +30,40 @@ TYPE
 
     PModuleGenerator* = POINTER TO ModuleGenerator;
 
-PROCEDURE Expression.code(): STRING;
-    RETURN SELF.mCode
-END Expression.code;
-
-PROCEDURE Expression.lval(): STRING;
+PROCEDURE adjustPrecedence*(e: Expression.PType; precedence: INTEGER): STRING;
 VAR
     result: STRING;
 BEGIN
-    IF SELF.mDesignator # NIL THEN
-        result := SELF.mDesignator.mLval;
-    ELSE
-        result := SELF.mCode;
-    END;
-    RETURN result
-END Expression.lval;
-
-PROCEDURE Expression.type(): Types.PType;
-    RETURN SELF.mType
-END Expression.type;
-
-PROCEDURE Expression.designator(): PDesignator;
-    RETURN SELF.mDesignator
-END Expression.designator;
-
-PROCEDURE Expression.constValue(): ConstValue.PType;
-    RETURN SELF.mConstValue
-END Expression.constValue;
-
-PROCEDURE Expression.maxPrecedence(): INTEGER;
-    RETURN SELF.mMaxPrecedence
-END Expression.maxPrecedence;
-
-PROCEDURE Expression.isTerm(): BOOLEAN;
-    RETURN (SELF.mDesignator = NIL) & (SELF.mMaxPrecedence = Precedence.none)
-END Expression.isTerm;
-
-PROCEDURE Expression.Expression(
-    code: STRING; 
-    type: Types.PType; 
-    designator: PDesignator; 
-    constValue: ConstValue.PType; 
-    maxPrecedence: INTEGER)
-  | mCode(code),
-    mType(type),
-    mDesignator(designator),
-    mConstValue(constValue),
-    mMaxPrecedence(maxPrecedence);
-END;
-
-PROCEDURE makeExpression*(
-    code: STRING; 
-    type: Types.PType; 
-    designator: PDesignator; 
-    constValue: ConstValue.PType)
-    : PExpression;
-    RETURN NEW Expression(code, type, designator, constValue, Precedence.none)
-END makeExpression;
-
-PROCEDURE makeSimpleExpression*(
-    code: STRING; 
-    type: Types.PType)
-    : PExpression;
-    RETURN makeExpression(code, type, NIL, NIL)
-END makeSimpleExpression;
-
-PROCEDURE Designator.code(): STRING;
-    RETURN SELF.mCode
-END Designator.code;
-
-PROCEDURE Designator.lval(): STRING;
-    RETURN SELF.mLval
-END Designator.lval;
-
-PROCEDURE Designator.type(): Types.PType;
-    RETURN SELF.mType
-END Designator.type;
-
-PROCEDURE Designator.info(): Types.PId;
-    RETURN SELF.mInfo
-END Designator.info;
-
-PROCEDURE Designator.scope(): ScopeBase.PType;
-    RETURN SELF.mScope
-END Designator.scope;
-
-PROCEDURE Designator.Designator(code: STRING; lval: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType)
-  | mCode(code),
-    mLval(lval),
-    mType(type),
-    mInfo(info),
-    mScope(scope);
-END;
-
-PROCEDURE derefExpression*(e: PExpression): PExpression;
-VAR
-    result: PExpression;
-BEGIN
-    IF     (e.mDesignator = NIL)
-        OR ((e.mType IS Types.PArray) OR (e.mType IS Types.PRecord)) 
-        OR ~((e.mDesignator.mInfo IS Types.PVariable) 
-                & e.mDesignator.mInfo(Types.PVariable).isReference()) THEN
-        result := e;
-    ELSE
-        result := makeSimpleExpression(e.mCode + ".get()", e.mType);
-    END;
-    RETURN result
-END derefExpression;
-
-PROCEDURE adjustPrecedence*(e: PExpression; precedence: INTEGER): STRING;
-VAR
-    result: STRING;
-BEGIN
-    result := e.mCode;
-    IF (precedence # Precedence.none) & (e.mMaxPrecedence > precedence) THEN
+    result := e.code();
+    IF (precedence # Precedence.none) & (e.maxPrecedence() > precedence) THEN
         result := "(" + result + ")";
     END;
     RETURN result
 END adjustPrecedence;
 
-PROCEDURE isPointerShouldBeExported(type: Types.Pointer): STRING;
+PROCEDURE isPointerShouldBeExported(type: Record.Pointer): STRING;
 VAR
-    r: Types.PRecord;
     result: STRING;
 BEGIN
-    r := Types.pointerBase(type);
+    r <- Record.pointerBase(type);
     IF LEN(Types.typeName(r^)) = 0 THEN
         result := r.cons;
     END;
     RETURN result
-END isPointerShouldBeExported;
+END;
 
-PROCEDURE typeShouldBeExported(typeId: Types.PId; defaultId: STRING): STRING;
+PROCEDURE typeShouldBeExported(typeId: TypeId.PType; defaultId: STRING): STRING;
 VAR
     result: STRING;
-    type: Types.PType;
 BEGIN
-    type := typeId(Types.PTypeId).type();
-    IF type IS Types.PRecord THEN
+    type <- typeId.type();
+    IF type IS Record.PType THEN
         result := defaultId;
-    ELSIF type IS Types.PPointer THEN
-        result := isPointerShouldBeExported(type^(Types.Pointer));
+    ELSIF type IS Record.PPointer THEN
+        result := isPointerShouldBeExported(type^);
     END;
     RETURN result
-END typeShouldBeExported;
+END;
 
 PROCEDURE genExport*(s: Symbols.Symbol): STRING;
 VAR
@@ -223,7 +74,7 @@ BEGIN
     ELSIF ~s.isType() THEN
         result := s.id();
     ELSE
-        result := typeShouldBeExported(s.info(), s.id())
+        result := typeShouldBeExported(s.info()(TypeId.PType), s.id())
     END;
     RETURN result
 END;

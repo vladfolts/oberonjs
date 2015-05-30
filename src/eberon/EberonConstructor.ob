@@ -1,5 +1,7 @@
 MODULE EberonConstructor;
-IMPORT Cast, Code, EberonCast, EberonRecord, Errors, LanguageContext, Procedure, Stream, Types;
+IMPORT 
+    Cast, EberonCast, EberonRecord, Errors, Expression, 
+    LanguageContext, Procedure, Record, Stream, TypeId, Types;
 TYPE
     ConstructorCall = RECORD(Procedure.StdCall)
         recordType: EberonRecord.PRecord;
@@ -21,35 +23,35 @@ TYPE
         code: STRING;
     END;
 
-PROCEDURE checkArgs(call: ConstructorCall; args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): STRING;
+PROCEDURE checkArgs(call: ConstructorCall; args: ARRAY OF Expression.PType; cx: LanguageContext.PType): STRING;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
     Procedure.processArguments(args, call.args, argCode, cx.types);
     RETURN argCode.result();
 END;
 
-PROCEDURE ConstructorCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE ConstructorCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- checkArgs(SELF, args, cx);
-    RETURN Code.makeSimpleExpression(Types.recordInitializer(cx^, SELF.recordType^, argCode), SELF.resultType);
+    RETURN Expression.makeSimple(Record.initializer(cx^, SELF.recordType^, argCode), SELF.resultType);
 END;
 
-PROCEDURE BaseConstructorCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE BaseConstructorCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- checkArgs(SELF, args, cx);
-    code <- Types.recordConstructor(cx^, SELF.recordType^) + ".call(this, " + argCode + ");" + Stream.kCR;
-    RETURN Code.makeSimpleExpression(code, NIL);
+    code <- Record.constructor(cx^, SELF.recordType^) + ".call(this, " + argCode + ");" + Stream.kCR;
+    RETURN Expression.makeSimple(code, NIL);
 END;
 
 PROCEDURE fieldInitLval(field: STRING): STRING;
-    RETURN "this." + Types.mangleField(field);
+    RETURN "this." + Record.mangleField(field);
 END;
 
-PROCEDURE RecordInitCall.make(args: ARRAY OF Code.PExpression; cx: LanguageContext.PType): Code.PExpression;
+PROCEDURE RecordInitCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     e <- SUPER(args, cx);
     t <- e.type()(Types.PStorageType);
-    RETURN Code.makeSimpleExpression(fieldInitLval(SELF.field) + " = " + e.code(), t);
+    RETURN Expression.makeSimple(fieldInitLval(SELF.field) + " = " + e.code(), t);
 END;
 
 PROCEDURE makeCallGenerator(
@@ -73,7 +75,7 @@ BEGIN
     Errors.raise("single argument expected to initialize field '" + c.field + "'");
 END;
 
-PROCEDURE NonRecordInitCall.handleArgument(e: Code.PExpression);
+PROCEDURE NonRecordInitCall.handleArgument(e: Expression.PType);
 VAR
     op: LanguageContext.PCastOp;
 BEGIN
@@ -90,16 +92,16 @@ BEGIN
     SELF.code := lval + " = " + op.clone(SELF.cx, e);
 END;
         
-PROCEDURE NonRecordInitCall.end(): Code.PExpression;
+PROCEDURE NonRecordInitCall.end(): Expression.PType;
 BEGIN
     IF LEN(SELF.code) = 0 THEN
         raiseSingleArgumentException(SELF);
     END;
-    RETURN Code.makeSimpleExpression(SELF.code, NIL);
+    RETURN Expression.makeSimple(SELF.code, NIL);
 END;
 
 PROCEDURE makeConstructorCall*(
-    typeId: Types.PTypeId;
+    typeId: TypeId.PType;
     cx: LanguageContext.PType;
     forNew: BOOLEAN
     ): Procedure.PCallGenerator;
@@ -115,7 +117,7 @@ BEGIN
     
     EberonRecord.ensureCanBeInstantiated(cx^, recordType, instType);
     IF forNew THEN
-        resultType := NEW Types.Pointer("", typeId);
+        resultType := NEW Record.Pointer("", typeId);
     END;
     RETURN makeCallGenerator(recordType, resultType, cx, call);
 END;

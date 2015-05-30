@@ -1,5 +1,5 @@
 MODULE Symbols;
-IMPORT Object, ScopeBase, Types;
+IMPORT Object, ScopeBase, Types, TypeId;
 TYPE
     Symbol* = RECORD(Object.Type)
         PROCEDURE Symbol*(id: STRING; info: Types.PId);
@@ -52,8 +52,8 @@ PROCEDURE Symbol.isConst(): BOOLEAN;
 END Symbol.isConst;
 
 PROCEDURE Symbol.isType(): BOOLEAN;
-    RETURN SELF.mInfo IS Types.PTypeId
-END Symbol.isType;
+    RETURN SELF.mInfo IS TypeId.PType;
+END;
 
 PROCEDURE Symbol.isProcedure(): BOOLEAN;
     RETURN SELF.mInfo IS Types.PProcedureId

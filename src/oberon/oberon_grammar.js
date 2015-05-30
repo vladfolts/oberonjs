@@ -10,6 +10,7 @@ var ObRtl = require("js/OberonRtl.js");
 var ObRtlCode = require("rtl.js");
 var Operator = require("js/Operator.js");
 var Parser = require("parser.js");
+var Record = require("js/Record.js");
 var Symbols = require("js/OberonSymbols.js");
 var Types = require("js/Types.js");
 
@@ -133,7 +134,7 @@ exports.language = {
         implicitCast: function(from, to, toVar, op){
             return Cast.implicit(from, to, toVar, Operator.castOperations(), op);
         },
-        typeInfo: function(type){return Types.generateTypeInfo(type);},
+        typeInfo: function(type){return Record.generateTypeInfo(type);},
         StaticArray: Types.StaticArray,
         OpenArray: Types.OpenArray
     },
