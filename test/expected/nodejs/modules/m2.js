@@ -10,6 +10,14 @@ function p(i/*INTEGER*/){
 
 function ref(i/*VAR INTEGER*/){
 }
+
+function castToImportedPointer(p/*PBase*/){
+	var p2 = null;
+	if (p instanceof m1.ExportPointerOnly){
+		p2 = p;
+		RTL$.assert(RTL$.typeGuard(p2, m1.ExportPointerOnly) != null);
+	}
+}
 ptr = new m1.T();
 pb = ptr;
 RTL$.typeGuard(pb, m1.T).i = 123;

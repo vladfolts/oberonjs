@@ -21,7 +21,7 @@ TYPE
         notExported: ARRAY * OF STRING
     END;
 
-    NonExported* = RECORD(Type)
+    NonExported = RECORD(Type)
         PROCEDURE NonExported(cons: STRING; scope: ScopeBase.PType; base: PType);
     END;
     PNonExported* = POINTER TO NonExported;

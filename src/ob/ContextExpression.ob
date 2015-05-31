@@ -386,12 +386,16 @@ BEGIN
 END;
 
 PROCEDURE castCode*(type: Types.PType; cx: Context.Type): STRING;
+VAR
+    result: STRING;
 BEGIN
-    baseType <- type;
     IF type IS Record.PPointer THEN
-        baseType := Record.pointerBase(type^);
+        baseType <- Record.pointerBase(type^);
+        result := Record.constructor(cx, baseType^);
+    ELSE
+        result := Record.constructor(cx, type(Record.PType)^);
     END;
-    RETURN Record.constructor(cx, baseType(Record.PType)^);
+    RETURN result;
 END;
 
 PROCEDURE RelationOps.is(type: Types.PType; cx: Context.Type): BinaryOperatorCx;

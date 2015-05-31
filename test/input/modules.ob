@@ -7,6 +7,10 @@ TYPE
 	TP* = POINTER TO T;
 	TPA* = POINTER TO RECORD END;
     TPB* = POINTER TO RECORD(Base) END;
+
+    ExportPointerOnly = RECORD(Base)
+    END;
+    PExportPointerOnly* = POINTER TO ExportPointerOnly;
 VAR
     i*: INTEGER;
     pr*: POINTER TO RECORD i: INTEGER END;
@@ -29,6 +33,12 @@ BEGIN
     RETURN result
 END makeTPB;
 
+PROCEDURE constructor*();
+END constructor;
+
+PROCEDURE prototype*();
+END prototype;
+
 BEGIN
     NEW(pr);
 END m1.
@@ -38,6 +48,7 @@ IMPORT m1;
 
 TYPE
 	T = RECORD(m1.T) i2: INTEGER END;
+    PBase = POINTER TO m1.Base;
 VAR 
 	r: m1.T;
 	r2: T;
@@ -51,6 +62,16 @@ END p;
 
 PROCEDURE ref(VAR i: INTEGER);
 END ref;
+
+PROCEDURE castToImportedPointer(p: PBase);
+VAR
+    p2: PBase;
+BEGIN
+    IF p IS m1.PExportPointerOnly THEN
+        p2 := p;
+        ASSERT(p2(m1.PExportPointerOnly) # NIL);
+    END;
+END castToImportedPointer;
 
 BEGIN
 	NEW(ptr);

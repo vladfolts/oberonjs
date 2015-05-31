@@ -6,6 +6,10 @@ TYPE
 	T* = RECORD(Base) END;
 	TP* = POINTER TO T;
 	TPA* = POINTER TO RECORD END;
+
+    ExportPointerOnly = RECORD(Base)
+    END;
+    PExportPointerOnly* = POINTER TO ExportPointerOnly;
 VAR
     i*: INTEGER;
     pr*: POINTER TO RECORD i: INTEGER END;
@@ -33,7 +37,8 @@ END m1.
 
 MODULE m2;
 IMPORT m1;
-
+TYPE
+    PBase = POINTER TO m1.Base;
 VAR 
 	r: m1.T;
 	pb: POINTER TO m1.Base;
@@ -45,6 +50,16 @@ END p;
 
 PROCEDURE ref(VAR i: INTEGER);
 END ref;
+
+PROCEDURE castToImportedPointer(p: PBase);
+VAR
+    p2: PBase;
+BEGIN
+    IF p IS m1.PExportPointerOnly THEN
+        p2 := p;
+        ASSERT(p2(m1.PExportPointerOnly) # NIL);
+    END;
+END castToImportedPointer;
 
 BEGIN
 	NEW(ptr);

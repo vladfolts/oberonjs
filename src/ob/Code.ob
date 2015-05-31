@@ -100,6 +100,26 @@ PROCEDURE ModuleGenerator.prolog(): STRING;
     RETURN "var " + SELF.name + " = function (" + genCommaList(SELF.imports, TRUE) + "){" + Stream.kCR
 END;
 
+PROCEDURE exportId*(s: Symbols.Symbol): STRING;
+VAR
+    result: STRING;
+BEGIN
+    info <- s.info();
+    IF info IS TypeId.PType THEN
+        type <- info.type();
+        IF type IS Record.PPointer THEN
+            name <- Record.pointerBase(type^).cons;
+            IF LEN(name) # 0 THEN
+                result := name;
+            END;
+        END;
+    END;
+    IF LEN(result) = 0 THEN
+        result := s.id();
+    END;
+    RETURN Record.mangleJSProperty(result);
+END;
+
 PROCEDURE ModuleGenerator.epilog(exports: Symbols.Map): STRING;
 VAR
     result: STRING;
@@ -110,7 +130,7 @@ BEGIN
             IF LEN(result) # 0 THEN
                 result := result + "," + Stream.kCR;
             END;
-            result := result + CodeGenerator.kTab + s.id() + ": " + code;
+            result := result + CodeGenerator.kTab + exportId(s^) + ": " + code;
         END;
     END;
 

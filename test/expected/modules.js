@@ -14,6 +14,10 @@ function TPB(){
 	Base.call(this);
 }
 RTL$.extend(TPB, Base);
+function ExportPointerOnly(){
+	Base.call(this);
+}
+RTL$.extend(ExportPointerOnly, Base);
 var i = 0;
 function anonymous$1(){
 	this.i = 0;
@@ -35,6 +39,12 @@ function makeTPB(){
 	result = new TPB();
 	return result;
 }
+
+function constructor(){
+}
+
+function prototype(){
+}
 pr = new anonymous$1();
 return {
 	ci: ci,
@@ -42,12 +52,15 @@ return {
 	T: T,
 	TPA: TPA,
 	TPB: TPB,
+	ExportPointerOnly: ExportPointerOnly,
 	i: function(){return i;},
 	pr: function(){return pr;},
 	pr2: function(){return pr2;},
 	p: p,
 	makeTPA: makeTPA,
-	makeTPB: makeTPB
+	makeTPB: makeTPB,
+	constructor$: constructor,
+	prototype$: prototype
 }
 }();
 var m2 = function (m1){
@@ -67,6 +80,14 @@ function p(i/*INTEGER*/){
 }
 
 function ref(i/*VAR INTEGER*/){
+}
+
+function castToImportedPointer(p/*PBase*/){
+	var p2 = null;
+	if (p instanceof m1.ExportPointerOnly){
+		p2 = p;
+		RTL$.assert(RTL$.typeGuard(p2, m1.ExportPointerOnly) != null);
+	}
 }
 ptr = new m1.T();
 pb = ptr;

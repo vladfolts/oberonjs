@@ -9,6 +9,10 @@ function T(){
 RTL$.extend(T, Base);
 function TPA(){
 }
+function ExportPointerOnly(){
+	Base.call(this);
+}
+RTL$.extend(ExportPointerOnly, Base);
 var i = 0;
 function anonymous$1(){
 	this.i = 0;
@@ -35,6 +39,7 @@ exports.ci = ci;
 exports.Base = Base;
 exports.T = T;
 exports.TPA = TPA;
+exports.ExportPointerOnly = ExportPointerOnly;
 exports.i = function(){return i;};
 exports.pr = function(){return pr;};
 exports.pr2 = function(){return pr2;};
