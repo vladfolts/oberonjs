@@ -835,16 +835,16 @@ var Factor = Class.extend.call(ContextExpression.Factor, {
     }
 });
 
-var AddOperator = Context.AddOperator.extend({
+var AddOperator = Class.extend.call(ContextExpression.AddOperator, {
     init: function EberonContext$AddOperator(context){
-        Context.AddOperator.prototype.init.call(this, context);
+        ContextExpression.AddOperator.call(this, context);
     },
-    _matchPlusOperator: function(type){
+    doMatchPlusOperator: function(type){
         if (type == EberonString.string() || type instanceof Type.String)
             return eOp.addStr;
-        return Context.AddOperator.prototype._matchPlusOperator.call(this, type);
+        return ContextExpression.AddOperator.prototype.doMatchPlusOperator.call(this, type);
     },
-    _expectPlusOperator: function(){return "numeric type or SET or STRING";},
+    doExpectPlusOperator: function(){return "numeric type or SET or STRING";},
     endParse: function(){
         this.parent().handleLogicalOr();
     }

@@ -74,6 +74,11 @@ TYPE
     MulOperator* = RECORD(ContextHierarchy.Node)
     END;
 
+    AddOperator* = RECORD(ContextHierarchy.Node)
+        PROCEDURE doMatchPlusOperator(type: Types.PType): BinaryOperator;
+        PROCEDURE doExpectPlusOperator(): STRING;
+    END;
+
     Const = RECORD(ContextHierarchy.Node)
         PROCEDURE Const(factor: PFactor);
 
@@ -643,6 +648,55 @@ BEGIN
     END;
 
     parent.handleOperator(o);
+END;
+
+PROCEDURE matchAddOperator(cx: AddOperator; s: STRING; type: Types.PType): BinaryOperator;
+VAR
+    result: BinaryOperator;
+BEGIN
+    IF s = "+" THEN
+        result := cx.doMatchPlusOperator(type);
+        IF result = NIL THEN
+            throwOperatorTypeMismatch(s, cx.doExpectPlusOperator(), type);
+        END;
+    ELSIF s = "-" THEN
+        result := assertNumericOrSetOp(type, s, Operator.subReal, Operator.subInt, Operator.setDiff);
+    ELSIF s = "OR" THEN
+        IF type # Types.basic.bool THEN
+            Errors.raise("BOOLEAN expected as operand of 'OR', got '"
+                         + type.description() + "'");
+        END;
+        result := Operator.or;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE AddOperator.handleLiteral(s: STRING);
+BEGIN
+    parent <- SELF.parent()(PSimpleExpression);
+    type <- parent.type();
+    o <- matchAddOperator(SELF, s, type);
+    IF o # NIL THEN
+        parent.handleOperator(o);
+    END;
+END;
+
+PROCEDURE AddOperator.doMatchPlusOperator(type: Types.PType): BinaryOperator;
+VAR
+    result: BinaryOperator;
+BEGIN
+    IF type = Types.basic.set THEN
+        result := Operator.setUnion;
+    ELSIF Types.isInt(type) THEN
+        result := Operator.addInt;
+    ELSIF type = Types.basic.real THEN
+        result := Operator.addReal;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE AddOperator.doExpectPlusOperator(): STRING;
+    RETURN "numeric type or SET";
 END;
 
 PROCEDURE Const.Const(factor: PFactor)

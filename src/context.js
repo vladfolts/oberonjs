@@ -673,47 +673,6 @@ function relationOp(leftType, rightType, literal, ops, context){
     return o;
 }
 
-exports.AddOperator = ChainedContext.extend({
-    init: function AddOperatorContext(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    handleLiteral: function(s){
-        var parent = this.parent();
-        var type = parent.type();
-        var o = this.__matchOperator(s, type);
-        if (o)
-            parent.handleOperator(o);
-    },
-    __matchOperator: function(s, type){
-        var result;
-        switch (s){
-            case "+":
-                result = this._matchPlusOperator(type);
-                if (!result)
-                    ContextExpression.throwOperatorTypeMismatch(s, this._expectPlusOperator(), type);
-                break;
-            case "-":
-                return ContextExpression.assertNumericOrSetOp(type, s, op.subReal, op.subInt, op.setDiff);
-            case "OR":
-                if (type != basicTypes.bool)
-                    throw new Errors.Error("BOOLEAN expected as operand of 'OR', got '"
-                                         + type.description() + "'");
-                return op.or;
-            }
-        return result;
-    },
-    _matchPlusOperator: function(type){
-        if (type == basicTypes.set)
-            return op.setUnion;
-        if (Type.isInt(type))
-            return op.addInt;
-        if (type == basicTypes.real)
-            return op.addReal;
-        return undefined;
-    },
-    _expectPlusOperator: function(){return "numeric type or SET";}
-});
-
 function designatorAsExpression(d){
     var info = d.info();
     if (info instanceof Type.ProcedureId){
