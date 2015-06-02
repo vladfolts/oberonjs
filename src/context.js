@@ -614,65 +614,6 @@ exports.ArrayDimensions = ChainedContext.extend({
     }
 });
 
-var relationOps = new ContextExpression.RelationOps();
-
-function checkSetHasBit(leftType, rightType, context){
-    if (!Type.isInt(leftType))
-        throw new Errors.Error(
-            Type.intsDescription() + " expected as an element of SET, got '" + Type.typeName(leftType) + "'");
-    ContextExpression.checkImplicitCast(context.root(), rightType, basicTypes.set);
-}
-
-function relationOp(leftType, rightType, literal, ops, context){
-    var type = 
-          literal == "IS" ? ContextExpression.unwrapType(rightType)
-        : literal == "IN" ? checkSetHasBit(leftType, rightType, context)
-                          : ops.coalesceType(leftType, rightType);
-    var o;
-    var mismatch;
-    switch (literal){
-        case "=":
-            o = ops.eq(type);
-            if (!o)
-                mismatch = ops.eqExpect();
-            break;
-        case "#":
-            o = ops.notEq(type);
-            if (!o)
-                mismatch = ops.eqExpect();
-            break;
-        case "<":
-            o = ops.less(type);
-            if (!o)
-                mismatch = ops.strongRelExpect();
-            break;
-        case ">":
-            o = ops.greater(type);
-            if (!o)
-                mismatch = ops.strongRelExpect();
-            break;
-        case "<=":
-            o = ops.lessEq(type);
-            if (!o)
-                mismatch = ops.relExpect();
-            break;
-        case ">=":
-            o = ops.greaterEq(type);
-            if (!o)
-                mismatch = ops.relExpect();
-            break;
-        case "IS":
-            o = ops.is(type, context);
-            break;
-        case "IN":
-            o = op.setHasBit;
-            break;
-        }
-    if (mismatch)
-        ContextExpression.throwOperatorTypeMismatch(literal, mismatch, type);
-    return o;
-}
-
 function designatorAsExpression(d){
     var info = d.info();
     if (info instanceof Type.ProcedureId){
@@ -752,46 +693,6 @@ exports.SetElement = ChainedContext.extend({
     },
     endParse: function(){
         this.parent().handleElement(this.__from, this.__fromValue, this.__to, this.__toValue);
-    }
-});
-
-exports.Expression = ChainedContext.extend({
-    init: function ExpressionContext(context, relOps){
-        ChainedContext.prototype.init.call(this, context);
-        this.__relOps = relOps || relationOps;
-        this.__relation = undefined;
-        this.__expression = undefined;
-    },
-    handleSimpleExpression: function(e){
-        if (!this.__expression){
-            this.__expression = e;
-            return;
-        }
-
-        var leftExpression = this.__expression;
-        var rightExpression = e;
-        leftExpression = ContextExpression.promoteTypeInExpression(leftExpression, rightExpression.type());
-        rightExpression = ContextExpression.promoteTypeInExpression(rightExpression, leftExpression.type());
-
-        var o = this._relationOperation(leftExpression.type(), rightExpression.type(), this.__relation);
-        var language = this.root().language();
-        this.__expression = o(leftExpression, rightExpression, language);
-    },
-    _relationOperation: function(left, right, relation){
-        return relationOp(left, right, relation, this.__relOps, this);
-    },
-    handleLiteral: function(relation){
-        this.__relation = relation;
-    },
-    codeGenerator: function(){return nullCodeGenerator;},
-    endParse: function(){
-        var type = this.__expression.type();
-        if (!type)
-            throw new Errors.Error("procedure returning no result cannot be used in an expression");
-
-        var parent = this.parent();
-        parent.codeGenerator().write(this.__expression.code());
-        parent.handleExpression(this.__expression);
     }
 });
 

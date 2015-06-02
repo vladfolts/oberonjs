@@ -30,7 +30,7 @@ TYPE
     END;
 
 VAR
-    nullGenerator*: NullGenerator;
+    nullGenerator*: POINTER TO NullGenerator;
 
 PROCEDURE NullGenerator.write(s: STRING); END;
 
@@ -125,4 +125,6 @@ PROCEDURE makeGenerator*(): PIGenerator;
     RETURN NEW Generator();
 END;
 
+BEGIN
+    NEW(nullGenerator);
 END CodeGenerator.

@@ -902,14 +902,14 @@ var RelationOps = Class.extend.call(ContextExpression.RelationOps, {
             ? eOp.greaterEqualStr
             : ContextExpression.RelationOps.prototype.greaterEq.call(this, type);
     },
-    is: function(type, context){
-        var impl = ContextExpression.RelationOps.prototype.is.call(this, type, context);
+    is: function(context){
+        var impl = ContextExpression.RelationOps.prototype.is.call(this, context);
         return function(left, right){
             var d = left.designator();
             if (d){
                 var v = d.info();
                 if (v instanceof TypeNarrowVariableBase)
-                    context.handleMessage(new PromoteTypeMsg(v, type));
+                    context.handleMessage(new PromoteTypeMsg(v, ContextExpression.unwrapType(right.designator().info())));
             }
             return impl(left, right);
         };
@@ -1018,16 +1018,16 @@ var SimpleExpression = Class.extend.call(ContextExpression.SimpleExpression, {
 
 var relationOps = new RelationOps();
 
-var ExpressionContext = Context.Expression.extend({
+var ExpressionContext = Class.extend.call(ContextExpression.ExpressionNode, {
     init: function EberonContext$Expression(context){
-        Context.Expression.prototype.init.call(this, context, relationOps);
+        ContextExpression.ExpressionNode.call(this, context, relationOps);
         this.__typePromotion = undefined;
         this.__currentTypePromotion = undefined;
     },
     handleMessage: function(msg){
         if (msg instanceof TransferPromotedTypesMsg)
             return;
-        return Context.Expression.prototype.handleMessage.call(this, msg);
+        return ContextExpression.ExpressionNode.prototype.handleMessage.call(this, msg);
     },
     handleTypePromotion: function(t){
         this.__currentTypePromotion = t;
@@ -1036,19 +1036,19 @@ var ExpressionContext = Context.Expression.extend({
         if (this.__currentTypePromotion){
             this.__currentTypePromotion.clear();
         }
-        Context.Expression.prototype.handleLiteral.call(this, s);
+        ContextExpression.ExpressionNode.prototype.handleLiteral.call(this, s);
     },
     endParse: function(){
         if (this.__currentTypePromotion)
             this.parent().handleMessage(new TransferPromotedTypesMsg(this.__currentTypePromotion));
-        return Context.Expression.prototype.endParse.call(this);
+        return ContextExpression.ExpressionNode.prototype.endParse.call(this);
     },
-    _relationOperation: function(left, right, relation){
+    doRelationOperation: function(left, right, relation){
         if (relation == "IN" && right instanceof EberonMap.Type){
             checkMapKeyType(left);
             return eOp.inMap;            
         }
-        return Context.Expression.prototype._relationOperation.call(this, left, right, relation);
+        return ContextExpression.ExpressionNode.prototype.doRelationOperation.call(this, left, right, relation);
     }
 });
 

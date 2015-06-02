@@ -571,7 +571,7 @@ PROCEDURE setSymmetricDiff*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opSetSymmetricDiff, " ^ ", Precedence.bitXor)
 END setSymmetricDiff;
 
-PROCEDURE setHasBit*(left, right: Expression.PType; rtl: OberonRtl.PType): Expression.PType;
+PROCEDURE setHasBit*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN NEW Expression.Type(
             "1 << " + Code.adjustPrecedence(Expression.deref(left), Precedence.shift) 
             + " & " + Code.adjustPrecedence(Expression.deref(right), Precedence.bitAnd),
@@ -579,7 +579,7 @@ PROCEDURE setHasBit*(left, right: Expression.PType; rtl: OberonRtl.PType): Expre
             NIL,
             NIL,
             Precedence.bitAnd)
-END setHasBit;
+END;
 
 PROCEDURE setInclL*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN binaryPred(left, right, cx.rtl, opSetInclL, codeSetInclL)

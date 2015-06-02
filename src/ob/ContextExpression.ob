@@ -1,12 +1,13 @@
 MODULE ContextExpression;
 IMPORT 
-    Cast, Chars, ConstValue, Context, ContextHierarchy, Errors, Expression, JS, LanguageContext, Operator, Record, String, TypeId, Types;
+    Cast, Chars, CodeGenerator, ConstValue, Context, ContextHierarchy, Errors, Expression, JS, LanguageContext, Operator, Record, String, TypeId, Types;
 TYPE
     ExpressionHandler = RECORD(ContextHierarchy.Node)
         PROCEDURE handleExpression(e: Expression.PType);
 
         expression: Expression.PType;
     END;
+    PExpressionHandler = POINTER TO ExpressionHandler;
 
     BinaryOperator = PROCEDURE(l, r: Expression.PType): Expression.PType;
     BinaryOperatorCx = PROCEDURE(l, r: Expression.PType; cx: LanguageContext.PType): Expression.PType;
@@ -18,7 +19,7 @@ TYPE
         PROCEDURE greater(type: Types.PType): BinaryOperatorCx;
         PROCEDURE lessEq(type: Types.PType): BinaryOperatorCx;
         PROCEDURE greaterEq(type: Types.PType): BinaryOperatorCx;
-        PROCEDURE is(type: Types.PType; cx: Context.Type): BinaryOperatorCx;
+        PROCEDURE is(cx: Context.Type): BinaryOperatorCx;
 
         PROCEDURE eqExpect(): STRING;
         PROCEDURE strongRelExpect(): STRING;
@@ -26,9 +27,18 @@ TYPE
 
         PROCEDURE coalesceType(leftType, rightType: Types.PType): Types.PType;
     END;
+    PRelationOps = POINTER TO RelationOps;
 
-    ExpressionNode = RECORD(ContextHierarchy.Node)
+    ExpressionNode* = RECORD(ContextHierarchy.Node)
+        PROCEDURE ExpressionNode(parent: PExpressionHandler; ops: PRelationOps);
+
         PROCEDURE handleSimpleExpression(e: Expression.PType);
+        PROCEDURE doRelationOperation(left, right: Types.PType; relation: STRING): BinaryOperatorCx;
+
+        expressionHandler: PExpressionHandler;
+        relOps: PRelationOps;
+        expression: Expression.PType;
+        relation: STRING;
     END;
     PExpressionNode = POINTER TO ExpressionNode;
 
@@ -51,22 +61,16 @@ TYPE
     PFactor = POINTER TO Factor;
 
     Factor* = RECORD(ExpressionHandler)
-        PROCEDURE Factor(parent: PFactor);
-
         PROCEDURE handleConst(type: Types.PType; value: ConstValue.PType; code: STRING);
         PROCEDURE handleLogicalNot();
 
-        factorParent: PFactor;
         logicalNot: BOOLEAN;
     END;
 
     Term* = RECORD(ExpressionHandler)
-        PROCEDURE Term(parent: PSimpleExpression);
-
         PROCEDURE type(): Types.PType;
         PROCEDURE handleOperator(op: BinaryOperator);
 
-        simpleExpression: PSimpleExpression;
         operator: BinaryOperator;
     END;
     PTerm = POINTER TO Term;
@@ -115,8 +119,9 @@ VAR
     intOpTypeCheck: IntOpTypeCheck;
     numericOpTypeCheck: NumericOpTypeCheck;
     numericOrSetOpTypeCheck: NumericOrSetOpTypeCheck;
+    relationOps: PRelationOps;
 
-PROCEDURE throwOperatorTypeMismatch*(op, expect: STRING; type: Types.PType);
+PROCEDURE throwOperatorTypeMismatch(op, expect: STRING; type: Types.PType);
 BEGIN
     Errors.raise(
         "operator '" + op +
@@ -178,12 +183,17 @@ PROCEDURE useIntEqOp(t: Types.PType): BOOLEAN;
         OR (t = Types.nil);
 END;
 
+PROCEDURE throwTypeNameExpected();
+BEGIN
+    Errors.raise("type name expected");
+END;
+
 PROCEDURE unwrapTypeId*(id: Types.PId): TypeId.PType;
 VAR
     result: TypeId.PType;
 BEGIN
     IF ~(id IS TypeId.PType) THEN
-        Errors.raise("type name expected");
+        throwTypeNameExpected();
     ELSE
         result := id;
     END;
@@ -214,7 +224,7 @@ BEGIN
     END;
 END;
 
-PROCEDURE checkImplicitCast*(cx: ContextHierarchy.Root; from, to: Types.PType);
+PROCEDURE checkImplicitCast(cx: ContextHierarchy.Root; from, to: Types.PType);
 VAR
     op: LanguageContext.PCastOp;
 BEGIN
@@ -234,7 +244,7 @@ BEGIN
     END;
 END;
 
-PROCEDURE promoteTypeInExpression*(e: Expression.PType; type: Types.PType): Expression.PType;
+PROCEDURE promoteTypeInExpression(e: Expression.PType; type: Types.PType): Expression.PType;
 VAR
     v: CHAR;
     result: Expression.PType;
@@ -403,12 +413,13 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.is(type: Types.PType; cx: Context.Type): BinaryOperatorCx;
+PROCEDURE RelationOps.is(cx: Context.Type): BinaryOperatorCx;
 VAR
     r: BinaryOperatorCx;
 
     PROCEDURE is(left, right: Expression.PType; unused: LanguageContext.PType): Expression.PType;
     VAR
+        result: Expression.PType;
         leftVar: Types.PVariable;
     BEGIN
         d <- left.designator();
@@ -418,9 +429,16 @@ VAR
                 leftVar := info;
             END;
         END;
-        rightType <- right.designator().info()(TypeId.PType).type();
-        checkTypeCast(leftVar, left.type(), rightType, "type test");
-        RETURN Operator.is(left, Expression.makeSimple(castCode(rightType, cx), NIL));
+
+        rightDesignator <- right.designator();
+        IF rightDesignator = NIL THEN
+            throwTypeNameExpected();
+        ELSE
+            rightType <- unwrapType(rightDesignator.info());
+            checkTypeCast(leftVar, left.type(), rightType, "type test");
+            result := Operator.is(left, Expression.makeSimple(castCode(rightType, cx), NIL));
+        END;
+        RETURN result;
     END;
 
 BEGIN    
@@ -460,6 +478,121 @@ BEGIN
         result := leftType;
     END;
     RETURN result;
+END;
+
+PROCEDURE ExpressionNode.ExpressionNode(parent: PExpressionHandler; ops: PRelationOps)
+    | SUPER(parent),
+      expressionHandler(parent),
+      relOps(ops);
+BEGIN
+    IF ops = NIL THEN
+        SELF.relOps := relationOps;
+    END;
+END;
+
+PROCEDURE ExpressionNode.handleSimpleExpression(e: Expression.PType);
+BEGIN
+    IF SELF.expression = NIL THEN
+        SELF.expression := e;
+    ELSE
+        leftExpression <- SELF.expression;
+        rightExpression <- e;
+        leftExpression := promoteTypeInExpression(leftExpression, rightExpression.type());
+        rightExpression := promoteTypeInExpression(rightExpression, leftExpression.type());
+
+        o <- SELF.doRelationOperation(leftExpression.type(), rightExpression.type(), SELF.relation);
+        SELF.expression := o(leftExpression, rightExpression, SELF.root().language());
+    END;
+END;
+
+PROCEDURE checkSetHasBit(leftType, rightType: Types.PType; cx: ContextHierarchy.Root);
+BEGIN
+    IF ~Types.isInt(leftType) THEN
+        Errors.raise(Types.intsDescription() 
+                     + " expected as an element of SET, got '" + leftType.description() + "'");
+    END;
+    checkImplicitCast(cx, rightType, Types.basic.set);
+END;
+
+PROCEDURE relationOp(leftType, rightType: Types.PType; literal: STRING; ops: PRelationOps; context: ContextHierarchy.Node): BinaryOperatorCx;
+VAR
+    type: Types.PType;
+    o: BinaryOperatorCx;
+    mismatch: STRING;
+BEGIN
+    IF literal = "IS" THEN
+        type := (*unwrapType*)(rightType);
+    ELSIF literal = "IN" THEN
+        checkSetHasBit(leftType, rightType, context.root()^);
+    ELSE
+        type := ops.coalesceType(leftType, rightType);
+    END;
+
+    IF literal = "=" THEN
+        o := ops.eq(type);
+        IF o = NIL THEN
+            mismatch := ops.eqExpect();
+        END;
+    ELSIF literal = "#" THEN
+        o := ops.notEq(type);
+        IF o = NIL THEN
+            mismatch := ops.eqExpect();
+        END;
+    ELSIF literal =  "<" THEN
+        o := ops.less(type);
+        IF o = NIL THEN
+            mismatch := ops.strongRelExpect();
+        END;
+    ELSIF literal =  ">" THEN
+        o := ops.greater(type);
+        IF o = NIL THEN
+            mismatch := ops.strongRelExpect();
+        END;
+    ELSIF literal = "<=" THEN
+        o := ops.lessEq(type);
+        IF o = NIL THEN
+            mismatch := ops.relExpect();
+        END;
+    ELSIF literal = ">=" THEN
+        o := ops.greaterEq(type);
+        IF o = NIL THEN
+            mismatch := ops.relExpect();
+        END;
+    ELSIF literal = "IS" THEN
+        o := ops.is(context);
+    ELSIF literal = "IN" THEN
+        o := Operator.setHasBit;
+    END;
+
+    IF LEN(mismatch) # 0 THEN
+        throwOperatorTypeMismatch(literal, mismatch, type);
+    END;
+    RETURN o;
+END;
+
+PROCEDURE ExpressionNode.doRelationOperation(left, right: Types.PType; relation: STRING): BinaryOperatorCx;
+    RETURN relationOp(left, right, relation, SELF.relOps, SELF);
+END;
+
+PROCEDURE ExpressionNode.handleLiteral(s: STRING);
+BEGIN
+    SELF.relation := s;
+END;
+
+PROCEDURE ExpressionNode.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN CodeGenerator.nullGenerator;
+END;
+
+PROCEDURE ExpressionNode.endParse();
+BEGIN
+    type <- SELF.expression.type();
+    IF type = NIL THEN
+        Errors.raise("procedure returning no result cannot be used in an expression");
+    END;
+
+    parent <- SELF.expressionHandler;
+    parent.codeGenerator().write(SELF.expression.code());
+    parent.handleExpression(SELF.expression);
 END;
 
 PROCEDURE SimpleExpression.SimpleExpression(parent: PExpressionNode)
@@ -527,11 +660,6 @@ BEGIN
     SELF.parentExpression.handleSimpleExpression(SELF.expression);
 END;
 
-PROCEDURE Factor.Factor(parent: PFactor)
-    | SUPER(parent),
-      factorParent(parent);
-END;
-
 PROCEDURE Factor.handleConst(type: Types.PType; value: ConstValue.PType; code: STRING);
 BEGIN
     SELF.expression := Expression.make(code, type, NIL, value);
@@ -566,14 +694,8 @@ BEGIN
         checkTypeMatch(SELF.expression.type(), Types.basic.bool);
         SELF.expression := Operator.not(SELF.expression);
     END;
-    SELF.factorParent.handleExpression(SELF.expression);
+    SELF.parent()^(ExpressionHandler).handleExpression(SELF.expression);
 END;
-
-PROCEDURE Term.Term(parent: PSimpleExpression)
-    | SUPER(parent),
-      simpleExpression(parent);
-END;
-
 
 PROCEDURE Term.type(): Types.PType;
 VAR
@@ -617,7 +739,7 @@ BEGIN
         END;
         e := Expression.make(d.code(), d.type(), d, const);
     END;
-    SELF.simpleExpression.handleTerm(e);
+    SELF.parent()(PSimpleExpression).handleTerm(e);
 END;
 
 PROCEDURE MulOperator.handleLiteral(s: STRING);
@@ -786,4 +908,6 @@ PROCEDURE NumericOrSetOpTypeCheck.check(t: Types.PType): BOOLEAN;
     RETURN SUPER(t) OR (t = Types.basic.set);
 END;
 
+BEGIN
+    NEW(relationOps);
 END ContextExpression.

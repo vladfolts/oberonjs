@@ -3,7 +3,7 @@ IMPORT
     CodeGenerator, Context, Designator, Errors, LanguageContext, Module, Scope, ScopeBase, Symbols, String, Types;
 TYPE
     PRoot = POINTER TO Root;
-    PNode = POINTER TO Node;
+    PNode* = POINTER TO Node;
 
     Message = RECORD
     END;
@@ -27,7 +27,7 @@ TYPE
         PROCEDURE root*(): PRoot;
         PROCEDURE parent*(): PNode;
         PROCEDURE handleMessage(VAR msg: Message): PMessageResult;
-        PROCEDURE codeGenerator(): CodeGenerator.PIGenerator;
+        PROCEDURE codeGenerator*(): CodeGenerator.PIGenerator;
         PROCEDURE handleLiteral*(s: STRING);
         PROCEDURE handleIdent*(s: STRING);
         PROCEDURE genTypeName(): STRING;
