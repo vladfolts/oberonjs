@@ -460,7 +460,7 @@ var ExpressionProcedureCall = Context.Chained.extend({
             e = new Expression.Type(d.code(), d.type(), undefined, e.constValue(), e.maxPrecedence());
         }
         else
-            e = Context.designatorAsExpression(d);
+            e = ContextExpression.designatorAsExpression(d);
         parent.handleExpression(e);
     }
 });

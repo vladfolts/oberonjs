@@ -442,24 +442,6 @@ exports.ArrayDimensions = ChainedContext.extend({
     }
 });
 
-function designatorAsExpression(d){
-    var info = d.info();
-
-    if (info instanceof Type.ProcedureId){
-        var proc = info.type;
-        if (proc instanceof Procedure.Std)
-            throw new Errors.Error(proc.description() + " cannot be referenced");
-        var scope = d.scope();
-        if (scope instanceof Scope.Procedure)
-            throw new Errors.Error("local procedure '" + d.code() + "' cannot be referenced");
-    }
-
-    var value;
-    if (info instanceof Type.Const)
-        value = info.value;
-    return Expression.make(d.code(), d.type(), d, value);
-}
-
 exports.Set = ChainedContext.extend({
     init: function SetContext(context){
         ChainedContext.prototype.init.call(this, context);
@@ -788,7 +770,7 @@ exports.For = ChainedContext.extend({
             if (type != basicTypes.integer)
                 throw new Errors.Error("'INTEGER' expression expected as 'BY' parameter, got '" + type.description() + "'");
             var value = e.constValue();
-            if ( value === undefined )
+            if (!value)
                 throw new Errors.Error("constant expression expected as 'BY' parameter");
             this.__by = value.value;
         }
@@ -1258,7 +1240,6 @@ exports.assertProcStatementResult = assertProcStatementResult;
 exports.beginCallMsg = beginCallMsg;
 exports.endCallMsg = endCallMsg;
 exports.Chained = ChainedContext;
-exports.designatorAsExpression = designatorAsExpression;
 exports.endParametersMsg = endParametersMsg;
 exports.makeProcCall = makeProcCall;
 exports.HandleSymbolAsType = HandleSymbolAsType;

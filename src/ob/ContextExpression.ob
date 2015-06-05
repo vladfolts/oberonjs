@@ -1,6 +1,8 @@
 MODULE ContextExpression;
 IMPORT 
-    Cast, Chars, CodeGenerator, ConstValue, Context, ContextHierarchy, Errors, Expression, JS, LanguageContext, Operator, Record, String, TypeId, Types;
+    Cast, Chars, CodeGenerator, ConstValue, Context, ContextHierarchy, 
+    Designator, Errors, Expression, JS, LanguageContext, Operator, 
+    Procedure, Record, Scope, String, TypeId, Types;
 TYPE
     ExpressionHandler = RECORD(ContextHierarchy.Node)
         PROCEDURE handleExpression(e: Expression.PType);
@@ -928,6 +930,29 @@ END;
 
 PROCEDURE NumericOrSetOpTypeCheck.check(t: Types.PType): BOOLEAN;
     RETURN SUPER(t) OR (t = Types.basic.set);
+END;
+
+PROCEDURE designatorAsExpression*(d: Designator.PType): Expression.PType;
+VAR
+    value: ConstValue.PType;
+BEGIN
+    info <- d.info();
+
+    IF info IS Types.PProcedureId THEN
+        proc <- info.type;
+        IF proc^ IS Procedure.Std THEN
+            Errors.raise(proc.description() + " cannot be referenced");
+        END;
+        scope <- d.scope();
+        IF scope^ IS Scope.Procedure THEN
+            Errors.raise("local procedure '" + d.code() + "' cannot be referenced");
+        END;
+    END;
+
+    IF info IS Types.PConst THEN
+        value := info.value;
+    END;
+    RETURN Expression.make(d.code(), d.type(), d, value);
 END;
 
 BEGIN

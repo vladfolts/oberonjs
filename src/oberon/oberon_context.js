@@ -2,6 +2,7 @@
 
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var ContextExpression = require("js/ContextExpression.js");
 var Errors = require("js/Errors.js");
 var Expression = require("js/Expression.js");
 var op = require("js/Operator.js");
@@ -89,7 +90,7 @@ var ExpressionProcedureCall = ProcedureCall.extend({
     endParse: function(){
         var e = this.__hasActualParameters 
               ? this.callExpression()
-              : Context.designatorAsExpression(this.attributes.designator); 
+              : ContextExpression.designatorAsExpression(this.attributes.designator); 
         this.parent().handleExpression(e);
     }
 });

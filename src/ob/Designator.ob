@@ -9,7 +9,7 @@ TYPE
         PROCEDURE lval*(): STRING;
         PROCEDURE type*(): Types.PType;
         PROCEDURE info*(): Types.PId;
-        PROCEDURE scope(): ScopeBase.PType;
+        PROCEDURE scope*(): ScopeBase.PType;
 
         mCode: STRING;
         mLval: STRING;
