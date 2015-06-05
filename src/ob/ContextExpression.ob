@@ -33,7 +33,7 @@ TYPE
         PROCEDURE ExpressionNode(parent: PExpressionHandler; ops: PRelationOps);
 
         PROCEDURE handleSimpleExpression(e: Expression.PType);
-        PROCEDURE doRelationOperation(left, right: Types.PType; relation: STRING): BinaryOperatorCx;
+        PROCEDURE doRelationOperation(left, right: Expression.PType; relation: STRING): BinaryOperatorCx;
 
         expressionHandler: PExpressionHandler;
         relOps: PRelationOps;
@@ -500,7 +500,7 @@ BEGIN
         leftExpression := promoteTypeInExpression(leftExpression, rightExpression.type());
         rightExpression := promoteTypeInExpression(rightExpression, leftExpression.type());
 
-        o <- SELF.doRelationOperation(leftExpression.type(), rightExpression.type(), SELF.relation);
+        o <- SELF.doRelationOperation(leftExpression, rightExpression, SELF.relation);
         SELF.expression := o(leftExpression, rightExpression, SELF.root().language());
     END;
 END;
@@ -514,18 +514,32 @@ BEGIN
     checkImplicitCast(cx, rightType, Types.basic.set);
 END;
 
-PROCEDURE relationOp(leftType, rightType: Types.PType; literal: STRING; ops: PRelationOps; context: ContextHierarchy.Node): BinaryOperatorCx;
+PROCEDURE notTypeId(e: Expression.PType);
+BEGIN
+    d <- e.designator();
+    IF d # NIL THEN
+        info <- d.info();
+        IF info IS TypeId.PType THEN
+            Errors.raise("type name '" + info.type().description() + "' cannot be used as an expression");
+        END;
+    END;
+END;
+
+PROCEDURE relationOp(left, right: Expression.PType; literal: STRING; ops: PRelationOps; context: ContextHierarchy.Node): BinaryOperatorCx;
 VAR
     type: Types.PType;
     o: BinaryOperatorCx;
     mismatch: STRING;
 BEGIN
-    IF literal = "IS" THEN
-        type := (*unwrapType*)(rightType);
-    ELSIF literal = "IN" THEN
-        checkSetHasBit(leftType, rightType, context.root()^);
-    ELSE
-        type := ops.coalesceType(leftType, rightType);
+    notTypeId(left);
+    IF literal # "IS" THEN
+        notTypeId(right);
+
+        IF literal = "IN" THEN
+            checkSetHasBit(left.type(), right.type(), context.root()^);
+        ELSE
+            type := ops.coalesceType(left.type(), right.type());
+        END;
     END;
 
     IF literal = "=" THEN
@@ -570,7 +584,7 @@ BEGIN
     RETURN o;
 END;
 
-PROCEDURE ExpressionNode.doRelationOperation(left, right: Types.PType; relation: STRING): BinaryOperatorCx;
+PROCEDURE ExpressionNode.doRelationOperation(left, right: Expression.PType; relation: STRING): BinaryOperatorCx;
     RETURN relationOp(left, right, relation, SELF.relOps, SELF);
 END;
 
@@ -585,6 +599,8 @@ END;
 
 PROCEDURE ExpressionNode.endParse();
 BEGIN
+    notTypeId(SELF.expression);
+
     type <- SELF.expression.type();
     IF type = NIL THEN
         Errors.raise("procedure returning no result cannot be used in an expression");
@@ -623,9 +639,14 @@ BEGIN
     END;
 
     IF o # NIL THEN
+        notTypeId(e);
+
         SELF.expression := o(e);
         SELF.unaryOperator := "";
     ELSIF SELF.expression # NIL THEN
+        notTypeId(SELF.expression);
+        notTypeId(e);
+
         SELF.expression := SELF.binaryOperator(SELF.expression, e);
     ELSE
         SELF.expression := e;
@@ -691,6 +712,7 @@ END;
 PROCEDURE Factor.endParse();
 BEGIN
     IF SELF.logicalNot THEN
+        notTypeId(SELF.expression);
         checkTypeMatch(SELF.expression.type(), Types.basic.bool);
         SELF.expression := Operator.not(SELF.expression);
     END;
@@ -711,6 +733,7 @@ END;
 
 PROCEDURE Term.handleOperator(op: BinaryOperator);
 BEGIN
+    notTypeId(SELF.expression);
     SELF.operator := op;
 END;
 
@@ -720,9 +743,8 @@ BEGIN
     IF SELF.operator = NIL THEN
         SELF.expression := e;
     ELSIF SELF.expression # NIL THEN
+        notTypeId(e);
         SELF.expression := SELF.operator(SELF.expression, e);
-    ELSE
-        SELF.expression := SELF.operator(e, NIL);
     END;
 END;
 

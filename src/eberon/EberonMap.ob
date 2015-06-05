@@ -129,7 +129,7 @@ PROCEDURE MethodRemoveField.designatorCode(leadCode: STRING; cx: Context.Type): 
 END;
 
 PROCEDURE MethodClearField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
-    RETURN NEW Types.FieldCode(cx.rtl(EberonRtl.PType).clearMap(leadCode), "", "");
+    RETURN NEW Types.FieldCode(cx.rtl()(EberonRtl.PType).clearMap(leadCode), "", "");
 END;
 
 END EberonMap.

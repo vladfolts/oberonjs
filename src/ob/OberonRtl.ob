@@ -9,6 +9,7 @@ TYPE
         setInclR*: PROCEDURE(l, r: STRING): STRING;
         assertId*: PROCEDURE(): STRING;
         makeRef*: PROCEDURE(derefCode, propCode: STRING): STRING;
+        PROCEDURE typeGuard*(from, to: STRING): STRING;
     END;
     PType* = POINTER TO Type;
 END OberonRtl.

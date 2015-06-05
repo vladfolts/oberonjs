@@ -31,7 +31,7 @@ BEGIN
 END;
 
 PROCEDURE CastOpToDynamicArray.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
-    RETURN copyArray(left.type()(Types.PArray), left.code(), right.code(), cx.rtl^)
+    RETURN copyArray(left.type()(Types.PArray), left.code(), right.code(), cx.rtl()^)
 END;
 
 PROCEDURE CastOpToMap.make(cx: LanguageContext.PType; e: Expression.PType): Expression.PType;
@@ -39,25 +39,24 @@ PROCEDURE CastOpToMap.make(cx: LanguageContext.PType; e: Expression.PType): Expr
 END;
 
 PROCEDURE CastOpToMap.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
-    RETURN cx.rtl.copy(right.code(), left.code(), EberonOperator.generateTypeInfo(left.type()));
+    RETURN cx.rtl().copy(right.code(), left.code(), EberonOperator.generateTypeInfo(left.type()));
 END;
 
 PROCEDURE CastOpToMap.clone(cx: LanguageContext.PType; e: Expression.PType): STRING;
-    RETURN cx.rtl.clone(e.code(), EberonOperator.generateTypeInfo(e.type()), "undefined");
+    RETURN cx.rtl().clone(e.code(), EberonOperator.generateTypeInfo(e.type()), "undefined");
 END;
 
 PROCEDURE isOpenCharArray(type: Types.PType): BOOLEAN;
     RETURN (type IS Types.POpenArray) 
-         & (Types.arrayElementsType(type^) = Types.basic.ch)
-END isOpenCharArray;
+         & (type.elementsType = Types.basic.ch)
+END;
 
 PROCEDURE dynamicArrayElementsMatch(t1: Types.PType; t2: Types.PType): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN
     IF (t1 IS EberonDynamicArray.PDynamicArray) & (t2 IS EberonDynamicArray.PDynamicArray) THEN
-        result := dynamicArrayElementsMatch(Types.arrayElementsType(t1^), 
-                                            Types.arrayElementsType(t2^));
+        result := dynamicArrayElementsMatch(t1.elementsType, t2.elementsType);
     ELSE
         result := Cast.areTypesExactlyMatch(t1, t2);
     END;
@@ -77,8 +76,7 @@ BEGIN
             result := Cast.errNo;
         END;
     ELSIF (from IS Types.PArray) & (to IS EberonDynamicArray.PDynamicArray)
-        & dynamicArrayElementsMatch(Types.arrayElementsType(from^), 
-                                    Types.arrayElementsType(to^)) THEN
+        & dynamicArrayElementsMatch(from.elementsType, to.elementsType) THEN
         IF toVar THEN
             IF ~(from IS EberonDynamicArray.PDynamicArray) THEN
                 result := Cast.errVarParameter;

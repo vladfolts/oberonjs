@@ -98,7 +98,7 @@ BEGIN
         IF (right.designator() = NIL) & (left.type() = right.type()) THEN
             result := leftLval + " = " + right.code();
         ELSE
-            result := leftLval + " = " + cx.rtl.clone(right.code(), 
+            result := leftLval + " = " + cx.rtl().clone(right.code(), 
                                                       generateTypeInfo(left.type()), 
                                                       Record.constructor(cx^, left.type()(Record.PType)^));
         END;

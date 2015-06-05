@@ -3,6 +3,7 @@
 var Cast = require("js/Cast.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var Grammar = require("grammar.js");
 var ObContext = require("oberon/oberon_context.js");
@@ -47,7 +48,7 @@ function makeIdentdef(ident){
 }
 
 function makeDesignator(ident, qualident, selector, actualParameters){
-    var designator = context(and(qualident, repeat(selector)), Context.Designator);
+    var designator = context(and(qualident, repeat(selector)), ContextDesignator.Type);
     return { 
         factor: context(and(designator, optional(actualParameters)), ObContext.ExpressionProcedureCall),
         assignmentOrProcedureCall: function(assignment){

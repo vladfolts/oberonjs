@@ -96,12 +96,10 @@ BEGIN
     IF t1 = t2 THEN
         result := TRUE;
     ELSIF (t1 IS Types.PArray) & (t2 IS Types.POpenArray) THEN
-        result := areTypesMatch(Types.arrayElementsType(t1^), 
-                                Types.arrayElementsType(t2^));
+        result := areTypesMatch(t1.elementsType, t2.elementsType);
     ELSIF (t1 IS Types.PStaticArray) & (t2 IS Types.PStaticArray) THEN
         result := (t1.length() = t2.length()) 
-                & (areTypesMatch(Types.arrayElementsType(t1^), 
-                                 Types.arrayElementsType(t2^)));
+                & (areTypesMatch(t1.elementsType, t2.elementsType));
     ELSIF (t1 IS Record.PPointer) & (t2 IS Record.PPointer) THEN
         result := areTypesMatch(Record.pointerBase(t1^), 
                                 Record.pointerBase(t2^));
@@ -146,10 +144,10 @@ PROCEDURE cloneArray*(t: Types.PArray; code: STRING; cx: LanguageContext.PType):
 VAR
     result: STRING;
 BEGIN
-    IF Types.arrayElementsType(t^).isScalar() THEN
+    IF t.elementsType.isScalar() THEN
         result := code + ".slice()";
     ELSE
-        result := cx.rtl.clone(code, cx.types.typeInfo(t), "undefined");
+        result := cx.rtl().clone(code, cx.types.typeInfo(t), "undefined");
     END;
     RETURN result
 END;
@@ -163,7 +161,7 @@ PROCEDURE CastOpArray.clone(cx: LanguageContext.PType; e: Expression.PType): STR
 END;
 
 PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
-    RETURN cx.rtl.copy(right.code(), left.lval(), Record.generateTypeInfo(left.type()));
+    RETURN cx.rtl().copy(right.code(), left.lval(), Record.generateTypeInfo(left.type()));
 END;
 
 PROCEDURE CastOpStrToChar.make(cx: LanguageContext.PType; e: Expression.PType): Expression.PType;
@@ -211,13 +209,11 @@ BEGIN
             result := errNo;
         END;
     ELSIF (from IS Types.PArray) & (to IS Types.POpenArray)
-        & areTypesExactlyMatch(Types.arrayElementsType(from^), 
-                               Types.arrayElementsType(to^)) THEN
+        & areTypesExactlyMatch(from.elementsType, to.elementsType) THEN
             result := errNo;
     ELSIF (from IS Types.PStaticArray) & (to IS Types.PStaticArray) 
         & (from.length() = to.length())
-        & areTypesExactlyMatch(Types.arrayElementsType(from^), 
-                               Types.arrayElementsType(to^)) THEN
+        & areTypesExactlyMatch(from.elementsType, to.elementsType) THEN
             op := castOpArray;
             result := errNo;
     ELSIF (from IS Record.PPointer) & (to IS Record.PPointer) THEN

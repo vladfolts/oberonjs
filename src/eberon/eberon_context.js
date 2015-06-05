@@ -5,6 +5,7 @@ var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var EberonConstructor= require("js/EberonConstructor.js");
@@ -190,8 +191,17 @@ var Identdef = Context.Identdef.extend({
     }
 });
 
+function makeContext(context){
+    var l = context.root().language();
+    return {
+        types: l.types, 
+        rtl: function(){return l.rtl();}, 
+        qualifyScope: context.qualifyScope.bind(context)
+        };
+    }
+
 function makeContextCall(context, call){
-    return call(Context.makeContext(context));
+    return call(makeContext(context));
     }
 
 function OperatorNewMsg(e){
@@ -231,30 +241,31 @@ var SelfAsPointer = Class.extend.call(Type.Id, {
     }
 });
 
-var Designator = Context.Designator.extend({
+var Designator = Class.extend.call(ContextDesignator.Type, {
     init: function EberonContext$Designator(parent){
-        Context.Designator.prototype.init.call(this, parent);
+        ContextDesignator.Type.call(this, parent);
         this.__procCall = undefined;
     },
-    _checkIndexType: function(type){
-        if (this._currentType() instanceof EberonMap.Type){
+    doCheckIndexType: function(type){
+        if (this.currentType instanceof EberonMap.Type){
             checkMapKeyType(type);
             return;
         }
-        return Context.Designator.prototype._checkIndexType.call(this, type);
+        return ContextDesignator.Type.prototype.doCheckIndexType.call(this, type);
     },
-    _indexSequence: function(info, code, indexCode){
-        var currentType = this._currentType();
+    doIndexSequence: function(info, code, indexCode){
+        var currentType = this.currentType;
         if (currentType == EberonString.string())
             return { length: undefined, 
                      type: Type.basic().ch,
                      info: EberonString.makeElementVariable(),
-                     code: this._stringIndexCode()
+                     code: this.stringIndexCode(),
+                     lval: ""
                    };
 
         if (currentType instanceof EberonMap.Type){
             var indexType = currentType.valueType;
-            var rval = this.root().language().rtl.getMappedValue(code, indexCode);
+            var rval = this.root().language().rtl().getMappedValue(code, indexCode);
             return { length: undefined, 
                      type: indexType,
                      info: new MapElementVariable(indexType, info.isReadOnly(), rval),
@@ -263,12 +274,12 @@ var Designator = Context.Designator.extend({
                    };
         }
         
-        return Context.Designator.prototype._indexSequence.call(this, info, code, indexCode);
+        return ContextDesignator.Type.prototype.doIndexSequence.call(this, info, code, indexCode);
     },
-    _makeDerefVar: function(info){
+    doMakeDerefVar: function(info){
         if (info instanceof TypeNarrowVariable)
             return new DereferencedTypeNarrowVariable(info);
-        return Context.Designator.prototype._makeDerefVar.call(this, info);
+        return ContextDesignator.Type.prototype.doMakeDerefVar.call(this, info);
     },
     handleMessage: function(msg){
         if (msg == Context.beginCallMsg)
@@ -277,7 +288,7 @@ var Designator = Context.Designator.extend({
             return this.__endCall();
         if (msg instanceof OperatorNewMsg){
             var e = msg.expression;
-            this._advance(e.type(), new ResultVariable(e), e.code());
+            this.advance(e.type(), new ResultVariable(e), e.code(), "");
             return;
         }
 
@@ -285,47 +296,48 @@ var Designator = Context.Designator.extend({
         if (breakTypePromotion(msg))
             return;
         
-        return Context.Designator.prototype.handleMessage.call(this, msg);
+        return ContextDesignator.Type.prototype.handleMessage.call(this, msg);
     },
     handleExpression: function(e){
         if (this.__procCall)
             this.__procCall.handleArgument(e);
         else
-            Context.Designator.prototype.handleExpression.call(this, e);
+            ContextDesignator.Type.prototype.handleExpression.call(this, e);
     },
     handleLiteral: function(s){
         if (s == "SELF"){
             var type = this.handleMessage(getMethodSelf);
             var info = new Variable.DeclaredVariable("this", type);
-            this._advance(type, info, "this");
+            this.advance(type, info, "this", "");
         } 
         else if (s == "POINTER"){
             var typeId = new TypeId.Type(this.handleMessage(getSelfAsPointerMsg));
             var pointerType = new Record.Pointer("", typeId);
-            this._advance(pointerType, new SelfAsPointer(), "");
+            this.advance(pointerType, new SelfAsPointer(), "", "");
         }
         else if (s == "SUPER"){
             var ms = this.handleMessage(getMethodSuper);
-            this._advance(ms.info.type, ms.info, ms.code);
+            this.advance(ms.info.type, ms.info, ms.code, "");
         }
         else 
-            Context.Designator.prototype.handleLiteral.call(this, s);
+            ContextDesignator.Type.prototype.handleLiteral.call(this, s);
     },
     __beginCall: function(){
-        var type = this._currentType();
-        if (type instanceof TypeId.Type && type.type() instanceof Type.Record){
+        var type = this.currentType;
+        var info = this.info;
+        if (info instanceof TypeId.Type && type instanceof Type.Record){
             this.__procCall = makeContextCall(
                 this, 
-                function(cx){ return EberonConstructor.makeConstructorCall(type, cx, false); }
+                function(cx){ return EberonConstructor.makeConstructorCall(info, cx, false); }
                 );
-            this._discardCode();
+            this.discardCode();
         }
         else
-            this.__procCall = Context.makeProcCall(this, type, this._currentInfo());
+            this.__procCall = Context.makeProcCall(this, type, this.info);
     },
     __endCall: function(){
         var e = this.__procCall.end();
-        this._advance(e.type(), new ResultVariable(e), e.code());
+        this.advance(e.type(), new ResultVariable(e), e.code(), "");
         this.__procCall = undefined;
     }
 });
@@ -397,7 +409,7 @@ var InPlaceVariableInit = Context.Chained.extend({
             EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForCopy);
             if (e.designator()){
                 var l = this.root().language();
-                this._code += l.rtl.clone(e.code(), l.types.typeInfo(type));
+                this._code += l.rtl().clone(e.code(), l.types.typeInfo(type));
             }
             else // do not clone if it is temporary, e.g. constructor call
                 this._code += e.code();
@@ -469,7 +481,7 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
         var code;
         if (this.__right){
             var left = Expression.make(d.code(), type, d);
-            code = op.assign(left, this.__right, Context.makeContext(this));
+            code = op.assign(left, this.__right, makeContext(this));
         }
         else if (!(d.info() instanceof ResultVariable)){
             var procCall = Context.makeProcCall(this, type, d.info());
@@ -1044,8 +1056,8 @@ var ExpressionContext = Class.extend.call(ContextExpression.ExpressionNode, {
         return ContextExpression.ExpressionNode.prototype.endParse.call(this);
     },
     doRelationOperation: function(left, right, relation){
-        if (relation == "IN" && right instanceof EberonMap.Type){
-            checkMapKeyType(left);
+        if (relation == "IN" && right.type() instanceof EberonMap.Type){
+            checkMapKeyType(left.type());
             return eOp.inMap;            
         }
         return ContextExpression.ExpressionNode.prototype.doRelationOperation.call(this, left, right, relation);
@@ -1327,7 +1339,7 @@ function assertArgumentIsNotNonVarDynamicArray(msg){
             while (type instanceof Type.Array){
                 if (type instanceof EberonDynamicArray.DynamicArray)
                     throw new Errors.Error("dynamic array has no use as non-VAR argument '" + msg.name + "'");
-                type = Type.arrayElementsType(type);
+                type = type.elementsType;
             }
         }
     }

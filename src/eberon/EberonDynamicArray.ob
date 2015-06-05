@@ -126,7 +126,7 @@ BEGIN
     IF t IS Types.PArray THEN
         SELF.code := Cast.cloneArray(t, SELF.code, SELF.cx);
     ELSIF t IS Record.PType THEN
-        SELF.code := SELF.cx.rtl.clone(SELF.code, EberonOperator.generateTypeInfo(t), Record.constructor(SELF.cx^, t^));
+        SELF.code := SELF.cx.rtl().clone(SELF.code, EberonOperator.generateTypeInfo(t), Record.constructor(SELF.cx^, t^));
     END;
 END AddCallGenerator.handleArgument;
 

@@ -1,0 +1,253 @@
+MODULE ContextDesignator;
+IMPORT
+    Code, ConstValue, ContextExpression, ContextHierarchy, 
+    Designator, Errors, Expression, 
+    Record, ScopeBase, String, TypeId, Types, Variable;
+TYPE
+    Index = RECORD
+        PROCEDURE Index(length: INTEGER; type: Types.PType; info: Types.PId; code, lval, asProperty: STRING);
+
+        length: INTEGER;
+        type: Types.PType;
+        info: Types.PId;
+        code, lval, asProperty: STRING;
+    END;
+    PIndex = POINTER TO Index;
+
+    Type* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
+        PROCEDURE handleExpression(e: Expression.PType);
+        PROCEDURE handleTypeCast(type: Types.PType);
+
+        PROCEDURE advance(type: Types.PType; info: Types.PId; code, lval: STRING; replace: BOOLEAN);
+        PROCEDURE doCheckIndexType(type: Types.PType);
+        PROCEDURE doCheckIndexValue(index: PIndex; const: ConstValue.PType);
+        PROCEDURE doIndexSequence(info: Types.PId; code, indexCode: STRING): PIndex;
+        PROCEDURE stringIndexCode(): STRING;
+        PROCEDURE discardCode();
+        PROCEDURE doMakeDerefVar(info: Types.PId): Types.PVariable;
+
+        scope: ScopeBase.PType;
+        currentType-: Types.PType;
+        info-: Types.PId;
+        code, derefCode, propCode, lval: STRING;
+        indexExpression: Expression.PType;
+    END;
+
+PROCEDURE Index.Index(length: INTEGER; type: Types.PType; info: Types.PId; code, lval, asProperty: STRING)
+    | length(length),
+      type(type),
+      info(info),
+      code(code),
+      lval(lval),
+      asProperty(asProperty);
+END;
+
+PROCEDURE Type.handleQIdent(q: ContextHierarchy.QIdent);
+BEGIN
+    found <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
+    SELF.scope := found.scope();
+    s <- found.symbol();
+    info <- s.info();
+    code <- q.code;
+
+    IF info IS TypeId.PType THEN
+        SELF.currentType := info.type();
+    ELSIF info IS Types.PConst THEN
+        SELF.currentType := info.type;
+    ELSIF info IS Types.PVariable THEN
+        SELF.currentType := info.type();
+        IF q.module # NIL THEN
+            code := code + "()";
+        END;
+    ELSIF info IS Types.PProcedureId THEN
+        procType <- info.type;
+        code := procType.designatorCode(code);
+        SELF.currentType := procType;
+    END;
+
+    SELF.info := info;
+    SELF.code := code;
+END;
+
+PROCEDURE Type.handleExpression(e: Expression.PType);
+BEGIN
+    SELF.indexExpression := e;
+END;
+
+PROCEDURE Type.handleTypeCast(type: Types.PType);
+BEGIN
+    ContextExpression.checkTypeCast(SELF.info(Types.PVariable), SELF.currentType, type, "type cast");
+
+    code <- SELF.root().language().rtl().typeGuard(SELF.code, ContextExpression.castCode(type, SELF));
+    SELF.code := code;
+
+    SELF.currentType := type;
+END;
+
+PROCEDURE handleIndexExpression(designator: Type): PIndex;
+BEGIN
+    e <- designator.indexExpression;
+    designator.doCheckIndexType(e.type());
+    index <- designator.doIndexSequence(designator.info, designator.derefCode, Expression.deref(e).code());
+    designator.doCheckIndexValue(index, e.constValue());  
+    RETURN index;
+END;
+
+PROCEDURE handleDeref(VAR designator: Type);
+BEGIN
+    t <- designator.currentType;
+    IF t IS Record.PPointer THEN
+        designator.currentType := Record.pointerBase(t^);
+    ELSE
+        Errors.raise("POINTER TO type expected, got '"
+                     + designator.currentType.description() + "'");
+    END;
+    
+    IF designator.currentType IS Record.PNonExported THEN
+        Errors.raise("POINTER TO non-exported RECORD type cannot be dereferenced");
+    END;
+    
+    designator.lval := "";
+END;
+
+PROCEDURE Type.handleLiteral(s: STRING);
+BEGIN
+    IF (s = "]") OR (s = ",") THEN
+        index <- handleIndexExpression(SELF);
+        SELF.propCode := index.asProperty;
+        SELF.advance(index.type, index.info, SELF.code + index.code, index.lval, FALSE);
+    END;
+    IF (s = "[") OR (s = ",") THEN
+        SELF.derefCode := SELF.code;
+        SELF.code := "";
+    ELSIF s = "^" THEN
+        handleDeref(SELF);
+        SELF.info := SELF.doMakeDerefVar(SELF.info);
+    END;
+END;
+
+PROCEDURE Type.handleIdent(id: STRING);
+BEGIN
+    info <- SELF.info;
+    isReadOnly <- (info IS Types.PVariable) & info.isReadOnly();
+
+    t <- SELF.currentType;
+    IF t IS Record.PPointer THEN
+        handleDeref(SELF);
+        isReadOnly := FALSE;
+    END;
+
+    IF info IS TypeId.PType THEN
+        Types.raiseUnexpectedSelector(id, info.description());
+    ELSIF ~(t IS Types.PStorageType) THEN
+        Types.raiseUnexpectedSelector(id, t.description());
+    ELSE
+        field <- t.denote(id, isReadOnly);
+        currentType <- field.type();
+        fieldCode <- field.designatorCode(SELF.code, SELF);
+        SELF.derefCode := fieldCode.derefCode;
+        SELF.propCode := fieldCode.propCode;
+        SELF.advance(currentType, field.asVar(SELF.code, isReadOnly, SELF), fieldCode.code, "", TRUE);
+        SELF.scope := NIL;
+    END;
+END;
+
+PROCEDURE Type.advance(type: Types.PType; info: Types.PId; code, lval: STRING; replace: BOOLEAN);
+BEGIN
+    SELF.currentType := type;
+    SELF.info := info;
+    IF replace THEN
+        SELF.code := code;
+    ELSE
+        SELF.code := SELF.code + code;
+    END;
+    SELF.lval := lval;
+END;
+
+PROCEDURE Type.doCheckIndexType(type: Types.PType);
+BEGIN
+    IF ~Types.isInt(type) THEN
+        Errors.raise(Types.intsDescription() + " expression expected, got '" 
+                     + type.description() + "'");
+    END;
+END;
+
+PROCEDURE Type.doCheckIndexValue(index: PIndex; pValue: ConstValue.PType);
+BEGIN
+    IF (pValue # NIL) & (pValue^ IS ConstValue.Int) THEN
+        value <- pValue.value;
+        Code.checkIndex(value);
+        
+        length <- index.length;
+        IF (((SELF.currentType IS Types.PStaticArray) OR (SELF.currentType IS Types.PString))
+          & (value >= length)) THEN
+            Errors.raise("index out of bounds: maximum possible index is "
+                         + String.fromInt(length - 1)
+                         + ", got " + String.fromInt(value));
+        END;
+    END;
+END;
+
+PROCEDURE Type.doIndexSequence(info: Types.PId; code, indexCode: STRING): PIndex;
+VAR
+    length: INTEGER;
+    indexType: Types.PStorageType;
+    lval: STRING;
+BEGIN
+    type <- SELF.currentType;
+    IF type IS Types.PArray THEN
+        indexType := type.elementsType;
+    ELSIF type IS Types.PString THEN
+        indexType := Types.basic.ch;
+    ELSE
+        Errors.raise("ARRAY or string expected, got '" + type.description() + "'");
+    END;
+
+    IF type IS Types.PStaticArray THEN
+        length := type.length();
+    ELSIF type IS Types.PString THEN
+        length := Types.stringLen(type^);
+        IF length = 0 THEN
+            Errors.raise("cannot index empty string" );
+        END;
+    END;
+
+    leadCode <- code;
+    wholeCode <- code + "[" + indexCode + "]";
+    IF indexType = Types.basic.ch THEN
+        lval := wholeCode;
+        wholeCode := SELF.stringIndexCode();
+    END;
+
+    readOnly <- (info IS Types.PConst) 
+             OR ((info IS Types.PVariable) & info.isReadOnly());
+    v <- NEW Variable.PropertyVariable(indexType, leadCode, indexCode, readOnly, SELF.root().language().rtl());
+    RETURN NEW Index(length, indexType, v, wholeCode, lval, indexCode);
+END;
+
+PROCEDURE Type.stringIndexCode(): STRING;
+    RETURN SELF.derefCode + ".charCodeAt(" + Expression.deref(SELF.indexExpression).code() + ")";
+END;
+
+PROCEDURE Type.discardCode();
+BEGIN
+    SELF.code := "";
+END;
+
+PROCEDURE Type.doMakeDerefVar(info: Types.PId): Types.PVariable;
+   RETURN NEW Variable.DerefVariable(SELF.currentType(Types.PStorageType), SELF.code);
+END;
+
+PROCEDURE Type.endParse();
+BEGIN
+    code <- SELF.code;
+    lval <- SELF.lval;
+    IF LEN(lval) = 0 THEN
+        lval := code;
+    END;
+    SELF.parent().attributes.designator :=
+        NEW Designator.Type(code, lval, SELF.currentType, SELF.info, SELF.scope);
+END;
+
+END ContextDesignator.

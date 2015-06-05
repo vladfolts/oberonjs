@@ -3,8 +3,7 @@ IMPORT OberonRtl, ScopeBase;
 TYPE
     Type* = RECORD
         PROCEDURE qualifyScope*(scope: ScopeBase.PType): STRING;
-        
-        rtl*: OberonRtl.PType;
+        PROCEDURE rtl*(): OberonRtl.PType;
     END;
     PType* = POINTER TO Type;
 

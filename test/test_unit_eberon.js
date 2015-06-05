@@ -1147,7 +1147,7 @@ exports.suite = {
         ),
     "as expression": testWithContext(
         context(grammar.expression,
-                "TYPE T = RECORD i: INTEGER; END; PT = POINTER TO T;"
+                "TYPE T = RECORD i: INTEGER; END; PT = POINTER TO T; ProcType = PROCEDURE(): INTEGER;"
                 + "ConsWithArguments = RECORD PROCEDURE ConsWithArguments(a: INTEGER); END;"
                 + "PROCEDURE ConsWithArguments.ConsWithArguments(a: INTEGER); END;"
                 + "PROCEDURE byVar(VAR a: T): INTEGER; RETURN 0; END;"
@@ -1158,7 +1158,8 @@ exports.suite = {
              "T().i",
              "ConsWithArguments(123)"
              ),
-        fail(["PT()", "PROCEDURE expected, got 'type PT'"],
+        fail(["ProcType()", "PROCEDURE expected, got 'ProcType'"],
+             ["PT()", "PROCEDURE expected, got 'PT'"],
              ["byVar(T())", "expression cannot be used as VAR parameter"],
              ["T(0)", "0 argument(s) expected, got 1"],
              ["ConsWithArguments()", "1 argument(s) expected, got 0"],
@@ -1458,7 +1459,7 @@ exports.suite = {
              ["FOR k, v IN m DO k := \"\"; END", "cannot assign to FOR variable"],
              ["FOR k, v IN m DO v := 0; END", "cannot assign to FOR variable"],
              ["FOR k, v IN r DO END", "expression of type MAP is expected in FOR, got 'T'"],
-             ["FOR k, v IN T DO END", "expression of type MAP is expected in FOR, got 'type T'"]
+             ["FOR k, v IN T DO END", "type name 'T' cannot be used as an expression"]
             )
         ),
     "FOR scope": testWithContext(

@@ -64,7 +64,7 @@ PROCEDURE MethodField.exported(): BOOLEAN;
     RETURN FALSE
 END;
 
-PROCEDURE MethodField.type(): Types.PType;
+PROCEDURE MethodField.type(): Types.PStorageType;
     RETURN SELF.method
 END;
 

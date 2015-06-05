@@ -7,11 +7,11 @@ TYPE
     END;
     PType* = POINTER TO Type;
 
-    AnyType* = RECORD(Types.StorageType)
+    AnyType* = RECORD(Types.Procedure)
         PROCEDURE AnyType();
 
         PROCEDURE callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
-        PROCEDURE designatorCode(id: STRING): STRING;
+
         asVar: Types.PId
     END;
 
@@ -71,7 +71,7 @@ PROCEDURE AnyField.exported(): BOOLEAN;
     RETURN FALSE
 END AnyField.exported;
 
-PROCEDURE AnyField.type(): Types.PType;
+PROCEDURE AnyField.type(): Types.PStorageType;
     RETURN any
 END AnyField.type;
 
@@ -153,7 +153,8 @@ PROCEDURE makeJS*(): PType;
 END;
 
 PROCEDURE AnyType.AnyType()
-    | asVar(NEW TypeId.Type(SELF(POINTER)));
+    | SUPER("any type"),
+      asVar(NEW TypeId.Type(SELF(POINTER)));
 END;
 
 PROCEDURE AnyField.AnyField(id: STRING)

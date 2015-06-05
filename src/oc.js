@@ -131,7 +131,7 @@ function compile(text, language, handleErrors){
                 return new ContextHierarchy.Root(
                     { codeGenerator: language.codeGenerator.make(),
                       moduleGenerator: moduleCode,
-                      rtl: rtl,
+                      rtl: function(){return rtl;},
                       types: language.types,
                       stdSymbols: language.stdSymbols,
                       moduleResolver: moduleResolver

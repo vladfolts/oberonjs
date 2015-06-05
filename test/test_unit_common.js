@@ -28,11 +28,12 @@ var TestModuleGenerator = Class.extend({
 
 var TestContext = Class.extend.call(ContextHierarchy.Root, {
     init: function TestContext(language){
+        var rtl = new makeRTL(language.rtl);
         ContextHierarchy.Root.call(
                 this,
                 { codeGenerator: language.codeGenerator.nil,
                   moduleGenerator: function(){return new TestModuleGenerator();},
-                  rtl: new makeRTL(language.rtl),
+                  rtl: function(){return rtl;},
                   types: language.types,
                   stdSymbols: language.stdSymbols
                 });

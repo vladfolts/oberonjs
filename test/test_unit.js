@@ -70,7 +70,15 @@ return {
          "p2()"),
     fail(["", "not parsed"],
          ["12a", "not parsed"],
-         ["noResult()", "procedure returning no result cannot be used in an expression"]
+         ["noResult()", "procedure returning no result cannot be used in an expression"],
+         ["1 + INTEGER", "type name 'INTEGER' cannot be used as an expression"],
+         ["INTEGER + 1", "type name 'INTEGER' cannot be used as an expression"],
+         ["1 * INTEGER", "type name 'INTEGER' cannot be used as an expression"],
+         ["INTEGER * 1", "type name 'INTEGER' cannot be used as an expression"],
+         ["-INTEGER", "type name 'INTEGER' cannot be used as an expression"],
+         ["+INTEGER", "type name 'INTEGER' cannot be used as an expression"],
+         ["~BOOLEAN", "type name 'BOOLEAN' cannot be used as an expression"],
+         ["INTEGER", "type name 'INTEGER' cannot be used as an expression"]
          )
     ),
 "string expression": testWithContext(
@@ -267,7 +275,7 @@ return {
         ),
 "POINTER relations": testWithContext(
     context(grammar.expression,
-            "TYPE B = RECORD END; D = RECORD(B) END;"
+            "TYPE B = RECORD END; D = RECORD(B) END; PB = POINTER TO B;"
           + "VAR p1, p2: POINTER TO RECORD END; pb: POINTER TO B; pd: POINTER TO D;"),
     pass("p1 = p2",
          "p1 # p2",
@@ -278,7 +286,9 @@ return {
          ["p1 <= p2", "operator '<=' type mismatch: numeric type or SET or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
          ["p1 > p2", "operator '>' type mismatch: numeric type or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
          ["p1 >= p2", "operator '>=' type mismatch: numeric type or SET or CHAR or character array expected, got 'POINTER TO anonymous RECORD'"],
-         ["p1 = pb", "type mismatch: expected 'POINTER TO anonymous RECORD', got 'POINTER TO B'"]
+         ["p1 = pb", "type mismatch: expected 'POINTER TO anonymous RECORD', got 'POINTER TO B'"],
+         ["pb = PB", "type name 'PB' cannot be used as an expression"],
+         ["PB = pb", "type name 'PB' cannot be used as an expression"]
          )
     ),
 "IS expression": testWithContext(
@@ -292,7 +302,7 @@ return {
          ["pBase IS TRUE", "type name expected"],
          ["pBase IS vDerived", "type name expected"],
          ["Derived IS Derived", 
-          "invalid type test: POINTER to type or RECORD expected, got 'type Derived'"],
+          "type name 'Derived' cannot be used as an expression"],
          ["i IS Derived", 
           "invalid type test: POINTER to type or RECORD expected, got 'INTEGER'"],
          ["p^ IS Derived", 
@@ -541,7 +551,7 @@ return {
          ["ch := \"AB\"",
           "type mismatch: 'ch' is 'CHAR' and cannot be assigned to 'multi-character string' expression"],
          ["ch := CHAR",
-          "type mismatch: 'ch' is 'CHAR' and cannot be assigned to 'type CHAR' expression"],
+          "type name 'CHAR' cannot be used as an expression"],
          ["i := .1", "expression expected"],
          ["proc1 := proc2",
           "type mismatch: 'proc1' is 'PROCEDURE' and cannot be assigned to 'PROCEDURE(): INTEGER' expression"],
@@ -1183,6 +1193,14 @@ return {
          "VAR a: ARRAY 10, 5 OF BOOLEAN; BEGIN a[0][0] := TRUE END",
          "VAR a: ARRAY 10, 5 OF BOOLEAN; BEGIN a[0, 0] := TRUE END")
     ),
+"selector": testWithContext(
+    context(grammar.expression,
+            "TYPE T = RECORD field: INTEGER END; VAR r: T; i: INTEGER;"),
+    pass("r.field"),
+    fail(["i.field",
+          "selector '.field' cannot be applied to 'INTEGER'"],
+         ["T.field", "selector '.field' cannot be applied to 'type T'"])
+    ),
 "procedure body": testWithGrammar(
     grammar.procedureBody,
     pass("END",
@@ -1198,8 +1216,6 @@ return {
     fail(["VAR i: INTEGER;", "END expected (PROCEDURE)"],
          ["VAR i: INTEGER; i := 1; END", "END expected (PROCEDURE)"],
          ["VAR i: INTEGER; BEGIN j := 1 END", "undeclared identifier: 'j'"],
-         ["VAR i: INTEGER; BEGIN i.field := 1 END",
-          "selector '.field' cannot be applied to 'INTEGER'"],
          ["VAR i: INTEGER; BEGIN i := j END", "undeclared identifier: 'j'"],
          ["TYPE T = RECORD field: INTEGER END; VAR v: T; BEGIN v := 1 END",
           "type mismatch: 'v' is 'T' and cannot be assigned to 'INTEGER' expression"],

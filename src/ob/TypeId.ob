@@ -8,7 +8,7 @@ TYPE
 
         PROCEDURE type*(): Types.PType;
         PROCEDURE reset*(type: Types.PType);
-        PROCEDURE description(): STRING;
+        PROCEDURE description*(): STRING;
 
         mType: Types.PType
     END;

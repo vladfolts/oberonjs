@@ -238,12 +238,12 @@ BEGIN
         Chars.doubleQuote + codeId + Chars.doubleQuote);
 END;
 
-PROCEDURE Field.type(): Types.PType;
+PROCEDURE Field.type(): Types.PStorageType;
     RETURN SELF.mType;
 END;
 
 PROCEDURE Field.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
-    RETURN NEW FieldVariable(SELF(POINTER), leadCode, isReadOnly, cx.rtl);
+    RETURN NEW FieldVariable(SELF(POINTER), leadCode, isReadOnly, cx.rtl());
 END;
 
 PROCEDURE Field.Field(identdef: Context.PIdentdefInfo; type: Types.PStorageType)

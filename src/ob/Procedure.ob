@@ -402,7 +402,7 @@ PROCEDURE makeAssert(): Symbols.PSymbol;
     BEGIN
         arg := checkSingleArgument(args, SELF, cx.types, NIL);
         RETURN Expression.makeSimple(
-                cx.rtl.assertId() + "(" + arg.code() + ")",
+                cx.rtl().assertId() + "(" + arg.code() + ")",
                 NIL)
     END CallImpl.make;
 BEGIN

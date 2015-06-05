@@ -104,178 +104,6 @@ exports.Identdef = ChainedContext.extend({
     }
 });
 
-function makeContext(context){
-    var l = context.root().language();
-    return {
-        types: l.types, 
-        rtl: l.rtl, 
-        qualifyScope: context.qualifyScope.bind(context)
-        };
-    }
-
-exports.Designator = ChainedContext.extend({
-    init: function Context$Designator(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__currentType = undefined;
-        this.__info = undefined;
-        this.__scope = undefined;
-        this.__code = "";
-        this.__lval = undefined;
-        this.__indexExpression = undefined;
-        this.__derefCode = undefined;
-        this.__propCode = undefined;
-    },
-    handleQIdent: function(q){
-        var found = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        this.__scope = found.scope();
-        var s = found.symbol();
-        var info = s.info();
-        var code = q.code;
-        if (info instanceof Type.Type || s.isType())
-            this.__currentType = info;
-        else if (s.isConst())
-            this.__currentType = Type.constType(info);
-        else if (s.isVariable()){
-            this.__currentType = info.type();
-            if (q.module)
-                code += "()";
-        }
-        else if (s.isProcedure()){
-            this.__currentType = Type.procedureType(info);
-            code = this.__currentType.designatorCode(code);
-        }
-        
-        this.__info = info;
-        this.__code += code;
-    },
-    handleIdent: function(id){
-        var t = this.__currentType;
-        var isReadOnly = this.__info instanceof Type.Variable 
-                      && this.__info.isReadOnly();
-        if (t instanceof Record.Pointer){
-            this.__handleDeref();
-            isReadOnly = false;
-        }
-        var field = t.denote(id, isReadOnly);
-        var currentType = field.type();
-        var language = this.root().language();
-        var cx = makeContext(this);
-        var fieldCode = field.designatorCode(this.__code, cx);
-        this.__derefCode = fieldCode.derefCode;
-        this.__propCode = fieldCode.propCode;
-        this._advance(currentType, field.asVar(this.__code, isReadOnly, cx), fieldCode.code, undefined, true);
-        this.__scope = undefined;
-    },
-    _currentType: function(){return this.__currentType;},
-    _currentInfo: function(){return this.__info;},
-    _discardCode: function(){this.__code = "";},
-    _makeDerefVar: function(info){
-        return new Variable.DerefVariable(this.__currentType, this.__code);
-    },
-    handleExpression: function(e){this.__indexExpression = e;},
-    __handleIndexExpression: function(){
-        var e = this.__indexExpression;
-        this._checkIndexType(e.type());
-        var index = this._indexSequence(this.__info, this.__derefCode, Expression.deref(e).code());
-        this._checkIndexValue(index, e.constValue());  
-        return index;
-    },
-    _checkIndexType: function(type){
-        if (!Type.isInt(type))
-            throw new Errors.Error(
-                Type.intsDescription() + " expression expected, got '" + type.description() + "'");
-    },        
-    _checkIndexValue: function(index, pValue){
-        if (!pValue)
-            return;
-
-        var value = pValue.value;
-        Code.checkIndex(value);
-        
-        var length = index.length;
-        if ((this.__currentType instanceof Type.StaticArray || this.__currentType instanceof Type.String)
-         && value >= length)
-            throw new Errors.Error("index out of bounds: maximum possible index is "
-                                 + (length - 1)
-                                 + ", got " + value );
-    },
-    _advance: function(type, info, code, lval, replace){
-        this.__currentType = type;
-        this.__info = info;
-        this.__code = (replace ? "" : this.__code) + code;
-        this.__lval = lval;
-    },
-    _indexSequence: function(info, code, indexCode){
-        var type = this._currentType();
-        var isArray = type instanceof Type.Array;
-        if (!isArray && !(type instanceof Type.String))
-            throw new Errors.Error("ARRAY or string expected, got '" + type.description() + "'");
-
-        var length = isArray ? type instanceof Type.StaticArray ? type.length() 
-                                                                : undefined
-                             : Type.stringLen(type);
-        if (!isArray && !length)
-            throw new Errors.Error("cannot index empty string" );
-        var indexType = isArray ? Type.arrayElementsType(type) : basicTypes.ch;
-
-        var leadCode = code;
-        code = code + "[" + indexCode + "]";
-        var lval;
-        if (indexType == basicTypes.ch){
-            lval = code;
-            code = this._stringIndexCode();
-        }
-
-        return { length: length,
-                 type: indexType,
-                 info: new Variable.PropertyVariable(indexType, leadCode, indexCode, info instanceof Type.Const || info.isReadOnly(), this.root().language().rtl),
-                 code: code,
-                 lval: lval,
-                 asProperty: indexCode
-               };
-    },
-    _stringIndexCode: function(){
-        return this.__derefCode + ".charCodeAt(" + Expression.deref(this.__indexExpression).code() + ")";
-    },
-    handleLiteral: function(s){
-        if (s == "]" || s == ","){
-            var index = this.__handleIndexExpression();
-            this.__propCode = index.asProperty;
-            this._advance(index.type, index.info, this.__code + index.code, index.lval);
-        }
-        if (s == "[" || s == ","){
-            this.__derefCode = this.__code;
-            this.__code = "";
-        }
-        else if (s == "^"){
-            this.__handleDeref();
-            this.__info = this._makeDerefVar(this.__info);
-        }
-    },
-    __handleDeref: function(){
-        if (!(this.__currentType instanceof Record.Pointer))
-            throw new Errors.Error("POINTER TO type expected, got '"
-                                 + this.__currentType.description() + "'");
-        this.__currentType = Record.pointerBase(this.__currentType);
-        if (this.__currentType instanceof Record.NonExported)
-            throw new Errors.Error("POINTER TO non-exported RECORD type cannot be dereferenced");
-        this.__lval = undefined;
-    },
-    handleTypeCast: function(type){
-        ContextExpression.checkTypeCast(this.__info, this.__currentType, type, "type cast");
-
-        var code = this.root().language().rtl.typeGuard(this.__code, ContextExpression.castCode(type, this));
-        this.__code = code;
-
-        this.__currentType = type;
-    },
-    endParse: function(){
-        var code = this.__code;
-        this.parent().attributes.designator =
-            new Designator.Type(code, this.__lval ? this.__lval : code, this.__currentType, this.__info, this.__scope);
-    }
-});
-
 exports.Type = ChainedContext.extend({
     init: function Context$Type(context){
         ChainedContext.prototype.init.call(this, context);
@@ -575,7 +403,7 @@ exports.ArrayDecl = HandleSymbolAsType.extend({
     isAnonymousDeclaration: function(){return true;},
     endParse: function(){this.parent().setType(this.__type);},
     _makeInit: function(type, dimensions, length){
-        var rtl = this.root().language().rtl;
+        var rtl = this.root().language().rtl();
         if (type == basicTypes.ch)
             return rtl.makeCharArray(dimensions);
 
@@ -616,8 +444,9 @@ exports.ArrayDimensions = ChainedContext.extend({
 
 function designatorAsExpression(d){
     var info = d.info();
+
     if (info instanceof Type.ProcedureId){
-        var proc = Type.procedureType(info);
+        var proc = info.type;
         if (proc instanceof Procedure.Std)
             throw new Errors.Error(proc.description() + " cannot be referenced");
         var scope = d.scope();
@@ -659,7 +488,7 @@ exports.Set = ChainedContext.extend({
         if (!this.__expr.length)
             parent.handleConst(basicTypes.set, new ConstValue.Set(this.__value), this.__value.toString());
         else{
-            var code = this.root().language().rtl.makeSet(this.__expr);
+            var code = this.root().language().rtl().makeSet(this.__expr);
             if (this.__value)
                 code += " | " + this.__value;
             var e = Expression.make(code, basicTypes.set);
@@ -852,7 +681,7 @@ exports.CaseRange = ChainedContext.extend({
         if (!s.isConst())
             throw new Errors.Error("'" + id + "' is not a constant");
         
-        var type = Type.constType(s.info());
+        var type = s.info().type;
         if (type instanceof Type.String)
             this.handleConst(type, undefined);
         else
@@ -1102,7 +931,8 @@ function assertProcType(type, info){
     var unexpected;
     if ( !type )
         unexpected = info.idType();
-    else if (!(type instanceof Type.Procedure) && !(type instanceof Module.AnyType))
+    else if (((info instanceof TypeId.Type) || !(type instanceof Type.Procedure)) 
+        && !(type instanceof Module.AnyType))
         unexpected = type.description();
     if (unexpected)
         throw new Errors.Error("PROCEDURE expected, got '" + unexpected + "'");
@@ -1143,7 +973,7 @@ function isTypeRecursive(type, base){
         }
     }
     else if (type instanceof Type.Array)
-        return isTypeRecursive(Type.arrayElementsType(type), base);
+        return isTypeRecursive(type.elementsType, base);
     return false;
 }
 
@@ -1219,7 +1049,7 @@ exports.RecordDecl = ChainedContext.extend({
         if (!base)
             return "";
         var qualifiedBase = this.qualifyScope(base.scope) + Type.typeName(base); 
-        return this.root().language().rtl.extend(this.__cons, qualifiedBase) + ";\n";
+        return this.root().language().rtl().extend(this.__cons, qualifiedBase) + ";\n";
     },
     _makeField: function(field, type){
         return new Record.Field(field, type);
@@ -1418,7 +1248,7 @@ function makeProcCall(context, type, info){
     var l = context.root().language();
     return type.callGenerator(
         { types: l.types, 
-          rtl: l.rtl, 
+          rtl: function(){ return l.rtl(); }, 
           qualifyScope: context.qualifyScope.bind(context)
         });
 }
@@ -1432,4 +1262,3 @@ exports.designatorAsExpression = designatorAsExpression;
 exports.endParametersMsg = endParametersMsg;
 exports.makeProcCall = makeProcCall;
 exports.HandleSymbolAsType = HandleSymbolAsType;
-exports.makeContext = makeContext;

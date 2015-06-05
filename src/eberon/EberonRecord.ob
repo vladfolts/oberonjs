@@ -52,6 +52,7 @@ TYPE
     END;
 
     FieldAsMethod = RECORD(Base.Field)
+        PROCEDURE FieldAsMethod(identdef: Context.PIdentdefInfo; type: Types.PProcedure);
     END;
     PFieldAsMethod = POINTER TO FieldAsMethod;
 
@@ -202,8 +203,12 @@ BEGIN
     END;
 END;
 
+PROCEDURE FieldAsMethod.FieldAsMethod(identdef: Context.PIdentdefInfo; type: Types.PProcedure)
+    | SUPER(identdef, type);
+END;
+
 PROCEDURE FieldAsMethod.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
-    RETURN NEW EberonTypes.MethodVariable(SELF.type()); 
+    RETURN NEW EberonTypes.MethodVariable(SELF.type()(Types.PProcedure)); 
 END;
 
 PROCEDURE constructor*(r: Record): Types.PDefinedProcedure;
@@ -512,7 +517,7 @@ VAR
     result: STRING;
 BEGIN
     FOR key, f IN r.fields DO
-        type <- f.type()(Types.PStorageType);
+        type <- f.type();
         IF key IN r.fieldsInit THEN
             code := r.fieldsInit[key];
         ELSE

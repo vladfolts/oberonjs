@@ -21,7 +21,7 @@ TYPE
     END;
 
     PropertyVariable* = RECORD(TypedVariable)
-        PROCEDURE PropertyVariable(type: Types.PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType);
+        PROCEDURE PropertyVariable*(type: Types.PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType);
 
         leadCode, propCode: STRING;
         readOnly: BOOLEAN;
@@ -29,7 +29,7 @@ TYPE
     END;
 
     DerefVariable* = RECORD(TypedVariable)
-        PROCEDURE DerefVariable(type: Types.PStorageType; code: STRING);
+        PROCEDURE DerefVariable*(type: Types.PStorageType; code: STRING);
 
         code: STRING;
     END;
