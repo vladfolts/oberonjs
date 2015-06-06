@@ -59,7 +59,7 @@ var designator = makeDesignator(
         // break recursive declaration of actualParameters
         function(stream, context){return actualParameters(stream, context);}
         );
-var type = or(context(qualident, Context.Type),
+var type = or(qualident,
               function(stream, context){return strucType(stream, context);} // break recursive declaration of strucType
              );
 var identList = and(identdef, repeat(and(",", identdef)));

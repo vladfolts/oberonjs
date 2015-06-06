@@ -1,0 +1,154 @@
+MODULE ContextType;
+IMPORT
+    CodeGenerator, ConstValue, ContextExpression, ContextHierarchy, 
+    Errors, Expression, String, Types;
+TYPE
+    HandleSymbolAsType* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
+        PROCEDURE setType(type: Types.PStorageType);
+    END;
+    PHandleSymbolAsType = POINTER TO HandleSymbolAsType;
+
+    FormalType* = RECORD(HandleSymbolAsType)
+        PROCEDURE FormalType(parent: PHandleSymbolAsType);
+
+        handleType: PHandleSymbolAsType;
+        dimensionCount: INTEGER;
+    END;
+
+    Array* = RECORD(HandleSymbolAsType)
+        PROCEDURE Array(parent: PHandleSymbolAsType);
+
+        PROCEDURE isAnonymousDeclaration(): BOOLEAN;
+        PROCEDURE doMakeInit(type: Types.PStorageType; dimensions: STRING; length: INTEGER): STRING;
+        PROCEDURE doMakeType(elementsType: Types.PType; init: STRING; length: INTEGER): Types.PStorageType;
+
+        handleType: PHandleSymbolAsType;
+        dimensions: POINTER TO ArrayDimensions;
+        type: Types.PStorageType;
+    END;
+
+    ArrayDimensions* = RECORD(ContextExpression.ExpressionHandler) 
+        PROCEDURE doAddDimension(size: INTEGER);
+
+        dimensions: ARRAY * OF INTEGER;
+    END;
+
+PROCEDURE HandleSymbolAsType.handleQIdent(q: ContextHierarchy.QIdent);
+BEGIN
+    s <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
+    SELF.setType(ContextExpression.unwrapType(s.symbol().info()));
+END;
+
+PROCEDURE FormalType.FormalType(parent: PHandleSymbolAsType)
+    | SUPER(parent),
+      handleType(parent);
+END;
+
+PROCEDURE FormalType.setType(type: Types.PStorageType);
+BEGIN
+    result <- type;
+    types <- SELF.root().language().types;
+    FOR i <- 0 TO SELF.dimensionCount - 1 DO
+        result := types.makeOpenArray(result);
+    END;
+    SELF.handleType.setType(result);
+END;
+
+PROCEDURE FormalType.handleLiteral(s: STRING);
+BEGIN
+    IF s = "ARRAY" THEN
+        INC(SELF.dimensionCount);
+    END;
+END;
+
+PROCEDURE Array.Array(parent: PHandleSymbolAsType)
+    | SUPER(parent),
+      handleType(parent);
+END;
+
+PROCEDURE Array.setType(elementsType: Types.PStorageType);
+VAR
+    dimensions: STRING;
+    arrayInit: STRING;
+BEGIN
+    type <- elementsType;
+    FOR i <- LEN(SELF.dimensions.dimensions) - 1 TO 0 BY -1 DO
+        IF LEN(dimensions) # 0 THEN
+            dimensions := ", " + dimensions;
+        END;
+        length <- SELF.dimensions.dimensions[i];
+        dimensions := String.fromInt(length) + dimensions;
+        IF i = 0 THEN
+            arrayInit := SELF.doMakeInit(elementsType, dimensions, length);
+        END;
+        type := SELF.doMakeType(type, arrayInit, length);
+    END;
+
+    SELF.type := type;
+END;
+
+PROCEDURE Array.isAnonymousDeclaration(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE Array.doMakeInit(type: Types.PStorageType; dimensions: STRING; length: INTEGER): STRING;
+VAR
+    result: STRING;
+    initializer: STRING;
+BEGIN
+    rtl <- SELF.root().language().rtl();
+    IF type = Types.basic.ch THEN
+        result := rtl.makeCharArray(dimensions);
+    ELSE
+        IF (type IS Types.PArray) OR (type IS Types.PRecord) THEN
+            initializer := "function(){return " + type.initializer(SELF) + ";}";
+        ELSE
+            initializer := type.initializer(SELF);
+        END;
+        result := rtl.makeArray(dimensions + ", " + initializer);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Array.doMakeType(elementsType: Types.PType; init: STRING; length: INTEGER): Types.PStorageType;
+    RETURN SELF.root().language().types.makeStaticArray(elementsType, init, length);
+END;
+
+PROCEDURE Array.endParse();
+BEGIN
+    SELF.handleType.setType(SELF.type);
+END;
+
+PROCEDURE ArrayDimensions.handleExpression(e: Expression.PType);
+BEGIN
+    type <- e.type();
+    IF type # Types.basic.integer THEN
+        Errors.raise("'INTEGER' constant expression expected, got '" + type.description() + "'");
+    END;
+    value <- e.constValue();
+    IF value = NIL THEN
+        Errors.raise("constant expression expected as ARRAY size");
+    END;
+    dimension <- value(ConstValue.PInt).value;
+    IF dimension <= 0 THEN
+        Errors.raise("array size must be greater than 0, got " + String.fromInt(dimension));
+    END;
+    SELF.doAddDimension(dimension);
+END;
+
+PROCEDURE ArrayDimensions.doAddDimension(size: INTEGER);
+BEGIN
+    SELF.dimensions.add(size);
+END;
+
+PROCEDURE ArrayDimensions.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN CodeGenerator.nullGenerator;
+END;
+
+PROCEDURE ArrayDimensions.endParse();
+BEGIN
+    SELF.parent()^(Array).dimensions := SELF(POINTER);
+END;
+
+END ContextType.

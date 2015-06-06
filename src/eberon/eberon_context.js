@@ -8,6 +8,7 @@ var Context = require("context.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
+var ContextType = require("js/ContextType.js");
 var EberonConstructor= require("js/EberonConstructor.js");
 var EberonContext= require("js/EberonContext.js");
 var EberonDynamicArray = require("js/EberonDynamicArray.js");
@@ -1226,15 +1227,15 @@ var For = Context.For.extend({
 
 var dynamicArrayLength = -1;
 
-var ArrayDimensions = Context.ArrayDimensions.extend({
+var ArrayDimensions = Class.extend.call(ContextType.ArrayDimensions, {
     init: function EberonContext$ArrayDimensions(context){
-        Context.ArrayDimensions.prototype.init.call(this, context);
+        ContextType.ArrayDimensions.call(this, context);
     },
     handleLiteral: function(s){
         if ( s == "*" )
-            this._addDimension(dynamicArrayLength);
+            this.doAddDimension(dynamicArrayLength);
         else
-            Context.ArrayDimensions.prototype.handleLiteral.call(this, s);
+            ContextType.ArrayDimensions.prototype.handleLiteral.call(this, s);
     }
 });
 
@@ -1311,23 +1312,23 @@ var ForEach = Context.Chained.extend({
     }
 });
 
-var ArrayDecl = Context.ArrayDecl.extend({
+var ArrayDecl = Class.extend.call(ContextType.Array, {
     init: function EberonContext$ArrayDecl(context){
-        Context.ArrayDecl.prototype.init.call(this, context);
+        ContextType.Array.call(this, context);
     },
-    _makeInit: function(type, dimensions, length){
+    doMakeInit: function(type, dimensions, length){
         if (length == dynamicArrayLength)
             return '[]';
 
         if (type instanceof EberonRecord.Record && EberonRecord.hasParameterizedConstructor(type))
             throw new Errors.Error("cannot use '" + Type.typeName(type) + "' as an element of static array because it has constructor with parameters");
 
-        return Context.ArrayDecl.prototype._makeInit.call(this, type, dimensions, length);
+        return ContextType.Array.prototype.doMakeInit.call(this, type, dimensions, length);
     },
-    _makeType: function(elementsType, init, length){
+    doMakeType: function(elementsType, init, length){
         return length == dynamicArrayLength
             ? new EberonDynamicArray.DynamicArray(elementsType)
-            : Context.ArrayDecl.prototype._makeType.call(this, elementsType, init, length);
+            : ContextType.Array.prototype.doMakeType.call(this, elementsType, init, length);
     }
 });
 
@@ -1367,11 +1368,13 @@ var FormalType = Context.HandleSymbolAsType.extend({
         this.__dynamicDimension = false;
     },
     setType: function(type){           
+        function makeDynamic(type){return new EberonDynamicArray.DynamicArray(type); }
+
         for(var i = this.__arrayDimensions.length; i--;){
-            var Cons = this.__arrayDimensions[i]
-                ? EberonDynamicArray.DynamicArray
-                : this.root().language().types.OpenArray;
-            type = new Cons(type);
+            var cons = this.__arrayDimensions[i]
+                ? makeDynamic
+                : this.root().language().types.makeOpenArray;
+            type = cons(type);
         }
         this.parent().setType(type);
     },

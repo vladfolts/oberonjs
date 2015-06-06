@@ -4,16 +4,16 @@ IMPORT
 TYPE
     PType* = POINTER TO Type;
     Type* = RECORD(Types.Id)
-        PROCEDURE Type*(type: Types.PType);
+        PROCEDURE Type*(type: Types.PStorageType);
 
-        PROCEDURE type*(): Types.PType;
-        PROCEDURE reset*(type: Types.PType);
+        PROCEDURE type*(): Types.PStorageType;
+        PROCEDURE reset*(type: Types.PStorageType);
         PROCEDURE description*(): STRING;
 
-        mType: Types.PType
+        mType: Types.PStorageType;
     END;
 
-    ResolveTypeCallback = PROCEDURE(): Types.PType;
+    ResolveTypeCallback = PROCEDURE(): Types.PStorageType;
 
     Forward* = RECORD(Type)
         PROCEDURE Forward(resolve: ResolveTypeCallback);
@@ -33,11 +33,11 @@ PROCEDURE Type.description(): STRING;
     RETURN "type " + SELF.type().description()
 END;
 
-PROCEDURE Type.type(): Types.PType;
+PROCEDURE Type.type(): Types.PStorageType;
     RETURN SELF.mType
 END;
 
-PROCEDURE Type.reset(type: Types.PType);
+PROCEDURE Type.reset(type: Types.PStorageType);
 BEGIN
     SELF.mType := type;
 END;
@@ -47,7 +47,7 @@ PROCEDURE Forward.Forward(resolve: ResolveTypeCallback)
       resolve(resolve);
 END;
 
-PROCEDURE Forward.type(): Types.PType;
+PROCEDURE Forward.type(): Types.PStorageType;
 BEGIN
     IF SELF.mType = NIL THEN
         SELF.mType := SELF.resolve();
@@ -55,7 +55,7 @@ BEGIN
     RETURN SELF.mType
 END;
 
-PROCEDURE define*(VAR tId: Lazy; t: Types.PType);
+PROCEDURE define*(VAR tId: Lazy; t: Types.PStorageType);
 BEGIN
     tId.mType := t;
 END;
@@ -64,7 +64,7 @@ PROCEDURE Type.idType(): STRING;
     RETURN "type"
 END Type.idType;
 
-PROCEDURE Type.Type(type: Types.PType)
+PROCEDURE Type.Type(type: Types.PStorageType)
     | mType(type);
 END;
 

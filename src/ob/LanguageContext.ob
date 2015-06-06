@@ -15,6 +15,8 @@ TYPE
     Types* = RECORD         
         PROCEDURE implicitCast*(from, to: T.PType; toVar: BOOLEAN; VAR op: PCastOp): INTEGER;
         PROCEDURE typeInfo*(type: T.PType): STRING;
+        PROCEDURE makeOpenArray*(type: T.PType): T.PStorageType;
+        PROCEDURE makeStaticArray*(type: T.PType; init: STRING; length: INTEGER): T.PStorageType;
     END;
     PTypes* = POINTER TO Types;
 

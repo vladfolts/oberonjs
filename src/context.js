@@ -6,6 +6,7 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var ConstValue = require("js/ConstValue.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
+var ContextType = require("js/ContextType.js");
 var Designator = require("js/Designator.js");
 var Errors = require("js/Errors.js");
 var Expression = require("js/Expression.js");
@@ -104,41 +105,9 @@ exports.Identdef = ChainedContext.extend({
     }
 });
 
-exports.Type = ChainedContext.extend({
-    init: function Context$Type(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    handleQIdent: function(q){
-        this.parent().handleQIdent(q);
-    }
-});
-
-var HandleSymbolAsType = ChainedContext.extend({
-    init: function Context$HandleSymbolAsType(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    handleQIdent: function(q){
-        var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        this.setType(ContextExpression.unwrapType(s.symbol().info()));
-    }
-});
-
-exports.FormalType = HandleSymbolAsType.extend({
-    init: function FormalType(context){
-        HandleSymbolAsType.prototype.init.call(this, context);
-        this.__arrayDimension = 0;
-    },
-    setType: function(type){           
-        for(var i = 0; i < this.__arrayDimension; ++i)
-            type = new (this.root().language().types.OpenArray)(type);
-        this.parent().setType(type);
-
-    },
-    handleLiteral: function(s){
-        if (s == "ARRAY")
-            ++this.__arrayDimension;
-    }
-});
+var HandleSymbolAsType = ContextType.HandleSymbolAsType;
+HandleSymbolAsType.extend = Class.extend;
+HandleSymbolAsType.prototype.init = ContextType.HandleSymbolAsType;
 
 var ProcArg = Class.extend({
     init: function(type, isVar){
@@ -378,67 +347,6 @@ exports.PointerDecl = ChainedContext.extend({
     isAnonymousDeclaration: function(){return true;},
     exportField: function(field){
         throw new Errors.Error( "cannot export anonymous RECORD field: '" + field + "'");
-    }
-});
-
-exports.ArrayDecl = HandleSymbolAsType.extend({
-    init: function Context$ArrayDecl(context){
-        HandleSymbolAsType.prototype.init.call(this, context);
-        this.__dimensions = undefined;
-    },
-    handleDimensions: function(dimensions){this.__dimensions = dimensions;},
-    setType: function(elementsType){
-        var type = elementsType;
-        var dimensions = "";
-        for(var i = this.__dimensions.length; i-- ;){
-            var length = this.__dimensions[i];
-            dimensions = length + (dimensions.length ? ", " + dimensions : "");
-            var arrayInit = i ? undefined
-                              : this._makeInit(elementsType, dimensions, length);
-            type = this._makeType(type, arrayInit, length);
-        }
-
-        this.__type = type;
-    },
-    isAnonymousDeclaration: function(){return true;},
-    endParse: function(){this.parent().setType(this.__type);},
-    _makeInit: function(type, dimensions, length){
-        var rtl = this.root().language().rtl();
-        if (type == basicTypes.ch)
-            return rtl.makeCharArray(dimensions);
-
-        var initializer = type instanceof Type.Array || type instanceof Type.Record
-            ? "function(){return " + type.initializer(this) + ";}"
-            : type.initializer(this);
-        return rtl.makeArray(dimensions + ", " + initializer);
-    },
-    _makeType: function(elementsType, init, length){
-        return new (this.root().language().types.StaticArray)(init, elementsType, length);
-    }
-});
-
-exports.ArrayDimensions = ChainedContext.extend({
-    init: function ArrayDimensionsContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__dimensions = [];
-    },
-    codeGenerator: function(){return nullCodeGenerator;},
-    handleExpression: function(e){
-        var type = e.type();
-        if (type !== basicTypes.integer)
-            throw new Errors.Error("'INTEGER' constant expression expected, got '" + type.description() + "'");
-        var value = e.constValue();
-        if (!value)
-            throw new Errors.Error("constant expression expected as ARRAY size");
-        if (value.value <= 0)
-            throw new Errors.Error("array size must be greater than 0, got " + value.value);
-        this._addDimension(value.value);
-    },
-    endParse: function(){
-        this.parent().handleDimensions(this.__dimensions);
-    },
-    _addDimension: function(size){
-        this.__dimensions.push(size);
     }
 });
 

@@ -4,10 +4,8 @@ IMPORT
     Designator, Errors, Expression, JS, LanguageContext, Operator, 
     Procedure, Record, Scope, String, TypeId, Types;
 TYPE
-    ExpressionHandler = RECORD(ContextHierarchy.Node)
-        PROCEDURE handleExpression(e: Expression.PType);
-
-        expression: Expression.PType;
+    ExpressionHandler* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleExpression*(e: Expression.PType);
     END;
     PExpressionHandler = POINTER TO ExpressionHandler;
 
@@ -66,6 +64,7 @@ TYPE
         PROCEDURE handleConst(type: Types.PType; value: ConstValue.PType; code: STRING);
         PROCEDURE handleLogicalNot();
 
+        expression: Expression.PType;
         logicalNot: BOOLEAN;
     END;
 
@@ -73,6 +72,7 @@ TYPE
         PROCEDURE type(): Types.PType;
         PROCEDURE handleOperator(op: BinaryOperator);
 
+        expression: Expression.PType;
         operator: BinaryOperator;
     END;
     PTerm = POINTER TO Term;
@@ -219,7 +219,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE unwrapType*(id: Types.PId): Types.PType;
+PROCEDURE unwrapType*(id: Types.PId): Types.PStorageType;
     RETURN unwrapTypeId(id).type();
 END;
 

@@ -167,8 +167,8 @@ exports.language = {
             return Cast.implicit(from, to, toVar, EbOperator.castOperations(), op);
         },
         typeInfo: function(type){return EbOperator.generateTypeInfo(type);},
-        StaticArray: EbArray.StaticArray,
-        OpenArray: EbArray.OpenArray
+        makeStaticArray: function(type, init, length){ return new EbArray.StaticArray(init, type, length); },
+        makeOpenArray: function(type){return new EbArray.OpenArray(type); }
     },
     codeGenerator: {
         make: CodeGenerator.makeGenerator,
