@@ -9,6 +9,7 @@ TYPE
 
         value-: INTEGER;
     END;
+    PInt* = POINTER TO Int;
 
     Real* = RECORD (Type)
         PROCEDURE Real*(r: REAL);

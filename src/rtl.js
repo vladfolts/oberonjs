@@ -137,7 +137,7 @@ var methods = {
             if (b instanceof Array){
                 var from = b[0];
                 var to = b[1];
-                if (from < to)
+                if (to < from)
                     throw new Error("invalid SET diapason: " + from + ".." + to);
                 for(var bi = from; bi <= to; ++bi)
                     setBit(bi);

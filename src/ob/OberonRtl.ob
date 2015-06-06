@@ -5,6 +5,7 @@ TYPE
         clone*: PROCEDURE(from, type, constructor: STRING): STRING;
         strCmp*: PROCEDURE(s1, s2: STRING): STRING;
         assignArrayFromString*: PROCEDURE(s1, s2: STRING): STRING;
+        makeSet*: PROCEDURE(repr: STRING): STRING;
         setInclL*: PROCEDURE(l, r: STRING): STRING;
         setInclR*: PROCEDURE(l, r: STRING): STRING;
         assertId*: PROCEDURE(): STRING;

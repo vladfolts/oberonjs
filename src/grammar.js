@@ -98,8 +98,8 @@ var expression = context(and(simpleExpression, optional(and(relation, simpleExpr
                        , contexts.Expression);
 var constExpression = expression;
 
-var element = context(and(expression, optional(and("..", expression))), Context.SetElement);
-var set = and("{", context(optional(and(element, repeat(and(",", element)))), Context.Set)
+var element = context(and(expression, optional(and("..", expression))), ContextExpression.SetElement);
+var set = and("{", context(optional(and(element, repeat(and(",", element)))), ContextExpression.Set)
             , "}");
 
 var expList = and(expression, repeat(and(",", expression)));

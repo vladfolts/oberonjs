@@ -1,7 +1,15 @@
 MODULE test;
-VAR s1, s2: SET;
+VAR 
+    s1, s2: SET;
+    i0, i5, i8: INTEGER;
 BEGIN
     s1 := {0..5};
     s2 := {0..8};
-    ASSERT(s1 <= s2)
+    ASSERT(s1 <= s2);
+
+    i0 := 0;
+    i5 := 5;
+    i8 := 8;
+    ASSERT(s1 = {i0..i5});
+    ASSERT(s2 = {i0..i8});
 END test.

@@ -103,6 +103,23 @@ TYPE
         PROCEDURE handleStr*(s: STRING);
     END;
 
+    PSet = POINTER TO Set;
+
+    SetElement* = RECORD(ExpressionHandler)
+        PROCEDURE SetElement*(parent: PSet);
+
+        from, to: STRING;
+        fromValue, toValue: ConstValue.PInt;
+        code: CodeGenerator.PIGenerator;
+    END;
+
+    Set* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleElement(s: SetElement);
+
+        value: SET;
+        expression: STRING;
+    END;
+
     OpTypeCheck = RECORD
         PROCEDURE expect(): STRING;
         PROCEDURE check(t: Types.PType): BOOLEAN;
@@ -906,6 +923,70 @@ BEGIN
         NEW Types.String(s), 
         NEW ConstValue.String(s), 
         escapeString(s));
+END;
+
+PROCEDURE SetElement.SetElement(parent: PSet)
+    | SUPER(parent),
+      code(CodeGenerator.makeSimpleGenerator());
+END;
+
+PROCEDURE SetElement.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN SELF.code;
+END;
+
+PROCEDURE SetElement.handleExpression(e: Expression.PType);
+BEGIN
+    value <- e.constValue()(ConstValue.PInt);
+    IF LEN(SELF.from) = 0 THEN
+        SELF.from := SELF.code.result();
+        SELF.fromValue := value;
+        SELF.code := CodeGenerator.makeSimpleGenerator();
+    ELSE
+        SELF.to := SELF.code.result();
+        SELF.toValue := value;
+    END;
+END;
+
+PROCEDURE SetElement.endParse();
+BEGIN
+    SELF.parent()^(Set).handleElement(SELF);
+END;
+
+PROCEDURE Set.handleElement(s: SetElement);
+BEGIN
+    IF (s.fromValue # NIL) & ((LEN(s.to) = 0) OR (s.toValue # NIL)) THEN
+        IF LEN(s.to) # 0 THEN
+            FOR i <- s.fromValue.value TO s.toValue.value DO
+                INCL(SELF.value, i);
+            END;
+        ELSE
+            INCL(SELF.value, s.fromValue.value);
+        END;
+    ELSE
+        IF LEN(SELF.expression) # 0 THEN
+            SELF.expression := SELF.expression + ", ";
+        END;
+        IF LEN(s.to) # 0 THEN
+            SELF.expression := SELF.expression + "[" + s.from + ", " + s.to + "]";
+        ELSE
+            SELF.expression := SELF.expression + s.from;
+        END;
+    END;
+END;
+
+PROCEDURE Set.endParse();
+BEGIN
+    parent <- SELF.parent()(PFactor);
+    IF LEN(SELF.expression) = 0 THEN
+        parent.handleConst(Types.basic.set, NEW ConstValue.Set(SELF.value), String.fromInt(ORD(SELF.value)));
+    ELSE
+        code <- SELF.root().language().rtl().makeSet(SELF.expression);
+        IF SELF.value # {} THEN
+            code := code + " | " + String.fromInt(ORD(SELF.value));
+        END;
+        e <- Expression.makeSimple(code, Types.basic.set);
+        parent.handleExpression(e);
+    END;
 END;
 
 PROCEDURE IntOpTypeCheck.expect(): STRING;
