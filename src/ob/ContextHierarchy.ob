@@ -31,7 +31,7 @@ TYPE
         PROCEDURE codeGenerator*(): CodeGenerator.PIGenerator;
         PROCEDURE handleLiteral*(s: STRING);
         PROCEDURE handleIdent*(s: STRING);
-        PROCEDURE genTypeName(): STRING;
+        PROCEDURE genTypeName*(): STRING;
         PROCEDURE endParse*();
 
         mParent: PNode;
@@ -46,7 +46,7 @@ TYPE
         PROCEDURE findSymbol(ident: STRING): Symbols.PFoundSymbol;
         PROCEDURE findModule(name: STRING): Types.PModule;
 
-        PROCEDURE currentScope(): Scope.PType;
+        PROCEDURE currentScope*(): Scope.PType;
         PROCEDURE pushScope(scope: Scope.PType);
         PROCEDURE popScope();
 

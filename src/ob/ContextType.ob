@@ -1,7 +1,7 @@
 MODULE ContextType;
 IMPORT
-    CodeGenerator, ConstValue, ContextExpression, ContextHierarchy, 
-    Errors, Expression, String, Types;
+    Chars, CodeGenerator, ConstValue, Context, ContextExpression, ContextHierarchy, 
+    Errors, Expression, R := Record, ScopeBase, String, Types;
 TYPE
     HandleSymbolAsType* = RECORD(ContextHierarchy.Node)
         PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
@@ -32,6 +32,30 @@ TYPE
         PROCEDURE doAddDimension(size: INTEGER);
 
         dimensions: ARRAY * OF INTEGER;
+    END;
+
+    Declaration = RECORD(HandleSymbolAsType)
+        PROCEDURE isAnonymousDeclaration(): BOOLEAN;
+        PROCEDURE exportField(name: STRING);
+    END;
+    PDeclaration = POINTER TO Declaration;
+
+    RecordTypeFactory = PROCEDURE(name, cons: STRING; scope: ScopeBase.PType): R.PType; 
+
+    Record* = RECORD(ContextHierarchy.Node)
+        PROCEDURE Record(parent: PDeclaration; factory: RecordTypeFactory);
+
+        PROCEDURE addField(field: Context.PIdentdefInfo; type: Types.PStorageType);
+        PROCEDURE setBaseType(type: Types.PType);
+        PROCEDURE doMakeField(field: Context.PIdentdefInfo; type: Types.PStorageType): Types.PField;
+        PROCEDURE doGenerateConstructor(): STRING;
+        PROCEDURE generateInheritance(): STRING;
+        PROCEDURE doGenerateBaseConstructorCallCode(): STRING;
+        PROCEDURE qualifiedBaseConstructor(): STRING;
+
+        declaration: PDeclaration;
+        cons: STRING;
+        type: R.PType;
     END;
 
 PROCEDURE HandleSymbolAsType.handleQIdent(q: ContextHierarchy.QIdent);
@@ -149,6 +173,135 @@ END;
 PROCEDURE ArrayDimensions.endParse();
 BEGIN
     SELF.parent()^(Array).dimensions := SELF(POINTER);
+END;
+
+PROCEDURE isTypeRecursive(type, base: Types.PType): BOOLEAN;
+BEGIN
+    result <- FALSE;
+    IF type = base THEN
+        result := TRUE;
+    ELSIF type IS R.PType THEN
+        IF isTypeRecursive(type.base, base) THEN
+            result := TRUE;
+        ELSE
+            FOR name, field IN type.fields DO
+                IF ~result & isTypeRecursive(field.type(), base) THEN
+                    result := TRUE;
+                END;
+            END;
+        END;
+    ELSIF type IS Types.PArray THEN
+        result := isTypeRecursive(type.elementsType, base);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Record.Record(parent: PDeclaration; factory: RecordTypeFactory)
+    | SUPER(parent),
+      declaration(parent);
+VAR
+    name: STRING;
+BEGIN
+    SELF.cons := parent.genTypeName();
+    IF ~parent.isAnonymousDeclaration() THEN
+        name := SELF.cons;
+    END;
+    SELF.type := factory(name, SELF.cons, parent.root().currentScope());
+    parent.setType(SELF.type);
+END;
+
+PROCEDURE Record.addField(field: Context.PIdentdefInfo; type: Types.PStorageType);
+BEGIN
+    IF isTypeRecursive(type, SELF.type) THEN
+        Errors.raise("recursive field definition: '" + field.id() + "'");
+    END;
+    SELF.type.addField(SELF.doMakeField(field, type));
+    IF field.exported() THEN
+        SELF.declaration.exportField(field.id());
+    END;
+END;
+
+PROCEDURE Record.setBaseType(type: Types.PType);
+BEGIN
+    IF ~(type IS R.PType) THEN
+        Errors.raise(
+            "RECORD type is expected as a base type, got '"
+            + type.description()
+            + "'");
+    ELSE
+        IF isTypeRecursive(type, SELF.type) THEN
+            Errors.raise("recursive inheritance: '"
+                         + SELF.type.description() + "'");
+        END;
+
+        SELF.type.setBase(type);
+    END;
+END;
+
+PROCEDURE Record.doMakeField(field: Context.PIdentdefInfo; type: Types.PStorageType): Types.PField;
+BEGIN
+    RETURN NEW R.Field(field, type);
+END;
+
+PROCEDURE generateFieldsInitializationCode(r: Record): STRING;
+VAR
+    result: STRING;
+BEGIN
+    FOR f, t IN r.type.fields DO
+        result := result + "this." + R.mangleField(f) + " = " + t.type().initializer(r) + ";" + Chars.ln;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Record.doGenerateConstructor(): STRING;
+BEGIN
+    gen <- CodeGenerator.makeGenerator();
+    gen.write("function " + SELF.cons + "()");
+    gen.openScope();
+    gen.write(SELF.doGenerateBaseConstructorCallCode() 
+            + generateFieldsInitializationCode(SELF));
+    gen.closeScope("");
+    RETURN gen.result();
+END;
+
+PROCEDURE Record.generateInheritance(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    base <- SELF.type.base;
+    IF base # NIL THEN
+        qualifiedBase <- SELF.qualifyScope(base.scope) + base.name; 
+        result := SELF.root().language().rtl().extend(SELF.cons, qualifiedBase) + ";" + Chars.ln;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Record.doGenerateBaseConstructorCallCode(): STRING;
+BEGIN
+    result <- SELF.qualifiedBaseConstructor();
+    IF LEN(result) # 0 THEN
+        result := result + ".call(this);" + Chars.ln;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Record.qualifiedBaseConstructor(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    baseType <- SELF.type.base;
+    IF baseType # NIL THEN
+        result := SELF.qualifyScope(baseType.scope) + baseType.name;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Record.endParse();
+BEGIN
+    SELF.codeGenerator().write(
+          SELF.doGenerateConstructor()
+        + SELF.generateInheritance()
+        );
 END;
 
 END ContextType.

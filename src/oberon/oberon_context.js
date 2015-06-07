@@ -1,17 +1,19 @@
 "use strict";
 
+var Class = require("rtl.js").Class;
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var ContextExpression = require("js/ContextExpression.js");
+var ContextType = require("js/ContextType.js");
 var Errors = require("js/Errors.js");
 var Expression = require("js/Expression.js");
 var op = require("js/Operator.js");
 var Record = require("js/Record.js");
 var Type = require("js/Types.js");
 
-var RecordDecl = Context.RecordDecl.extend({
+var RecordDecl = Class.extend.call(ContextType.Record, {
     init: function OberonContext$RecordDecl(context){
-        Context.RecordDecl.prototype.init.call(this, context, Record.Type);
+        ContextType.Record.call(this, context, function(name, cons, scope){return new Record.Type(name, cons, scope); });
     }
 });
 

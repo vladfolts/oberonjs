@@ -540,14 +540,14 @@ var TypeDeclaration = Context.TypeDeclaration.extend({
     }
 });
 
-var RecordDecl = Context.RecordDecl.extend({
+var RecordDecl = Class.extend.call(ContextType.Record, {
     init: function EberonContext$RecordDecl(context){
-        Context.RecordDecl.prototype.init.call(this, context, EberonRecord.Record);
+        ContextType.Record.call(this, context, function(name, cons, scope){return new EberonRecord.Record(name, cons, scope); });
     },
     handleMessage: function(msg){
         if (msg instanceof MethodOrProcMsg){
             var methodType = msg.type;
-            var boundType = this.type();
+            var boundType = this.type;
             var id = msg.id.id();
             if (Type.typeName(boundType) == id){
                 if (msg.id.exported()){
@@ -567,29 +567,29 @@ var RecordDecl = Context.RecordDecl.extend({
             return undefined;
         if (msg instanceof Context.AddArgumentMsg) // not used
             return undefined;
-        return Context.RecordDecl.prototype.handleMessage.call(this, msg);
+        return ContextType.Record.prototype.handleMessage.call(this, msg);
     },
-    _makeField: function(field, type){
-        return new EberonRecord.Field(field, type, this.__type);
+    doMakeField: function(field, type){
+        return new EberonRecord.Field(field, type, this.type);
     },
-    _generateBaseConstructorCallCode: function(){
-        var base = this.type().base;
+    doGenerateBaseConstructorCallCode: function(){
+        var base = this.type.base;
         if (!base)
             return "";
         var baseConstructor = EberonRecord.constructor$(base);
         if (!baseConstructor || !baseConstructor.args().length)
-            return Context.RecordDecl.prototype._generateBaseConstructorCallCode.call(this);
+            return ContextType.Record.prototype.doGenerateBaseConstructorCallCode.call(this);
         
-        return this._qualifiedBaseConstructor() + ".apply(this, arguments);\n";
+        return this.qualifiedBaseConstructor() + ".apply(this, arguments);\n";
     },
     endParse: function(){
-        var type = this.type();
+        var type = this.type;
         if (!type.customConstructor)
-            return Context.RecordDecl.prototype.endParse.call(this);
+            return ContextType.Record.prototype.endParse.call(this);
 
-        this.codeGenerator().write(this._generateInheritance());
+        this.codeGenerator().write(this.generateInheritance());
         type.setRecordInitializationCode(
-            this._generateBaseConstructorCallCode());
+            this.doGenerateBaseConstructorCallCode());
     }
 });
 
