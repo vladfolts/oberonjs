@@ -47,15 +47,25 @@ TYPE
 
         PROCEDURE addField(field: Context.PIdentdefInfo; type: Types.PStorageType);
         PROCEDURE setBaseType(type: Types.PType);
+        PROCEDURE generateInheritance(): STRING;
+        PROCEDURE qualifiedBaseConstructor(): STRING;
+
         PROCEDURE doMakeField(field: Context.PIdentdefInfo; type: Types.PStorageType): Types.PField;
         PROCEDURE doGenerateConstructor(): STRING;
-        PROCEDURE generateInheritance(): STRING;
         PROCEDURE doGenerateBaseConstructorCallCode(): STRING;
-        PROCEDURE qualifiedBaseConstructor(): STRING;
 
         declaration: PDeclaration;
         cons: STRING;
         type: R.PType;
+    END;
+    PRecord = POINTER TO Record;
+
+    FieldList* = RECORD(Declaration)
+        PROCEDURE handleIdentdef(id: Context.PIdentdefInfo);
+        PROCEDURE typeName(): STRING;
+
+        idents: ARRAY * OF Context.PIdentdefInfo;
+        type: Types.PStorageType;
     END;
 
 PROCEDURE HandleSymbolAsType.handleQIdent(q: ContextHierarchy.QIdent);
@@ -302,6 +312,49 @@ BEGIN
           SELF.doGenerateConstructor()
         + SELF.generateInheritance()
         );
+END;
+
+PROCEDURE checkIfFieldCanBeExported*(name: STRING; idents: ARRAY OF Context.PIdentdefInfo; hint: STRING);
+BEGIN
+    FOR i <- 0 TO LEN(idents) - 1 DO
+        id <- idents[i];
+        IF ~id.exported() THEN
+            Errors.raise(
+                "field '" + name + "' can be exported only if " + hint + " '" +
+                id.id() + "' itself is exported too");
+        END;
+    END;
+END;
+
+PROCEDURE FieldList.isAnonymousDeclaration(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE FieldList.exportField(name: STRING);
+BEGIN
+    checkIfFieldCanBeExported(name, SELF.idents, "field");
+END;
+
+PROCEDURE FieldList.setType(type: Types.PStorageType);
+BEGIN
+    SELF.type := type;    
+END;
+
+PROCEDURE FieldList.handleIdentdef(id: Context.PIdentdefInfo);
+BEGIN
+    SELF.idents.add(id);
+END;
+
+PROCEDURE FieldList.typeName(): STRING;
+    RETURN "";
+END;
+
+PROCEDURE FieldList.endParse();
+BEGIN
+    parent <- SELF.parent()(PRecord);
+    FOR i <- 0 TO LEN(SELF.idents) - 1 DO
+        parent.addField(SELF.idents[i], SELF.type);
+    END;
 END;
 
 END ContextType.

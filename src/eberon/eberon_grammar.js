@@ -4,6 +4,7 @@ var Cast = require("js/EberonCast.js");
 var Context = require("context.js");
 var EbArray = require("js/EberonArray.js");
 var CodeGenerator = require("js/CodeGenerator.js");
+var ContextType = require("js/ContextType.js");
 var EbContext = require("eberon/eberon_context.js");
 var Grammar = require("grammar.js");
 var EbRtl = require("js/EberonRtl.js");
@@ -87,7 +88,7 @@ function makeFieldList(identdef, identList, type, formalParameters){
     return context(
         or(makeMethodHeading(identdef, formalParameters),
                and(identList, ":", type)),
-        Context.FieldListDeclaration);
+        ContextType.FieldList);
 }
 
 function makeFieldListSequence(base){

@@ -680,16 +680,6 @@ exports.ConstDecl = ChainedContext.extend({
     }
 });
 
-function checkIfFieldCanBeExported(name, idents, hint){
-    for(var i = 0; i < idents.length; ++i){
-        var id = idents[i];
-        if (!id.exported())
-            throw new Errors.Error(
-                "field '" + name + "' can be exported only if " + hint + " '" +
-                id.id() + "' itself is exported too");
-    }
-}
-
 exports.VariableDeclaration = HandleSymbolAsType.extend({
     init: function Context$VariableDeclaration(context){
         HandleSymbolAsType.prototype.init.call(this, context);
@@ -698,7 +688,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
     },
     handleIdentdef: function(id){this.__idents.push(id);},
     exportField: function(name){
-        checkIfFieldCanBeExported(name, this.__idents, "variable");
+        ContextType.checkIfFieldCanBeExported(name, this.__idents, "variable");
     },
     setType: function(type){this.__type = type;},
     type: function(){return this.__type;},
@@ -728,27 +718,6 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
         }
 
         gen.write("\n");
-    }
-});
-
-exports.FieldListDeclaration = HandleSymbolAsType.extend({
-    init: function Context$FieldListDeclaration(context){
-        HandleSymbolAsType.prototype.init.call(this, context);
-        this.__idents = [];
-        this.__type = undefined;
-    },
-    typeName: function(){return undefined;},
-    handleIdentdef: function(id) {this.__idents.push(id);},
-    exportField: function(name){
-        checkIfFieldCanBeExported(name, this.__idents, "field");
-    },
-    setType: function(type) {this.__type = type;},
-    isAnonymousDeclaration: function(){return true;},
-    endParse: function(){
-        var idents = this.__idents;
-        var parent = this.parent();
-        for(var i = 0; i < idents.length; ++i)
-            parent.addField(idents[i], this.__type);
     }
 });
 
@@ -811,7 +780,7 @@ exports.TypeDeclaration = ChainedContext.extend({
     isAnonymousDeclaration: function(){return false;},
     type: function(){return this.parent().type();},
     exportField: function(name){
-        checkIfFieldCanBeExported(name, [this.__id], "record");
+        ContextType.checkIfFieldCanBeExported(name, [this.__id], "record");
     }
 });
 

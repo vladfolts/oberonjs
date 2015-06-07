@@ -66,7 +66,7 @@ function makeProcedureDeclaration(ident, procedureHeading, procedureBody){
 }
 
 function makeFieldList(identdef, identList, type){
-    return context(and(identList, ":", type), Context.FieldListDeclaration);
+    return context(and(identList, ":", type), ContextType.FieldList);
 }
 
 function makeFieldListSequence(base){
