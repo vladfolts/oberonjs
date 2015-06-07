@@ -1,7 +1,7 @@
 MODULE ContextDesignator;
 IMPORT
     Code, ConstValue, ContextExpression, ContextHierarchy, 
-    Designator, Errors, Expression, 
+    Designator, Errors, Expression,
     Record, ScopeBase, String, TypeId, Types, Variable;
 TYPE
     Index = RECORD
@@ -32,6 +32,12 @@ TYPE
         info-: Types.PId;
         code, derefCode, propCode, lval: STRING;
         indexExpression: Expression.PType;
+    END;
+
+    TypeCast* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
+
+        type: Types.PType;
     END;
 
 PROCEDURE Index.Index(length: INTEGER; type: Types.PType; info: Types.PId; code, lval, asProperty: STRING)
@@ -239,7 +245,7 @@ PROCEDURE Type.doMakeDerefVar(info: Types.PId): Types.PVariable;
    RETURN NEW Variable.DerefVariable(SELF.currentType(Types.PStorageType), SELF.code);
 END;
 
-PROCEDURE Type.endParse();
+PROCEDURE Type.endParse(): BOOLEAN;
 BEGIN
     code <- SELF.code;
     lval <- SELF.lval;
@@ -248,6 +254,25 @@ BEGIN
     END;
     SELF.parent().attributes.designator :=
         NEW Designator.Type(code, lval, SELF.currentType, SELF.info, SELF.scope);
+    RETURN TRUE;
+END;
+
+PROCEDURE TypeCast.handleQIdent(q: ContextHierarchy.QIdent);
+BEGIN
+    info <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q).symbol().info();
+    IF info IS TypeId.PType THEN (* this is a type cast, not a procedure call *)
+        SELF.type := info.type();
+    END;
+END;
+
+PROCEDURE TypeCast.endParse(): BOOLEAN;
+BEGIN
+    result <- FALSE;
+    IF SELF.type # NIL THEN
+        SELF.parent()^(Type).handleTypeCast(SELF.type);
+        result := TRUE;
+    END;
+    RETURN result;
 END;
 
 END ContextDesignator.

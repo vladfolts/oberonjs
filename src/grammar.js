@@ -1,6 +1,7 @@
 "use strict";
 
 var Context = require("context.js");
+var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var Lexer = require("js/Lexer.js");
 var Parser = require("parser.js");
@@ -50,7 +51,7 @@ var selector = or(and(point, ident)
                 // break recursive declaration of expList
                 , and("[", function(stream, context){return expList(stream, context);}, "]")
                 , "^"
-                , context(and("(", qualident, ")"), Context.TypeCast)
+                , context(and("(", qualident, ")"), ContextDesignator.TypeCast)
                 );
 var designator = makeDesignator(
         ident,

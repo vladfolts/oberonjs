@@ -616,7 +616,7 @@ PROCEDURE ExpressionNode.codeGenerator(): CodeGenerator.PIGenerator;
     RETURN CodeGenerator.nullGenerator;
 END;
 
-PROCEDURE ExpressionNode.endParse();
+PROCEDURE ExpressionNode.endParse(): BOOLEAN;
 BEGIN
     notTypeId(SELF.expression);
 
@@ -628,6 +628,8 @@ BEGIN
     parent <- SELF.expressionHandler;
     parent.codeGenerator().write(SELF.expression.code());
     parent.handleExpression(SELF.expression);
+
+    RETURN TRUE;
 END;
 
 PROCEDURE SimpleExpression.SimpleExpression(parent: PExpressionNode)
@@ -695,9 +697,10 @@ BEGIN
     SELF.binaryOperator := o;
 END;
 
-PROCEDURE SimpleExpression.endParse();
+PROCEDURE SimpleExpression.endParse(): BOOLEAN;
 BEGIN
     SELF.parentExpression.handleSimpleExpression(SELF.expression);
+    RETURN TRUE;
 END;
 
 PROCEDURE Factor.handleConst(type: Types.PType; value: ConstValue.PType; code: STRING);
@@ -728,7 +731,7 @@ BEGIN
     SELF.expression := e;
 END;
 
-PROCEDURE Factor.endParse();
+PROCEDURE Factor.endParse(): BOOLEAN;
 BEGIN
     IF SELF.logicalNot THEN
         notTypeId(SELF.expression);
@@ -736,6 +739,7 @@ BEGIN
         SELF.expression := Operator.not(SELF.expression);
     END;
     SELF.parent()^(ExpressionHandler).handleExpression(SELF.expression);
+    RETURN TRUE;
 END;
 
 PROCEDURE Term.type(): Types.PType;
@@ -767,7 +771,7 @@ BEGIN
     END;
 END;
 
-PROCEDURE Term.endParse();
+PROCEDURE Term.endParse(): BOOLEAN;
 VAR
     const: ConstValue.PType;
 BEGIN
@@ -781,6 +785,7 @@ BEGIN
         e := Expression.make(d.code(), d.type(), d, const);
     END;
     SELF.parent()(PSimpleExpression).handleTerm(e);
+    RETURN TRUE;
 END;
 
 PROCEDURE MulOperator.handleLiteral(s: STRING);
@@ -947,9 +952,10 @@ BEGIN
     END;
 END;
 
-PROCEDURE SetElement.endParse();
+PROCEDURE SetElement.endParse(): BOOLEAN;
 BEGIN
     SELF.parent()^(Set).handleElement(SELF);
+    RETURN TRUE;
 END;
 
 PROCEDURE Set.handleElement(s: SetElement);
@@ -974,7 +980,7 @@ BEGIN
     END;
 END;
 
-PROCEDURE Set.endParse();
+PROCEDURE Set.endParse(): BOOLEAN;
 BEGIN
     parent <- SELF.parent()(PFactor);
     IF LEN(SELF.expression) = 0 THEN
@@ -987,6 +993,7 @@ BEGIN
         e <- Expression.makeSimple(code, Types.basic.set);
         parent.handleExpression(e);
     END;
+    RETURN TRUE;
 END;
 
 PROCEDURE IntOpTypeCheck.expect(): STRING;

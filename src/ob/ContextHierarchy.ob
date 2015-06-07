@@ -32,7 +32,7 @@ TYPE
         PROCEDURE handleLiteral*(s: STRING);
         PROCEDURE handleIdent*(s: STRING);
         PROCEDURE genTypeName*(): STRING;
-        PROCEDURE endParse*();
+        PROCEDURE endParse*(): BOOLEAN;
 
         mParent: PNode;
         attributes*: Attributes;

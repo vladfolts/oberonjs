@@ -149,9 +149,10 @@ PROCEDURE Array.doMakeType(elementsType: Types.PType; init: STRING; length: INTE
     RETURN SELF.root().language().types.makeStaticArray(elementsType, init, length);
 END;
 
-PROCEDURE Array.endParse();
+PROCEDURE Array.endParse(): BOOLEAN;
 BEGIN
     SELF.handleType.setType(SELF.type);
+    RETURN TRUE;
 END;
 
 PROCEDURE ArrayDimensions.handleExpression(e: Expression.PType);
@@ -180,9 +181,10 @@ PROCEDURE ArrayDimensions.codeGenerator(): CodeGenerator.PIGenerator;
     RETURN CodeGenerator.nullGenerator;
 END;
 
-PROCEDURE ArrayDimensions.endParse();
+PROCEDURE ArrayDimensions.endParse(): BOOLEAN;
 BEGIN
     SELF.parent()^(Array).dimensions := SELF(POINTER);
+    RETURN TRUE;
 END;
 
 PROCEDURE isTypeRecursive(type, base: Types.PType): BOOLEAN;
@@ -306,12 +308,13 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Record.endParse();
+PROCEDURE Record.endParse(): BOOLEAN;
 BEGIN
     SELF.codeGenerator().write(
           SELF.doGenerateConstructor()
         + SELF.generateInheritance()
         );
+    RETURN TRUE;
 END;
 
 PROCEDURE checkIfFieldCanBeExported*(name: STRING; idents: ARRAY OF Context.PIdentdefInfo; hint: STRING);
@@ -349,12 +352,13 @@ PROCEDURE FieldList.typeName(): STRING;
     RETURN "";
 END;
 
-PROCEDURE FieldList.endParse();
+PROCEDURE FieldList.endParse(): BOOLEAN;
 BEGIN
     parent <- SELF.parent()(PRecord);
     FOR i <- 0 TO LEN(SELF.idents) - 1 DO
         parent.addField(SELF.idents[i], SELF.type);
     END;
+    RETURN TRUE;
 END;
 
 END ContextType.

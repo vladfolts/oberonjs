@@ -807,26 +807,6 @@ exports.TypeSection = ChainedContext.extend({
     }
 });
 
-exports.TypeCast = ChainedContext.extend({
-    init: function TypeCastContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__type = undefined;
-    },
-    handleQIdent: function(q){
-        var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        s = s.symbol();
-        if (!s.isType())
-            return; // this is not a type cast, may be procedure call
-        this.__type = s.info().type();
-    },
-    endParse: function(){
-        if (this.__type === undefined)
-            return false;
-        this.parent().handleTypeCast(this.__type);
-        return true;
-    }
-});
-
 exports.ModuleDeclaration = ChainedContext.extend({
     init: function ModuleDeclarationContext(context){
         ChainedContext.prototype.init.call(this, context);
