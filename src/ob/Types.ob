@@ -2,7 +2,7 @@ MODULE Types;
 IMPORT
     Chars, ConstValue, Context, Errors, OberonRtl, Object, Str := String;
 TYPE
-    Id* = RECORD
+    Id* = RECORD(Object.Type)
         PROCEDURE idType*(): STRING
     END;
 

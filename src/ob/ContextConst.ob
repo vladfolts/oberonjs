@@ -1,0 +1,38 @@
+MODULE ContextConst;
+IMPORT
+    Chars, ConstValue, Context, ContextExpression, 
+    Errors, Expression, Symbols, Types;
+TYPE
+    Type* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE handleIdentdef(id: Context.PIdentdefInfo);
+
+        id: Context.PIdentdefInfo;
+        type: Types.PType;
+        value: ConstValue.PType;
+    END;
+
+PROCEDURE Type.handleIdentdef(id: Context.PIdentdefInfo);
+BEGIN
+    SELF.id := id;
+    SELF.codeGenerator().write("var " + id.id() + " = ");
+END;
+
+PROCEDURE Type.handleExpression(e: Expression.PType);
+BEGIN
+    value <- e.constValue();
+    IF value = NIL THEN
+        Errors.raise("constant expression expected");
+    END;
+    SELF.type := e.type();
+    SELF.value := value;
+END;
+
+PROCEDURE Type.endParse(): BOOLEAN;
+BEGIN
+    c <- NEW Types.Const(SELF.type, SELF.value);
+    SELF.root().currentScope().addSymbol(NEW Symbols.Symbol(SELF.id.id(), c), SELF.id.exported());
+    SELF.codeGenerator().write(";" + Chars.ln);
+    RETURN TRUE;
+END;
+
+END ContextConst.

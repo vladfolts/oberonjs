@@ -3,6 +3,7 @@
 var Context = require("context.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
+var ContextType = require("js/ContextType.js");
 var Lexer = require("js/Lexer.js");
 var Parser = require("parser.js");
 var Class = require("rtl.js").Class;
@@ -168,7 +169,7 @@ var arrayType = and("ARRAY",
                     context(and(makeArrayDimensions(constExpression), "OF", type), 
                             contexts.ArrayDecl));
 
-var baseType = context(qualident, Context.BaseType);
+var baseType = context(qualident, ContextType.RecordBase);
 var recordType = and("RECORD", context(and(optional(and("(", baseType, ")")), optional(fieldListSequence)
                                      , "END"), contexts.recordDecl));
 

@@ -3,6 +3,7 @@
 var Cast = require("js/Cast.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var ContextConst = require("js/ContextConst.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextType = require("js/ContextType.js");
@@ -108,8 +109,8 @@ exports.language = {
         makeFormalResult,
         makeReturn,
         {
-            constDeclaration:   Context.ConstDecl, 
-            typeDeclaration:    Context.TypeDeclaration,
+            constDeclaration:   ContextConst.Type, 
+            typeDeclaration:    ContextType.Declaration,
             recordDecl:         ObContext.RecordDecl,
             variableDeclaration: ObContext.VariableDeclaration,
             ArrayDecl:          ContextType.Array,

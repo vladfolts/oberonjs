@@ -5,6 +5,7 @@ var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var ContextConst = require("js/ContextConst.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
@@ -504,13 +505,13 @@ function checkOrdinaryExport(id, hint){
         throw new Errors.Error(hint + " cannot be exported as read-only using '-' mark (did you mean '*'?)");
 }
 
-var ConstDecl = Context.ConstDecl.extend({
+var ConstDecl = Class.extend.call(ContextConst.Type, {
     init: function EberonContext$ConstDecl(context){
-        Context.ConstDecl.prototype.init.call(this, context);
+        ContextConst.Type.call(this, context);
     },
     handleIdentdef: function(id){
         checkOrdinaryExport(id, "constant");
-        Context.ConstDecl.prototype.handleIdentdef.call(this, id);
+        ContextConst.Type.prototype.handleIdentdef.call(this, id);
     }
 });
 
@@ -530,13 +531,13 @@ var VariableDeclaration = Context.VariableDeclaration.extend({
     }
 });
 
-var TypeDeclaration = Context.TypeDeclaration.extend({
+var TypeDeclaration = Class.extend.call(ContextType.Declaration, {
     init: function EberonContext$TypeDeclaration(context){
-        Context.TypeDeclaration.prototype.init.call(this, context);
+        ContextType.Declaration.call(this, context);
     },
     handleIdentdef: function(id){
         checkOrdinaryExport(id, "type");
-        Context.TypeDeclaration.prototype.handleIdentdef.call(this, id);
+        ContextType.Declaration.prototype.handleIdentdef.call(this, id);
     }
 });
 
@@ -551,7 +552,7 @@ var RecordDecl = Class.extend.call(ContextType.Record, {
             var id = msg.id.id();
             if (Type.typeName(boundType) == id){
                 if (msg.id.exported()){
-                    var typeId = this.parent().id();
+                    var typeId = this.parent().id;
                     if (!typeId.exported())
                         throw new Errors.Error("constructor '" + id + "' cannot be exported because record itslef is not exported");
                 }

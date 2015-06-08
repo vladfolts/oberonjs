@@ -1,7 +1,8 @@
 MODULE ContextType;
 IMPORT
     Chars, CodeGenerator, ConstValue, Context, ContextExpression, ContextHierarchy, 
-    Errors, Expression, R := Record, ScopeBase, String, Types;
+    Errors, Expression, Object, R := Record, 
+    Scope, ScopeBase, String, Symbols, TypeId, Types;
 TYPE
     HandleSymbolAsType* = RECORD(ContextHierarchy.Node)
         PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
@@ -34,9 +35,16 @@ TYPE
         dimensions: ARRAY * OF INTEGER;
     END;
 
-    Declaration = RECORD(HandleSymbolAsType)
+    DeclarationHandle = RECORD(HandleSymbolAsType)
         PROCEDURE isAnonymousDeclaration(): BOOLEAN;
         PROCEDURE exportField(name: STRING);
+        PROCEDURE handleIdentdef(id: Context.PIdentdefInfo);
+        PROCEDURE typeName(): STRING;
+    END;
+
+    Declaration* = RECORD(DeclarationHandle)
+        id: Context.PIdentdefInfo;
+        symbol: Symbols.PSymbol;
     END;
     PDeclaration = POINTER TO Declaration;
 
@@ -60,10 +68,11 @@ TYPE
     END;
     PRecord = POINTER TO Record;
 
-    FieldList* = RECORD(Declaration)
-        PROCEDURE handleIdentdef(id: Context.PIdentdefInfo);
-        PROCEDURE typeName(): STRING;
+    RecordBase* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
+    END;
 
+    FieldList* = RECORD(Declaration)
         idents: ARRAY * OF Context.PIdentdefInfo;
         type: Types.PStorageType;
     END;
@@ -208,6 +217,63 @@ BEGIN
     RETURN result;
 END;
 
+PROCEDURE stripTypeId(closure: Object.PType);
+BEGIN
+    typeId <- closure(TypeId.PType);
+    R.stripTypeId(typeId^);
+END;
+
+PROCEDURE checkIfFieldCanBeExported*(name: STRING; idents: ARRAY OF Context.PIdentdefInfo; hint: STRING);
+BEGIN
+    FOR i <- 0 TO LEN(idents) - 1 DO
+        id <- idents[i];
+        IF ~id.exported() THEN
+            Errors.raise(
+                "field '" + name + "' can be exported only if " + hint + " '" +
+                id.id() + "' itself is exported too");
+        END;
+    END;
+END;
+
+PROCEDURE Declaration.handleIdentdef(id: Context.PIdentdefInfo);
+BEGIN
+    typeId <- NEW TypeId.Lazy();
+    symbol <- NEW Symbols.Symbol(id.id(), typeId);
+    scope <- SELF.root().currentScope();
+    scope.addSymbol(symbol, id.exported());
+    IF ~id.exported() THEN
+        scope.addFinalizer(stripTypeId, typeId);
+    END;
+    SELF.id := id;
+    SELF.symbol := symbol;
+END;
+
+PROCEDURE Declaration.setType(type: Types.PStorageType);
+BEGIN
+    TypeId.define(SELF.symbol.info()^(TypeId.Lazy), type);
+    Scope.resolve(SELF.root().currentScope()^, SELF.symbol);
+END;
+
+PROCEDURE Declaration.isAnonymousDeclaration(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE Declaration.exportField(name: STRING);
+VAR
+    idents: ARRAY 1 OF Context.PIdentdefInfo;
+BEGIN
+    idents[0] := SELF.id;
+    checkIfFieldCanBeExported(name, idents, "record");
+END;
+
+PROCEDURE Declaration.typeName(): STRING;
+    RETURN SELF.id.id();
+END;
+
+PROCEDURE Declaration.genTypeName(): STRING;
+    RETURN SELF.typeName();
+END;
+
 PROCEDURE Record.Record(parent: PDeclaration; factory: RecordTypeFactory)
     | SUPER(parent),
       declaration(parent);
@@ -317,16 +383,11 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE checkIfFieldCanBeExported*(name: STRING; idents: ARRAY OF Context.PIdentdefInfo; hint: STRING);
+PROCEDURE RecordBase.handleQIdent(q: ContextHierarchy.QIdent);
 BEGIN
-    FOR i <- 0 TO LEN(idents) - 1 DO
-        id <- idents[i];
-        IF ~id.exported() THEN
-            Errors.raise(
-                "field '" + name + "' can be exported only if " + hint + " '" +
-                id.id() + "' itself is exported too");
-        END;
-    END;
+    s <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
+    base <- ContextExpression.unwrapType(s.symbol().info());
+    SELF.parent()^(Record).setBaseType(base);
 END;
 
 PROCEDURE FieldList.isAnonymousDeclaration(): BOOLEAN;

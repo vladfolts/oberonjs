@@ -36,16 +36,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-exports.BaseType = ChainedContext.extend({
-    init: function BaseTypeContext(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    handleQIdent: function(q){
-        var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        this.parent().setBaseType(ContextExpression.unwrapType(s.symbol().info()));
-    }
-});
-
 exports.QualifiedIdentificatorModule = ChainedContext.extend({
     init: function QualifiedIdentificatorModule(context){
         ChainedContext.prototype.init.call(this, context);
@@ -655,31 +645,6 @@ exports.CheckAssignment = ChainedContext.extend({
     }
 });
 
-exports.ConstDecl = ChainedContext.extend({
-    init: function ConstDeclContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__id = undefined;
-        this.__type = undefined;
-        this.__value = undefined;
-    },
-    handleIdentdef: function(id){
-        this.__id = id;
-        this.codeGenerator().write("var " + id.id() + " = ");
-    },
-    handleExpression: function(e){
-        var value = e.constValue();
-        if (!value)
-            throw new Errors.Error("constant expression expected");
-        this.__type = e.type();
-        this.__value = value;
-    },
-    endParse: function(){
-        var c = new Type.Const(this.__type, this.__value);
-        this.root().currentScope().addSymbol(new Symbol.Symbol(this.__id.id(), c), this.__id.exported());
-        this.codeGenerator().write(";\n");
-    }
-});
-
 exports.VariableDeclaration = HandleSymbolAsType.extend({
     init: function Context$VariableDeclaration(context){
         HandleSymbolAsType.prototype.init.call(this, context);
@@ -751,36 +716,6 @@ exports.ActualParameters = ChainedContext.extend({
     },
     endParse: function(){
         this.handleMessage(endCallMsg);
-    }
-});
-
-exports.TypeDeclaration = ChainedContext.extend({
-    init: function TypeDeclarationContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__id = undefined;
-        this.__symbol = undefined;
-    },
-    handleIdentdef: function(id){
-        var typeId = new TypeId.Lazy();
-        var symbol = new Symbol.Symbol(id.id(), typeId);
-        var scope = this.root().currentScope();
-        scope.addSymbol(symbol, id.exported());
-        if (!id.exported())
-            scope.addFinalizer(function(){Record.stripTypeId(typeId);});
-        this.__id = id;
-        this.__symbol = symbol;
-    },
-    setType: function(type){
-        TypeId.define(this.__symbol.info(), type);
-        Scope.resolve(this.root().currentScope(), this.__symbol);
-    },
-    typeName: function(){return this.__id.id();},
-    id: function(){return this.__id;},
-    genTypeName: function(){return this.__id.id();},
-    isAnonymousDeclaration: function(){return false;},
-    type: function(){return this.parent().type();},
-    exportField: function(name){
-        ContextType.checkIfFieldCanBeExported(name, [this.__id], "record");
     }
 });
 
