@@ -3,6 +3,7 @@
 var Context = require("context.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
+var ContextIdentdef = require("js/ContextIdentdef.js");
 var ContextType = require("js/ContextType.js");
 var Lexer = require("js/Lexer.js");
 var Parser = require("parser.js");
@@ -44,8 +45,8 @@ var ident = function(stream, context){
     return Lexer.ident(stream, context, reservedWords);
 };
 
-var qualident = context(and(optional(context(and(ident, "."), Context.QualifiedIdentificatorModule)), ident),
-                        Context.QualifiedIdentificator);
+var qualident = context(and(optional(context(and(ident, "."), ContextIdentdef.QualifiedModule)), ident),
+                        ContextIdentdef.Qualified);
 var identdef = makeIdentdef(ident);
 
 var selector = or(and(point, ident)

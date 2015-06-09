@@ -36,65 +36,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-exports.QualifiedIdentificatorModule = ChainedContext.extend({
-    init: function QualifiedIdentificatorModule(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__id = undefined;
-    },
-    handleIdent: function(id){
-        this.__id = id;
-    },
-    endParse: function(){
-        var found = this.root().findSymbol(this.__id);
-        if (!found)
-            return false;
-        var s = found.symbol();
-        if (!s || !s.isModule())
-            return false;
-        this.parent().handleModule(this.__id, s.info());
-    }
-});
-
-exports.QualifiedIdentificator = ChainedContext.extend({
-    init: function QualifiedIdentificator(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__module = undefined;
-        this.__id = undefined;
-        this.__code = "";
-    },
-    handleIdent: function(id){
-        this.__id = id;
-    },
-    handleModule: function(id, module){
-        this.__module = module;
-        this.__code = id + ".";
-    },
-    endParse: function(){
-        var code = this.__code ? this.__code + Record.mangleJSProperty(this.__id) : this.__id;
-        this.parent().handleQIdent({
-            module: this.__module,
-            id: this.__id,
-            code: code
-        });
-    }
-});
-
-exports.Identdef = ChainedContext.extend({
-    init: function IdentdefContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this._id = undefined;
-        this._export = false;
-    },
-    handleIdent: function(id){this._id = id;},
-    handleLiteral: function(){this._export = true;},
-    endParse: function(){
-        this.parent().handleIdentdef(this._makeIdendef());
-    },
-    _makeIdendef: function(){
-        return new ObContext.IdentdefInfo(this._id, this._export);
-    }
-});
-
 var HandleSymbolAsType = ContextType.HandleSymbolAsType;
 HandleSymbolAsType.extend = Class.extend;
 HandleSymbolAsType.prototype.init = ContextType.HandleSymbolAsType;

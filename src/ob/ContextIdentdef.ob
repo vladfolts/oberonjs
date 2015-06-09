@@ -1,0 +1,106 @@
+MODULE ContextIdentdef;
+IMPORT
+    Context, ContextDesignator, ContextHierarchy, ContextType, 
+    Module, Record, TypeId;
+TYPE
+    Type* = RECORD(ContextHierarchy.Node)
+        PROCEDURE Type(parent: ContextType.PDeclarationHandle);
+        PROCEDURE doMakeIdendef(): Context.PIdentdefInfo;
+
+        parentDecl: ContextType.PDeclarationHandle;
+        id: STRING;
+        export: BOOLEAN;
+    END;
+
+    Qualified* = RECORD(ContextHierarchy.Node)
+        PROCEDURE Qualified(parent: ContextDesignator.PQIdentHandler);
+        PROCEDURE handleModule(id: STRING; module: Module.PType);
+
+        qidentHandler: ContextDesignator.PQIdentHandler;
+        module: Module.PType;
+        id: STRING;
+        code: STRING;
+    END;
+
+    QualifiedModule* = RECORD(ContextHierarchy.Node)
+        id: STRING;
+    END;
+
+PROCEDURE Type.Type(parent: ContextType.PDeclarationHandle)
+    | SUPER(parent),
+      parentDecl(parent);
+END;
+
+PROCEDURE Type.handleIdent(id: STRING);
+BEGIN
+    SELF.id := id;
+END;
+
+PROCEDURE Type.handleLiteral(s: STRING);
+BEGIN
+    SELF.export := TRUE;
+END;
+
+PROCEDURE Type.doMakeIdendef(): Context.PIdentdefInfo;
+    RETURN NEW Context.IdentdefInfo(SELF.id, SELF.export);
+END;
+
+PROCEDURE Type.endParse(): BOOLEAN;
+BEGIN
+    SELF.parentDecl.handleIdentdef(SELF.doMakeIdendef());
+    RETURN TRUE;
+END;
+
+PROCEDURE Qualified.Qualified(parent: ContextDesignator.PQIdentHandler)
+    | SUPER(parent),
+      qidentHandler(parent);
+END;
+
+PROCEDURE Qualified.handleIdent(id: STRING);
+BEGIN
+    SELF.id := id;
+END;
+
+PROCEDURE Qualified.handleModule(id: STRING; module: Module.PType);
+BEGIN
+    SELF.module := module;
+    SELF.code := id + ".";
+END;
+
+PROCEDURE Qualified.endParse(): BOOLEAN;
+VAR
+    code: STRING;
+BEGIN
+    IF LEN(SELF.code) = 0 THEN
+        code := SELF.id;
+    ELSE
+        code := SELF.code + Record.mangleJSProperty(SELF.id);
+    END;
+    SELF.qidentHandler.handleQIdent(
+        ContextHierarchy.QIdent(SELF.module, SELF.id, code));
+    RETURN TRUE;
+END;
+
+PROCEDURE QualifiedModule.handleIdent(id: STRING);
+BEGIN
+    SELF.id := id;
+END;
+
+PROCEDURE QualifiedModule.endParse(): BOOLEAN;
+BEGIN
+    result <- FALSE;
+    found <- SELF.root().findSymbol(SELF.id);
+    IF found # NIL THEN
+        s <- found.symbol();
+        IF s # NIL THEN
+            info <- s.info();
+            IF info IS Module.PType THEN
+                SELF.parent()^(Qualified).handleModule(SELF.id, info);
+                result := TRUE;
+            END;
+        END;
+    END;
+    RETURN result;
+END;
+
+END ContextIdentdef.

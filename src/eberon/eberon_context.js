@@ -8,6 +8,7 @@ var Context = require("context.js");
 var ContextConst = require("js/ContextConst.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
+var ContextIdentdef = require("js/ContextIdentdef.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var ContextType = require("js/ContextType.js");
 var EberonConstructor= require("js/EberonConstructor.js");
@@ -178,18 +179,18 @@ var ForEachVariable = TypeNarrowVariable.extend({
     idType: function(){return "FOR variable";}
 });
 
-var Identdef = Context.Identdef.extend({
+var Identdef = Class.extend.call(ContextIdentdef.Type, {
     init: function(parent){
-        Context.Identdef.prototype.init.call(this, parent);
+        ContextIdentdef.Type.call(this, parent);
         this.__ro = false;
     },
     handleLiteral: function(l){
         if (l == "-")
             this.__ro = true;  
-        Context.Identdef.prototype.handleLiteral.call(this, l);
+        ContextIdentdef.Type.prototype.handleLiteral.call(this, l);
     },
-    _makeIdendef: function(){
-        return new EberonContext.IdentdefInfo(this._id, this._export, this.__ro);
+    doMakeIdendef: function(){
+        return new EberonContext.IdentdefInfo(this.id, this.export$, this.__ro);
     }
 });
 

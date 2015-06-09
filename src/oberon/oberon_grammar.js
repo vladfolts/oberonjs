@@ -6,6 +6,7 @@ var Context = require("context.js");
 var ContextConst = require("js/ContextConst.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
+var ContextIdentdef = require("js/ContextIdentdef.js");
 var ContextType = require("js/ContextType.js");
 var Grammar = require("grammar.js");
 var ObContext = require("oberon/oberon_context.js");
@@ -46,7 +47,7 @@ function makeAssignmentOrProcedureCall(designator, actualParameters, assignment)
 }
 
 function makeIdentdef(ident){
-    return context(and(ident, optional("*")), Context.Identdef);
+    return context(and(ident, optional("*")), ContextIdentdef.Type);
 }
 
 function makeDesignator(ident, qualident, selector, actualParameters){

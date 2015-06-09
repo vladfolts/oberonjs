@@ -13,6 +13,8 @@ TYPE
     END;
 
     QIdent* = RECORD
+        PROCEDURE QIdent*(module: Module.PType; id: STRING; code: STRING);
+
         module-: Module.PType;
         id-: STRING;
         code-: STRING;
@@ -43,7 +45,7 @@ TYPE
 
         PROCEDURE language*(): LanguageContext.PType;
 
-        PROCEDURE findSymbol(ident: STRING): Symbols.PFoundSymbol;
+        PROCEDURE findSymbol*(ident: STRING): Symbols.PFoundSymbol;
         PROCEDURE findModule(name: STRING): Types.PModule;
 
         PROCEDURE currentScope*(): Scope.PType;
@@ -54,6 +56,12 @@ TYPE
         scopes: ARRAY * OF Scope.PType;
         gen: INTEGER;
     END;
+
+PROCEDURE QIdent.QIdent(module: Module.PType; id: STRING; code: STRING)
+    | module(module),
+      id(id),
+      code(code);
+END;
 
 PROCEDURE Node.Node(parent: PNode)
     | mParent(parent);

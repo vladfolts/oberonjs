@@ -14,8 +14,12 @@ TYPE
     END;
     PIndex = POINTER TO Index;
 
-    Type* = RECORD(ContextHierarchy.Node)
-        PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
+    QIdentHandler* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleQIdent*(q: ContextHierarchy.QIdent);
+    END;
+    PQIdentHandler* = POINTER TO QIdentHandler;
+
+    Type* = RECORD(QIdentHandler)
         PROCEDURE handleExpression(e: Expression.PType);
         PROCEDURE handleTypeCast(type: Types.PType);
 
@@ -34,9 +38,7 @@ TYPE
         indexExpression: Expression.PType;
     END;
 
-    TypeCast* = RECORD(ContextHierarchy.Node)
-        PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
-
+    TypeCast* = RECORD(QIdentHandler)
         type: Types.PType;
     END;
 

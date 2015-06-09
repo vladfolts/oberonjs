@@ -35,12 +35,13 @@ TYPE
         dimensions: ARRAY * OF INTEGER;
     END;
 
-    DeclarationHandle = RECORD(HandleSymbolAsType)
+    DeclarationHandle* = RECORD(HandleSymbolAsType)
         PROCEDURE isAnonymousDeclaration(): BOOLEAN;
         PROCEDURE exportField(name: STRING);
-        PROCEDURE handleIdentdef(id: Context.PIdentdefInfo);
+        PROCEDURE handleIdentdef*(id: Context.PIdentdefInfo);
         PROCEDURE typeName(): STRING;
     END;
+    PDeclarationHandle* = POINTER TO DeclarationHandle;
 
     Declaration* = RECORD(DeclarationHandle)
         id: Context.PIdentdefInfo;

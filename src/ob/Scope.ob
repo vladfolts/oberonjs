@@ -1,6 +1,7 @@
 MODULE Scope;
 IMPORT 
     Errors, 
+    M := Module,
     Object, 
     Procedures := Procedure, 
     Record,
@@ -39,9 +40,7 @@ TYPE
         tempVarCounter: INTEGER;
     END;
 
-    CompiledModule = RECORD(Types.Module)
-        PROCEDURE findSymbol(id: STRING): Symbols.PFoundSymbol;
-
+    CompiledModule = RECORD(M.Type)
         exports: Symbols.Map;
     END;
 
