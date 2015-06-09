@@ -41,59 +41,6 @@ var HandleSymbolAsType = ContextType.HandleSymbolAsType;
 HandleSymbolAsType.extend = Class.extend;
 HandleSymbolAsType.prototype.init = ContextType.HandleSymbolAsType;
 
-exports.FormalParameters = ChainedContext.extend({
-    init: function FormalParametersContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__arguments = [];
-        this.__result = undefined;
-
-        var parent = this.parent();
-        var name = parent.typeName();
-        if (name === undefined)
-            name = "";
-        this.__type = new Procedure.Type(name);
-        parent.setType(this.__type);
-    },
-    handleMessage: function(msg){
-        if (msg instanceof ContextProcedure.AddArgumentMsg){
-            this.__arguments.push(msg.arg);
-            return undefined;
-        }
-        return ChainedContext.prototype.handleMessage.call(this, msg);
-    },
-    handleQIdent: function(q){
-        var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        var resultType = ContextExpression.unwrapType(s.symbol().info());
-        this._checkResultType(resultType);
-        this.__result = resultType;
-    },
-    endParse: function(){
-        this.__type.define(this.__arguments, this.__result);
-    },
-    _checkResultType: function(type){
-        if (type instanceof Type.Array)
-            throw new Errors.Error("the result type of a procedure cannot be an ARRAY");
-        if (type instanceof Type.Record)
-            throw new Errors.Error("the result type of a procedure cannot be a RECORD");
-    }
-});
-
-exports.FormalParametersProcDecl = exports.FormalParameters.extend({
-    init: function FormalParametersProcDeclContext(context){
-        exports.FormalParameters.prototype.init.call(this, context);
-    },
-    handleMessage: function(msg){
-        var result = exports.FormalParameters.prototype.handleMessage.call(this, msg);
-        if (msg instanceof ContextProcedure.AddArgumentMsg)
-            this.parent().handleMessage(msg);
-        return result;
-    },
-    endParse: function(){
-        exports.FormalParameters.prototype.endParse.call(this);
-        this.handleMessage(new ContextProcedure.EndParametersMsg());
-    }
-});
-
 exports.Return = ChainedContext.extend({
     init: function Context$Return(context){
         ChainedContext.prototype.init.call(this, context);
@@ -489,7 +436,7 @@ exports.VariableDeclaration = HandleSymbolAsType.extend({
     },
     setType: function(type){this.__type = type;},
     type: function(){return this.__type;},
-    typeName: function(){return undefined;},
+    typeName: function(){return "";},
     isAnonymousDeclaration: function(){return true;},
     checkExport: function(){},
     handleMessage: function(msg){

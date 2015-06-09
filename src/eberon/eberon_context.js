@@ -88,7 +88,7 @@ var MethodHeading = Context.Chained.extend({
         checkOrdinaryExport(id, "method");
         this.__id = id;
     },
-    typeName: function(){return undefined;},
+    typeName: function(){return "";},
     setType: function(type){this.__type = type;},
     endParse: function(){
         this.handleMessage(new MethodOrProcMsg(this.__id, this.__type));
@@ -1257,7 +1257,7 @@ var MapDecl = Context.Chained.extend({
         this.__type = type;
     },
     isAnonymousDeclaration: function(){return true;},
-    typeName: function(){return undefined;},
+    typeName: function(){return "";},
     endParse: function(){
         this.parent().setType(new EberonMap.Type(this.__type));
     }
@@ -1349,18 +1349,18 @@ function assertArgumentIsNotNonVarDynamicArray(msg){
     }
 }
 
-var FormalParameters = Context.FormalParameters.extend({
+var FormalParameters = Class.extend.call(ContextProcedure.FormalParameters, {
     init: function EberonContext$FormalParameters(context){
-        Context.FormalParameters.prototype.init.call(this, context);
+        ContextProcedure.FormalParameters.call(this, context);
     },
     handleMessage: function(msg){
         assertArgumentIsNotNonVarDynamicArray(msg);
-        return Context.FormalParameters.prototype.handleMessage.call(this, msg);
+        return ContextProcedure.FormalParameters.prototype.handleMessage.call(this, msg);
     },
-    _checkResultType: function(type){
+    doCheckResultType: function(type){
         if (type instanceof EberonDynamicArray.DynamicArray)
             return;
-        Context.FormalParameters.prototype._checkResultType.call(this, type);
+        ContextProcedure.FormalParameters.prototype.doCheckResultType.call(this, type);
     }
 });
 
@@ -1391,18 +1391,18 @@ var FormalType = Context.HandleSymbolAsType.extend({
     }
 });
 
-var FormalParametersProcDecl = Context.FormalParametersProcDecl.extend({
+var FormalParametersProcDecl = Class.extend.call(ContextProcedure.FormalParametersProcDecl, {
     init: function EberonContext$FormalParametersProcDecl(context){
-        Context.FormalParametersProcDecl.prototype.init.call(this, context);
+        ContextProcedure.FormalParametersProcDecl.call(this, context);
     },
     handleMessage: function(msg){
         assertArgumentIsNotNonVarDynamicArray(msg);
-        return Context.FormalParametersProcDecl.prototype.handleMessage.call(this, msg);
+        return ContextProcedure.FormalParametersProcDecl.prototype.handleMessage.call(this, msg);
     },
-    _checkResultType: function(type){
+    doCheckResultType: function(type){
         if (type instanceof EberonDynamicArray.DynamicArray)
             return;
-        Context.FormalParametersProcDecl.prototype._checkResultType.call(this, type);
+        ContextProcedure.FormalParametersProcDecl.prototype.doCheckResultType.call(this, type);
     }
 });
 

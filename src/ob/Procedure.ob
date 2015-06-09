@@ -47,12 +47,12 @@ TYPE
 
     Type* = RECORD(Types.DefinedProcedure)
         PROCEDURE callGenerator(cx: LanguageContext.PType): PCallGenerator;
-        PROCEDURE define(args: ARRAY OF Types.PProcedureArgument; result: Types.PType);
+        PROCEDURE define*(args: ARRAY OF Types.PProcedureArgument; result: Types.PType);
 
         mArgs: Types.ProcedureArguments;
         mResult: Types.PType
     END;
-    PType = POINTER TO Type;
+    PType* = POINTER TO Type;
 
     Std* = RECORD(Types.Procedure)
         PROCEDURE Std*(name: STRING; call: PCall);
@@ -797,7 +797,7 @@ PROCEDURE Type.description(): STRING;
 VAR
     result: STRING;
 BEGIN
-    result := Types.typeName(SELF);
+    result := SELF.name;
     IF LEN(result) = 0 THEN
         result := "PROCEDURE" + dumpProcArgs(SELF);
         IF SELF.mResult # NIL THEN

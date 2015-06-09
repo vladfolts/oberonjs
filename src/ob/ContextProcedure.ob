@@ -1,6 +1,6 @@
 MODULE ContextProcedure;
 IMPORT
-    Cast, Chars, Context, ContextHierarchy, ContextType, 
+    Cast, Chars, Context, ContextExpression, ContextHierarchy, ContextType, 
     Errors, Expression, LanguageContext,
     Procedure, Scope, Symbols, Types, Variable;
 TYPE
@@ -19,6 +19,21 @@ TYPE
         type: Types.PDefinedProcedure;
         multipleArguments: BOOLEAN;
         returnParsed: BOOLEAN;
+    END;
+    PDeclaration = POINTER TO Declaration;
+
+    FormalParameters* = RECORD(ContextHierarchy.Node)
+        PROCEDURE FormalParameters(parent: ContextType.PDeclarationHandle);
+
+        PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
+        PROCEDURE doCheckResultType(type: Types.PStorageType);
+
+        arguments: ARRAY * OF Types.PProcedureArgument;
+        type: Procedure.PType;
+        result: Types.PStorageType;
+    END;
+
+    FormalParametersProcDecl* = RECORD(FormalParameters)
     END;
 
     AddArgumentMsg* = RECORD(ContextHierarchy.Message)
@@ -150,6 +165,66 @@ BEGIN
                      + result.description() + "' result type");
     END;
     RETURN TRUE;
+END;
+
+PROCEDURE FormalParameters.FormalParameters(parent: ContextType.PDeclarationHandle)
+    | SUPER(parent),
+      type(NEW Procedure.Type(parent.typeName()));
+BEGIN
+    parent.setType(SELF.type);
+END;
+
+PROCEDURE FormalParameters.handleMessage(VAR msg: ContextHierarchy.Message): ContextHierarchy.PMessageResult;
+VAR
+    result: ContextHierarchy.PMessageResult;
+BEGIN
+    IF msg IS AddArgumentMsg THEN
+        SELF.arguments.add(msg.arg);
+    ELSE
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE FormalParameters.handleQIdent(q: ContextHierarchy.QIdent);
+BEGIN
+    s <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
+    resultType <- ContextExpression.unwrapType(s.symbol().info());
+    SELF.doCheckResultType(resultType);
+    SELF.result := resultType;
+END;
+
+PROCEDURE FormalParameters.doCheckResultType(type: Types.PStorageType);
+BEGIN
+    IF type IS Types.PArray THEN
+        Errors.raise("the result type of a procedure cannot be an ARRAY");
+    ELSIF type IS Types.PRecord THEN
+        Errors.raise("the result type of a procedure cannot be a RECORD");
+    END;
+END;
+
+PROCEDURE FormalParameters.endParse(): BOOLEAN;
+BEGIN
+    SELF.type.define(SELF.arguments, SELF.result);
+    RETURN TRUE;
+END;
+
+PROCEDURE FormalParametersProcDecl.handleMessage(VAR msg: ContextHierarchy.Message): ContextHierarchy.PMessageResult;
+BEGIN
+    result <- SUPER(msg);
+    IF msg IS AddArgumentMsg THEN
+        result := SELF.parent().handleMessage(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE FormalParametersProcDecl.endParse(): BOOLEAN;
+BEGIN
+    result <- SUPER();
+    IF result THEN
+        void <- SELF.handleMessage(NEW EndParametersMsg()^);
+    END;
+    RETURN result;
 END;
 
 PROCEDURE AddArgumentMsg.AddArgumentMsg(name: STRING; arg: Types.PProcedureArgument)

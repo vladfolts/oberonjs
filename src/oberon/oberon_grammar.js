@@ -36,7 +36,7 @@ function makeStatement(base){
 function makeProcedureHeading(ident, identdef, formalParameters){
     return and("PROCEDURE"
              , identdef
-             , context(optional(formalParameters), Context.FormalParametersProcDecl));
+             , context(optional(formalParameters), ContextProcedure.FormalParametersProcDecl));
 }
 
 function makeAssignmentOrProcedureCall(designator, actualParameters, assignment){
@@ -117,7 +117,7 @@ exports.language = {
             variableDeclaration: ObContext.VariableDeclaration,
             ArrayDecl:          ContextType.Array,
             Factor:             ContextExpression.Factor,
-            FormalParameters:   Context.FormalParameters,
+            FormalParameters:   ContextProcedure.FormalParameters,
             FormalType:         ContextType.FormalType,
             Term:               ContextExpression.Term,
             AddOperator:        ContextExpression.AddOperator,
