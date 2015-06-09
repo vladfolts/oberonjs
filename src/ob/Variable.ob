@@ -15,7 +15,7 @@ TYPE
     END;
 
     ArgumentVariable* = RECORD(DeclaredVariable)
-        PROCEDURE ArgumentVariable(id: STRING; type: Types.PStorageType; var: BOOLEAN);
+        PROCEDURE ArgumentVariable*(id: STRING; type: Types.PStorageType; var: BOOLEAN);
 
         var: BOOLEAN;
     END;

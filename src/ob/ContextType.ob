@@ -6,7 +6,7 @@ IMPORT
 TYPE
     HandleSymbolAsType* = RECORD(ContextHierarchy.Node)
         PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
-        PROCEDURE setType(type: Types.PStorageType);
+        PROCEDURE setType*(type: Types.PStorageType);
     END;
     PHandleSymbolAsType = POINTER TO HandleSymbolAsType;
 
@@ -39,7 +39,7 @@ TYPE
         PROCEDURE isAnonymousDeclaration(): BOOLEAN;
         PROCEDURE exportField(name: STRING);
         PROCEDURE handleIdentdef*(id: Context.PIdentdefInfo);
-        PROCEDURE typeName(): STRING;
+        PROCEDURE typeName*(): STRING;
     END;
     PDeclarationHandle* = POINTER TO DeclarationHandle;
 

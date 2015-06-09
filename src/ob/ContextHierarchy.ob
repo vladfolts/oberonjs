@@ -6,10 +6,10 @@ TYPE
     PRoot = POINTER TO Root;
     PNode* = POINTER TO Node;
 
-    Message = RECORD
+    Message* = RECORD
     END;
 
-    PMessageResult = POINTER TO RECORD
+    PMessageResult* = POINTER TO RECORD
     END;
 
     QIdent* = RECORD
@@ -29,7 +29,7 @@ TYPE
 
         PROCEDURE root*(): PRoot;
         PROCEDURE parent*(): PNode;
-        PROCEDURE handleMessage(VAR msg: Message): PMessageResult;
+        PROCEDURE handleMessage*(VAR msg: Message): PMessageResult;
         PROCEDURE codeGenerator*(): CodeGenerator.PIGenerator;
         PROCEDURE handleLiteral*(s: STRING);
         PROCEDURE handleIdent*(s: STRING);
@@ -49,8 +49,8 @@ TYPE
         PROCEDURE findModule(name: STRING): Types.PModule;
 
         PROCEDURE currentScope*(): Scope.PType;
-        PROCEDURE pushScope(scope: Scope.PType);
-        PROCEDURE popScope();
+        PROCEDURE pushScope*(scope: Scope.PType);
+        PROCEDURE popScope*();
 
         mLanguage: LanguageContext.PType;
         scopes: ARRAY * OF Scope.PType;

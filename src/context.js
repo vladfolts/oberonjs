@@ -6,6 +6,7 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var ConstValue = require("js/ConstValue.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
+var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var Designator = require("js/Designator.js");
 var Errors = require("js/Errors.js");
@@ -40,21 +41,6 @@ var HandleSymbolAsType = ContextType.HandleSymbolAsType;
 HandleSymbolAsType.extend = Class.extend;
 HandleSymbolAsType.prototype.init = ContextType.HandleSymbolAsType;
 
-var ProcArg = Class.extend({
-    init: function(type, isVar){
-        this.type = type;
-        this.isVar = isVar;
-    },
-    description: function(){
-        return (this.isVar ? "VAR " : "") + this.type.description();
-    }
-});
-
-function AddArgumentMsg(name, arg){
-    this.name = name;
-    this.arg = arg;
-}
-
 exports.FormalParameters = ChainedContext.extend({
     init: function FormalParametersContext(context){
         ChainedContext.prototype.init.call(this, context);
@@ -69,7 +55,7 @@ exports.FormalParameters = ChainedContext.extend({
         parent.setType(this.__type);
     },
     handleMessage: function(msg){
-        if (msg instanceof AddArgumentMsg){
+        if (msg instanceof ContextProcedure.AddArgumentMsg){
             this.__arguments.push(msg.arg);
             return undefined;
         }
@@ -92,21 +78,19 @@ exports.FormalParameters = ChainedContext.extend({
     }
 });
 
-function endParametersMsg(){}
-
 exports.FormalParametersProcDecl = exports.FormalParameters.extend({
     init: function FormalParametersProcDeclContext(context){
         exports.FormalParameters.prototype.init.call(this, context);
     },
     handleMessage: function(msg){
         var result = exports.FormalParameters.prototype.handleMessage.call(this, msg);
-        if (msg instanceof AddArgumentMsg)
+        if (msg instanceof ContextProcedure.AddArgumentMsg)
             this.parent().handleMessage(msg);
         return result;
     },
     endParse: function(){
         exports.FormalParameters.prototype.endParse.call(this);
-        this.handleMessage(endParametersMsg);
+        this.handleMessage(new ContextProcedure.EndParametersMsg());
     }
 });
 
@@ -166,12 +150,12 @@ exports.ProcDecl = ChainedContext.extend({
         return new Variable.ArgumentVariable(name, arg.type, arg.isVar);
     },
     handleMessage: function(msg){
-        if (msg == endParametersMsg){
+        if (msg instanceof ContextProcedure.EndParametersMsg){
             this.codeGenerator().write(")");
             this._beginBody();
             return;
         }
-        if (msg instanceof AddArgumentMsg)
+        if (msg instanceof ContextProcedure.AddArgumentMsg)
             return this.__addArgument(msg.name, msg.arg);
         return ChainedContext.prototype.handleMessage.call(this, msg);
     },
@@ -229,7 +213,7 @@ exports.ProcParams = HandleSymbolAsType.extend({
         for(var i = 0; i < names.length; ++i){
             var name = names[i];
             this.handleMessage(
-                new AddArgumentMsg(name, new Type.ProcedureArgument(type, this.__isVar)));
+                new ContextProcedure.AddArgumentMsg(name, new Type.ProcedureArgument(type, this.__isVar)));
         }
         this.__isVar = false;
         this.__argNamesForType = [];
@@ -807,11 +791,9 @@ function makeProcCall(context, type, info){
         });
 }
 
-exports.AddArgumentMsg = AddArgumentMsg;
 exports.assertProcStatementResult = assertProcStatementResult;
 exports.beginCallMsg = beginCallMsg;
 exports.endCallMsg = endCallMsg;
 exports.Chained = ChainedContext;
-exports.endParametersMsg = endParametersMsg;
 exports.makeProcCall = makeProcCall;
 exports.HandleSymbolAsType = HandleSymbolAsType;

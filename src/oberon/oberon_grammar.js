@@ -7,6 +7,7 @@ var ContextConst = require("js/ContextConst.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextIdentdef = require("js/ContextIdentdef.js");
+var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var Grammar = require("grammar.js");
 var ObContext = require("oberon/oberon_context.js");
@@ -64,7 +65,7 @@ function makeProcedureDeclaration(ident, procedureHeading, procedureBody){
     return context(and(procedureHeading, ";",
                        procedureBody,
                        ident),
-                   Context.ProcDecl);
+                   ContextProcedure.Declaration);
 }
 
 function makeFieldList(identdef, identList, type){

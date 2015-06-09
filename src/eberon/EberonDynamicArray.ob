@@ -14,7 +14,7 @@ TYPE
 
     AddCallGenerator = RECORD(Procedure.CallGenerator)
         cx: LanguageContext.PType;
-        elementsType: Types.PType;
+        elementsType: Types.PStorageType;
         code: STRING
     END;
 
@@ -22,9 +22,9 @@ TYPE
     END;
 
     MethodAdd = RECORD(Method)
-        PROCEDURE MethodAdd(elementsType: Types.PType);
+        PROCEDURE MethodAdd(elementsType: Types.PStorageType);
 
-        elementsType: Types.PType
+        elementsType: Types.PStorageType;
     END;
 
     MethodClear = RECORD(Method)
@@ -40,7 +40,7 @@ TYPE
     END;
 
     MethodAddField = RECORD(EberonTypes.MethodField)
-        PROCEDURE MethodAddField(elementsType: Types.PType);
+        PROCEDURE MethodAddField(elementsType: Types.PStorageType);
     END;
 
     MethodClearField = RECORD(EberonTypes.MethodField)
@@ -75,7 +75,7 @@ PROCEDURE DynamicArray.description(): STRING;
     RETURN Types.arrayDescription(SELF, arrayDimensionDescription)
 END DynamicArray.description;
 
-PROCEDURE MethodAdd.MethodAdd(elementsType: Types.PType)
+PROCEDURE MethodAdd.MethodAdd(elementsType: Types.PStorageType)
     | SUPER(methodNameAdd, NIL),
       elementsType(elementsType);
 END;
@@ -164,7 +164,7 @@ BEGIN
     RETURN result
 END MethodAdd.callGenerator;
 
-PROCEDURE MethodAddField.MethodAddField(elementsType: Types.PType)
+PROCEDURE MethodAddField.MethodAddField(elementsType: Types.PStorageType)
     | SUPER(NEW MethodAdd(elementsType));
 END;
 

@@ -109,11 +109,11 @@ TYPE
     END;
 
     ProcedureArgument* = RECORD
-        PROCEDURE ProcedureArgument*(type: PType; isVar: BOOLEAN);
+        PROCEDURE ProcedureArgument*(type: PStorageType; isVar: BOOLEAN);
 
-        PROCEDURE description(): STRING;
+        PROCEDURE description*(): STRING;
 
-        type*: PType;
+        type*: PStorageType;
         isVar*: BOOLEAN
     END;
 
@@ -336,7 +336,7 @@ BEGIN
     RETURN result + SELF.type.description()
 END ProcedureArgument.description;
 
-PROCEDURE ProcedureArgument.ProcedureArgument(type: PType; isVar: BOOLEAN)
+PROCEDURE ProcedureArgument.ProcedureArgument(type: PStorageType; isVar: BOOLEAN)
     | type(type),
       isVar(isVar);
 END;

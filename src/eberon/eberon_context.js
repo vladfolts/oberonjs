@@ -10,6 +10,7 @@ var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextIdentdef = require("js/ContextIdentdef.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
+var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var EberonConstructor= require("js/EberonConstructor.js");
 var EberonContext= require("js/EberonContext.js");
@@ -565,9 +566,9 @@ var RecordDecl = Class.extend.call(ContextType.Record, {
             return;
         }
 
-        if (msg == Context.endParametersMsg) // not used
+        if (msg instanceof ContextProcedure.EndParametersMsg) // not used
             return undefined;
-        if (msg instanceof Context.AddArgumentMsg) // not used
+        if (msg instanceof ContextProcedure.AddArgumentMsg) // not used
             return undefined;
         return ContextType.Record.prototype.handleMessage.call(this, msg);
     },
@@ -669,9 +670,9 @@ var BaseInit = Context.Chained.extend({
     }
 });
 
-var ProcOrMethodDecl = Context.ProcDecl.extend({
+var ProcOrMethodDecl = Class.extend.call(ContextProcedure.Declaration, {
     init: function EberonContext$ProcOrMethodDecl(parent, stdSymbols){
-        Context.ProcDecl.prototype.init.call(this, parent, stdSymbols);
+        ContextProcedure.Declaration.call(this, parent, stdSymbols);
         this.__methodId = undefined;
         this.__methodType = undefined;
         this.__boundType = undefined;
@@ -718,64 +719,64 @@ var ProcOrMethodDecl = Context.ProcDecl.extend({
                 this.__isConstructor = name == id.id();
             }
 
-            Context.ProcDecl.prototype.handleIdentdef.call(this, id);
+            ContextProcedure.Declaration.prototype.handleIdentdef.call(this, id);
             return;
         }
 
         if (handleTypePromotionMadeInSeparateStatement(msg))
             return;
 
-        return Context.ProcDecl.prototype.handleMessage.call(this, msg);
+        return ContextProcedure.Declaration.prototype.handleMessage.call(this, msg);
     },
-    _prolog: function(){
+    doProlog: function(){
         return this.__boundType
             ? this.__isConstructor ? "function " + Type.typeName(this.__boundType) + "("
                                    : Type.typeName(this.__boundType) + ".prototype." + this.__methodId.id() + " = function("
-            : Context.ProcDecl.prototype._prolog.call(this);
+            : ContextProcedure.Declaration.prototype.doProlog.call(this);
     },
-    _epilog: function(){
+    doEpilog: function(){
         return this.__boundType && !this.__isConstructor
             ? ";\n"
-            : Context.ProcDecl.prototype._epilog.call(this);
+            : ContextProcedure.Declaration.prototype.doEpilog.call(this);
     },
-    _beginBody: function(){
-        Context.ProcDecl.prototype._beginBody.call(this);
+    doBeginBody: function(){
+        ContextProcedure.Declaration.prototype.doBeginBody.call(this);
         if (this.__isConstructor)
             this.codeGenerator().write(
                 this.__boundType.baseConstructorCallCode
               + EberonRecord.fieldsInitializationCode(this.__boundType, this));
     },
-    _makeArgumentVariable: function(arg, name){
+    doMakeArgumentVariable: function(arg, name){
         if (!arg.isVar)
             return new TypeNarrowVariable(arg.type, false, true, name);
 
         if (arg.type instanceof Type.Record)
             return new TypeNarrowVariable(arg.type, true, false, name);
 
-        return Context.ProcDecl.prototype._makeArgumentVariable.call(this, arg, name);
+        return ContextProcedure.Declaration.prototype.doMakeArgumentVariable.call(this, arg, name);
     },
     setType: function(type){
         if (this.__methodId){
             this.__methodType = new EberonTypes.MethodType(this.__methodId.id(), type, Procedure.makeProcCallGenerator);
-            this.__type = type;
+            this.type = type;
             }            
         else
-            Context.ProcDecl.prototype.setType.call(this, type);
+            ContextProcedure.Declaration.prototype.setType.call(this, type);
     },
     handleIdent: function(id){
         if (!this.__boundType)
-            Context.ProcDecl.prototype.handleIdent.call(this, id);
+            ContextProcedure.Declaration.prototype.handleIdent.call(this, id);
         else if (this.__endingId)
             this.__endingId = this.__endingId + "." + id;
         else
             this.__endingId = id;
     },
     endParse: function(){
-        Context.ProcDecl.prototype.endParse.call(this);
+        ContextProcedure.Declaration.prototype.endParse.call(this);
 
         if (this.__boundType){
             if (this.__endingId){
-                var expected = Type.typeName(this.__boundType) + "." + this.__id.id();
+                var expected = Type.typeName(this.__boundType) + "." + this.id.id();
                 if (this.__endingId != expected)
                     throw new Errors.Error(
                           "mismatched method names: expected '" 
@@ -1335,7 +1336,7 @@ var ArrayDecl = Class.extend.call(ContextType.Array, {
 });
 
 function assertArgumentIsNotNonVarDynamicArray(msg){
-    if (msg instanceof Context.AddArgumentMsg){
+    if (msg instanceof ContextProcedure.AddArgumentMsg){
         var arg = msg.arg;
         if (!arg.isVar){
             var type = arg.type;

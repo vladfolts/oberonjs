@@ -1,5 +1,5 @@
 MODULE LanguageContext;
-IMPORT Context, CodeGenerator, Expression, T := Types;
+IMPORT Context, CodeGenerator, Expression, Symbols, T := Types;
 
 TYPE
     PType* = POINTER TO Type;
@@ -24,6 +24,7 @@ TYPE
         moduleResolver*: PROCEDURE(name: STRING): T.PModule;
         codeGenerator*: CodeGenerator.PIGenerator;
         types*: PTypes;
+        stdSymbols*: Symbols.Map;
     END;
 
 END LanguageContext.

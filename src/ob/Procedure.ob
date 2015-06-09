@@ -267,12 +267,12 @@ PROCEDURE makeSymbol*(p: Types.PProcedure): Symbols.PSymbol;
     RETURN NEW Symbols.Symbol(p.name, NEW Types.ProcedureId(p))
 END;
 
-PROCEDURE hasArgument(call: PStdCall; type: Types.PType);
+PROCEDURE hasArgument(call: PStdCall; type: Types.PStorageType);
 BEGIN
     call.args.add(NEW Types.ProcedureArgument(type, FALSE));
 END hasArgument;
 
-PROCEDURE hasVarArgument(call: PStdCall; type: Types.PType);
+PROCEDURE hasVarArgument(call: PStdCall; type: Types.PStorageType);
 BEGIN
     call.args.add(NEW Types.ProcedureArgument(type, TRUE));
 END hasVarArgument;

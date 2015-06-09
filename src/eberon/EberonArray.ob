@@ -1,5 +1,6 @@
 MODULE EberonArray;
-IMPORT EberonTypes, Errors, Expression, LanguageContext, Procedure, Types;
+IMPORT 
+    EberonTypes, Errors, Expression, LanguageContext, Procedure, Types;
 CONST
     methodNameIndexOf = "indexOf";
 TYPE
@@ -7,9 +8,9 @@ TYPE
     END;
 
     MethodIndexOf = RECORD(Method)
-        PROCEDURE MethodIndexOf(elementsType: Types.PType);
+        PROCEDURE MethodIndexOf(elementsType: Types.PStorageType);
 
-        elementsType: Types.PType
+        elementsType: Types.PStorageType
     END;
 
     MethodCallIndexOf = RECORD(Procedure.StdCall)
@@ -25,7 +26,7 @@ PROCEDURE Method.description(): STRING;
     RETURN "array method '" + SELF.name + "'"
 END Method.description;
 
-PROCEDURE MethodIndexOf.MethodIndexOf(elementsType: Types.PType)
+PROCEDURE MethodIndexOf.MethodIndexOf(elementsType: Types.PStorageType)
     | SUPER(methodNameIndexOf, NIL),
       elementsType(elementsType);
 BEGIN
@@ -46,7 +47,7 @@ BEGIN
     RETURN Expression.makeSimple("(" + argCode.result() + ")", Types.basic.integer)
 END MethodCallIndexOf.make;
 
-PROCEDURE denoteMethod*(id: STRING; elementsType: Types.PType): Types.PField;
+PROCEDURE denoteMethod*(id: STRING; elementsType: Types.PStorageType): Types.PField;
 VAR
     result: Types.PField;
 BEGIN

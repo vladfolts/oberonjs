@@ -1,0 +1,160 @@
+MODULE ContextProcedure;
+IMPORT
+    Cast, Chars, Context, ContextHierarchy, ContextType, 
+    Errors, Expression, LanguageContext,
+    Procedure, Scope, Symbols, Types, Variable;
+TYPE
+    Declaration* = RECORD(ContextType.DeclarationHandle)
+        PROCEDURE Declaration(parent: ContextHierarchy.PNode);
+
+        PROCEDURE doProlog(): STRING;
+        PROCEDURE doEpilog(): STRING;
+        PROCEDURE doBeginBody();
+        PROCEDURE doMakeArgumentVariable(arg: Types.ProcedureArgument; name: STRING): Types.PVariable;
+
+        PROCEDURE handleReturn(e: Expression.PType);
+
+        outerScope: Scope.PType;
+        id: Context.PIdentdefInfo;
+        type: Types.PDefinedProcedure;
+        multipleArguments: BOOLEAN;
+        returnParsed: BOOLEAN;
+    END;
+
+    AddArgumentMsg* = RECORD(ContextHierarchy.Message)
+        PROCEDURE AddArgumentMsg(name: STRING; arg: Types.PProcedureArgument);
+
+        name: STRING;
+        arg: Types.PProcedureArgument;
+    END;
+
+    EndParametersMsg* = RECORD(ContextHierarchy.Message)
+    END;
+
+PROCEDURE Declaration.Declaration(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      outerScope(SELF.root().currentScope());
+END;
+
+PROCEDURE Declaration.handleIdentdef(id: Context.PIdentdefInfo);
+BEGIN
+    SELF.id := id;
+    SELF.codeGenerator().write(SELF.doProlog());
+    root <- SELF.root();
+    root.pushScope(Scope.makeProcedure(root.language().stdSymbols));
+END;
+
+PROCEDURE Declaration.handleIdent(id: STRING);
+BEGIN
+    expectId <- SELF.id.id();
+    IF expectId # id THEN
+        Errors.raise("mismatched procedure names: '" + expectId
+                     + "' at the begining and '" + id + "' at the end");
+    END;
+END;
+
+PROCEDURE Declaration.doProlog(): STRING;
+    RETURN Chars.ln + "function " + SELF.id.id() + "(";
+END;
+
+PROCEDURE Declaration.doEpilog(): STRING;
+    RETURN "";
+END;
+
+PROCEDURE Declaration.doBeginBody();
+BEGIN
+    SELF.codeGenerator().openScope();
+END;
+
+PROCEDURE Declaration.typeName(): STRING;
+    RETURN "";
+END;
+
+PROCEDURE Declaration.setType(type: Types.PStorageType);
+BEGIN
+    t <- type(Types.PDefinedProcedure);
+    procSymbol <- NEW Symbols.Symbol(
+        SELF.id.id(), NEW Types.ProcedureId(t));
+    SELF.outerScope.addSymbol(procSymbol, SELF.id.exported());
+    SELF.type := t;
+END;
+
+PROCEDURE addArgument(VAR declaration: Declaration; name: STRING; arg: Types.ProcedureArgument);
+BEGIN
+    IF name = declaration.id.id() THEN
+        Errors.raise("argument '" + name + "' has the same name as procedure");
+    END;
+    v <- declaration.doMakeArgumentVariable(arg, name);
+    s <- NEW Symbols.Symbol(name, v);
+    declaration.root().currentScope().addSymbol(s, FALSE);
+
+    code <- declaration.codeGenerator();
+    IF declaration.multipleArguments THEN
+        code.write(", ");
+    ELSE
+        declaration.multipleArguments := TRUE;
+    END;
+    code.write(name + "/*" + arg.description() + "*/");
+END;
+
+PROCEDURE Declaration.doMakeArgumentVariable(arg: Types.ProcedureArgument; name: STRING): Types.PVariable;
+    RETURN NEW Variable.ArgumentVariable(name, arg.type, arg.isVar);
+END;
+
+PROCEDURE Declaration.handleMessage(VAR msg: ContextHierarchy.Message): ContextHierarchy.PMessageResult;
+VAR
+    result: ContextHierarchy.PMessageResult;
+BEGIN
+    IF msg IS EndParametersMsg THEN
+        SELF.codeGenerator().write(")");
+        SELF.doBeginBody();
+    ELSIF msg IS AddArgumentMsg THEN
+        ASSERT(msg.arg # NIL);
+        addArgument(SELF, msg.name, msg.arg^);
+    ELSE
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Declaration.handleReturn(e: Expression.PType);
+VAR
+    op: LanguageContext.PCastOp;
+BEGIN
+    type <- e.type();
+    result <- SELF.type.result();
+    IF result = NIL THEN
+        Errors.raise("unexpected RETURN in PROCEDURE declared with no result type");
+    END;
+    
+    language <- SELF.root().language();
+    IF language.types.implicitCast(type, result, FALSE, op) # Cast.errNo THEN
+        Errors.raise(
+            "RETURN '" + result.description() + "' expected, got '"
+            + type.description() + "'");
+    END;
+
+    SELF.codeGenerator().write("return " + op.clone(language, e) + ";" + Chars.ln);
+
+    SELF.returnParsed := TRUE;
+END;
+
+PROCEDURE Declaration.endParse(): BOOLEAN;
+BEGIN
+    SELF.codeGenerator().closeScope(SELF.doEpilog());
+    SELF.root().popScope();
+
+    result <- SELF.type.result();
+    IF (result # NIL) & ~SELF.returnParsed THEN
+        Errors.raise("RETURN expected at the end of PROCEDURE declared with '"
+                     + result.description() + "' result type");
+    END;
+    RETURN TRUE;
+END;
+
+PROCEDURE AddArgumentMsg.AddArgumentMsg(name: STRING; arg: Types.PProcedureArgument)
+    | name(name),
+      arg(arg);
+END;
+
+END ContextProcedure.
