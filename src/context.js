@@ -5,6 +5,7 @@ var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var ConstValue = require("js/ConstValue.js");
 var ContextExpression = require("js/ContextExpression.js");
+var ContextIf = require("js/ContextIf.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
@@ -40,62 +41,6 @@ ChainedContext.prototype.init = ContextHierarchy.Node;
 var HandleSymbolAsType = ContextType.HandleSymbolAsType;
 HandleSymbolAsType.extend = Class.extend;
 HandleSymbolAsType.prototype.init = ContextType.HandleSymbolAsType;
-
-exports.Return = ChainedContext.extend({
-    init: function Context$Return(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    codeGenerator: function(){return nullCodeGenerator;},
-    handleExpression: function(e){
-        this.parent().handleReturn(e);
-    }
-});
-
-function handleIfExpression(e){
-    var type = e.type();
-    if (type !== basicTypes.bool)
-        throw new Errors.Error("'BOOLEAN' expression expected, got '" + type.description() + "'");
-}
-/*
-var IfContextBase = ChainedContext.extend({
-    init: function(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    endParse: function(){
-        var gen = this.codeGenerator();
-        gen.write(")");
-        gen.openScope();
-    },
-    handleExpression: handleIfExpression
-});
-*/
-exports.If = ChainedContext.extend({
-    init: function IfContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.codeGenerator().write("if (");
-    },
-    handleExpression: function(e){
-        handleIfExpression(e);
-        var gen = this.codeGenerator();
-        gen.write(")");
-        gen.openScope();
-    },
-    handleLiteral: function(s){
-        var gen = this.codeGenerator();
-        if (s == "ELSIF"){
-            gen.closeScope("");
-            gen.write("else if (");
-        }
-        else if (s == "ELSE"){
-            gen.closeScope("");
-            gen.write("else ");
-            gen.openScope();
-        }
-    },
-    endParse: function(){
-        this.codeGenerator().closeScope("");
-    }
-});
 
 exports.emitEndStatement = function(context){
     context.codeGenerator().write(";\n");
@@ -225,7 +170,7 @@ exports.While = ChainedContext.extend({
         gen.write("if (");
     },
     handleExpression: function WhileContext$handleExpression(e){
-        handleIfExpression(e);
+        ContextIf.handleIfExpression(e);
         var gen = this.codeGenerator();
         gen.write(")");
         gen.openScope();
@@ -260,7 +205,7 @@ exports.Until = ChainedContext.extend({
     },
     codeGenerator: function(){ return nullCodeGenerator; },
     handleExpression: function(e){
-        handleIfExpression(e);
+        ContextIf.handleIfExpression(e);
         this.parent().codeGenerator().write( op.not(e).code() );
     },
     endParse: function(){

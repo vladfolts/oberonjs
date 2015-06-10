@@ -1,6 +1,7 @@
 MODULE ContextProcedure;
 IMPORT
-    Cast, Chars, Context, ContextExpression, ContextHierarchy, ContextType, 
+    Cast, Chars, CodeGenerator, Context, ContextExpression, 
+    ContextHierarchy, ContextType, 
     Errors, Expression, LanguageContext,
     Object, Procedure, Scope, Symbols, Types, Variable;
 TYPE
@@ -41,6 +42,9 @@ TYPE
     DefinedParameters* = RECORD(ContextType.HandleSymbolAsType)
         isVar: BOOLEAN;
         argNamesForType: ARRAY * OF STRING;
+    END;
+
+    Return* = RECORD(ContextExpression.ExpressionHandler)
     END;
 
     AddArgumentMsg* = RECORD(ContextHierarchy.Message)
@@ -255,6 +259,15 @@ BEGIN
     END;
     SELF.isVar := FALSE;
     SELF.argNamesForType.clear();
+END;
+
+PROCEDURE Return.handleExpression(e: Expression.PType);
+BEGIN
+    SELF.parent()^(Declaration).handleReturn(e);
+END;
+
+PROCEDURE Return.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN CodeGenerator.nullGenerator;
 END;
 
 PROCEDURE AddArgumentMsg.AddArgumentMsg(name: STRING; arg: Types.PProcedureArgument)

@@ -1,0 +1,50 @@
+MODULE ContextIf;
+IMPORT
+    ContextExpression, ContextHierarchy, Errors, Expression, Types;
+TYPE
+    Type* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE Type(parent: ContextHierarchy.PNode);
+    END;
+
+PROCEDURE handleIfExpression*(e: Expression.PType);
+BEGIN
+    type <- e.type();
+    IF type # Types.basic.bool THEN
+        Errors.raise("'BOOLEAN' expression expected, got '" + type.description() + "'");
+    END;
+END;
+
+PROCEDURE Type.Type(parent: ContextHierarchy.PNode)
+    | SUPER(parent);
+BEGIN
+    SELF.codeGenerator().write("if (");
+END;
+
+PROCEDURE Type.handleExpression(e: Expression.PType);
+BEGIN
+    handleIfExpression(e);
+    gen <- SELF.codeGenerator();
+    gen.write(")");
+    gen.openScope();
+END;
+
+PROCEDURE Type.handleLiteral(s: STRING);
+BEGIN
+    gen <- SELF.codeGenerator();
+    IF s = "ELSIF" THEN
+        gen.closeScope("");
+        gen.write("else if (");
+    ELSIF s = "ELSE" THEN
+        gen.closeScope("");
+        gen.write("else ");
+        gen.openScope();
+    END;
+END;
+
+PROCEDURE Type.endParse(): BOOLEAN;
+BEGIN
+    SELF.codeGenerator().closeScope("");
+    RETURN TRUE;
+END;
+
+END ContextIf.

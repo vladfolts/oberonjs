@@ -157,7 +157,6 @@ exports.language = {
             If:                 EbContext.If,
             CaseLabel:          EbContext.CaseLabel,
             Repeat:             EbContext.Repeat,
-            Return:             EbContext.Return,
             ModuleDeclaration:  EbContext.ModuleDeclaration
         },
         Grammar.reservedWords + " SELF SUPER MAP"

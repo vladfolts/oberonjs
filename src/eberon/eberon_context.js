@@ -9,6 +9,7 @@ var ContextConst = require("js/ContextConst.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextIdentdef = require("js/ContextIdentdef.js");
+var ContextIf = require("js/ContextIf.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
@@ -1149,19 +1150,19 @@ var While = Context.While.extend({
     }
 });
 
-var If = Context.If.extend({
+var If = Class.extend.call(ContextIf.Type, {
     init: function EberonContext$If(context){
-        Context.If.prototype.init.call(this, context);
+        ContextIf.Type.call(this, context);
         this.__scopes = new OperatorScopes(this);
     },
     handleMessage: function(msg){
         if (this.__scopes.handleMessage(msg))
             return;
 
-        return Context.If.prototype.handleMessage.call(this, msg);
+        return ContextIf.Type.prototype.handleMessage.call(this, msg);
     },
     handleLiteral: function(s){
-        Context.If.prototype.handleLiteral.call(this, s);
+        ContextIf.Type.prototype.handleLiteral.call(this, s);
         if (s == "THEN")
             this.__scopes.doThen();
         else if (s == "ELSIF" || s == "ELSE")
@@ -1169,7 +1170,7 @@ var If = Context.If.extend({
     },
     endParse: function(){
         this.__scopes.reset();
-        Context.If.prototype.endParse.call(this);
+        ContextIf.Type.prototype.endParse.call(this);
     }
 });
 
@@ -1206,8 +1207,6 @@ var Repeat = Context.Repeat.extend({
         //Context.Repeat.prototype.endParse.call(this);
     }
 });
-
-var Return = Context.Return;
 
 var For = Context.For.extend({
     init: function EberonContext$Repeat(context){
@@ -1443,7 +1442,6 @@ exports.ProcOrMethodId = ProcOrMethodId;
 exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;
 exports.Repeat = Repeat;
-exports.Return = Return;
 exports.SimpleExpression = SimpleExpression;
 exports.InPlaceVariableInit = InPlaceVariableInit;
 exports.InPlaceVariableInitFor = InPlaceVariableInitFor;
