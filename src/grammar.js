@@ -4,6 +4,7 @@ var Context = require("context.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextIdentdef = require("js/ContextIdentdef.js");
+var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var Lexer = require("js/Lexer.js");
 var Parser = require("parser.js");
@@ -174,13 +175,13 @@ var baseType = context(qualident, ContextType.RecordBase);
 var recordType = and("RECORD", context(and(optional(and("(", baseType, ")")), optional(fieldListSequence)
                                      , "END"), contexts.recordDecl));
 
-var pointerType = and("POINTER", "TO", context(type, Context.PointerDecl));
+var pointerType = and("POINTER", "TO", context(type, ContextType.Pointer));
 
 var formalType = context(and(repeat(makeFormalArray()), qualident), contexts.FormalType);
 var fpSection = and(optional("VAR"), ident, repeat(and(",", ident)), ":", formalType);
 var formalParameters = and(
           "("
-        , optional(context(and(fpSection, repeat(and(";", fpSection))), Context.ProcParams))
+        , optional(context(and(fpSection, repeat(and(";", fpSection))), ContextProcedure.DefinedParameters))
         , required( ")" )
         , optional(makeFormalResult(and(":", qualident), ident, actualParameters)));
 

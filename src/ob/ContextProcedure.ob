@@ -2,10 +2,12 @@ MODULE ContextProcedure;
 IMPORT
     Cast, Chars, Context, ContextExpression, ContextHierarchy, ContextType, 
     Errors, Expression, LanguageContext,
-    Procedure, Scope, Symbols, Types, Variable;
+    Object, Procedure, Scope, Symbols, Types, Variable;
 TYPE
-    Declaration* = RECORD(ContextType.DeclarationHandle)
+    Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
         PROCEDURE Declaration(parent: ContextHierarchy.PNode);
+
+        PROCEDURE typeName(): STRING;
 
         PROCEDURE doProlog(): STRING;
         PROCEDURE doEpilog(): STRING;
@@ -23,7 +25,7 @@ TYPE
     PDeclaration = POINTER TO Declaration;
 
     FormalParameters* = RECORD(ContextHierarchy.Node)
-        PROCEDURE FormalParameters(parent: ContextType.PDeclarationHandle);
+        PROCEDURE FormalParameters(parent: PDeclaration);
 
         PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
         PROCEDURE doCheckResultType(type: Types.PStorageType);
@@ -34,6 +36,11 @@ TYPE
     END;
 
     FormalParametersProcDecl* = RECORD(FormalParameters)
+    END;
+
+    DefinedParameters* = RECORD(ContextType.HandleSymbolAsType)
+        isVar: BOOLEAN;
+        argNamesForType: ARRAY * OF STRING;
     END;
 
     AddArgumentMsg* = RECORD(ContextHierarchy.Message)
@@ -116,9 +123,9 @@ PROCEDURE Declaration.doMakeArgumentVariable(arg: Types.ProcedureArgument; name:
     RETURN NEW Variable.ArgumentVariable(name, arg.type, arg.isVar);
 END;
 
-PROCEDURE Declaration.handleMessage(VAR msg: ContextHierarchy.Message): ContextHierarchy.PMessageResult;
+PROCEDURE Declaration.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
 VAR
-    result: ContextHierarchy.PMessageResult;
+    result: Object.PType;
 BEGIN
     IF msg IS EndParametersMsg THEN
         SELF.codeGenerator().write(")");
@@ -167,16 +174,16 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE FormalParameters.FormalParameters(parent: ContextType.PDeclarationHandle)
+PROCEDURE FormalParameters.FormalParameters(parent: PDeclaration)
     | SUPER(parent),
       type(NEW Procedure.Type(parent.typeName()));
 BEGIN
     parent.setType(SELF.type);
 END;
 
-PROCEDURE FormalParameters.handleMessage(VAR msg: ContextHierarchy.Message): ContextHierarchy.PMessageResult;
+PROCEDURE FormalParameters.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
 VAR
-    result: ContextHierarchy.PMessageResult;
+    result: Object.PType;
 BEGIN
     IF msg IS AddArgumentMsg THEN
         SELF.arguments.add(msg.arg);
@@ -209,7 +216,7 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE FormalParametersProcDecl.handleMessage(VAR msg: ContextHierarchy.Message): ContextHierarchy.PMessageResult;
+PROCEDURE FormalParametersProcDecl.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
 BEGIN
     result <- SUPER(msg);
     IF msg IS AddArgumentMsg THEN
@@ -225,6 +232,29 @@ BEGIN
         void <- SELF.handleMessage(NEW EndParametersMsg()^);
     END;
     RETURN result;
+END;
+
+PROCEDURE DefinedParameters.handleLiteral(s: STRING);
+BEGIN
+    IF s = "VAR" THEN
+        SELF.isVar := TRUE;
+    END;
+END;
+
+PROCEDURE DefinedParameters.handleIdent(id: STRING);
+BEGIN
+    SELF.argNamesForType.add(id);
+END;
+
+PROCEDURE DefinedParameters.setType(type: Types.PStorageType);
+BEGIN
+    FOR i <- 0 TO LEN(SELF.argNamesForType) - 1 DO
+        name <- SELF.argNamesForType[i];
+        void <- SELF.handleMessage(
+            NEW AddArgumentMsg(name, NEW Types.ProcedureArgument(type, SELF.isVar))^);
+    END;
+    SELF.isVar := FALSE;
+    SELF.argNamesForType.clear();
 END;
 
 PROCEDURE AddArgumentMsg.AddArgumentMsg(name: STRING; arg: Types.PProcedureArgument)

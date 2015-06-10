@@ -4,10 +4,10 @@ IMPORT
     Module, Record, TypeId;
 TYPE
     Type* = RECORD(ContextHierarchy.Node)
-        PROCEDURE Type(parent: ContextType.PDeclarationHandle);
+        PROCEDURE Type(parent: ContextType.PDeclarationAndIdentHandle);
         PROCEDURE doMakeIdendef(): Context.PIdentdefInfo;
 
-        parentDecl: ContextType.PDeclarationHandle;
+        parentDecl: ContextType.PDeclarationAndIdentHandle;
         id: STRING;
         export: BOOLEAN;
     END;
@@ -26,7 +26,7 @@ TYPE
         id: STRING;
     END;
 
-PROCEDURE Type.Type(parent: ContextType.PDeclarationHandle)
+PROCEDURE Type.Type(parent: ContextType.PDeclarationAndIdentHandle)
     | SUPER(parent),
       parentDecl(parent);
 END;

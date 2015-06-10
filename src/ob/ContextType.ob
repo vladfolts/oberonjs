@@ -38,12 +38,17 @@ TYPE
     DeclarationHandle* = RECORD(HandleSymbolAsType)
         PROCEDURE isAnonymousDeclaration(): BOOLEAN;
         PROCEDURE exportField(name: STRING);
-        PROCEDURE handleIdentdef*(id: Context.PIdentdefInfo);
-        PROCEDURE typeName*(): STRING;
     END;
     PDeclarationHandle* = POINTER TO DeclarationHandle;
 
-    Declaration* = RECORD(DeclarationHandle)
+    DeclarationAndIdentHandle* = RECORD(DeclarationHandle)
+        PROCEDURE handleIdentdef*(id: Context.PIdentdefInfo);
+    END;
+    PDeclarationAndIdentHandle* = POINTER TO DeclarationAndIdentHandle;
+
+    Declaration* = RECORD(DeclarationAndIdentHandle)
+        PROCEDURE typeName*(): STRING;
+
         id: Context.PIdentdefInfo;
         symbol: Symbols.PSymbol;
     END;
@@ -76,6 +81,18 @@ TYPE
     FieldList* = RECORD(Declaration)
         idents: ARRAY * OF Context.PIdentdefInfo;
         type: Types.PStorageType;
+    END;
+
+    Pointer* = RECORD(DeclarationHandle)
+        PROCEDURE Pointer(parent: PDeclarationHandle);
+
+        declParent: PDeclarationHandle;
+    END;
+
+    ForwardTypeMsg* = RECORD(ContextHierarchy.Message)
+        PROCEDURE ForwardTypeMsg(id: STRING);
+
+        id: STRING;
     END;
 
 PROCEDURE HandleSymbolAsType.handleQIdent(q: ContextHierarchy.QIdent);
@@ -421,6 +438,71 @@ BEGIN
         parent.addField(SELF.idents[i], SELF.type);
     END;
     RETURN TRUE;
+END;
+
+PROCEDURE setTypeId(p: Pointer; typeId: TypeId.PType);
+VAR
+    name: STRING;
+BEGIN
+    IF ~(typeId^ IS TypeId.Forward) THEN
+        type <- typeId.type();
+        IF ~(type IS Types.PRecord) THEN
+            Errors.raise("RECORD is expected as a POINTER base type, got '" 
+                         + type.description() + "'");
+        END;
+    END;
+    
+    parent <- p.declParent;
+    IF ~parent.isAnonymousDeclaration() THEN
+        name := parent.genTypeName();
+    END;
+
+    parent.setType(NEW R.Pointer(name, typeId));
+END;
+
+PROCEDURE Pointer.Pointer(parent: PDeclarationHandle)
+    | SUPER(parent),
+      declParent(parent);
+END;
+
+PROCEDURE Pointer.handleQIdent(q: ContextHierarchy.QIdent);
+VAR 
+    info: Types.PId;
+    s: Symbols.PFoundSymbol;
+BEGIN
+    id <- q.id;
+    IF q.module # NIL THEN
+        s := ContextHierarchy.getModuleSymbolAndScope(q.module^, id);
+    ELSE
+        s := SELF.root().findSymbol(id);
+    END;
+    IF s # NIL THEN
+        info := s.symbol().info();
+    ELSE
+        msg <- NEW ForwardTypeMsg(id);
+        info := SELF.parent().handleMessage(msg^)(Types.PId);
+    END;
+    setTypeId(SELF, ContextExpression.unwrapTypeId(info));
+END;
+
+PROCEDURE Pointer.setType(type: Types.PStorageType);
+BEGIN
+    typeId <- NEW TypeId.Type(type);
+    SELF.root().currentScope().addFinalizer(stripTypeId, typeId);
+    setTypeId(SELF, typeId);
+END;
+
+PROCEDURE Pointer.isAnonymousDeclaration(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE Pointer.exportField(field: STRING);
+BEGIN
+    Errors.raise("cannot export anonymous RECORD field: '" + field + "'");
+END;
+
+PROCEDURE ForwardTypeMsg.ForwardTypeMsg(id: STRING)
+    | id(id);
 END;
 
 END ContextType.

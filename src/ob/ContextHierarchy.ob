@@ -1,15 +1,12 @@
 MODULE ContextHierarchy;
 IMPORT 
     CodeGenerator, Context, Designator, Errors, LanguageContext, Module, 
-    OberonRtl, Scope, ScopeBase, Symbols, String, Types;
+    OberonRtl, Object, Scope, ScopeBase, Symbols, String, Types;
 TYPE
     PRoot = POINTER TO Root;
     PNode* = POINTER TO Node;
 
     Message* = RECORD
-    END;
-
-    PMessageResult* = POINTER TO RECORD
     END;
 
     QIdent* = RECORD
@@ -29,7 +26,7 @@ TYPE
 
         PROCEDURE root*(): PRoot;
         PROCEDURE parent*(): PNode;
-        PROCEDURE handleMessage*(VAR msg: Message): PMessageResult;
+        PROCEDURE handleMessage*(VAR msg: Message): Object.PType;
         PROCEDURE codeGenerator*(): CodeGenerator.PIGenerator;
         PROCEDURE handleLiteral*(s: STRING);
         PROCEDURE handleIdent*(s: STRING);
@@ -83,7 +80,7 @@ PROCEDURE Node.rtl(): OberonRtl.PType;
     RETURN SELF.root().language().rtl();
 END;
 
-PROCEDURE Node.handleMessage(VAR msg: Message): PMessageResult;
+PROCEDURE Node.handleMessage(VAR msg: Message): Object.PType;
     RETURN SELF.mParent.handleMessage(msg);
 END;
 
