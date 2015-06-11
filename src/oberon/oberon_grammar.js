@@ -3,6 +3,7 @@
 var Cast = require("js/Cast.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var ContextCase = require("js/ContextCase.js");
 var ContextConst = require("js/ContextConst.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
@@ -128,7 +129,7 @@ exports.language = {
             For:                Context.For,
             While:              Context.While,
             If:                 ContextIf.Type,
-            CaseLabel:          Context.CaseLabel,
+            CaseLabel:          ContextCase.Label,
             Repeat:             Context.Repeat,
             ModuleDeclaration:  Context.ModuleDeclaration
         },

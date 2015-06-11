@@ -5,6 +5,7 @@ var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
+var ContextCase = require("js/ContextCase.js");
 var ContextConst = require("js/ContextConst.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
@@ -1174,9 +1175,9 @@ var If = Class.extend.call(ContextIf.Type, {
     }
 });
 
-var CaseLabel = Context.CaseLabel.extend({
+var CaseLabel = Class.extend.call(ContextCase.Label, {
     init: function EberonContext$CaseLabel(context){
-        Context.CaseLabel.prototype.init.call(this, context);
+        ContextCase.Label.call(this, context);
     },
     handleLiteral: function(s){
         if (s == ':'){ // statement sequence is expected now
@@ -1189,7 +1190,7 @@ var CaseLabel = Context.CaseLabel.extend({
     },
     endParse: function(){
         this.root().popScope();
-        Context.CaseLabel.prototype.endParse.call(this);
+        ContextCase.Label.prototype.endParse.call(this);
     }
 });
 

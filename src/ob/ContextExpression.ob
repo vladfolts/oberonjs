@@ -61,7 +61,6 @@ TYPE
     PFactor = POINTER TO Factor;
 
     Factor* = RECORD(ExpressionHandler)
-        PROCEDURE handleConst(type: Types.PType; value: ConstValue.PType; code: STRING);
         PROCEDURE handleLogicalNot();
 
         expression: Expression.PType;
@@ -86,9 +85,9 @@ TYPE
     END;
 
     Const = RECORD(ContextHierarchy.Node)
-        PROCEDURE Const(factor: PFactor);
+        PROCEDURE Const(parent: PExpressionHandler);
 
-        factor: PFactor;
+        parentExpression: PExpressionHandler;
     END;
 
     Integer* = RECORD(Const)
@@ -703,19 +702,18 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE Factor.handleConst(type: Types.PType; value: ConstValue.PType; code: STRING);
-BEGIN
-    SELF.expression := Expression.make(code, type, NIL, value);
+PROCEDURE expressionFromConst(type: Types.PType; value: ConstValue.PType; code: STRING): Expression.PType;
+    RETURN Expression.make(code, type, NIL, value);
 END;
 
 PROCEDURE Factor.handleLiteral(s: STRING);
 BEGIN
     IF s = "NIL" THEN
-        SELF.handleConst(Types.nil, NIL, "null");
+        SELF.handleExpression(expressionFromConst(Types.nil, NIL, "null"));
     ELSIF s = "TRUE" THEN
-        SELF.handleConst(Types.basic.bool, NEW ConstValue.Int(1), "true");
+        SELF.handleExpression(expressionFromConst(Types.basic.bool, NEW ConstValue.Int(1), "true"));
     ELSIF s = "FALSE" THEN
-        SELF.handleConst(Types.basic.bool, NEW ConstValue.Int(0), "false");
+        SELF.handleExpression(expressionFromConst(Types.basic.bool, NEW ConstValue.Int(0), "false"));
     ELSIF s = "~" THEN
         SELF.handleLogicalNot();
     END;
@@ -867,25 +865,25 @@ PROCEDURE AddOperator.doExpectPlusOperator(): STRING;
     RETURN "numeric type or SET";
 END;
 
-PROCEDURE Const.Const(factor: PFactor)
-    | SUPER(factor),
-      factor(factor);
+PROCEDURE Const.Const(parent: PExpressionHandler)
+    | SUPER(parent),
+      parentExpression(parent);
 END;
 
 PROCEDURE Integer.handleInt(n: INTEGER);
 BEGIN
-    SELF.factor.handleConst(
+    SELF.parentExpression.handleExpression(expressionFromConst(
         Types.basic.integer, 
         NEW ConstValue.Int(n), 
-        String.fromInt(n));
+        String.fromInt(n)));
 END;
 
 PROCEDURE Real.handleReal(r: REAL);
 BEGIN
-    SELF.factor.handleConst(
+    SELF.parentExpression.handleExpression(expressionFromConst(
         Types.basic.real, 
         NEW ConstValue.Real(r), 
-        String.fromReal(r));
+        String.fromReal(r)));
 END;
 
 PROCEDURE escapeString(s: STRING): STRING;
@@ -924,10 +922,10 @@ END;
 
 PROCEDURE Str.handleStr(s: STRING);
 BEGIN
-    SELF.factor.handleConst(
+    SELF.parentExpression.handleExpression(expressionFromConst(
         NEW Types.String(s), 
         NEW ConstValue.String(s), 
-        escapeString(s));
+        escapeString(s)));
 END;
 
 PROCEDURE SetElement.SetElement(parent: PSet)
@@ -984,7 +982,7 @@ PROCEDURE Set.endParse(): BOOLEAN;
 BEGIN
     parent <- SELF.parent()(PFactor);
     IF LEN(SELF.expression) = 0 THEN
-        parent.handleConst(Types.basic.set, NEW ConstValue.Set(SELF.value), String.fromInt(ORD(SELF.value)));
+        parent.handleExpression(expressionFromConst(Types.basic.set, NEW ConstValue.Set(SELF.value), String.fromInt(ORD(SELF.value))));
     ELSE
         code <- SELF.root().language().rtl().makeSet(SELF.expression);
         IF SELF.value # {} THEN

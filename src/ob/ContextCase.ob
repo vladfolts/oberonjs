@@ -1,0 +1,171 @@
+MODULE ContextCase;
+IMPORT
+    Cast, Chars, CodeGenerator, ConstValue, ContextExpression, ContextHierarchy, 
+    Errors, Expression, String, Types;
+TYPE
+    Type* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE Type(parent: ContextHierarchy.PNode);
+
+        PROCEDURE beginCase();
+        PROCEDURE handleLabelType(type: Types.PType);
+
+        var: STRING;
+        type: Types.PType;
+        firstCaseParsed: BOOLEAN;
+    END;
+
+    Label* = RECORD(ContextHierarchy.Node)
+        PROCEDURE caseLabelBegin();
+        PROCEDURE caseLabelEnd();
+    END;
+    PLabel = POINTER TO Label;
+
+    LabelList* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleRange(from, to: ConstValue.PInt);
+
+        glue: STRING;
+    END;
+
+    Range* = RECORD(ContextExpression.ExpressionHandler)
+        from, to: ConstValue.PInt;
+    END;
+
+PROCEDURE Type.Type(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      var(SELF.root().currentScope().generateTempVar("case"));
+BEGIN
+    SELF.codeGenerator().write("var " + SELF.var + " = ");
+END;
+
+PROCEDURE Type.handleExpression(e: Expression.PType);
+VAR
+    c: CHAR;
+BEGIN
+    type <- e.type();
+    gen <- SELF.codeGenerator();
+    IF (type IS Types.PString) & Types.stringAsChar(type^, c) THEN
+        gen.write(String.fromChar(c));
+        SELF.type := Types.basic.ch;
+    ELSIF Types.isInt(type) OR (type = Types.basic.ch) THEN
+        SELF.type := type;
+    ELSE
+        Errors.raise(Types.intsDescription() 
+                     + " or 'CHAR' expected as CASE expression");
+    END;
+    gen.write(";" + Chars.ln);
+END;
+
+PROCEDURE Type.beginCase();
+BEGIN
+    IF ~SELF.firstCaseParsed THEN
+        SELF.firstCaseParsed := TRUE;
+    ELSE
+        SELF.codeGenerator().write("else ");
+    END;
+END;
+
+PROCEDURE Type.handleLabelType(type: Types.PType);
+BEGIN
+    IF ~Cast.areTypesMatch(type, SELF.type) THEN
+        Errors.raise("label must be '" + SELF.type.description() + "' (the same as case expression), got '"
+                     + type.description() + "'");
+    END;
+END;
+
+PROCEDURE LabelList.handleRange(from, to: ConstValue.PInt);
+VAR
+    cond: STRING;
+BEGIN
+    parent <- SELF.parent()(PLabel);
+    IF LEN(SELF.glue) = 0 THEN
+        parent.caseLabelBegin();
+    END;
+
+    v <- parent.parent()^(Type).var;
+    IF to = NIL THEN
+        cond := v + " === " + String.fromInt(from.value);
+    ELSE
+        cond := "(" + v + " >= " + String.fromInt(from.value)
+              + " && " + v + " <= " + String.fromInt(to.value) + ")";
+    END;
+
+    SELF.codeGenerator().write(SELF.glue + cond);
+    SELF.glue := " || ";
+END;
+
+PROCEDURE LabelList.endParse(): BOOLEAN;
+BEGIN
+    SELF.parent()(PLabel).caseLabelEnd();
+    RETURN TRUE;
+END;
+
+PROCEDURE Label.caseLabelBegin();
+BEGIN
+    SELF.parent()^(Type).beginCase();
+    SELF.codeGenerator().write("if (");
+END;
+
+PROCEDURE Label.caseLabelEnd();
+BEGIN
+    gen <- SELF.codeGenerator();
+    gen.write(")");
+    gen.openScope();
+END;
+
+PROCEDURE Label.endParse(): BOOLEAN;
+BEGIN
+    SELF.codeGenerator().closeScope("");
+    RETURN TRUE;
+END;
+
+PROCEDURE handleLabel(VAR r: Range; type: Types.PType; v: ConstValue.PInt);
+BEGIN
+    r.parent().parent().parent()^(Type).handleLabelType(type);
+    IF r.from = NIL THEN
+        r.from := v;
+    ELSE
+        r.to := v;
+    END;
+END;
+
+PROCEDURE Range.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN CodeGenerator.nullGenerator;
+END;
+
+PROCEDURE Range.handleExpression(e: Expression.PType);
+VAR
+    c: CHAR;
+BEGIN
+    type <- e.type();
+    IF type IS Types.PString THEN
+        IF ~Types.stringAsChar(type^, c) THEN
+            Errors.raise("single-character string expected");
+        END;
+        handleLabel(SELF, Types.basic.ch, NEW ConstValue.Int(ORD(c)));
+    ELSE
+        handleLabel(SELF, type, e.constValue()(ConstValue.PInt));
+    END;
+END;
+
+PROCEDURE Range.handleIdent(id: STRING);
+BEGIN
+    info <- ContextHierarchy.getSymbol(SELF.root()^, id).info();
+    IF ~(info IS Types.PConst) THEN
+        Errors.raise("'" + id + "' is not a constant");
+    ELSE
+        type <- info.type;
+        IF type IS Types.PString THEN
+            SELF.handleExpression(Expression.makeSimple("", type));
+        ELSE
+            handleLabel(SELF, type, info.value(ConstValue.PInt));
+        END;
+    END;
+END;
+
+PROCEDURE Range.endParse(): BOOLEAN;
+BEGIN
+    SELF.parent()^(LabelList).handleRange(SELF.from, SELF.to);
+    RETURN TRUE;
+END;
+
+END ContextCase.

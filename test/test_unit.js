@@ -628,7 +628,7 @@ return {
     ),
 "CASE statement": testWithContext(
     context(grammar.statement,
-              "CONST ci = 15; cc = \"A\";"
+              "CONST ci = 15; cc = \"A\"; cb = TRUE; cs = \"abc\";"
             + "VAR c1: CHAR; b1: BOOLEAN; i1, i2: INTEGER; byte: BYTE; p: POINTER TO RECORD END;"),
     pass("CASE i1 OF END",
          "CASE i1 OF | END",
@@ -645,7 +645,8 @@ return {
          "CASE i1 OF ci..2: b1 := TRUE END",
          "CASE c1 OF cc..\"Z\": b1 := TRUE END",
          "CASE i1 OF 1, 2, 3: b1 := TRUE | 4..10: b1 := FALSE | 11: c1 := \"A\" END",
-         "CASE i1 OF 1, 2, 5..9: b1 := TRUE END"),
+         "CASE i1 OF 1, 2, 5..9: b1 := TRUE END"
+         ),
     fail(["CASE i1 OF undefined: b1 := TRUE END",
           "undeclared identifier: 'undefined'"],
          ["CASE i1 OF i2: b1 := TRUE END",
@@ -659,7 +660,11 @@ return {
          ["CASE c1 OF \"A\", 1: b1 := TRUE END",
           "label must be 'CHAR' (the same as case expression), got 'INTEGER'"],
          ["CASE c1 OF \"A\"..1: b1 := TRUE END",
-          "label must be 'CHAR' (the same as case expression), got 'INTEGER'"])
+          "label must be 'CHAR' (the same as case expression), got 'INTEGER'"],
+         ["CASE c1 OF cs: b1 := TRUE END", "single-character string expected"],
+         ["CASE ci OF cb: b1 := TRUE END", "label must be 'INTEGER' (the same as case expression), got 'BOOLEAN'"],
+         ["CASE ci OF TRUE: b1 := TRUE END", "not parsed"]
+         )
     ),
 "WHILE statement": testWithContext(
     context(grammar.statement,

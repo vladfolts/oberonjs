@@ -1,6 +1,7 @@
 "use strict";
 
 var Context = require("context.js");
+var ContextCase = require("js/ContextCase.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextIdentdef = require("js/ContextIdentdef.js");
@@ -123,12 +124,12 @@ var ifStatement = and("IF", context(and(expression, required("THEN", "THEN expec
                                     contexts.If));
 
 var label = or(integer, string, ident);
-var labelRange = context(and(label, optional(and("..", label))), Context.CaseRange);
-var caseLabelList = context(and(labelRange, repeat(and(",", labelRange))), Context.CaseLabelList);
+var labelRange = context(and(label, optional(and("..", label))), ContextCase.Range);
+var caseLabelList = context(and(labelRange, repeat(and(",", labelRange))), ContextCase.LabelList);
 var caseParser = optional(context(and(caseLabelList, ":", statementSequence), contexts.CaseLabel));
 var caseStatement = and("CASE", context(and(expression
                       , "OF", caseParser, repeat(and("|", caseParser)), "END")
-                      , Context.Case));
+                      , ContextCase.Type));
 
 var whileStatement = and("WHILE", 
                          context(and(expression, "DO", statementSequence, 
