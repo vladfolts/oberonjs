@@ -1,0 +1,212 @@
+MODULE ContextLoop;
+IMPORT
+    Chars, CodeGenerator, ConstValue, Context, ContextExpression, ContextIf, ContextHierarchy, 
+    Errors, Expression, Operator, String, Types;
+TYPE
+    While* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE While(parent: ContextHierarchy.PNode);
+    END;
+
+    Repeat* = RECORD(ContextHierarchy.Node)
+        PROCEDURE Repeat(parent: ContextHierarchy.PNode);
+    END;
+
+    Until* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE Until(parent: ContextHierarchy.PNode);
+    END;
+
+    For* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE For(parent: ContextHierarchy.PNode);
+
+        PROCEDURE doHandleInitCode(id, code: STRING);
+        PROCEDURE doHandleInitExpression(type: Types.PType);
+
+        toExpr: CodeGenerator.PIGenerator;
+        var: STRING;
+        initExprParsed, toParsed, byParsed: BOOLEAN;
+        by: INTEGER;
+    END;
+
+PROCEDURE While.While(parent: ContextHierarchy.PNode)
+    | SUPER(parent);
+BEGIN
+    gen <- SELF.codeGenerator();
+    gen.write("while (true)");
+    gen.openScope();
+    gen.write("if (");
+END;
+
+PROCEDURE While.handleExpression(e: Expression.PType);
+BEGIN
+    ContextIf.handleIfExpression(e);
+    gen <- SELF.codeGenerator();
+    gen.write(")");
+    gen.openScope();
+END;
+
+PROCEDURE While.handleLiteral(s: STRING);
+BEGIN
+    IF s = "ELSIF" THEN
+        gen <- SELF.codeGenerator();
+        gen.closeScope("");
+        gen.write("else if (");
+    END;
+END;
+
+PROCEDURE While.endParse(): BOOLEAN;
+BEGIN
+    gen <- SELF.codeGenerator();
+    gen.closeScope(" else break;" + Chars.ln);
+    gen.closeScope("");
+    RETURN TRUE;
+END;
+
+PROCEDURE Repeat.Repeat(parent: ContextHierarchy.PNode)
+    | SUPER(parent);
+BEGIN
+    gen <- SELF.codeGenerator();
+    gen.write("do ");
+    gen.openScope();
+END;
+
+(*
+PROCEDURE Repeat.endParse(): BOOLEAN;
+BEGIN
+    SELF.root().popScope();
+    RETURN TRUE;
+END;
+*)
+
+PROCEDURE Until.Until(parent: ContextHierarchy.PNode)
+    | SUPER(parent);
+BEGIN
+    parent.codeGenerator().closeScope(" while (");
+END;
+
+PROCEDURE Until.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN CodeGenerator.nullGenerator;
+END;
+
+PROCEDURE Until.handleExpression(e: Expression.PType);
+BEGIN
+    ContextIf.handleIfExpression(e);
+    SELF.parent().codeGenerator().write( Operator.not(e).code() );
+END;
+
+PROCEDURE Until.endParse(): BOOLEAN;
+BEGIN
+    SELF.parent().codeGenerator().write(");" + Chars.ln);
+    RETURN TRUE;
+END;
+
+PROCEDURE For.For(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      toExpr(CodeGenerator.makeSimpleGenerator()),
+      by(1);
+END;
+
+PROCEDURE For.handleIdent(id: STRING);
+BEGIN
+    s <- ContextHierarchy.getSymbol(SELF.root()^, id);
+    info <- s.info();
+    IF ~(info IS Types.PVariable) THEN
+        Errors.raise("'" + s.id() + "' is not a variable");
+    ELSE
+        type <- info.type();
+        IF type # Types.basic.integer THEN
+            Errors.raise("'" + s.id() + "' is a '" + type.description() 
+                         + "' variable, 'FOR' control variable must be 'INTEGER'");
+        END;
+        SELF.doHandleInitCode(id, "for (" + id + " = ");
+    END;
+END;
+
+PROCEDURE For.doHandleInitCode(id, code: STRING);
+BEGIN
+    SELF.var := id;
+    SELF.codeGenerator().write(code);
+END;
+
+PROCEDURE For.doHandleInitExpression(type: Types.PType);
+BEGIN
+    IF type # Types.basic.integer THEN
+        Errors.raise(
+            "'INTEGER' expression expected to assign '" + SELF.var
+            + "', got '" + type.description() + "'");
+    END;
+    SELF.initExprParsed := TRUE;
+END;
+
+PROCEDURE For.handleExpression(e: Expression.PType);
+BEGIN
+    type <- e.type();
+    IF ~SELF.initExprParsed THEN
+        SELF.doHandleInitExpression(type);
+    ELSIF ~SELF.toParsed THEN
+        IF type # Types.basic.integer THEN
+            Errors.raise("'INTEGER' expression expected as 'TO' parameter, got '" 
+                         + type.description() + "'");
+        END;
+        SELF.toParsed := TRUE;
+    ELSE
+        IF type # Types.basic.integer THEN
+            Errors.raise("'INTEGER' expression expected as 'BY' parameter, got '" 
+                         + type.description() + "'");
+        END;
+        value <- e.constValue();
+        IF value = NIL THEN
+            Errors.raise("constant expression expected as 'BY' parameter");
+        END;
+        SELF.by := value(ConstValue.PInt).value;
+    END;
+END;
+
+PROCEDURE For.codeGenerator(): CodeGenerator.PIGenerator;
+VAR
+    result: CodeGenerator.PIGenerator;
+BEGIN
+    IF SELF.initExprParsed & ~SELF.toParsed THEN
+        result := SELF.toExpr;
+    ELSIF SELF.toParsed & ~SELF.byParsed THEN
+        result := CodeGenerator.nullGenerator; (* suppress output for BY expression *)
+    ELSE    
+        result := SELF.parent().codeGenerator();
+    END;
+    RETURN result;
+END;
+
+PROCEDURE For.endParse(): BOOLEAN;
+BEGIN
+    SELF.codeGenerator().closeScope("");
+    RETURN TRUE;
+END;
+
+PROCEDURE emitForBegin*(VAR cx: For);
+VAR
+    relation, step: STRING;
+BEGIN
+    cx.byParsed := TRUE;
+
+    IF cx.by < 0 THEN
+        relation := " >= ";
+    ELSE
+        relation := " <= ";
+    END;
+
+    IF cx.by = 1 THEN
+        step := "++" + cx.var;
+    ELSIF cx.by = -1 THEN
+        step := "--" + cx.var;
+    ELSIF cx.by < 0 THEN
+        step := cx.var + " -= " + String.fromInt(-cx.by);
+    ELSE
+        step := cx.var + " += " + String.fromInt(cx.by);
+    END;
+
+    s <- "; " + cx.var + relation + cx.toExpr.result() + "; " + step + ")";
+    gen <- cx.codeGenerator();
+    gen.write(s);
+    gen.openScope();
+END;
+
+END ContextLoop.

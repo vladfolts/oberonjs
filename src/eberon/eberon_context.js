@@ -11,6 +11,7 @@ var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextIdentdef = require("js/ContextIdentdef.js");
 var ContextIf = require("js/ContextIf.js");
+var ContextLoop = require("js/ContextLoop.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
@@ -1127,13 +1128,13 @@ var OperatorScopes = Class.extend({
     }
 });
 
-var While = Context.While.extend({
+var While = Class.extend.call(ContextLoop.While, {
     init: function EberonContext$While(context){
-        Context.While.prototype.init.call(this, context);
+        ContextLoop.While.call(this, context);
         this.__scopes = new OperatorScopes(this);
     },
     handleLiteral: function(s){
-        Context.While.prototype.handleLiteral.call(this, s);
+        ContextLoop.While.prototype.handleLiteral.call(this, s);
         if (s == "DO")
             this.__scopes.doThen();
         else if (s == "ELSIF")
@@ -1143,11 +1144,11 @@ var While = Context.While.extend({
         if (this.__scopes.handleMessage(msg))
             return;
 
-        return Context.While.prototype.handleMessage.call(this, msg);
+        return ContextLoop.While.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
         this.__scopes.reset();
-        Context.While.prototype.endParse.call(this);
+        ContextLoop.While.prototype.endParse.call(this);
     }
 });
 
@@ -1194,9 +1195,9 @@ var CaseLabel = Class.extend.call(ContextCase.Label, {
     }
 });
 
-var Repeat = Context.Repeat.extend({
+var Repeat = Class.extend.call(ContextLoop.Repeat, {
     init: function EberonContext$Repeat(context){
-        Context.Repeat.prototype.init.call(this, context);
+        ContextLoop.Repeat.call(this, context);
         var root = this.root();
         var scope = EberonScope.makeOperator(
             root.currentScope(),
@@ -1209,9 +1210,9 @@ var Repeat = Context.Repeat.extend({
     }
 });
 
-var For = Context.For.extend({
+var For = Class.extend.call(ContextLoop.For, {
     init: function EberonContext$Repeat(context){
-        Context.For.prototype.init.call(this, context);
+        ContextLoop.For.call(this, context);
         var root = this.root();
         var scope = EberonScope.makeOperator(
             root.currentScope(),
@@ -1219,12 +1220,12 @@ var For = Context.For.extend({
         root.pushScope(scope);
     },
     handleInPlaceInit: function(symbol, code){
-        this._handleInitCode(symbol.id(), "for (" + code);
-        this._handleInitExpression(symbol.info().type());
+        this.doHandleInitCode(symbol.id(), "for (" + code);
+        this.doHandleInitExpression(symbol.info().type());
     },
     endParse: function(){
         this.root().popScope();
-        Context.For.prototype.endParse.call(this);
+        ContextLoop.For.prototype.endParse.call(this);
     }
 });
 

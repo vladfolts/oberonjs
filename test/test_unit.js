@@ -683,12 +683,15 @@ return {
     ),
 "FOR statement": testWithContext(
     context(grammar.statement,
-              "CONST c = 15;"
+              "CONST c = 15; zero = 1 - 1;"
             + "VAR b: BOOLEAN; i, n: INTEGER; ch: CHAR; p: POINTER TO RECORD END;"),
     pass("FOR i := 0 TO 10 DO n := 1 END",
          "FOR i := 0 TO 10 BY 5 DO b := TRUE END",
          "FOR i := 0 TO n DO b := TRUE END",
-         "FOR i := 0 TO n BY c DO n := 1; b := FALSE END"),
+         "FOR i := 0 TO n BY c DO n := 1; b := FALSE END",
+         "FOR i := 0 TO 10 BY 0 DO b := TRUE END",
+         "FOR i := 0 TO 10 BY zero DO b := TRUE END"
+         ),
     fail(["FOR undefined := 0 TO 10 DO n := 1 END",
           "undeclared identifier: 'undefined'"],
          ["FOR b := TRUE TO 10 DO n := 1 END",
@@ -710,8 +713,8 @@ return {
           "'INTEGER' expression expected as 'BY' parameter, got 'POINTER TO anonymous RECORD'"],
          ["FOR i := 0 TO 10 BY TRUE DO END",
           "'INTEGER' expression expected as 'BY' parameter, got 'BOOLEAN'"],
-         ["FOR i := 0 TO 10 DO - END",
-          "END expected (FOR)"])
+         ["FOR i := 0 TO 10 DO - END", "END expected (FOR)"]
+         )
     ),
 "logical operators": testWithContext(
     context(grammar.statement, "VAR b1, b2: BOOLEAN; i1: INTEGER; p: POINTER TO RECORD END;"),

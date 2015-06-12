@@ -5,6 +5,7 @@ var ContextCase = require("js/ContextCase.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextIdentdef = require("js/ContextIdentdef.js");
+var ContextLoop = require("js/ContextLoop.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var Lexer = require("js/Lexer.js");
@@ -139,18 +140,18 @@ var whileStatement = and("WHILE",
 var repeatStatement = and("REPEAT", 
                           context(and(statementSequence, 
                                       "UNTIL", 
-                                      context(expression, Context.Until)), 
+                                      context(expression, ContextLoop.Until)), 
                                   contexts.Repeat));
 
 var forStatement = and("FOR", 
                        context(and(makeForInit(ident, expression, assignment), "TO", expression
                                  , optional(and("BY", constExpression))
-                                 , emit("DO", Context.emitForBegin)
+                                 , emit("DO", ContextLoop.emitForBegin)
                                  , statementSequence, required("END", "END expected (FOR)"))
                              , contexts.For));
 
 var statement = optional(
-    makeStatement(or( emit(designator.assignmentOrProcedureCall(assignment, expression), Context.emitEndStatement),
+    makeStatement(or( emit(designator.assignmentOrProcedureCall(assignment, expression), ContextProcedure.emitEndStatement),
                       ifStatement,
                       caseStatement,
                       whileStatement,

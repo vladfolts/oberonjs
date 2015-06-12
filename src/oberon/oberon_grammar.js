@@ -9,6 +9,7 @@ var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextIdentdef = require("js/ContextIdentdef.js");
 var ContextIf = require("js/ContextIf.js");
+var ContextLoop = require("js/ContextLoop.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var Grammar = require("grammar.js");
@@ -126,11 +127,11 @@ exports.language = {
             MulOperator:        ContextExpression.MulOperator,
             SimpleExpression:   ContextExpression.SimpleExpression, 
             Expression:         ContextExpression.ExpressionNode,
-            For:                Context.For,
-            While:              Context.While,
+            For:                ContextLoop.For,
+            While:              ContextLoop.While,
             If:                 ContextIf.Type,
             CaseLabel:          ContextCase.Label,
-            Repeat:             Context.Repeat,
+            Repeat:             ContextLoop.Repeat,
             ModuleDeclaration:  Context.ModuleDeclaration
         },
         Grammar.reservedWords

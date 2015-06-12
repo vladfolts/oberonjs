@@ -275,4 +275,9 @@ PROCEDURE AddArgumentMsg.AddArgumentMsg(name: STRING; arg: Types.PProcedureArgum
       arg(arg);
 END;
 
+PROCEDURE emitEndStatement*(cx: ContextHierarchy.Node);
+BEGIN
+    cx.codeGenerator().write(";" + Chars.ln);
+END;
+
 END ContextProcedure.
