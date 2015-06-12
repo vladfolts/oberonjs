@@ -5,6 +5,7 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var ContextExpression = require("js/ContextExpression.js");
 var ContextType = require("js/ContextType.js");
+var ContextVar = require("js/ContextVar.js");
 var Errors = require("js/Errors.js");
 var Expression = require("js/Expression.js");
 var op = require("js/Operator.js");
@@ -17,12 +18,12 @@ var RecordDecl = Class.extend.call(ContextType.Record, {
     }
 });
 
-var VariableDeclaration = Context.VariableDeclaration.extend({
+var VariableDeclaration = Class.extend.call(ContextVar.Declaration, {
     init: function(context){
-        Context.VariableDeclaration.prototype.init.call(this, context);
+        ContextVar.Declaration.call(this, context);
     },
-    checkExport: function(id){
-        var type = this.type();
+    doCheckExport: function(id){
+        var type = this.type;
         if (type instanceof Type.Record || type instanceof Type.Array)
             throw new Errors.Error("variable '" + id + "' cannot be exported: only scalar variables can be exported");
     }

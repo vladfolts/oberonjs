@@ -42,57 +42,6 @@ var HandleSymbolAsType = ContextType.HandleSymbolAsType;
 HandleSymbolAsType.extend = Class.extend;
 HandleSymbolAsType.prototype.init = ContextType.HandleSymbolAsType;
 
-exports.CheckAssignment = ChainedContext.extend({
-    init: function Context$CheckAssignment(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    handleLiteral: function(s){
-        if (s == "=")
-            throw new Errors.Error("did you mean ':=' (statement expected, got expression)?");
-    }
-});
-
-exports.VariableDeclaration = HandleSymbolAsType.extend({
-    init: function Context$VariableDeclaration(context){
-        HandleSymbolAsType.prototype.init.call(this, context);
-        this.__idents = [];
-        this.__type = undefined;
-    },
-    handleIdentdef: function(id){this.__idents.push(id);},
-    exportField: function(name){
-        ContextType.checkIfFieldCanBeExported(name, this.__idents, "variable");
-    },
-    setType: function(type){this.__type = type;},
-    type: function(){return this.__type;},
-    typeName: function(){return "";},
-    isAnonymousDeclaration: function(){return true;},
-    checkExport: function(){},
-    handleMessage: function(msg){
-        if (msg instanceof ContextType.ForwardTypeMsg)
-            throw new Errors.Error("type '" + msg.id + "' was not declared");
-        return HandleSymbolAsType.prototype.handleMessage.call(this, msg);
-    },
-    _initCode: function(){
-        return this.__type.initializer(this);
-    },
-    endParse: function(){
-        var idents = this.__idents;
-        var gen = this.codeGenerator();
-        for(var i = 0; i < idents.length; ++i){
-            var id = idents[i];
-            var varName = id.id();
-            if (id.exported())
-                this.checkExport(varName);
-
-            var v = new Variable.DeclaredVariable(varName, this.__type);
-            this.root().currentScope().addSymbol(new Symbol.Symbol(varName, v), id.exported());
-            gen.write("var " + varName + " = " + this._initCode() + ";");
-        }
-
-        gen.write("\n");
-    }
-});
-
 function assertProcType(type, info){
     var unexpected;
     if ( !type )

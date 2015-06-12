@@ -15,6 +15,7 @@ var ContextLoop = require("js/ContextLoop.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
+var ContextVar = require("js/ContextVar.js");
 var EberonConstructor= require("js/EberonConstructor.js");
 var EberonContext= require("js/EberonContext.js");
 var EberonDynamicArray = require("js/EberonDynamicArray.js");
@@ -520,19 +521,19 @@ var ConstDecl = Class.extend.call(ContextConst.Type, {
     }
 });
 
-var VariableDeclaration = Context.VariableDeclaration.extend({
+var VariableDeclaration = Class.extend.call(ContextVar.Declaration, {
     init: function EberonContext$VariableDeclaration(context){
-        Context.VariableDeclaration.prototype.init.call(this, context);
+        ContextVar.Declaration.call(this, context);
     },
     handleIdentdef: function(id){
         checkOrdinaryExport(id, "variable");
-        Context.VariableDeclaration.prototype.handleIdentdef.call(this, id);
+        ContextVar.Declaration.prototype.handleIdentdef.call(this, id);
     },
-    _initCode: function(){
-        var type = this.type();
+    doInitCode: function(){
+        var type = this.type;
         if (type instanceof EberonRecord.Record)
             EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForVar);
-        return Context.VariableDeclaration.prototype._initCode.call(this);
+        return ContextVar.Declaration.prototype.doInitCode.call(this);
     }
 });
 

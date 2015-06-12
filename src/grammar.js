@@ -1,6 +1,7 @@
 "use strict";
 
 var Context = require("context.js");
+var ContextAssignment = require("js/ContextAssignment.js");
 var ContextCase = require("js/ContextCase.js");
 var ContextDesignator = require("js/ContextDesignator.js");
 var ContextExpression = require("js/ContextExpression.js");
@@ -111,7 +112,7 @@ var set = and("{", context(optional(and(element, repeat(and(",", element)))), Co
 var expList = and(expression, repeat(and(",", expression)));
 var actualParameters = and("(", context(optional(expList), Context.ActualParameters), ")");
 
-var assignment = and(context(or(":=", "="), Context.CheckAssignment),
+var assignment = and(context(or(":=", "="), ContextAssignment.Check),
                      required(expression, "expression expected"));
 
 // break recursive declaration of statement
@@ -151,7 +152,7 @@ var forStatement = and("FOR",
                              , contexts.For));
 
 var statement = optional(
-    makeStatement(or( emit(designator.assignmentOrProcedureCall(assignment, expression), ContextProcedure.emitEndStatement),
+    makeStatement(or( emit(designator.assignmentOrProcedureCall(assignment, expression), ContextAssignment.emitEnd),
                       ifStatement,
                       caseStatement,
                       whileStatement,

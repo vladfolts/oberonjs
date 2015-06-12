@@ -36,19 +36,18 @@ TYPE
     END;
 
     DeclarationHandle* = RECORD(HandleSymbolAsType)
-        PROCEDURE isAnonymousDeclaration(): BOOLEAN;
-        PROCEDURE exportField(name: STRING);
+        PROCEDURE isAnonymousDeclaration*(): BOOLEAN;
+        PROCEDURE exportField*(name: STRING);
     END;
     PDeclarationHandle* = POINTER TO DeclarationHandle;
 
     DeclarationAndIdentHandle* = RECORD(DeclarationHandle)
         PROCEDURE handleIdentdef*(id: Context.PIdentdefInfo);
+        PROCEDURE typeName*(): STRING;
     END;
     PDeclarationAndIdentHandle* = POINTER TO DeclarationAndIdentHandle;
 
     Declaration* = RECORD(DeclarationAndIdentHandle)
-        PROCEDURE typeName*(): STRING;
-
         id: Context.PIdentdefInfo;
         symbol: Symbols.PSymbol;
     END;
@@ -92,7 +91,7 @@ TYPE
     ForwardTypeMsg* = RECORD(ContextHierarchy.Message)
         PROCEDURE ForwardTypeMsg(id: STRING);
 
-        id: STRING;
+        id-: STRING;
     END;
 
 PROCEDURE HandleSymbolAsType.handleQIdent(q: ContextHierarchy.QIdent);

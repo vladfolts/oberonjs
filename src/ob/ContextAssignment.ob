@@ -1,0 +1,20 @@
+MODULE ContextAssignment;
+IMPORT
+    Chars, ContextHierarchy, Errors;
+TYPE
+    Check* = RECORD(ContextHierarchy.Node)
+    END;
+
+PROCEDURE Check.handleLiteral(s: STRING);
+BEGIN
+    IF s = "=" THEN
+        Errors.raise("did you mean ':=' (statement expected, got expression)?");
+    END;
+END;
+
+PROCEDURE emitEnd*(cx: ContextHierarchy.Node);
+BEGIN
+    cx.codeGenerator().write(";" + Chars.ln);
+END;
+
+END ContextAssignment.

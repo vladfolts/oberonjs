@@ -8,8 +8,6 @@ TYPE
     Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
         PROCEDURE Declaration(parent: ContextHierarchy.PNode);
 
-        PROCEDURE typeName(): STRING;
-
         PROCEDURE doProlog(): STRING;
         PROCEDURE doEpilog(): STRING;
         PROCEDURE doBeginBody();
@@ -26,7 +24,7 @@ TYPE
     PDeclaration = POINTER TO Declaration;
 
     FormalParameters* = RECORD(ContextHierarchy.Node)
-        PROCEDURE FormalParameters(parent: PDeclaration);
+        PROCEDURE FormalParameters(parent: ContextType.PDeclarationAndIdentHandle);
 
         PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
         PROCEDURE doCheckResultType(type: Types.PStorageType);
@@ -178,7 +176,7 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE FormalParameters.FormalParameters(parent: PDeclaration)
+PROCEDURE FormalParameters.FormalParameters(parent: ContextType.PDeclarationAndIdentHandle)
     | SUPER(parent),
       type(NEW Procedure.Type(parent.typeName()));
 BEGIN
@@ -273,11 +271,6 @@ END;
 PROCEDURE AddArgumentMsg.AddArgumentMsg(name: STRING; arg: Types.PProcedureArgument)
     | name(name),
       arg(arg);
-END;
-
-PROCEDURE emitEndStatement*(cx: ContextHierarchy.Node);
-BEGIN
-    cx.codeGenerator().write(";" + Chars.ln);
 END;
 
 END ContextProcedure.
