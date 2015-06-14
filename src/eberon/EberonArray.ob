@@ -43,7 +43,7 @@ END MethodIndexOf.callGenerator;
 PROCEDURE MethodCallIndexOf.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
-    argType <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode).type();
+    argType <- Procedure.checkSingleArgument(args, SELF, cx.language.types, argCode).type();
     RETURN Expression.makeSimple("(" + argCode.result() + ")", Types.basic.integer)
 END MethodCallIndexOf.make;
 

@@ -31,7 +31,7 @@ BEGIN
 END;
 
 PROCEDURE CastOpToDynamicArray.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
-    RETURN copyArray(left.type()(Types.PArray), left.code(), right.code(), cx.rtl()^)
+    RETURN copyArray(left.type()(Types.PArray), left.code(), right.code(), cx.language.rtl^)
 END;
 
 PROCEDURE CastOpToMap.make(cx: LanguageContext.PType; e: Expression.PType): Expression.PType;
@@ -39,11 +39,11 @@ PROCEDURE CastOpToMap.make(cx: LanguageContext.PType; e: Expression.PType): Expr
 END;
 
 PROCEDURE CastOpToMap.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
-    RETURN cx.rtl().copy(right.code(), left.code(), EberonOperator.generateTypeInfo(left.type()));
+    RETURN cx.language.rtl.copy(right.code(), left.code(), EberonOperator.generateTypeInfo(left.type()));
 END;
 
 PROCEDURE CastOpToMap.clone(cx: LanguageContext.PType; e: Expression.PType): STRING;
-    RETURN cx.rtl().clone(e.code(), EberonOperator.generateTypeInfo(e.type()), "undefined");
+    RETURN cx.language.rtl.clone(e.code(), EberonOperator.generateTypeInfo(e.type()), "undefined");
 END;
 
 PROCEDURE isOpenCharArray(type: Types.PType): BOOLEAN;

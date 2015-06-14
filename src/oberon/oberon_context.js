@@ -4,10 +4,13 @@ var Class = require("rtl.js").Class;
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var ContextExpression = require("js/ContextExpression.js");
+var ContextHierarchy = require("js/ContextHierarchy.js");
+var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var ContextVar = require("js/ContextVar.js");
 var Errors = require("js/Errors.js");
 var Expression = require("js/Expression.js");
+var Module = require("js/Module.js");
 var op = require("js/Operator.js");
 var Record = require("js/Record.js");
 var Type = require("js/Types.js");
@@ -43,7 +46,7 @@ var ProcedureCall = Context.Chained.extend({
             var d = this.attributes.designator;
             this.__type = d.type();
             this.__id = d.code();
-            this.__procCall = Context.makeProcCall(this, this.__type, d.info());
+            this.__procCall = ContextProcedure.makeCall(this, this.__type, d.info());
             this.__callExpression = undefined;
         }
         return this.__procCall;
@@ -73,7 +76,7 @@ var StatementProcedureCall = ProcedureCall.extend({
     },
     endParse: function(){
         var e = this.callExpression();
-        Context.assertProcStatementResult(e.type());
+        Module.assertProcStatementResult(e.type());
         this.parent().codeGenerator().write(e.code());
     }
 });
@@ -107,7 +110,7 @@ var Assignment = Context.Chained.extend({
     handleExpression: function(e){
         var d = this.attributes.designator;
         var left = Expression.make(d.code(), d.type(), d);
-        this.parent().codeGenerator().write(op.assign(left, e, this.root().language()));
+        this.parent().codeGenerator().write(op.assign(left, e, ContextHierarchy.makeLanguageContext(this)));
     }
 });
 

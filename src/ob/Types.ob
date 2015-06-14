@@ -104,10 +104,6 @@ TYPE
     END;
     PStaticArray* = POINTER TO StaticArray;
 
-    Procedure* = RECORD(NamedType)
-        PROCEDURE designatorCode*(id: STRING): STRING
-    END;
-
     ProcedureArgument* = RECORD
         PROCEDURE ProcedureArgument*(type: PStorageType; isVar: BOOLEAN);
 
@@ -120,11 +116,11 @@ TYPE
     PProcedureArgument* = POINTER TO ProcedureArgument;
     ProcedureArguments* = ARRAY * OF PProcedureArgument;
 
-    DefinedProcedure* = RECORD(Procedure)
+    Procedure* = RECORD(NamedType)
         PROCEDURE args*(): ProcedureArguments;
-        PROCEDURE result*(): PType
+        PROCEDURE result*(): PType;
+        PROCEDURE designatorCode*(id: STRING): STRING
     END;
-    PDefinedProcedure* = POINTER TO DefinedProcedure;
 
     BasicType* = RECORD(NamedType)
         PROCEDURE BasicType*(name: STRING; initializer: STRING);
@@ -321,10 +317,6 @@ END Procedure.description;
 PROCEDURE Procedure.isScalar(): BOOLEAN;
     RETURN TRUE;
 END;
-
-PROCEDURE DefinedProcedure.designatorCode(id: STRING): STRING;
-    RETURN id
-END DefinedProcedure.designatorCode;
 
 PROCEDURE ProcedureArgument.description(): STRING;
 VAR

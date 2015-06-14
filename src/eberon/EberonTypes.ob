@@ -2,14 +2,14 @@ MODULE EberonTypes;
 IMPORT Context, LanguageContext, Procedure, Record, Types;
 
 TYPE
-    CallGenerator = PROCEDURE(cx: LanguageContext.PType; type: Types.DefinedProcedure): Procedure.PCallGenerator;
+    CallGenerator = PROCEDURE(cx: LanguageContext.PType; type: Procedure.Type): Procedure.PCallGenerator;
 
     MethodType* = RECORD(Procedure.Std)
-        PROCEDURE MethodType*(id: STRING; t: Types.PDefinedProcedure; call: CallGenerator);
+        PROCEDURE MethodType*(id: STRING; t: Procedure.PType; call: CallGenerator);
 
-        PROCEDURE procType*(): Types.PDefinedProcedure;
+        PROCEDURE procType*(): Procedure.PType;
 
-        type: Types.PDefinedProcedure;
+        type: Procedure.PType;
         call: CallGenerator
     END;
     PMethodType* = POINTER TO MethodType;
@@ -29,7 +29,7 @@ PROCEDURE MethodType.designatorCode(id: STRING): STRING;
     RETURN id
 END MethodType.designatorCode;
 
-PROCEDURE MethodType.procType(): Types.PDefinedProcedure;
+PROCEDURE MethodType.procType(): Procedure.PType;
     RETURN SELF.type
 END MethodType.procType;
 
@@ -41,7 +41,7 @@ PROCEDURE MethodType.callGenerator(cx: LanguageContext.PType): Procedure.PCallGe
     RETURN SELF.call(cx, SELF.type^)
 END MethodType.callGenerator;
 
-PROCEDURE MethodType.MethodType(id: STRING; t: Types.PDefinedProcedure; call: CallGenerator)
+PROCEDURE MethodType.MethodType(id: STRING; t: Procedure.PType; call: CallGenerator)
     | SUPER(id, NIL);
 BEGIN
     SELF.type := t;

@@ -119,14 +119,14 @@ BEGIN
         NEW Types.ProcedureArgument(SELF.elementsType, FALSE), 
         0, 
         argCode, 
-        SELF.cx.types);
+        SELF.cx.language.types);
     SELF.code := argCode.result();
     
     t <- e.type();
     IF t IS Types.PArray THEN
         SELF.code := Cast.cloneArray(t, SELF.code, SELF.cx);
     ELSIF t IS Record.PType THEN
-        SELF.code := SELF.cx.rtl().clone(SELF.code, EberonOperator.generateTypeInfo(t), Record.constructor(SELF.cx^, t^));
+        SELF.code := SELF.cx.language.rtl.clone(SELF.code, EberonOperator.generateTypeInfo(t), Record.constructor(SELF.cx.cx^, t^));
     END;
 END AddCallGenerator.handleArgument;
 
@@ -178,14 +178,14 @@ END;
 
 PROCEDURE MethodCallClear.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
-    Procedure.processArguments(args, SELF.args, NIL, cx.types);
+    Procedure.processArguments(args, SELF.args, NIL, cx.language.types);
     RETURN Expression.makeSimple("(0, Number.MAX_VALUE)", NIL)
 END MethodCallClear.make;
 
 PROCEDURE MethodCallRemove.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
-    arg <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
+    arg <- Procedure.checkSingleArgument(args, SELF, cx.language.types, argCode);
     value <- arg.constValue();
     IF (value # NIL) & (value^ IS ConstValue.Int) THEN
         Code.checkIndex(value.value);

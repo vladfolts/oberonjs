@@ -445,7 +445,7 @@ END codeSetInclR;
 
 PROCEDURE strCmp(op: STRING; left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN Expression.makeSimple(
-            cx.rtl().strCmp(castToStr(left, cx), castToStr(right, cx)) + op + "0",
+            cx.language.rtl.strCmp(castToStr(left, cx), castToStr(right, cx)) + op + "0",
             Types.basic.bool)
 END;
 
@@ -468,7 +468,7 @@ VAR
                          + String.fromInt(Types.stringLen(s))
                          + "-character string");
         END;
-        RETURN cx.rtl().assignArrayFromString(leftCode, rightCode)
+        RETURN cx.language.rtl.assignArrayFromString(leftCode, rightCode)
     END assignArrayFromString;
 BEGIN
     designator := left.designator();
@@ -488,7 +488,7 @@ BEGIN
         & (rightType IS Types.PString) THEN
         result := assignArrayFromString(leftType(Types.PArray)^, rightType^);
     ELSE
-        IF cx.types.implicitCast(rightType, leftType, FALSE, castOperation)
+        IF cx.language.types.implicitCast(rightType, leftType, FALSE, castOperation)
             # Cast.errNo THEN
             Errors.raise("type mismatch: '" + left.code() + "' is '" + leftType.description()
                          + "' and cannot be assigned to '" + rightType.description() + "' expression");
@@ -582,11 +582,11 @@ PROCEDURE setHasBit*(left, right: Expression.PType; cx: LanguageContext.PType): 
 END;
 
 PROCEDURE setInclL*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
-    RETURN binaryPred(left, right, cx.rtl(), opSetInclL, codeSetInclL)
+    RETURN binaryPred(left, right, cx.language.rtl, opSetInclL, codeSetInclL)
 END setInclL;
 
 PROCEDURE setInclR*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
-    RETURN binaryPred(left, right, cx.rtl(), opSetInclR, codeSetInclR)
+    RETURN binaryPred(left, right, cx.language.rtl, opSetInclR, codeSetInclR)
 END setInclR;
 
 PROCEDURE or*(left, right: Expression.PType): Expression.PType;

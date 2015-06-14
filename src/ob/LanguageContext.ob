@@ -1,5 +1,5 @@
 MODULE LanguageContext;
-IMPORT Context, CodeGenerator, Expression, Symbols, T := Types;
+IMPORT CodeGenerator, Context, Expression, OberonRtl, Symbols, T := Types;
 
 TYPE
     PType* = POINTER TO Type;
@@ -20,11 +20,25 @@ TYPE
     END;
     PTypes* = POINTER TO Types;
 
-    Type* = RECORD(Context.Type)
-        moduleResolver*: PROCEDURE(name: STRING): T.PModule;
-        codeGenerator*: CodeGenerator.PIGenerator;
-        types*: PTypes;
-        stdSymbols*: Symbols.Map;
+    Language* = RECORD
+        moduleResolver-: PROCEDURE(name: STRING): T.PModule;
+        rtl-: OberonRtl.PType;
+        codeGenerator-: CodeGenerator.PIGenerator;
+        types-: PTypes;
+        stdSymbols-: Symbols.Map;
     END;
+    PLanguage* = POINTER TO Language;
+
+    Type* = RECORD
+        PROCEDURE Type*(language: PLanguage; cx: Context.PType);
+
+        language-: PLanguage;
+        cx-: Context.PType;
+    END;
+
+PROCEDURE Type.Type(language: PLanguage; cx: Context.PType)
+    | language(language),
+      cx(cx);
+END;
 
 END LanguageContext.

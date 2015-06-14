@@ -26,20 +26,20 @@ TYPE
 PROCEDURE checkArgs(call: ConstructorCall; args: ARRAY OF Expression.PType; cx: LanguageContext.PType): STRING;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
-    Procedure.processArguments(args, call.args, argCode, cx.types);
+    Procedure.processArguments(args, call.args, argCode, cx.language.types);
     RETURN argCode.result();
 END;
 
 PROCEDURE ConstructorCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- checkArgs(SELF, args, cx);
-    RETURN Expression.makeSimple(Record.initializer(cx^, SELF.recordType^, argCode), SELF.resultType);
+    RETURN Expression.makeSimple(Record.initializer(cx.cx^, SELF.recordType^, argCode), SELF.resultType);
 END;
 
 PROCEDURE BaseConstructorCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- checkArgs(SELF, args, cx);
-    code <- Record.constructor(cx^, SELF.recordType^) + ".call(this, " + argCode + ");" + Stream.kCR;
+    code <- Record.constructor(cx.cx^, SELF.recordType^) + ".call(this, " + argCode + ");" + Stream.kCR;
     RETURN Expression.makeSimple(code, NIL);
 END;
 
@@ -83,7 +83,7 @@ BEGIN
         raiseSingleArgumentException(SELF);
     END;
 
-    IF SELF.cx.types.implicitCast(e.type(), SELF.type, FALSE, op)
+    IF SELF.cx.language.types.implicitCast(e.type(), SELF.type, FALSE, op)
         # Cast.errNo THEN
             Errors.raise("type mismatch: field '" + SELF.field + "' is '" + SELF.type.description()
                          + "' and cannot be initialized using '" + e.type().description() + "' expression");
@@ -115,7 +115,7 @@ BEGIN
         instType := EberonRecord.instantiateForNew;
     END;
     
-    EberonRecord.ensureCanBeInstantiated(cx^, recordType, instType);
+    EberonRecord.ensureCanBeInstantiated(cx.cx^, recordType, instType);
     IF forNew THEN
         resultType := NEW Record.Pointer("", typeId);
     END;

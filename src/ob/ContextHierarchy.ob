@@ -38,9 +38,9 @@ TYPE
     END;
 
     Root* = RECORD(Node)
-        PROCEDURE Root(language: LanguageContext.PType);
+        PROCEDURE Root(language: LanguageContext.PLanguage);
 
-        PROCEDURE language*(): LanguageContext.PType;
+        PROCEDURE language*(): LanguageContext.PLanguage;
 
         PROCEDURE findSymbol*(ident: STRING): Symbols.PFoundSymbol;
         PROCEDURE findModule(name: STRING): Types.PModule;
@@ -49,7 +49,7 @@ TYPE
         PROCEDURE pushScope*(scope: Scope.PType);
         PROCEDURE popScope*();
 
-        mLanguage: LanguageContext.PType;
+        mLanguage: LanguageContext.PLanguage;
         scopes: ARRAY * OF Scope.PType;
         gen: INTEGER;
     END;
@@ -76,10 +76,6 @@ PROCEDURE Node.parent(): PNode;
     RETURN SELF.mParent;
 END;
 
-PROCEDURE Node.rtl(): OberonRtl.PType;
-    RETURN SELF.root().language().rtl();
-END;
-
 PROCEDURE Node.handleMessage(VAR msg: Message): Object.PType;
     RETURN SELF.mParent.handleMessage(msg);
 END;
@@ -92,6 +88,10 @@ PROCEDURE Node.qualifyScope(scope: ScopeBase.PType): STRING;
     RETURN SELF.mParent.qualifyScope(scope);
 END;
 
+PROCEDURE Node.rtl(): OberonRtl.PType;
+    RETURN SELF.root().language().rtl;
+END;
+
 PROCEDURE Node.handleLiteral(s: STRING);
 END;
 
@@ -102,12 +102,12 @@ PROCEDURE Node.genTypeName(): STRING;
     RETURN SELF.mParent.genTypeName();
 END;
 
-PROCEDURE Root.Root(language: LanguageContext.PType)
+PROCEDURE Root.Root(language: LanguageContext.PLanguage)
     | SUPER(NIL),
       mLanguage(language);
-END;
+      END;
 
-PROCEDURE Root.language(): LanguageContext.PType;
+PROCEDURE Root.language(): LanguageContext.PLanguage;
     RETURN SELF.mLanguage;
 END;
 
@@ -198,6 +198,10 @@ END;
 
 PROCEDURE getSymbol*(cx: Root; id: STRING): Symbols.PSymbol;
     RETURN getSymbolAndScope(cx, id).symbol();
+END;
+
+PROCEDURE makeLanguageContext*(cx: PNode): LanguageContext.PType;
+    RETURN NEW LanguageContext.Type(cx.root().language(), cx);
 END;
 
 END ContextHierarchy.

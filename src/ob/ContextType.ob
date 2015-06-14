@@ -157,7 +157,7 @@ VAR
     result: STRING;
     initializer: STRING;
 BEGIN
-    rtl <- SELF.root().language().rtl();
+    rtl <- SELF.root().language().rtl;
     IF type = Types.basic.ch THEN
         result := rtl.makeCharArray(dimensions);
     ELSE
@@ -366,7 +366,7 @@ BEGIN
     base <- SELF.type.base;
     IF base # NIL THEN
         qualifiedBase <- SELF.qualifyScope(base.scope) + base.name; 
-        result := SELF.root().language().rtl().extend(SELF.cons, qualifiedBase) + ";" + Chars.ln;
+        result := SELF.root().language().rtl.extend(SELF.cons, qualifiedBase) + ";" + Chars.ln;
     END;
     RETURN result;
 END;

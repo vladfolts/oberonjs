@@ -33,7 +33,7 @@ var TestContext = Class.extend.call(ContextHierarchy.Root, {
                 this,
                 { codeGenerator: language.codeGenerator.nil,
                   moduleGenerator: function(){return new TestModuleGenerator();},
-                  rtl: function(){return rtl;},
+                  rtl: rtl,
                   types: language.types,
                   stdSymbols: language.stdSymbols
                 });

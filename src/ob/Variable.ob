@@ -2,8 +2,8 @@ MODULE Variable;
 IMPORT
     OberonRtl, Types;
 TYPE
-    TypedVariable = RECORD(Types.Variable)
-        PROCEDURE TypedVariable(type: Types.PStorageType);
+    TypedVariable* = RECORD(Types.Variable)
+        PROCEDURE TypedVariable*(type: Types.PStorageType);
 
         mType: Types.PStorageType;
     END;

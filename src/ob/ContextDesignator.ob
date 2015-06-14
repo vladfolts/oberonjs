@@ -87,7 +87,7 @@ PROCEDURE Type.handleTypeCast(type: Types.PType);
 BEGIN
     ContextExpression.checkTypeCast(SELF.info(Types.PVariable), SELF.currentType, type, "type cast");
 
-    code <- SELF.root().language().rtl().typeGuard(SELF.code, ContextExpression.castCode(type, SELF));
+    code <- SELF.root().language().rtl.typeGuard(SELF.code, ContextExpression.castCode(type, SELF));
     SELF.code := code;
 
     SELF.currentType := type;
@@ -230,7 +230,7 @@ BEGIN
 
     readOnly <- (info IS Types.PConst) 
              OR ((info IS Types.PVariable) & info.isReadOnly());
-    v <- NEW Variable.PropertyVariable(indexType, leadCode, indexCode, readOnly, SELF.root().language().rtl());
+    v <- NEW Variable.PropertyVariable(indexType, leadCode, indexCode, readOnly, SELF.root().language().rtl);
     RETURN NEW Index(length, indexType, v, wholeCode, lval, indexCode);
 END;
 

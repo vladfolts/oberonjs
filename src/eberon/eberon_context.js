@@ -26,6 +26,7 @@ var EberonString = require("js/EberonString.js");
 var EberonTypes = require("js/EberonTypes.js");
 var Errors = require("js/Errors.js");
 var Expression = require("js/Expression.js");
+var Module = require("js/Module.js");
 var op = require("js/Operator.js");
 var eOp = require("js/EberonOperator.js");
 var Symbol = require("js/Symbols.js");
@@ -199,17 +200,8 @@ var Identdef = Class.extend.call(ContextIdentdef.Type, {
     }
 });
 
-function makeContext(context){
-    var l = context.root().language();
-    return {
-        types: l.types, 
-        rtl: function(){return l.rtl();}, 
-        qualifyScope: context.qualifyScope.bind(context)
-        };
-    }
-
 function makeContextCall(context, call){
-    return call(makeContext(context));
+    return call(ContextHierarchy.makeLanguageContext(context));
     }
 
 function OperatorNewMsg(e){
@@ -273,7 +265,7 @@ var Designator = Class.extend.call(ContextDesignator.Type, {
 
         if (currentType instanceof EberonMap.Type){
             var indexType = currentType.valueType;
-            var rval = this.root().language().rtl().getMappedValue(code, indexCode);
+            var rval = this.root().language().rtl.getMappedValue(code, indexCode);
             return { length: undefined, 
                      type: indexType,
                      info: new MapElementVariable(indexType, info.isReadOnly(), rval),
@@ -341,7 +333,7 @@ var Designator = Class.extend.call(ContextDesignator.Type, {
             this.discardCode();
         }
         else
-            this.__procCall = Context.makeProcCall(this, type, this.info);
+            this.__procCall = ContextProcedure.makeCall(this, type, this.info);
     },
     __endCall: function(){
         var e = this.__procCall.end();
@@ -417,7 +409,7 @@ var InPlaceVariableInit = Context.Chained.extend({
             EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForCopy);
             if (e.designator()){
                 var l = this.root().language();
-                this._code += l.rtl().clone(e.code(), l.types.typeInfo(type));
+                this._code += l.rtl.clone(e.code(), l.types.typeInfo(type));
             }
             else // do not clone if it is temporary, e.g. constructor call
                 this._code += e.code();
@@ -429,7 +421,7 @@ var InPlaceVariableInit = Context.Chained.extend({
             var language = this.root().language();
             var cloneOp;
             language.types.implicitCast(type, type, false, {set: function(v){cloneOp = v;}, get:function(){return cloneOp;}});
-            this._code += cloneOp.clone(language, e);
+            this._code += cloneOp.clone(ContextHierarchy.makeLanguageContext(this), e);
         }
     },
     _onParsed: function(){
@@ -489,16 +481,16 @@ var AssignmentOrProcedureCall = Context.Chained.extend({
         var code;
         if (this.__right){
             var left = Expression.make(d.code(), type, d);
-            code = op.assign(left, this.__right, makeContext(this));
+            code = op.assign(left, this.__right, ContextHierarchy.makeLanguageContext(this));
         }
         else if (!(d.info() instanceof ResultVariable)){
-            var procCall = Context.makeProcCall(this, type, d.info());
+            var procCall = ContextProcedure.makeCall(this, type, d.info());
             var result = procCall.end();
-            Context.assertProcStatementResult(result.type());
+            Module.assertProcStatementResult(result.type());
             code = d.code() + result.code();
         }
         else{
-            Context.assertProcStatementResult(type);
+            Module.assertProcStatementResult(type);
             code = d.code();
         }
     

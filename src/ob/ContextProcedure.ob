@@ -3,7 +3,7 @@ IMPORT
     Cast, Chars, CodeGenerator, Context, ContextExpression, 
     ContextHierarchy, ContextType, 
     Errors, Expression, LanguageContext,
-    Object, Procedure, Scope, Symbols, Types, Variable;
+    Object, Procedure, Scope, Symbols, TypeId, Types, Variable;
 TYPE
     Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
         PROCEDURE Declaration(parent: ContextHierarchy.PNode);
@@ -17,7 +17,7 @@ TYPE
 
         outerScope: Scope.PType;
         id: Context.PIdentdefInfo;
-        type: Types.PDefinedProcedure;
+        type: Procedure.PType;
         multipleArguments: BOOLEAN;
         returnParsed: BOOLEAN;
     END;
@@ -30,7 +30,7 @@ TYPE
         PROCEDURE doCheckResultType(type: Types.PStorageType);
 
         arguments: ARRAY * OF Types.PProcedureArgument;
-        type: Procedure.PType;
+        type: Procedure.PDefined;
         result: Types.PStorageType;
     END;
 
@@ -96,7 +96,7 @@ END;
 
 PROCEDURE Declaration.setType(type: Types.PStorageType);
 BEGIN
-    t <- type(Types.PDefinedProcedure);
+    t <- type(Procedure.PType);
     procSymbol <- NEW Symbols.Symbol(
         SELF.id.id(), NEW Types.ProcedureId(t));
     SELF.outerScope.addSymbol(procSymbol, SELF.id.exported());
@@ -158,7 +158,7 @@ BEGIN
             + type.description() + "'");
     END;
 
-    SELF.codeGenerator().write("return " + op.clone(language, e) + ";" + Chars.ln);
+    SELF.codeGenerator().write("return " + op.clone(ContextHierarchy.makeLanguageContext(SELF(POINTER)), e) + ";" + Chars.ln);
 
     SELF.returnParsed := TRUE;
 END;
@@ -178,7 +178,7 @@ END;
 
 PROCEDURE FormalParameters.FormalParameters(parent: ContextType.PDeclarationAndIdentHandle)
     | SUPER(parent),
-      type(NEW Procedure.Type(parent.typeName()));
+      type(NEW Procedure.Defined(parent.typeName()));
 BEGIN
     parent.setType(SELF.type);
 END;
@@ -271,6 +271,32 @@ END;
 PROCEDURE AddArgumentMsg.AddArgumentMsg(name: STRING; arg: Types.PProcedureArgument)
     | name(name),
       arg(arg);
+END;
+
+PROCEDURE assertProcType(type: Types.PType; info: Types.PId): Procedure.PType;
+VAR
+    unexpected: STRING;
+    result: Procedure.PType;
+BEGIN
+    IF type = NIL THEN
+        unexpected := info.idType();
+    ELSIF (info IS TypeId.PType) OR ~(type IS Procedure.PType) THEN
+        unexpected := type.description();
+    ELSE
+        result := type;
+    END;
+    
+    IF result = NIL THEN
+        Errors.raise("PROCEDURE expected, got '" + unexpected + "'");
+    END;
+    
+    RETURN result;
+END;
+
+PROCEDURE makeCall*(cx: ContextHierarchy.PNode; type: Types.PType; info: Types.PId): Procedure.PCallGenerator;
+BEGIN
+    RETURN assertProcType(type, info)
+          .callGenerator(ContextHierarchy.makeLanguageContext(cx));
 END;
 
 END ContextProcedure.

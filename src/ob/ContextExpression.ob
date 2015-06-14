@@ -519,7 +519,7 @@ BEGIN
         rightExpression := promoteTypeInExpression(rightExpression, leftExpression.type());
 
         o <- SELF.doRelationOperation(leftExpression, rightExpression, SELF.relation);
-        SELF.expression := o(leftExpression, rightExpression, SELF.root().language());
+        SELF.expression := o(leftExpression, rightExpression, ContextHierarchy.makeLanguageContext(SELF(POINTER)));
     END;
 END;
 
@@ -984,7 +984,7 @@ BEGIN
     IF LEN(SELF.expression) = 0 THEN
         parent.handleExpression(expressionFromConst(Types.basic.set, NEW ConstValue.Set(SELF.value), String.fromInt(ORD(SELF.value))));
     ELSE
-        code <- SELF.root().language().rtl().makeSet(SELF.expression);
+        code <- SELF.root().language().rtl.makeSet(SELF.expression);
         IF SELF.value # {} THEN
             code := code + " | " + String.fromInt(ORD(SELF.value));
         END;

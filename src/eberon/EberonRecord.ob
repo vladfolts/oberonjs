@@ -1,6 +1,8 @@
 MODULE EberonRecord;
 IMPORT 
-    Cast, Chars, Context, EberonContext, EberonTypes, Errors, JS, Object, Base := Record, Scope, ScopeBase, String, Types;
+    Cast, Chars, Context, EberonContext, EberonTypes, 
+    Errors, JS, Object, Procedure, Base := Record, 
+    Scope, ScopeBase, String, Types;
 CONST
     instantiateForVar* = 0;    
     instantiateForNew* = 1;    
@@ -16,16 +18,16 @@ TYPE
     Record* = RECORD(Base.Type)
         PROCEDURE Record(name: STRING; cons: STRING; scope: ScopeBase.PType);
 
-        PROCEDURE declareConstructor(type: Types.PDefinedProcedure; exported: BOOLEAN);
+        PROCEDURE declareConstructor(type: Procedure.PType; exported: BOOLEAN);
         PROCEDURE addMethod(methodId: Context.PIdentdefInfo; type: Types.PProcedure);
-        PROCEDURE defineConstructor(type: Types.PDefinedProcedure);
+        PROCEDURE defineConstructor(type: Procedure.PType);
         PROCEDURE defineMethod(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
         PROCEDURE requireNewOnly();
         PROCEDURE setBaseConstructorCallCode(code: STRING);
         PROCEDURE setFieldInitializationCode(field: STRING; code: STRING);
         PROCEDURE setRecordInitializationCode(baseConstructorCallCode: STRING);
 
-        customConstructor-: Types.PDefinedProcedure;
+        customConstructor-: Procedure.PType;
         customConstructorExported: BOOLEAN;
         customConstructorDefined: BOOLEAN;
         customInitedfields-: ARRAY * OF STRING;
@@ -211,7 +213,7 @@ PROCEDURE FieldAsMethod.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context
     RETURN NEW EberonTypes.MethodVariable(SELF.type()(Types.PProcedure)); 
 END;
 
-PROCEDURE constructor*(r: Record): Types.PDefinedProcedure;
+PROCEDURE constructor*(r: Record): Procedure.PType;
 BEGIN
     result <- r.customConstructor;
     IF (result = NIL) & (r.base # NIL) THEN
@@ -336,7 +338,7 @@ END;
 
 PROCEDURE Record.defineMethod(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
 VAR 
-    existingType: Types.PDefinedProcedure;
+    existingType: Procedure.PType;
 BEGIN
     id <- methodId.id();
     IF SELF.definedMethods.indexOf(id) # -1 THEN
@@ -391,7 +393,7 @@ BEGIN
     SELF.baseConstructorCallCode := baseConstructorCallCode;
 END;
 
-PROCEDURE Record.declareConstructor(type: Types.PDefinedProcedure; exported: BOOLEAN);
+PROCEDURE Record.declareConstructor(type: Procedure.PType; exported: BOOLEAN);
 BEGIN
     IF SELF.customConstructor # NIL THEN
         Errors.raise("constructor '" + SELF.name + "' already declared");
@@ -404,7 +406,7 @@ BEGIN
     SELF.customConstructorExported := exported;
 END;
 
-PROCEDURE Record.defineConstructor(type: Types.PDefinedProcedure);
+PROCEDURE Record.defineConstructor(type: Procedure.PType);
 BEGIN
     IF SELF.customConstructor = NIL THEN
         Errors.raise("constructor was not declared for '" + SELF.name +"'");

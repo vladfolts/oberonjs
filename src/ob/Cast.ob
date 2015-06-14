@@ -61,13 +61,13 @@ PROCEDURE areTypesMatch*(t1: Types.PType; t2: Types.PType): BOOLEAN;
             OR ((t2 = Types.nil) & (matchesToNIL(t1^))))
 END areTypesMatch;
 
-PROCEDURE areArgsMatch(a1, a2: Types.PProcedureArgument; p1, p2: Types.PDefinedProcedure): BOOLEAN;
+PROCEDURE areArgsMatch(a1, a2: Types.PProcedureArgument; p1, p2: Types.PProcedure): BOOLEAN;
     RETURN (a1.isVar = a2.isVar)
         & (    ((a1.type = p1) & (a2.type = p2))
             OR areTypesExactlyMatch(a1.type, a2.type))
 END areArgsMatch;
 
-PROCEDURE areProceduresMatch*(p1, p2: Types.PDefinedProcedure): BOOLEAN;
+PROCEDURE areProceduresMatch*(p1, p2: Types.PProcedure): BOOLEAN;
 VAR
     result: BOOLEAN;
 BEGIN
@@ -103,7 +103,7 @@ BEGIN
     ELSIF (t1 IS Record.PPointer) & (t2 IS Record.PPointer) THEN
         result := areTypesMatch(Record.pointerBase(t1^), 
                                 Record.pointerBase(t2^));
-    ELSIF (t1 IS Types.PDefinedProcedure) & (t2 IS Types.PDefinedProcedure) THEN
+    ELSIF (t1 IS Types.PProcedure) & (t2 IS Types.PProcedure) THEN
         result := areProceduresMatch(t1, t2);
     END;
     RETURN result
@@ -147,7 +147,8 @@ BEGIN
     IF t.elementsType.isScalar() THEN
         result := code + ".slice()";
     ELSE
-        result := cx.rtl().clone(code, cx.types.typeInfo(t), "undefined");
+        l <- cx.language;
+        result := l.rtl.clone(code, l.types.typeInfo(t), "undefined");
     END;
     RETURN result
 END;
@@ -161,7 +162,7 @@ PROCEDURE CastOpArray.clone(cx: LanguageContext.PType; e: Expression.PType): STR
 END;
 
 PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
-    RETURN cx.rtl().copy(right.code(), left.lval(), Record.generateTypeInfo(left.type()));
+    RETURN cx.language.rtl.copy(right.code(), left.lval(), Record.generateTypeInfo(left.type()));
 END;
 
 PROCEDURE CastOpStrToChar.make(cx: LanguageContext.PType; e: Expression.PType): Expression.PType;
@@ -233,7 +234,7 @@ BEGIN
         END;
     ELSIF (from = Types.nil) & matchesToNIL(to^) THEN
         result := errNo;
-    ELSIF (from IS Types.PDefinedProcedure) & (to IS Types.PDefinedProcedure) THEN
+    ELSIF (from IS Types.PProcedure) & (to IS Types.PProcedure) THEN
         IF areProceduresMatch(from, to) THEN
             result := errNo;
         END

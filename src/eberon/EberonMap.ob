@@ -80,7 +80,7 @@ END;
 PROCEDURE MethodCallRemove.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
-    arg <- Procedure.checkSingleArgument(args, SELF, cx.types, argCode);
+    arg <- Procedure.checkSingleArgument(args, SELF, cx.language.types, argCode);
     RETURN Expression.makeSimple("[" + argCode.result() + "]", NIL)
 END;        
 

@@ -1,18 +1,18 @@
 MODULE Module;
 IMPORT 
-    Context, Errors, Expression, LanguageContext, Procedure, Symbols, TypeId, Types;
+    Context, Errors, Expression, LanguageContext, Procedure, Symbols, TypeId, Types, Variable;
 TYPE
     Type* = RECORD(Types.Module)
         PROCEDURE findSymbol*(id: STRING): Symbols.PFoundSymbol
     END;
     PType* = POINTER TO Type;
 
-    AnyType* = RECORD(Types.Procedure)
+    AnyType = RECORD(Procedure.Type)
         PROCEDURE AnyType();
+    END;
 
-        PROCEDURE callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
-
-        asVar: Types.PId
+    AnyVariable = RECORD(Variable.TypedVariable)
+        PROCEDURE AnyVariable();
     END;
 
     AnyField = RECORD(Types.Field)
@@ -21,7 +21,7 @@ TYPE
         mId: STRING;
     END;
 
-    AnyTypeProc* = RECORD(Procedure.Std)
+    AnyTypeProc = RECORD(Procedure.Std)
     END;
 
     AnyProcCall = RECORD(Procedure.Call)
@@ -32,6 +32,7 @@ TYPE
 VAR
     doProcId, varTypeId: STRING;
     any: POINTER TO AnyType;
+    anyVar: POINTER TO AnyVariable;
     anyProc: AnyTypeProc;
     doProcSymbol, varTypeSymbol: Symbols.PSymbol;
 
@@ -63,6 +64,33 @@ PROCEDURE AnyType.isScalar(): BOOLEAN;
     RETURN FALSE;
 END;
 
+PROCEDURE AnyType.args(): Types.ProcedureArguments;
+VAR
+    result: Types.ProcedureArguments;
+BEGIN
+    RETURN result;
+END;
+
+PROCEDURE AnyType.result(): Types.PType;
+    RETURN NIL;
+END;
+
+PROCEDURE AnyVariable.AnyVariable()
+    | SUPER(any);
+END;
+
+PROCEDURE AnyVariable.isReadOnly(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE AnyVariable.isReference(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE AnyVariable.referenceCode(): STRING;
+    RETURN "";
+END;
+
 PROCEDURE AnyField.id(): STRING;
     RETURN "any field"
 END AnyField.id;
@@ -76,8 +104,8 @@ PROCEDURE AnyField.type(): Types.PStorageType;
 END AnyField.type;
 
 PROCEDURE AnyField.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
-    RETURN any.asVar
-END AnyField.asVar;
+    RETURN anyVar;
+END;
 
 PROCEDURE AnyField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
     RETURN NEW Types.FieldCode(leadCode + "." + SELF.mId, "", "");
@@ -128,7 +156,7 @@ VAR
         arg: Expression.PType;
         type: Types.PType;
     BEGIN
-        arg := Procedure.checkSingleArgument(args, SELF, cx.types, NIL);
+        arg := Procedure.checkSingleArgument(args, SELF, cx.language.types, NIL);
         type := arg.type();
         IF ~(type IS Types.PString) THEN
             Errors.raise("string is expected as an argument of "
@@ -153,12 +181,18 @@ PROCEDURE makeJS*(): PType;
 END;
 
 PROCEDURE AnyType.AnyType()
-    | SUPER("any type"),
-      asVar(NEW TypeId.Type(SELF(POINTER)));
+    | SUPER("any type");
 END;
 
 PROCEDURE AnyField.AnyField(id: STRING)
     | mId(id);
+END;
+
+PROCEDURE assertProcStatementResult*(type: Types.PType);
+BEGIN
+    IF (type # NIL) & ~(type^ IS AnyType) THEN
+        Errors.raise("procedure returning a result cannot be used as a statement");
+    END;
 END;
 
 BEGIN
@@ -166,6 +200,7 @@ BEGIN
     varTypeId := "var$";
     
     NEW(any);
+    NEW(anyVar);
 
     doProcSymbol := makeDoProcSymbol();
     varTypeSymbol := makeVarTypeSymbol();

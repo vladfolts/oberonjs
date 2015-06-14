@@ -42,23 +42,6 @@ var HandleSymbolAsType = ContextType.HandleSymbolAsType;
 HandleSymbolAsType.extend = Class.extend;
 HandleSymbolAsType.prototype.init = ContextType.HandleSymbolAsType;
 
-function assertProcType(type, info){
-    var unexpected;
-    if ( !type )
-        unexpected = info.idType();
-    else if (((info instanceof TypeId.Type) || !(type instanceof Type.Procedure)) 
-        && !(type instanceof Module.AnyType))
-        unexpected = type.description();
-    if (unexpected)
-        throw new Errors.Error("PROCEDURE expected, got '" + unexpected + "'");
-    return type;
-}
-
-function assertProcStatementResult(type){
-    if (type && !(type instanceof Module.AnyType))
-        throw new Errors.Error("procedure returning a result cannot be used as a statement");
-}
-
 function beginCallMsg(){}
 function endCallMsg(){}
 
@@ -212,19 +195,7 @@ var ModuleImport = ChainedContext.extend({
 });
 exports.ModuleImport = ModuleImport;
 
-function makeProcCall(context, type, info){
-    assertProcType(type, info);
-    var l = context.root().language();
-    return type.callGenerator(
-        { types: l.types, 
-          rtl: function(){ return l.rtl(); }, 
-          qualifyScope: context.qualifyScope.bind(context)
-        });
-}
-
-exports.assertProcStatementResult = assertProcStatementResult;
 exports.beginCallMsg = beginCallMsg;
 exports.endCallMsg = endCallMsg;
 exports.Chained = ChainedContext;
-exports.makeProcCall = makeProcCall;
 exports.HandleSymbolAsType = HandleSymbolAsType;
