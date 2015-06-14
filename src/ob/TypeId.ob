@@ -1,6 +1,6 @@
 MODULE TypeId;
 IMPORT
-    Types;
+    Types, Object;
 TYPE
     PType* = POINTER TO Type;
     Type* = RECORD(Types.Id)
@@ -13,12 +13,13 @@ TYPE
         mType: Types.PStorageType;
     END;
 
-    ResolveTypeCallback = PROCEDURE(): Types.PStorageType;
+    ResolveTypeCallback = PROCEDURE(closure: Object.PType): Types.PStorageType;
 
     Forward* = RECORD(Type)
-        PROCEDURE Forward(resolve: ResolveTypeCallback);
+        PROCEDURE Forward*(resolve: ResolveTypeCallback; closure: Object.PType);
 
-        resolve: ResolveTypeCallback
+        resolve: ResolveTypeCallback;
+        closure: Object.PType;
     END;
 
     PForward = POINTER TO Forward;
@@ -42,15 +43,16 @@ BEGIN
     SELF.mType := type;
 END;
 
-PROCEDURE Forward.Forward(resolve: ResolveTypeCallback)
+PROCEDURE Forward.Forward(resolve: ResolveTypeCallback; closure: Object.PType)
     | SUPER(NIL),
-      resolve(resolve);
+      resolve(resolve),
+      closure(closure);
 END;
 
 PROCEDURE Forward.type(): Types.PStorageType;
 BEGIN
     IF SELF.mType = NIL THEN
-        SELF.mType := SELF.resolve();
+        SELF.mType := SELF.resolve(SELF.closure);
     END;
     RETURN SELF.mType
 END;

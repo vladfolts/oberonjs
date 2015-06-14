@@ -110,7 +110,7 @@ var set = and("{", context(optional(and(element, repeat(and(",", element)))), Co
             , "}");
 
 var expList = and(expression, repeat(and(",", expression)));
-var actualParameters = and("(", context(optional(expList), Context.ActualParameters), ")");
+var actualParameters = and("(", context(optional(expList), ContextDesignator.ActualParameters), ")");
 
 var assignment = and(context(or(":=", "="), ContextAssignment.Check),
                      required(expression, "expression expected"));
@@ -215,7 +215,7 @@ result.procedureDeclaration
     );
 result.declarationSequence
     = and(optional(and("CONST", repeat(and(constantDeclaration, required(";"))))),
-          optional(and("TYPE", context(repeat(and(typeDeclaration, required(";"))), Context.TypeSection))),
+          optional(and("TYPE", context(repeat(and(typeDeclaration, required(";"))), ContextType.Section))),
           optional(and("VAR", repeat(and(variableDeclaration, required(";"))))),
           repeat(and(result.procedureDeclaration, ";")));
 result.procedureBody

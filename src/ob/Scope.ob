@@ -121,8 +121,12 @@ BEGIN
     END;
 END;
 
-PROCEDURE unresolved*(s: Type): Unresolved;
-    RETURN s.unresolved
+PROCEDURE checkAllResolved*(s: Type);
+BEGIN
+    IF LEN(s.unresolved) # 0 THEN
+        Errors.raise("no declaration found for '" 
+                     + String.join(s.unresolved, "', '") + "'");
+    END;
 END;
 
 PROCEDURE Type.close();

@@ -7,7 +7,7 @@ TYPE
     ExpressionHandler* = RECORD(ContextHierarchy.Node)
         PROCEDURE handleExpression*(e: Expression.PType);
     END;
-    PExpressionHandler = POINTER TO ExpressionHandler;
+    PExpressionHandler* = POINTER TO ExpressionHandler;
 
     BinaryOperator = PROCEDURE(l, r: Expression.PType): Expression.PType;
     BinaryOperatorCx = PROCEDURE(l, r: Expression.PType; cx: LanguageContext.PType): Expression.PType;

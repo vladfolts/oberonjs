@@ -42,6 +42,15 @@ TYPE
         type: Types.PType;
     END;
 
+    ActualParameters* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE ActualParameters(parent: ContextExpression.PExpressionHandler);
+
+        expressionHandler: ContextExpression.PExpressionHandler;
+    END;
+VAR
+    beginCallMsg*: ContextHierarchy.Message;
+    endCallMsg*: ContextHierarchy.Message;
+
 PROCEDURE Index.Index(length: INTEGER; type: Types.PType; info: Types.PId; code, lval, asProperty: STRING)
     | length(length),
       type(type),
@@ -275,6 +284,24 @@ BEGIN
         result := TRUE;
     END;
     RETURN result;
+END;
+
+PROCEDURE ActualParameters.ActualParameters(parent: ContextExpression.PExpressionHandler)
+    | SUPER(parent)
+    , expressionHandler(parent);
+BEGIN
+    void <- SELF.handleMessage(beginCallMsg);
+END;
+
+PROCEDURE ActualParameters.handleExpression(e: Expression.PType);
+BEGIN
+    SELF.expressionHandler.handleExpression(e);
+END;
+
+PROCEDURE ActualParameters.endParse(): BOOLEAN;
+BEGIN
+    void <- SELF.handleMessage(endCallMsg);
+    RETURN TRUE;
 END;
 
 END ContextDesignator.

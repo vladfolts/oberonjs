@@ -88,6 +88,17 @@ TYPE
         declParent: PDeclarationHandle;
     END;
 
+    Section* = RECORD(ContextHierarchy.Node)
+    END;
+
+    ResolveClosure = RECORD(Object.Type)
+        PROCEDURE ResolveClosure(root: ContextHierarchy.PRoot; id: STRING);
+
+        root: ContextHierarchy.PRoot;
+        id: STRING;
+    END;
+    PResolveClosure = POINTER TO ResolveClosure;
+
     ForwardTypeMsg* = RECORD(ContextHierarchy.Message)
         PROCEDURE ForwardTypeMsg(id: STRING);
 
@@ -498,6 +509,39 @@ END;
 PROCEDURE Pointer.exportField(field: STRING);
 BEGIN
     Errors.raise("cannot export anonymous RECORD field: '" + field + "'");
+END;
+
+PROCEDURE ResolveClosure.ResolveClosure(root: ContextHierarchy.PRoot; id: STRING)
+    | root(root),
+      id(id);
+END;
+
+PROCEDURE resolve(closure: Object.PType): Types.PStorageType;
+BEGIN
+    r <- closure(PResolveClosure);
+    info <- ContextHierarchy.getSymbol(r.root^, r.id).info();
+    RETURN info(TypeId.PType).type();
+END;
+
+PROCEDURE Section.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF msg IS ForwardTypeMsg THEN
+        root <- SELF.root();
+        scope <- root.currentScope();
+        Scope.addUnresolved(scope^, msg.id);
+        result := NEW TypeId.Forward(resolve, NEW ResolveClosure(root, msg.id));
+    ELSE
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Section.endParse(): BOOLEAN;
+BEGIN
+    Scope.checkAllResolved(SELF.root().currentScope()^);
+    RETURN TRUE;
 END;
 
 PROCEDURE ForwardTypeMsg.ForwardTypeMsg(id: STRING)

@@ -4,6 +4,7 @@ var Class = require("rtl.js").Class;
 var CodeGenerator = require("js/CodeGenerator.js");
 var Context = require("context.js");
 var ContextExpression = require("js/ContextExpression.js");
+var ContextDesignator = require("js/ContextDesignator.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
@@ -54,7 +55,7 @@ var ProcedureCall = Context.Chained.extend({
     codeGenerator: function(){return this.__code;},
     type: function(){return this.__type;},
     handleMessage: function(msg){
-        if (msg == Context.beginCallMsg || msg == Context.endCallMsg)
+        if (msg == ContextDesignator.beginCallMsg() || msg == ContextDesignator.endCallMsg())
             return undefined;
         return Context.Chained.prototype.handleMessage.call(this, msg);
     },
@@ -87,7 +88,7 @@ var ExpressionProcedureCall = ProcedureCall.extend({
         this.__hasActualParameters = false;
     },
     handleMessage: function(msg){
-        if (msg == Context.beginCallMsg){
+        if (msg == ContextDesignator.beginCallMsg()){
             this.__hasActualParameters = true;
             return;
         }

@@ -38,49 +38,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-var HandleSymbolAsType = ContextType.HandleSymbolAsType;
-HandleSymbolAsType.extend = Class.extend;
-HandleSymbolAsType.prototype.init = ContextType.HandleSymbolAsType;
-
-function beginCallMsg(){}
-function endCallMsg(){}
-
-exports.ActualParameters = ChainedContext.extend({
-    init: function ActualParametersContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.handleMessage(beginCallMsg);
-    },
-    handleExpression: function(e){
-        this.parent().handleExpression(e);
-    },
-    endParse: function(){
-        this.handleMessage(endCallMsg);
-    }
-});
-
-exports.TypeSection = ChainedContext.extend({
-    init: function TypeSection(context){
-        ChainedContext.prototype.init.call(this, context);
-    },
-    handleMessage: function(msg){
-        if (msg instanceof ContextType.ForwardTypeMsg){
-            var scope = this.root().currentScope();
-            Scope.addUnresolved(scope, msg.id);
-            var resolve = function(){
-                return ContextHierarchy.getSymbol(this.root(), msg.id).info().type();
-            }.bind(this);
-
-            return new TypeId.Forward(resolve);
-        }
-        return ChainedContext.prototype.handleMessage.call(this, msg);
-    },
-    endParse: function(){
-        var unresolved = Scope.unresolved(this.root().currentScope());
-        if (unresolved.length)
-            throw new Errors.Error("no declaration found for '" + unresolved.join("', '") + "'");
-    }
-});
-
 exports.ModuleDeclaration = ChainedContext.extend({
     init: function ModuleDeclarationContext(context){
         ChainedContext.prototype.init.call(this, context);
@@ -195,7 +152,4 @@ var ModuleImport = ChainedContext.extend({
 });
 exports.ModuleImport = ModuleImport;
 
-exports.beginCallMsg = beginCallMsg;
-exports.endCallMsg = endCallMsg;
 exports.Chained = ChainedContext;
-exports.HandleSymbolAsType = HandleSymbolAsType;

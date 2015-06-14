@@ -282,9 +282,9 @@ var Designator = Class.extend.call(ContextDesignator.Type, {
         return ContextDesignator.Type.prototype.doMakeDerefVar.call(this, info);
     },
     handleMessage: function(msg){
-        if (msg == Context.beginCallMsg)
+        if (msg == ContextDesignator.beginCallMsg())
             return this.__beginCall();
-        if (msg == Context.endCallMsg)
+        if (msg == ContextDesignator.endCallMsg())
             return this.__endCall();
         if (msg instanceof OperatorNewMsg){
             var e = msg.expression;
@@ -366,14 +366,14 @@ var OperatorNew = Context.Chained.extend({
         this.__call.handleArgument(e);
     },
     handleMessage: function(msg){
-        if (msg == Context.beginCallMsg){
+        if (msg == ContextDesignator.beginCallMsg()){
             this.__call = makeContextCall(
                 this,
                 function(cx){ return EberonConstructor.makeConstructorCall(this.__info, cx, true); }.bind(this)
                 );
             return;
         }
-        if (msg == Context.endCallMsg)
+        if (msg == ContextDesignator.endCallMsg())
             return;
 
         return Context.Chained.prototype.handleMessage.call(this, msg);
@@ -632,9 +632,9 @@ var BaseInit = Context.Chained.extend({
     },
     codeGenerator: function(){return CodeGenerator.nullGenerator();},
     handleMessage: function(msg){
-        if (msg == Context.beginCallMsg)
+        if (msg == ContextDesignator.beginCallMsg())
             return;
-        if (msg == Context.endCallMsg){
+        if (msg == ContextDesignator.endCallMsg()){
             var e = this.__initCall.end();
             if (this.__initField)
                 this.type().setFieldInitializationCode(this.__initField, e.code());
@@ -1358,9 +1358,9 @@ var FormalParameters = Class.extend.call(ContextProcedure.FormalParameters, {
     }
 });
 
-var FormalType = Context.HandleSymbolAsType.extend({
+var FormalType = Class.extend.call(ContextType.HandleSymbolAsType, {
     init: function EberonContext$FormalType(context){
-        Context.HandleSymbolAsType.prototype.init.call(this, context);
+        ContextType.HandleSymbolAsType.call(this, context);
         this.__arrayDimensions = [];
         this.__dynamicDimension = false;
     },
