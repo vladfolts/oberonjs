@@ -43,7 +43,7 @@ TYPE
         PROCEDURE language*(): LanguageContext.PLanguage;
 
         PROCEDURE findSymbol*(ident: STRING): Symbols.PFoundSymbol;
-        PROCEDURE findModule(name: STRING): Types.PModule;
+        PROCEDURE findModule*(name: STRING): Types.PModule;
 
         PROCEDURE currentScope*(): Scope.PType;
         PROCEDURE pushScope*(scope: Scope.PType);

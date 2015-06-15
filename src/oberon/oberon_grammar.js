@@ -10,6 +10,7 @@ var ContextExpression = require("js/ContextExpression.js");
 var ContextIdentdef = require("js/ContextIdentdef.js");
 var ContextIf = require("js/ContextIf.js");
 var ContextLoop = require("js/ContextLoop.js");
+var ContextModule = require("js/ContextModule.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var Grammar = require("grammar.js");
@@ -132,7 +133,7 @@ exports.language = {
             If:                 ContextIf.Type,
             CaseLabel:          ContextCase.Label,
             Repeat:             ContextLoop.Repeat,
-            ModuleDeclaration:  Context.ModuleDeclaration
+            ModuleDeclaration:  ContextModule.Declaration
         },
         Grammar.reservedWords
         ),

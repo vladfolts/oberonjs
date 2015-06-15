@@ -43,15 +43,16 @@ TYPE
     CompiledModule = RECORD(M.Type)
         exports: Symbols.Map;
     END;
+    PCompiledModule = POINTER TO CompiledModule;
 
     Module* = RECORD(Type)
         PROCEDURE Module*(name: STRING; stdSymbols: Symbols.Map);
 
-        symbol: Symbols.PSymbol;
-        exports: Symbols.Map;
+        symbol-: Symbols.PSymbol;
+        exports-: Symbols.Map;
         tempVarCounter: INTEGER;
     END;
-    PModule = POINTER TO Module;
+    PModule* = POINTER TO Module;
 
 PROCEDURE addSymbolForType*(t: Types.PBasicType; VAR result: Symbols.Map);
 BEGIN
@@ -213,15 +214,16 @@ PROCEDURE makeProcedure*(stdSymbols: Symbols.Map): PType;
     RETURN NEW Procedure(stdSymbols);
 END;
 
-PROCEDURE defineExports*(VAR m: CompiledModule; exports: Symbols.Map);
+PROCEDURE defineExports*(m: Module);
 BEGIN
-    FOR id, k IN exports DO
+    cm <- m.symbol.info()(PCompiledModule);
+    FOR id, k IN m.exports DO
         symbol <- k;
         info <- symbol.info();
         IF info IS Types.PVariable THEN
             symbol := NEW Symbols.Symbol(id, Variable.makeExportedVariable(info^));
         END;
-        m.exports[id] := symbol;
+        cm.exports[id] := symbol;
     END;
 END;
 

@@ -20,8 +20,17 @@ TYPE
     END;
     PTypes* = POINTER TO Types;
 
+    ModuleGenerator* = RECORD
+        PROCEDURE prolog*(): STRING;
+        PROCEDURE epilog*(exports: Symbols.Map): STRING;
+    END;
+    PModuleGenerator* = POINTER TO ModuleGenerator;
+
+    Imports = MAP OF STRING;
+
     Language* = RECORD
         moduleResolver-: PROCEDURE(name: STRING): T.PModule;
+        PROCEDURE moduleGenerator*(name: STRING; imports: Imports): PModuleGenerator;
         rtl-: OberonRtl.PType;
         codeGenerator-: CodeGenerator.PIGenerator;
         types-: PTypes;

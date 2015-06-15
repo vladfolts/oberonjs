@@ -38,67 +38,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-exports.ModuleDeclaration = ChainedContext.extend({
-    init: function ModuleDeclarationContext(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__name = undefined;
-        this.__imports = {};
-        this.__moduleScope = undefined;
-        this.__moduleGen = undefined;
-        this.__stdSymbols = this.root().language().stdSymbols;
-    },
-    handleIdent: function(id){
-        if (this.__name === undefined ) {
-            this.__name = id;
-            this.__moduleScope = new Scope.Module(id, this.__stdSymbols);
-            this.root().pushScope(this.__moduleScope);
-        }
-        else if (id === this.__name){
-            var scope = this.root().currentScope();
-            scope.close();
-            var exports = scope.exports;
-            Scope.defineExports(Scope.moduleSymbol(scope).info(), exports);
-            this.codeGenerator().write(this.__moduleGen.epilog(exports));
-        }
-        else
-            throw new Errors.Error("original module name '" + this.__name + "' expected, got '" + id + "'" );
-    },
-    findModule: function(name){
-        if (name == this.__name)
-            throw new Errors.Error("module '" + this.__name + "' cannot import itself");
-        return this.parent().findModule(name);
-    },
-    handleImport: function(modules){
-        var scope = this.root().currentScope();
-        var moduleAliases = {};
-        for(var i = 0; i < modules.length; ++i){
-            var s = modules[i];
-            var name = Type.moduleName(s.info());
-            this.__imports[name] = s;
-            scope.addSymbol(s);
-            moduleAliases[name] = s.id();
-        }
-        this.__moduleGen = this.root().language().moduleGenerator(
-                this.__name,
-                moduleAliases);
-        this.codeGenerator().write(this.__moduleGen.prolog());
-    },
-    handleLiteral: function(){},
-    qualifyScope: function(scope){
-        if (scope != this.__moduleScope && scope instanceof Scope.Module){
-            var id = Scope.moduleSymbol(scope).id();
-            
-            // implicitly imported module, e.g.: record.pointerToRecordFromAnotherModule.field
-            // should not be used in code generation, 
-            // just return non-empty value to indicate this is not current module
-            if (!(id in this.__imports))
-                return "module '" + id + "' is not imported";
-            return this.__imports[id].id() + ".";
-        }
-        return "";
-    }
-});
-
 var ModuleImport = ChainedContext.extend({
     init: function ModuleImport(context){
         ChainedContext.prototype.init.call(this, context);

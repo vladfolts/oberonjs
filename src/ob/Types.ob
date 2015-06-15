@@ -227,10 +227,6 @@ PROCEDURE isString*(t: PType): BOOLEAN;
            OR (t^ IS String)
 END isString;
 
-PROCEDURE moduleName*(m: Module): STRING;
-    RETURN m.name
-END moduleName;
-
 PROCEDURE BasicType.BasicType(name: STRING; initializer: STRING)
     | SUPER(name),
       mInitializer(initializer);

@@ -1,0 +1,80 @@
+MODULE ContextModule;
+IMPORT
+    ContextHierarchy, Errors, LanguageContext, Scope, ScopeBase, Symbols,
+    Types;
+TYPE
+    Declaration* = RECORD(ContextHierarchy.Node)
+        PROCEDURE findModule(name: STRING): Types.PModule;
+        PROCEDURE handleImport(modules: ARRAY OF Symbols.PSymbol);
+
+        name: STRING;
+        imports: MAP OF Symbols.PSymbol;
+        moduleScope: Scope.PModule;
+        moduleGen: LanguageContext.PModuleGenerator;
+    END;
+
+PROCEDURE Declaration.handleIdent(id: STRING);
+BEGIN
+    IF LEN(SELF.name) = 0 THEN
+        SELF.name := id;
+        root <- SELF.root();
+        SELF.moduleScope := NEW Scope.Module(id, root.language().stdSymbols);
+        root.pushScope(SELF.moduleScope);
+    ELSIF id = SELF.name THEN
+        scope <- SELF.moduleScope;
+        scope.close();
+        Scope.defineExports(scope^);
+        SELF.codeGenerator().write(SELF.moduleGen.epilog(scope.exports));
+    ELSE
+        Errors.raise("original module name '" + SELF.name + "' expected, got '" + id + "'" );
+    END;
+END;
+
+PROCEDURE Declaration.findModule(name: STRING): Types.PModule;
+BEGIN
+    IF name = SELF.name THEN
+        Errors.raise("module '" + SELF.name + "' cannot import itself");
+    END;
+    RETURN SELF.root().findModule(name);
+END;
+
+PROCEDURE Declaration.handleImport(modules: ARRAY OF Symbols.PSymbol);
+VAR
+    moduleAliases: MAP OF STRING;
+BEGIN
+    root <- SELF.root();
+    scope <- root.currentScope();
+    FOR i <- 0 TO LEN(modules) - 1 DO
+        s <- modules[i];
+        name <- s.info()(Types.PModule).name;
+        SELF.imports[name] := s;
+        scope.addSymbol(s, FALSE);
+        moduleAliases[name] := s.id();
+    END;
+    SELF.moduleGen := root.language().moduleGenerator(
+            SELF.name,
+            moduleAliases);
+    SELF.codeGenerator().write(SELF.moduleGen.prolog());
+END;
+
+PROCEDURE Declaration.qualifyScope(scope: ScopeBase.PType): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF (scope # SELF.moduleScope) & (scope IS Scope.PModule) THEN
+        id <- scope.symbol.id();
+        
+        (* implicitly imported module, e.g.: record.pointerToRecordFromAnotherModule.field
+           should not be used in code generation, 
+           just return non-empty value to indicate this is not current module
+        *)
+        IF ~(id IN SELF.imports) THEN
+            result := "module '" + id + "' is not imported";
+        ELSE
+            result := SELF.imports[id].id() + ".";
+        END;
+    END;
+    RETURN result;
+END;
+
+END ContextModule.

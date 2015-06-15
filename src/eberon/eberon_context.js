@@ -12,6 +12,7 @@ var ContextExpression = require("js/ContextExpression.js");
 var ContextIdentdef = require("js/ContextIdentdef.js");
 var ContextIf = require("js/ContextIf.js");
 var ContextLoop = require("js/ContextLoop.js");
+var ContextModule = require("js/ContextModule.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
@@ -1400,14 +1401,14 @@ var FormalParametersProcDecl = Class.extend.call(ContextProcedure.FormalParamete
     }
 });
 
-var ModuleDeclaration = Context.ModuleDeclaration.extend({
+var ModuleDeclaration = Class.extend.call(ContextModule.Declaration, {
     init: function EberonContext$ModuleDeclaration(context){
-        Context.ModuleDeclaration.prototype.init.call(this, context);
+        ContextModule.Declaration.call(this, context);
     },
     handleMessage: function(msg){
         if (handleTypePromotionMadeInSeparateStatement(msg))
             return;
-        return Context.ModuleDeclaration.prototype.handleMessage.call(this, msg);
+        return ContextModule.Declaration.prototype.handleMessage.call(this, msg);
     }
 });
 
