@@ -1,7 +1,6 @@
 "use strict";
 
 var Cast = require("js/EberonCast.js");
-var Context = require("context.js");
 var EbArray = require("js/EberonArray.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var ContextType = require("js/ContextType.js");

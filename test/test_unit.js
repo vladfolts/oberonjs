@@ -3,7 +3,6 @@
 var assert = require("rtl.js").assert;
 var Class = require("rtl.js").Class;
 var CodeGenerator = require("js/CodeGenerator.js");
-var Context = require("context.js");
 var Grammar = require("grammar.js");
 var Test = require("test.js");
 var TestUnitCommon = require("test_unit_common.js");

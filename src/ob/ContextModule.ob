@@ -1,7 +1,7 @@
 MODULE ContextModule;
 IMPORT
-    ContextHierarchy, Errors, LanguageContext, Scope, ScopeBase, Symbols,
-    Types;
+    ContextHierarchy, Errors, LanguageContext, 
+    Scope, ScopeBase, String, Symbols, Types;
 TYPE
     Declaration* = RECORD(ContextHierarchy.Node)
         PROCEDURE findModule(name: STRING): Types.PModule;
@@ -11,6 +11,12 @@ TYPE
         imports: MAP OF Symbols.PSymbol;
         moduleScope: Scope.PModule;
         moduleGen: LanguageContext.PModuleGenerator;
+    END;
+    PDeclaration = POINTER TO Declaration;
+
+    Import* = RECORD(ContextHierarchy.Node)
+        currentModule, currentAlias: STRING;
+        import: MAP OF STRING;
     END;
 
 PROCEDURE Declaration.handleIdent(id: STRING);
@@ -75,6 +81,65 @@ BEGIN
         END;
     END;
     RETURN result;
+END;
+
+PROCEDURE Import.handleIdent(id: STRING);
+BEGIN
+    SELF.currentModule := id;
+END;
+
+PROCEDURE handleImport(VAR import: Import);
+BEGIN
+    alias <- import.currentAlias;
+    IF LEN(alias) = 0 THEN
+        alias := import.currentModule;
+    ELSE
+        import.currentAlias := "";
+    END;
+    
+    FOR a, m IN import.import DO
+        IF a = alias THEN
+            Errors.raise("duplicated alias: '" + alias +"'");
+        ELSIF m = import.currentModule THEN
+            Errors.raise("module already imported: '" + import.currentModule + "'");
+        END;
+    END;
+    import.import[alias] := import.currentModule;
+END;
+
+PROCEDURE Import.handleLiteral(s: STRING);
+BEGIN
+    IF s = ":=" THEN
+        SELF.currentAlias := SELF.currentModule;
+    ELSIF s = "," THEN
+        handleImport(SELF);
+    END;
+END;
+
+PROCEDURE Import.endParse(): BOOLEAN;
+VAR
+    modules: ARRAY * OF Symbols.PSymbol;
+    unresolved: ARRAY * OF STRING;
+BEGIN
+    IF LEN(SELF.currentModule) # 0 THEN
+        handleImport(SELF);
+    END;
+
+    parent <- SELF.parent()(PDeclaration);
+    FOR alias, moduleName IN SELF.import DO
+        module <- parent.findModule(moduleName);
+        IF module = NIL THEN
+            unresolved.add(moduleName);
+        ELSE
+            modules.add(NEW Symbols.Symbol(alias, module));
+        END;
+    END;
+    IF LEN(unresolved) # 0 THEN
+        Errors.raise("module(s) not found: " + String.join(unresolved, ", "));
+    END;
+    
+    parent.handleImport(modules);
+    RETURN TRUE;
 END;
 
 END ContextModule.

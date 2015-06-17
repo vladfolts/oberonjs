@@ -2,7 +2,6 @@
 
 var Cast = require("js/Cast.js");
 var CodeGenerator = require("js/CodeGenerator.js");
-var Context = require("context.js");
 var ContextCase = require("js/ContextCase.js");
 var ContextConst = require("js/ContextConst.js");
 var ContextDesignator = require("js/ContextDesignator.js");
