@@ -34,7 +34,7 @@ TYPE
         PROCEDURE endParse*(): BOOLEAN;
 
         mParent: PNode;
-        attributes*: Attributes;
+        attributes*: POINTER TO Attributes;
     END;
 
     Root* = RECORD(Node)
@@ -65,6 +65,8 @@ PROCEDURE Node.Node(parent: PNode)
 BEGIN
     IF parent # NIL THEN
         SELF.attributes := parent.attributes;
+    ELSE
+        NEW(SELF.attributes);
     END;
 END;
 

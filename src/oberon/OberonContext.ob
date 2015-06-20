@@ -1,0 +1,123 @@
+MODULE OberonContext;
+IMPORT
+    CodeGenerator, 
+    ContextDesignator, ContextExpression, ContextHierarchy, ContextProcedure, 
+    Expression, Module, Object, Operator, Procedure, Types;
+TYPE
+    ProcedureCall = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE ProcedureCall(parent: ContextHierarchy.PNode);
+
+        PROCEDURE do(): Procedure.PCallGenerator;
+        PROCEDURE callExpression(): Expression.PType;
+
+        code: CodeGenerator.PIGenerator;
+        type: Types.PType;
+        id: STRING;
+        call: Procedure.PCallGenerator;
+        cachedCallExpression: Expression.PType;
+    END;
+
+    StatementProcedureCall* = RECORD(ProcedureCall)
+    END;
+
+    ExpressionProcedureCall* = RECORD(ProcedureCall)
+        hasActualParameters: BOOLEAN;
+    END;
+
+    Assignment* = RECORD(ContextExpression.ExpressionHandler)
+    END;
+
+PROCEDURE ProcedureCall.ProcedureCall(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      code(CodeGenerator.makeSimpleGenerator());
+BEGIN
+    NEW(SELF.attributes);
+END;
+
+PROCEDURE ProcedureCall.do(): Procedure.PCallGenerator;
+BEGIN
+    IF SELF.call = NIL THEN
+        d <- SELF.attributes.designator;
+        SELF.type := d.type();
+        SELF.id := d.code();
+        SELF.call := ContextProcedure.makeCall(SELF(POINTER), SELF.type, d.info());
+        SELF.cachedCallExpression := NIL;
+    END;
+    RETURN SELF.call;
+END;
+
+PROCEDURE ProcedureCall.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN SELF.code;
+END;
+
+PROCEDURE ProcedureCall.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF ~(msg IS ContextDesignator.BeginCallMsg)
+        & ~(msg IS ContextDesignator.EndCallMsg) THEN
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ProcedureCall.handleExpression(e: Expression.PType);
+BEGIN
+    SELF.do().handleArgument(e);
+END;
+
+PROCEDURE ProcedureCall.callExpression(): Expression.PType;
+BEGIN
+    IF SELF.cachedCallExpression = NIL THEN
+        e <- SELF.do().end();
+        SELF.cachedCallExpression := NEW Expression.Type(SELF.id + e.code(), e.type(), NIL, e.constValue(), e.maxPrecedence());
+    END;
+    RETURN SELF.cachedCallExpression;
+END;
+
+PROCEDURE StatementProcedureCall.endParse(): BOOLEAN;
+BEGIN
+    e <- SELF.callExpression();
+    Module.assertProcStatementResult(e.type());
+    SELF.parent().codeGenerator().write(e.code());
+    RETURN TRUE;
+END;
+
+PROCEDURE ExpressionProcedureCall.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF msg IS ContextDesignator.BeginCallMsg THEN
+        SELF.hasActualParameters := TRUE;
+    ELSE
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ExpressionProcedureCall.endParse(): BOOLEAN;
+VAR
+    e: Expression.PType;
+BEGIN
+    IF SELF.hasActualParameters THEN
+        e := SELF.callExpression();
+    ELSE
+        e := ContextExpression.designatorAsExpression(SELF.attributes.designator);
+    END;
+    SELF.parent()^(ContextExpression.ExpressionHandler).handleExpression(e);
+    RETURN TRUE;
+END;
+
+PROCEDURE Assignment.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN CodeGenerator.nullGenerator;
+END;
+
+PROCEDURE Assignment.handleExpression(e: Expression.PType);
+BEGIN
+    d <- SELF.attributes.designator;
+    left <- Expression.make(d.code(), d.type(), d, NIL);
+    SELF.parent().codeGenerator().write(
+            Operator.assign(left, e, ContextHierarchy.makeLanguageContext(SELF(POINTER))));
+END;
+
+END OberonContext.

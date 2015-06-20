@@ -51,12 +51,12 @@ TYPE
         id: Context.PIdentdefInfo;
         symbol: Symbols.PSymbol;
     END;
-    PDeclaration = POINTER TO Declaration;
+    PDeclaration* = POINTER TO Declaration;
 
     RecordTypeFactory = PROCEDURE(name, cons: STRING; scope: ScopeBase.PType): R.PType; 
 
     Record* = RECORD(ContextHierarchy.Node)
-        PROCEDURE Record(parent: PDeclaration; factory: RecordTypeFactory);
+        PROCEDURE Record*(parent: PDeclaration; factory: RecordTypeFactory);
 
         PROCEDURE addField(field: Context.PIdentdefInfo; type: Types.PStorageType);
         PROCEDURE setBaseType(type: Types.PType);

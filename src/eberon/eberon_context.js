@@ -4,7 +4,6 @@ var Cast = require("js/Cast.js");
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
-var Context = require("context.js");
 var ContextCase = require("js/ContextCase.js");
 var ContextConst = require("js/ContextConst.js");
 var ContextDesignator = require("js/ContextDesignator.js");
@@ -55,9 +54,13 @@ function MethodOrProcMsg(id, type){
     this.type = type;
 }
 
-var ProcOrMethodId = Context.Chained.extend({
+var ChainedContext = ContextHierarchy.Node;
+ChainedContext.extend = Class.extend;
+ChainedContext.prototype.init = ContextHierarchy.Node;
+
+var ProcOrMethodId = ChainedContext.extend({
     init: function EberonContext$ProcOrMethodId(parent){
-        Context.Chained.prototype.init.call(this, parent);
+        ChainedContext.prototype.init.call(this, parent);
         this.__maybeTypeId = undefined;
         this.__type = undefined;
     },
@@ -84,9 +87,9 @@ var ProcOrMethodId = Context.Chained.extend({
     }
 });
 
-var MethodHeading = Context.Chained.extend({
+var MethodHeading = ChainedContext.extend({
     init: function EberonContext$MethodHeading(parent){
-        Context.Chained.prototype.init.call(this, parent);
+        ChainedContext.prototype.init.call(this, parent);
         this.__id = undefined;
         this.__type = undefined;
     },
@@ -283,9 +286,9 @@ var Designator = Class.extend.call(ContextDesignator.Type, {
         return ContextDesignator.Type.prototype.doMakeDerefVar.call(this, info);
     },
     handleMessage: function(msg){
-        if (msg == ContextDesignator.beginCallMsg())
+        if (msg instanceof ContextDesignator.BeginCallMsg)
             return this.__beginCall();
-        if (msg == ContextDesignator.endCallMsg())
+        if (msg instanceof ContextDesignator.EndCallMsg)
             return this.__endCall();
         if (msg instanceof OperatorNewMsg){
             var e = msg.expression;
@@ -343,9 +346,9 @@ var Designator = Class.extend.call(ContextDesignator.Type, {
     }
 });
 
-var OperatorNew = Context.Chained.extend({
+var OperatorNew = ChainedContext.extend({
     init: function EberonContext$OperatorNew(parent){
-        Context.Chained.prototype.init.call(this, parent);
+        ChainedContext.prototype.init.call(this, parent);
         this.__info = undefined;
         this.__call = undefined;
     },
@@ -367,26 +370,26 @@ var OperatorNew = Context.Chained.extend({
         this.__call.handleArgument(e);
     },
     handleMessage: function(msg){
-        if (msg == ContextDesignator.beginCallMsg()){
+        if (msg instanceof ContextDesignator.BeginCallMsg){
             this.__call = makeContextCall(
                 this,
                 function(cx){ return EberonConstructor.makeConstructorCall(this.__info, cx, true); }.bind(this)
                 );
             return;
         }
-        if (msg == ContextDesignator.endCallMsg())
+        if (msg instanceof ContextDesignator.EndCallMsg)
             return;
 
-        return Context.Chained.prototype.handleMessage.call(this, msg);
+        return ChainedContext.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
         this.handleMessage(new OperatorNewMsg(this.__call.end()));
     }
 });
 
-var InPlaceVariableInit = Context.Chained.extend({
+var InPlaceVariableInit = ChainedContext.extend({
     init: function EberonContext$InPlaceVariableInit(context){
-        Context.Chained.prototype.init.call(this, context);
+        ChainedContext.prototype.init.call(this, context);
         this.__id = undefined;
         this._symbol = undefined;
         this._code = undefined;
@@ -447,9 +450,10 @@ var InPlaceVariableInitFor = InPlaceVariableInit.extend({
     }
 });
 
-var ExpressionProcedureCall = Context.Chained.extend({
+var ExpressionProcedureCall = ChainedContext.extend({
     init: function EberonContext$init(context){
-        Context.Chained.prototype.init.call(this, context);
+        ChainedContext.prototype.init.call(this, context);
+        this.attributes = {};
     },
     endParse: function(){
         var parent = this.parent();
@@ -466,9 +470,9 @@ var ExpressionProcedureCall = Context.Chained.extend({
     }
 });
 
-var AssignmentOrProcedureCall = Context.Chained.extend({
+var AssignmentOrProcedureCall = ChainedContext.extend({
     init: function EberonContext$init(context){
-        Context.Chained.prototype.init.call(this, context);
+        ChainedContext.prototype.init.call(this, context);
         this.attributes = {};
         this.__right = undefined;
     },
@@ -619,9 +623,9 @@ function InitFieldMsg(id){
     this.id = id;
 }
 
-var BaseInit = Context.Chained.extend({
+var BaseInit = ChainedContext.extend({
     init: function EberonContext$BaseInit(parent){
-        Context.Chained.prototype.init.call(this, parent);
+        ChainedContext.prototype.init.call(this, parent);
         this.__type = undefined;
         this.__initCall = undefined;
         this.__initField = undefined;
@@ -633,9 +637,9 @@ var BaseInit = Context.Chained.extend({
     },
     codeGenerator: function(){return CodeGenerator.nullGenerator();},
     handleMessage: function(msg){
-        if (msg == ContextDesignator.beginCallMsg())
+        if (msg instanceof ContextDesignator.BeginCallMsg)
             return;
-        if (msg == ContextDesignator.endCallMsg()){
+        if (msg instanceof ContextDesignator.EndCallMsg){
             var e = this.__initCall.end();
             if (this.__initField)
                 this.type().setFieldInitializationCode(this.__initField, e.code());
@@ -643,7 +647,7 @@ var BaseInit = Context.Chained.extend({
                 this.type().setBaseConstructorCallCode(e.code());
             return;
         }
-        return Context.Chained.prototype.handleMessage.call(this, msg);
+        return ChainedContext.prototype.handleMessage.call(this, msg);
     },
     handleIdent: function(id){
         this.__initField = id;
@@ -1237,9 +1241,9 @@ var ArrayDimensions = Class.extend.call(ContextType.ArrayDimensions, {
     }
 });
 
-var MapDecl = Context.Chained.extend({
+var MapDecl = ChainedContext.extend({
     init: function EberonContext$MapDecl(context){
-        Context.Chained.prototype.init.call(this, context);
+        ChainedContext.prototype.init.call(this, context);
         this.__type = undefined;
     },
     handleQIdent: function(q){
@@ -1258,9 +1262,9 @@ var MapDecl = Context.Chained.extend({
     }
 });
 
-var ForEach = Context.Chained.extend({
+var ForEach = ChainedContext.extend({
     init: function EberonContext$MapDecl(context){
-        Context.Chained.prototype.init.call(this, context);
+        ChainedContext.prototype.init.call(this, context);
         this.__valueId = undefined;
         this.__keyId = undefined;
         this.__scopeWasCreated = false;

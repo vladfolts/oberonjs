@@ -13,7 +13,9 @@ var ContextModule = require("js/ContextModule.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var Grammar = require("grammar.js");
-var ObContext = require("oberon/oberon_context.js");
+var OberonContext = require("js/OberonContext.js");
+var OberonContextType = require("js/OberonContextType.js");
+var OberonContextVar = require("js/OberonContextVar.js");
 var ObRtl = require("js/OberonRtl.js");
 var ObRtlCode = require("rtl.js");
 var Operator = require("js/Operator.js");
@@ -44,9 +46,9 @@ function makeProcedureHeading(ident, identdef, formalParameters){
 
 function makeAssignmentOrProcedureCall(designator, actualParameters, assignment){
     return or(context(and(designator, assignment), 
-                      ObContext.Assignment),
+                      OberonContext.Assignment),
               context(and(designator, optional(actualParameters)), 
-                      ObContext.StatementProcedureCall)
+                      OberonContext.StatementProcedureCall)
               );
 }
 
@@ -57,7 +59,7 @@ function makeIdentdef(ident){
 function makeDesignator(ident, qualident, selector, actualParameters){
     var designator = context(and(qualident, repeat(selector)), ContextDesignator.Type);
     return { 
-        factor: context(and(designator, optional(actualParameters)), ObContext.ExpressionProcedureCall),
+        factor: context(and(designator, optional(actualParameters)), OberonContext.ExpressionProcedureCall),
         assignmentOrProcedureCall: function(assignment){
             return makeAssignmentOrProcedureCall(designator, actualParameters, assignment);
         }
@@ -116,8 +118,8 @@ exports.language = {
         {
             constDeclaration:   ContextConst.Type, 
             typeDeclaration:    ContextType.Declaration,
-            recordDecl:         ObContext.RecordDecl,
-            variableDeclaration: ObContext.VariableDeclaration,
+            recordDecl:         OberonContextType.Record,
+            variableDeclaration: OberonContextVar.Declaration,
             ArrayDecl:          ContextType.Array,
             Factor:             ContextExpression.Factor,
             FormalParameters:   ContextProcedure.FormalParameters,

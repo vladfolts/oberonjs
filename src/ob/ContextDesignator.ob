@@ -47,9 +47,14 @@ TYPE
 
         expressionHandler: ContextExpression.PExpressionHandler;
     END;
+
+    BeginCallMsg* = RECORD(ContextHierarchy.Message)
+    END;
+    EndCallMsg* = RECORD(ContextHierarchy.Message)
+    END;
 VAR
-    beginCallMsg*: ContextHierarchy.Message;
-    endCallMsg*: ContextHierarchy.Message;
+    beginCallMsg: BeginCallMsg;
+    endCallMsg: EndCallMsg;
 
 PROCEDURE Index.Index(length: INTEGER; type: Types.PType; info: Types.PId; code, lval, asProperty: STRING)
     | length(length),

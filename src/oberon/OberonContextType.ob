@@ -1,0 +1,17 @@
+MODULE OberonContextType;
+IMPORT
+    ContextType, R := Record, ScopeBase;
+TYPE
+    Record* = RECORD(ContextType.Record)
+        PROCEDURE Record*(parent: ContextType.PDeclaration);
+    END;
+
+PROCEDURE recordTypeFactory(name, cons: STRING; scope: ScopeBase.PType): R.PType;
+    RETURN NEW R.Type(name, cons, scope);
+END;
+
+PROCEDURE Record.Record(parent: ContextType.PDeclaration)
+    | SUPER(parent, recordTypeFactory);
+END;
+
+END OberonContextType.

@@ -5,10 +5,10 @@ IMPORT
 TYPE
     Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
         PROCEDURE doInitCode(): STRING;
-        PROCEDURE doCheckExport(name: STRING);
+        PROCEDURE doCheckExport*(name: STRING);
 
         idents: ARRAY * OF Context.PIdentdefInfo;
-        type: Types.PStorageType;
+        type-: Types.PStorageType;
     END;
 
 PROCEDURE Declaration.handleIdentdef(id: Context.PIdentdefInfo);
