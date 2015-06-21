@@ -34,7 +34,7 @@ var Procedure = require("js/Procedure.js");
 var Record = require("js/Record.js");
 var Type = require("js/Types.js");
 var TypeId = require("js/TypeId.js");
-var TypePromotion = require("eberon/eberon_type_promotion.js");
+var TypePromotion = require("js/EberonTypePromotion.js");
 var Variable = require("js/Variable.js");
 
 /*
@@ -610,7 +610,7 @@ function handleTypePromotionMadeInSeparateStatement(msg){
     if (breakTypePromotion(msg))
         return true;
     if (msg instanceof BeginTypePromotionOrMsg){
-        msg.result = new TypePromotion.OrPromotions();
+        msg.result = new TypePromotion.Or();
         return true;
     }
     return false;
@@ -1085,12 +1085,12 @@ var OperatorScopes = Class.extend({
         if (msg instanceof TransferPromotedTypesMsg)
             return true;
         if (msg instanceof PromoteTypeMsg){
-            this.__typePromotion = new TypePromotion.Promotion(msg.info, msg.type);
+            this.__typePromotion = new TypePromotion.ForVariable(msg.info, msg.type);
             this.__typePromotions.push(this.__typePromotion);
             return true;
         }
         if (msg instanceof BeginTypePromotionOrMsg){
-            this.__typePromotion = new TypePromotion.OrPromotions();
+            this.__typePromotion = new TypePromotion.Or();
             this.__typePromotions.push(this.__typePromotion);
             msg.result = this.__typePromotion;
             return true;

@@ -4,7 +4,7 @@ var Class = require("rtl.js").Class;
 //var EberonCodeGenerator = require("js/EberonCodeGenerator.js");
 var language = require("eberon/eberon_grammar.js").language;
 var TestUnitCommon = require("test_unit_common.js");
-var TypePromotion = require("eberon/eberon_type_promotion.js");
+var TypePromotion = require("js/EberonTypePromotion.js");
 
 var assert = TestUnitCommon.assert;
 var pass = TestUnitCommon.pass;
@@ -532,7 +532,7 @@ exports.suite = {
 "type promotion": {
     "or" : pass(
         function(){
-            var or = new TypePromotion.OrPromotions();
+            var or = new TypePromotion.Or();
             var a = new TestVar();
             var p = or.next();
             assert(a.type() == "type");
@@ -545,7 +545,7 @@ exports.suite = {
             assert(a.type() == "type");
         },
         function(){
-            var or = new TypePromotion.OrPromotions();
+            var or = new TypePromotion.Or();
             var a = new TestVar();
             var p = or.next(p);
             p.promote(a, "type1");
@@ -553,7 +553,7 @@ exports.suite = {
             assert(a.type() == "type");
         },
         function(){
-            var or = new TypePromotion.OrPromotions();
+            var or = new TypePromotion.Or();
             var a = new TestVar();
             var p1 = or.next();
             p1.promote(a, "type1");
@@ -570,7 +570,7 @@ exports.suite = {
     ),
     "and": pass(
         function(){
-            var and = new TypePromotion.AndPromotions();
+            var and = new TypePromotion.And();
             var a = new TestVar();
             var p = and.next();
             p.promote(a, "type1");
@@ -580,7 +580,7 @@ exports.suite = {
             assert(a.type() == "type");
         },
         function(){ // (a IS type1) & (v OR (a IS type2)) & v
-            var and = new TypePromotion.AndPromotions();
+            var and = new TypePromotion.And();
             var a = new TestVar();
             var p = and.next();
             p.promote(a, "type1");
@@ -593,7 +593,7 @@ exports.suite = {
             assert(a.type() == "type");
         },
         function(){ // (a IS type1) & ~(v OR ~(a IS type2)) & v
-            var and = new TypePromotion.AndPromotions();
+            var and = new TypePromotion.And();
             var a = new TestVar();
             and.next().promote(a, "type1");
             var subOr = and.next();
@@ -609,7 +609,7 @@ exports.suite = {
             assert(a.type() == "type");
         },
         function(){ // (a IS type1) & (v & (a IS type2))
-            var and = new TypePromotion.AndPromotions();
+            var and = new TypePromotion.And();
             var a = new TestVar();
             and.next().promote(a, "type1");
             var sub = and.next().makeAnd();
@@ -624,7 +624,7 @@ exports.suite = {
         },
         function(){ // (~(~(a IS type1)) & v) OR v
             var a = new TestVar();
-            var or = new TypePromotion.OrPromotions();
+            var or = new TypePromotion.Or();
             var and = or.next().makeAnd();
             var p1 = and.next();
             p1.invert();
@@ -638,7 +638,7 @@ exports.suite = {
         },
         function(){ // (v OR (a IS type1)) & v)
             var a = new TestVar();
-            var and = new TypePromotion.AndPromotions();
+            var and = new TypePromotion.And();
             var or = and.next().makeOr();
             or.next();
             or.next().makeAnd().next().promote(a, "type1");

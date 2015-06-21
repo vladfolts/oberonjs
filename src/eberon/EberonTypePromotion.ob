@@ -1,0 +1,215 @@
+MODULE EberonTypePromotion;
+IMPORT
+    Types;
+TYPE
+    Variable = RECORD
+        PROCEDURE type(): Types.PType;
+        PROCEDURE setType(type: Types.PType);
+    END;
+    PVariable = POINTER TO Variable;
+
+    Type = RECORD
+        PROCEDURE and();
+        PROCEDURE or();
+        PROCEDURE reset();
+    END;
+    PType = POINTER TO Type;
+
+    ForVariable* = RECORD(Type)
+        PROCEDURE ForVariable(v: PVariable; type: Types.PType; inverted: BOOLEAN);
+
+        PROCEDURE invert();
+
+        v: PVariable;
+        type, originalType: Types.PType;
+        inverted: BOOLEAN;
+    END;
+
+    Operation = PROCEDURE(p: Type);
+    PMaybe = POINTER TO Maybe;
+
+    Combined = RECORD(Type)
+        PROCEDURE Combined(op, invertedOp: Operation; inverted: BOOLEAN);
+
+        PROCEDURE clear();
+        PROCEDURE next(): PMaybe;
+
+        op, invertedOp: Operation;
+        inverted: BOOLEAN;
+        promotions: ARRAY * OF PType;
+        current: PType;
+        count: INTEGER;
+    END;
+    PCombined = POINTER TO Combined;
+
+    And* = RECORD(Combined)
+        PROCEDURE And(inverted: BOOLEAN);
+    END;
+
+    Or* = RECORD(Combined)
+        PROCEDURE Or(inverted: BOOLEAN);
+    END;
+
+    Maybe = RECORD
+        PROCEDURE Maybe(handler: PCombined);
+
+        PROCEDURE promote(v: PVariable; type: Types.PType);
+        PROCEDURE invert();
+        PROCEDURE makeOr(): PCombined;
+        PROCEDURE makeAnd(): PCombined;
+
+        inverted: BOOLEAN;
+        handler: PCombined;
+    END;
+
+PROCEDURE ForVariable.ForVariable(v: PVariable; type: Types.PType; inverted: BOOLEAN)
+    | v(v),
+      type(type),
+      originalType(v.type()),
+      inverted(inverted);
+END;
+
+PROCEDURE ForVariable.and();
+BEGIN
+    IF ~SELF.inverted THEN
+        SELF.v.setType(SELF.type);
+    END;
+END;
+
+PROCEDURE ForVariable.or();
+BEGIN
+    IF SELF.inverted THEN
+        SELF.v.setType(SELF.type);
+    END;
+END;
+
+PROCEDURE ForVariable.reset();
+BEGIN
+    SELF.v.setType(SELF.originalType);
+END;
+
+PROCEDURE ForVariable.invert();
+BEGIN
+    SELF.inverted := ~SELF.inverted;
+END;
+
+PROCEDURE Maybe.Maybe(handler: PCombined)
+    | handler(handler);
+END;
+
+PROCEDURE handlePromotion(VAR handler: Combined; p: PType);
+BEGIN
+    ASSERT(handler.current = NIL);
+    handler.promotions.add(p);
+    handler.current := p;
+END;
+
+PROCEDURE Maybe.promote(v: PVariable; type: Types.PType);
+BEGIN
+    handlePromotion(SELF.handler^, NEW ForVariable(v, type, SELF.inverted));
+END;
+
+PROCEDURE Maybe.invert();
+BEGIN
+    SELF.inverted := ~SELF.inverted;
+END;
+
+PROCEDURE Maybe.makeOr(): PCombined;
+BEGIN
+    result <- NEW Or(SELF.inverted);
+    handlePromotion(SELF.handler^, result);
+    RETURN result;
+END;
+
+PROCEDURE Maybe.makeAnd(): PCombined;
+BEGIN
+    result <- NEW And(SELF.inverted);
+    handlePromotion(SELF.handler^, result);
+    RETURN result;
+END;
+
+PROCEDURE applyForAll(p: Combined);
+BEGIN
+    FOR i <- 0 TO LEN(p.promotions) - 1 DO
+        p.op(p.promotions[i]^);
+    END;
+END;
+
+PROCEDURE applyIfSingle(p: Combined);
+BEGIN
+    IF p.count > 1 THEN
+        p.reset();
+    ELSIF p.current # NIL THEN
+        p.invertedOp(p.current^);
+    END;
+END;
+
+PROCEDURE Combined.Combined(op, invertedOp: Operation; inverted: BOOLEAN)
+    | op(op),
+      invertedOp(invertedOp),
+      inverted(inverted);
+END;
+
+PROCEDURE Combined.and();
+BEGIN
+    IF SELF.inverted THEN
+        applyForAll(SELF);
+    ELSE
+        applyIfSingle(SELF);
+    END;
+END;
+
+PROCEDURE Combined.or();
+BEGIN
+    IF SELF.inverted THEN
+        applyIfSingle(SELF);
+    ELSE
+        applyForAll(SELF);
+    END;
+END;
+
+PROCEDURE Combined.reset();
+BEGIN
+    FOR i <- LEN(SELF.promotions) - 1 TO 0 BY -1 DO
+        p <- SELF.promotions[i];
+        p.reset();
+    END;
+END;
+
+PROCEDURE Combined.clear();
+BEGIN
+    SELF.reset();
+    SELF.promotions.clear();
+    SELF.current := NIL;
+    SELF.count := 0;
+END;
+
+PROCEDURE Combined.next(): PMaybe;
+BEGIN
+    IF SELF.current # NIL THEN
+        SELF.op(SELF.current^);
+        SELF.current := NIL;
+    END;
+    INC(SELF.count);
+    RETURN NEW Maybe(SELF(POINTER));
+END;
+
+PROCEDURE and(p: Type);
+BEGIN
+    p.and();
+END;
+
+PROCEDURE or(p: Type);
+BEGIN
+    p.or();
+END;
+
+PROCEDURE And.And(inverted: BOOLEAN)
+    | SUPER(and, or, ~inverted);
+END;
+
+PROCEDURE Or.Or(inverted: BOOLEAN)
+    | SUPER(or, and, inverted);
+END;
+
+END EberonTypePromotion.

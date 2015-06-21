@@ -131,6 +131,7 @@ def recompile(bin):
                'ContextIdentdef.ob', 'ContextLoop.ob', 'ContextModule.ob', 'ContextProcedure.ob', 
                'ContextVar.ob', 'EberonSymbols.ob', 'EberonCast.ob', 
                'EberonConstructor.ob', 'EberonOperator.ob', 'EberonScope.ob',
+               'EberonTypePromotion.ob',
                'OberonContext.ob', 'OberonContextType.ob', 'OberonContextVar.ob',
                'OberonSymbols.ob', 'Lexer.ob', 'Module.ob']
     
