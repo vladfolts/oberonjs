@@ -284,7 +284,7 @@ BEGIN
     Errors.raise("selector '." + id + "' cannot be applied to '" + obj + "'");
 END;
 
-PROCEDURE StorageType.denote(id: STRING; isReadObly: BOOLEAN): PField;
+PROCEDURE StorageType.denote(id: STRING; isReadOnly: BOOLEAN): PField;
 BEGIN
     raiseUnexpectedSelector(id, SELF.description());
     RETURN NIL

@@ -5,6 +5,7 @@ var EbArray = require("js/EberonArray.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var ContextType = require("js/ContextType.js");
 var EbContext = require("eberon/eberon_context.js");
+var EberonContextDesignator = require("js/EberonContextDesignator.js");
 var Grammar = require("grammar.js");
 var EbRtl = require("js/EberonRtl.js");
 var EbRtlCode = require("eberon/eberon_rtl.js");
@@ -59,7 +60,7 @@ function makeDesignator(ident, qualident, selector, actualParameters){
     var operatorNew = and("NEW", context(and(qualident, actualParameters), EbContext.OperatorNew));
     var designator = context(
         and(or(self, "SUPER", operatorNew, qualident), 
-            repeat(or(selector, actualParameters))), EbContext.Designator);
+            repeat(or(selector, actualParameters))), EberonContextDesignator.Type);
     return { 
         factor: context(designator, EbContext.ExpressionProcedureCall),
         assignmentOrProcedureCall: function(assignment, expression){

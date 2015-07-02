@@ -4,15 +4,15 @@ IMPORT
     Designator, Errors, Expression,
     Record, ScopeBase, String, TypeId, Types, Variable;
 TYPE
-    Index = RECORD
-        PROCEDURE Index(length: INTEGER; type: Types.PType; info: Types.PId; code, lval, asProperty: STRING);
+    Index* = RECORD
+        PROCEDURE Index*(length: INTEGER; type: Types.PType; info: Types.PId; code, lval, asProperty: STRING);
 
         length: INTEGER;
         type: Types.PType;
         info: Types.PId;
         code, lval, asProperty: STRING;
     END;
-    PIndex = POINTER TO Index;
+    PIndex* = POINTER TO Index;
 
     QIdentHandler* = RECORD(ContextHierarchy.Node)
         PROCEDURE handleQIdent*(q: ContextHierarchy.QIdent);
@@ -20,16 +20,13 @@ TYPE
     PQIdentHandler* = POINTER TO QIdentHandler;
 
     Type* = RECORD(QIdentHandler)
-        PROCEDURE handleExpression(e: Expression.PType);
+        PROCEDURE handleExpression*(e: Expression.PType);
         PROCEDURE handleTypeCast(type: Types.PType);
 
-        PROCEDURE advance(type: Types.PType; info: Types.PId; code, lval: STRING; replace: BOOLEAN);
-        PROCEDURE doCheckIndexType(type: Types.PType);
+        PROCEDURE doCheckIndexType*(type: Types.PType);
         PROCEDURE doCheckIndexValue(index: PIndex; const: ConstValue.PType);
-        PROCEDURE doIndexSequence(info: Types.PId; code, indexCode: STRING): PIndex;
-        PROCEDURE stringIndexCode(): STRING;
-        PROCEDURE discardCode();
-        PROCEDURE doMakeDerefVar(info: Types.PId): Types.PVariable;
+        PROCEDURE doIndexSequence*(info: Types.PId; code, indexCode: STRING): PIndex;
+        PROCEDURE doMakeDerefVar*(info: Types.PId): Types.PVariable;
 
         scope: ScopeBase.PType;
         currentType-: Types.PType;
@@ -133,12 +130,28 @@ BEGIN
     designator.lval := "";
 END;
 
+PROCEDURE stringIndexCode*(d: Type): STRING;
+    RETURN d.derefCode + ".charCodeAt(" + Expression.deref(d.indexExpression).code() + ")";
+END;
+
+PROCEDURE advance*(VAR d: Type; type: Types.PType; info: Types.PId; code, lval: STRING; replace: BOOLEAN);
+BEGIN
+    d.currentType := type;
+    d.info := info;
+    IF replace THEN
+        d.code := code;
+    ELSE
+        d.code := d.code + code;
+    END;
+    d.lval := lval;
+END;
+
 PROCEDURE Type.handleLiteral(s: STRING);
 BEGIN
     IF (s = "]") OR (s = ",") THEN
         index <- handleIndexExpression(SELF);
         SELF.propCode := index.asProperty;
-        SELF.advance(index.type, index.info, SELF.code + index.code, index.lval, FALSE);
+        advance(SELF, index.type, index.info, SELF.code + index.code, index.lval, FALSE);
     END;
     IF (s = "[") OR (s = ",") THEN
         SELF.derefCode := SELF.code;
@@ -170,21 +183,9 @@ BEGIN
         fieldCode <- field.designatorCode(SELF.code, SELF);
         SELF.derefCode := fieldCode.derefCode;
         SELF.propCode := fieldCode.propCode;
-        SELF.advance(currentType, field.asVar(SELF.code, isReadOnly, SELF), fieldCode.code, "", TRUE);
+        advance(SELF, currentType, field.asVar(SELF.code, isReadOnly, SELF), fieldCode.code, "", TRUE);
         SELF.scope := NIL;
     END;
-END;
-
-PROCEDURE Type.advance(type: Types.PType; info: Types.PId; code, lval: STRING; replace: BOOLEAN);
-BEGIN
-    SELF.currentType := type;
-    SELF.info := info;
-    IF replace THEN
-        SELF.code := code;
-    ELSE
-        SELF.code := SELF.code + code;
-    END;
-    SELF.lval := lval;
 END;
 
 PROCEDURE Type.doCheckIndexType(type: Types.PType);
@@ -239,7 +240,7 @@ BEGIN
     wholeCode <- code + "[" + indexCode + "]";
     IF indexType = Types.basic.ch THEN
         lval := wholeCode;
-        wholeCode := SELF.stringIndexCode();
+        wholeCode := stringIndexCode(SELF);
     END;
 
     readOnly <- (info IS Types.PConst) 
@@ -248,13 +249,9 @@ BEGIN
     RETURN NEW Index(length, indexType, v, wholeCode, lval, indexCode);
 END;
 
-PROCEDURE Type.stringIndexCode(): STRING;
-    RETURN SELF.derefCode + ".charCodeAt(" + Expression.deref(SELF.indexExpression).code() + ")";
-END;
-
-PROCEDURE Type.discardCode();
+PROCEDURE discardCode*(VAR d: Type);
 BEGIN
-    SELF.code := "";
+    d.code := "";
 END;
 
 PROCEDURE Type.doMakeDerefVar(info: Types.PId): Types.PVariable;

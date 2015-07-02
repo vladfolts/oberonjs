@@ -1,0 +1,386 @@
+MODULE EberonContextDesignator;
+IMPORT
+    ContextDesignator, ContextHierarchy, ContextProcedure,
+    EberonConstructor, EberonMap, EberonRtl, EberonString, EberonTypePromotion,
+    Errors, Expression, Object, Procedure, Record, TypeId, Types, Variable;
+TYPE
+    Type* = RECORD(ContextDesignator.Type)
+        procCall: Procedure.PCallGenerator;
+    END;
+    PType = POINTER TO Type;
+
+    MapElementVariable = RECORD(Types.Variable)
+        PROCEDURE MapElementVariable(type: Types.PStorageType; readOnly: BOOLEAN; code: STRING);
+
+        elementType: Types.PStorageType; 
+        readOnly: BOOLEAN; 
+        code: STRING;
+    END;
+
+    ResultVariable* = RECORD(Types.Variable)
+        PROCEDURE ResultVariable(e: Expression.PType);
+
+        expression: Expression.PType;
+    END;
+
+    TypeNarrowVariableBase* = RECORD(Types.Variable)
+    END;
+
+    TypeNarrowVariable* = RECORD(TypeNarrowVariableBase)
+        PROCEDURE TypeNarrowVariable(type: Types.PStorageType; isRef, isReadOnly: BOOLEAN; code: STRING);
+
+        PROCEDURE setType(type: Types.PStorageType);
+
+        mType: Types.PStorageType;
+        isRef: BOOLEAN;
+        readOnly: BOOLEAN;
+        code: STRING;
+    END;
+    PTypeNarrowVariable = POINTER TO TypeNarrowVariable;
+
+    DereferencedTypeNarrowVariable = RECORD(TypeNarrowVariableBase)
+        PROCEDURE DereferencedTypeNarrowVariable(var: PTypeNarrowVariable);
+
+        PROCEDURE setType(type: Types.PStorageType);
+
+        var: PTypeNarrowVariable;
+    END;
+
+    SelfAsPointer = RECORD(Types.Id)
+    END;
+
+    OperatorNewMsg* = RECORD(ContextHierarchy.Message)
+        PROCEDURE OperatorNewMsg(e: Expression.PType);
+
+        expression: Expression.PType;
+    END;
+
+    PromoteTypeMsg* = RECORD(ContextHierarchy.Message)
+        PROCEDURE PromoteTypeMsg(info: Types.PId; type: Types.PType);
+
+        info: Types.PId;
+        type: Types.PType;
+    END;
+
+    TransferPromotedTypesMsg* = RECORD(ContextHierarchy.Message)
+        PROCEDURE TransferPromotedTypesMsg(p: EberonTypePromotion.PCombined); 
+
+        promotion: EberonTypePromotion.PCombined;
+    END;
+
+    GetMethodSelfMsg* = RECORD(ContextHierarchy.Message)
+    END;
+
+    GetSelfAsPointerMsg* = RECORD(ContextHierarchy.Message)
+    END;
+
+    GetMethodSuperMsg* = RECORD(ContextHierarchy.Message)
+    END;
+
+    SuperMethodInfo* = RECORD(Object.Type)
+        PROCEDURE SuperMethodInfo(info: Types.PProcedureId; code: STRING);
+
+        info: Types.PProcedureId;
+        code: STRING;
+    END;
+    PSuperMethodInfo = POINTER TO SuperMethodInfo;
+
+VAR
+    getMethodSelfMsg: GetMethodSelfMsg;
+    getSelfAsPointerMsg: GetSelfAsPointerMsg;
+    getMethodSuperMsg: GetMethodSuperMsg;
+
+PROCEDURE checkMapKeyType*(type: Types.PType);
+BEGIN
+    IF (type # EberonString.string) & (~Types.isString(type)) THEN
+        Errors.raise("invalid MAP key type: STRING or string literal or ARRAY OF CHAR expected, got '" 
+                    + type.description() + "'");            
+    END;
+END;
+
+PROCEDURE Type.doCheckIndexType(type: Types.PType);
+BEGIN
+    IF SELF.currentType IS EberonMap.PType THEN
+        checkMapKeyType(type);
+    ELSE
+        SUPER(type);
+    END;
+END;
+
+PROCEDURE Type.doIndexSequence(info: Types.PId; code, indexCode: STRING): ContextDesignator.PIndex;
+VAR
+    result: ContextDesignator.PIndex;
+BEGIN
+    currentType <- SELF.currentType;
+    IF currentType = EberonString.string THEN
+        result := NEW ContextDesignator.Index(
+            0, 
+            Types.basic.ch, 
+            EberonString.makeElementVariable(),
+            ContextDesignator.stringIndexCode(SELF),
+            "",
+            "");
+    ELSIF currentType IS EberonMap.PType THEN
+        indexType <- currentType.valueType;
+        rtl <- SELF.root().language().rtl(EberonRtl.PType);
+        rval <- rtl.getMappedValue(code, indexCode);
+        lval <- code + "[" + indexCode + "]";
+        var <- NEW MapElementVariable(indexType, info(Types.PVariable).isReadOnly(), rval);
+        result := NEW ContextDesignator.Index(0, indexType, var, rval, lval, "");
+    ELSE
+        result := SUPER(info, code, indexCode);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Type.doMakeDerefVar(info: Types.PId): Types.PVariable;
+VAR
+    result: Types.PVariable;
+BEGIN
+    IF info IS PTypeNarrowVariable THEN
+        result := NEW DereferencedTypeNarrowVariable(info);
+    ELSE
+        result := SUPER(info);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE beginCall(d: PType);
+BEGIN
+    type <- d.currentType;
+    info <- d.info;
+    IF (info IS TypeId.PType) & (type IS Types.PRecord) THEN
+        cx <- ContextHierarchy.makeLanguageContext(d);
+        d.procCall := EberonConstructor.makeConstructorCall(info, cx, FALSE);
+        ContextDesignator.discardCode(d^);
+    ELSE
+        d.procCall := ContextProcedure.makeCall(d, type, info);
+    END;
+END;
+
+PROCEDURE endCall(VAR d: Type);
+BEGIN
+    e <- d.procCall.end();
+    ContextDesignator.advance(d, e.type(), NEW ResultVariable(e), e.code(), "", FALSE);
+    d.procCall := NIL;
+END;
+
+PROCEDURE breakTypePromotion*(VAR msg: ContextHierarchy.Message): BOOLEAN;
+BEGIN
+    result <- FALSE;
+    IF msg IS TransferPromotedTypesMsg THEN
+        msg.promotion.clear();
+        result := TRUE;
+    ELSIF msg IS PromoteTypeMsg THEN
+        result := TRUE;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Type.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF msg IS ContextDesignator.BeginCallMsg THEN
+        beginCall(SELF(POINTER));
+    ELSIF msg IS ContextDesignator.EndCallMsg THEN
+        endCall(SELF);
+    ELSIF msg IS OperatorNewMsg THEN
+        e <- msg.expression;
+        ContextDesignator.advance(SELF, e.type(), NEW ResultVariable(e), e.code(), "", FALSE);
+    ELSIF ~breakTypePromotion(msg) THEN (* no type promotion after calling functions *)
+        result := SUPER(msg);
+    END;    
+
+    RETURN result;
+END;
+
+PROCEDURE Type.handleExpression(e: Expression.PType);
+BEGIN
+    IF SELF.procCall # NIL THEN
+        SELF.procCall.handleArgument(e);
+    ELSE
+        SUPER(e);
+    END;
+END;
+
+PROCEDURE Type.handleLiteral(s: STRING);
+BEGIN
+    IF s = "SELF" THEN
+        type <- SELF.handleMessage(getMethodSelfMsg)(Types.PStorageType);
+        info <- NEW Variable.DeclaredVariable("this", type);
+        ContextDesignator.advance(SELF, type, info, "this", "", FALSE);
+    ELSIF s = "POINTER" THEN
+        type <- SELF.handleMessage(getSelfAsPointerMsg)(Types.PStorageType);
+        typeId <- NEW TypeId.Type(type);
+        pointerType <- NEW Record.Pointer("", typeId);
+        ContextDesignator.advance(SELF, pointerType, NEW SelfAsPointer(), "", "", FALSE);
+    ELSIF s = "SUPER" THEN
+        ms <- SELF.handleMessage(getMethodSuperMsg)(PSuperMethodInfo);
+        ContextDesignator.advance(SELF, ms.info.type, ms.info, ms.code, "", FALSE);
+    ELSE
+        SUPER(s);
+    END;
+END;
+
+PROCEDURE MapElementVariable.MapElementVariable(type: Types.PStorageType; readOnly: BOOLEAN; code: STRING)
+    | elementType(type),
+      readOnly(readOnly),
+      code(code);
+END;
+
+PROCEDURE MapElementVariable.type(): Types.PStorageType;
+    RETURN SELF.elementType;
+END;
+
+PROCEDURE MapElementVariable.isReference(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE MapElementVariable.isReadOnly(): BOOLEAN;
+    RETURN SELF.readOnly;
+END;
+
+PROCEDURE MapElementVariable.referenceCode(): STRING;
+BEGIN
+    IF SELF.elementType.isScalar() THEN
+        Errors.raise("cannot reference map element of type '" 
+                     + SELF.elementType.description() + "'");
+    END;
+    RETURN SELF.code;        
+END;
+
+PROCEDURE MapElementVariable.idType(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    result := "MAP's element";
+    IF SELF.readOnly THEN
+        result := "read-only " + result;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ResultVariable.ResultVariable(e: Expression.PType)
+    | expression(e);
+END;
+
+PROCEDURE ResultVariable.type(): Types.PStorageType;
+    RETURN SELF.expression.type()(Types.PStorageType);
+END;
+
+PROCEDURE ResultVariable.isReference(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE ResultVariable.referenceCode(): STRING;
+BEGIN
+    RETURN "";        
+END;
+
+PROCEDURE ResultVariable.isReadOnly(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE ResultVariable.idType(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF SELF.expression.type() # NIL THEN
+        result := "result";
+    ELSE
+        result := "statement";
+    END;
+    RETURN "procedure call " + result;
+END;
+
+PROCEDURE TypeNarrowVariable.TypeNarrowVariable(type: Types.PStorageType; isRef, isReadOnly: BOOLEAN; code: STRING)
+    | mType(type),
+      isRef(isRef),
+      readOnly(isReadOnly),
+      code(code);
+END;
+
+PROCEDURE TypeNarrowVariable.type(): Types.PStorageType;
+    RETURN SELF.mType;
+END;
+
+PROCEDURE TypeNarrowVariable.setType(type: Types.PStorageType);
+BEGIN
+    SELF.mType := type;
+END;
+
+PROCEDURE TypeNarrowVariable.isReference(): BOOLEAN;
+    RETURN SELF.isRef;
+END;
+
+PROCEDURE TypeNarrowVariable.isReadOnly(): BOOLEAN;
+    RETURN SELF.readOnly;
+END;
+
+PROCEDURE TypeNarrowVariable.referenceCode(): STRING;
+BEGIN
+    RETURN SELF.code;        
+END;
+
+PROCEDURE TypeNarrowVariable.idType(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF SELF.readOnly THEN
+        result := "non-VAR formal parameter";
+    ELSE
+        result := SUPER();
+    END;
+    RETURN result;
+END;
+
+PROCEDURE DereferencedTypeNarrowVariable.DereferencedTypeNarrowVariable(var: PTypeNarrowVariable)
+    | var(var);
+END;
+
+PROCEDURE DereferencedTypeNarrowVariable.type(): Types.PStorageType;
+    RETURN SELF.var.type();
+END;
+
+PROCEDURE DereferencedTypeNarrowVariable.setType(type: Types.PStorageType);
+BEGIN
+    SELF.var.setType(type);
+END;
+
+PROCEDURE DereferencedTypeNarrowVariable.isReference(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE DereferencedTypeNarrowVariable.isReadOnly(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE DereferencedTypeNarrowVariable.referenceCode(): STRING;
+BEGIN
+    RETURN SELF.var.code;        
+END;
+
+PROCEDURE SelfAsPointer.idType(): STRING;
+    RETURN "SELF(POINTER)";
+END;
+
+PROCEDURE OperatorNewMsg.OperatorNewMsg(e: Expression.PType)
+    | expression(e);
+END;
+
+PROCEDURE PromoteTypeMsg.PromoteTypeMsg(info: Types.PId; type: Types.PType)
+    | info(info),
+      type(type);
+END;
+
+PROCEDURE TransferPromotedTypesMsg.TransferPromotedTypesMsg(p: EberonTypePromotion.PCombined)
+    | promotion(p); 
+END;
+
+PROCEDURE SuperMethodInfo.SuperMethodInfo(info: Types.PProcedureId; code: STRING)
+    | info(info),
+      code(code);
+END;
+
+END EberonContextDesignator.

@@ -28,10 +28,10 @@ TYPE
     Operation = PROCEDURE(p: Type);
     PMaybe = POINTER TO Maybe;
 
-    Combined = RECORD(Type)
+    Combined* = RECORD(Type)
         PROCEDURE Combined(op, invertedOp: Operation; inverted: BOOLEAN);
 
-        PROCEDURE clear();
+        PROCEDURE clear*();
         PROCEDURE next(): PMaybe;
 
         op, invertedOp: Operation;
@@ -40,7 +40,7 @@ TYPE
         current: PType;
         count: INTEGER;
     END;
-    PCombined = POINTER TO Combined;
+    PCombined* = POINTER TO Combined;
 
     And* = RECORD(Combined)
         PROCEDURE And(inverted: BOOLEAN);

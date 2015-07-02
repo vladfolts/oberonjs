@@ -2,7 +2,8 @@ MODULE EberonRtl;
 IMPORT OberonRtl;
 TYPE
     Type* = RECORD(OberonRtl.Type)
-        clearMap*: PROCEDURE(s: STRING): STRING;
+        PROCEDURE clearMap*(s: STRING): STRING;
+        PROCEDURE getMappedValue*(code, indexCode: STRING): STRING;
     END;
     PType* = POINTER TO Type;
 

@@ -6,9 +6,9 @@ CONST
     clearMethodName = "clear";
 TYPE
     Type* = RECORD(Types.StorageType)
-        PROCEDURE Type*(type: Types.PType);
+        PROCEDURE Type*(type: Types.PStorageType);
 
-        valueType*: Types.PType;
+        valueType*: Types.PStorageType;
     END;
     PType* = POINTER TO Type;
 
@@ -48,7 +48,7 @@ PROCEDURE Type.description(): STRING;
     RETURN "MAP OF " + SELF.valueType.description();
 END;
 
-PROCEDURE Type.Type(valueType: Types.PType)
+PROCEDURE Type.Type(valueType: Types.PStorageType)
     | valueType(valueType);
 END;
 

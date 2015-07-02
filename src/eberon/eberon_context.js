@@ -16,8 +16,9 @@ var ContextHierarchy = require("js/ContextHierarchy.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var ContextVar = require("js/ContextVar.js");
-var EberonConstructor= require("js/EberonConstructor.js");
-var EberonContext= require("js/EberonContext.js");
+var EberonConstructor = require("js/EberonConstructor.js");
+var EberonContext = require("js/EberonContext.js");
+var EberonContextDesignator = require("js/EberonContextDesignator.js");
 var EberonDynamicArray = require("js/EberonDynamicArray.js");
 var EberonMap = require("js/EberonMap.js");
 var EberonRecord = require("js/EberonRecord.js");
@@ -104,87 +105,16 @@ var MethodHeading = ChainedContext.extend({
     }
 });
 
-function getMethodSelf(){}
-function getSelfAsPointerMsg(){}
-function getMethodSuper(){}
-
-var ResultVariable = Class.extend.call(Type.Variable, {
-    init: function(e){
-        this.__e = e;
-    },
-    expression: function(){return this.__e;},
-    type: function(){return this.__e.type();},
-    isReadOnly: function(){return true;},
-    idType: function(){return "procedure call " + (this.type() ? "result" : "statement");}
-});
-
-var TypeNarrowVariableBase = Class.extend.call(Type.Variable, {
-    init: function TypeNarrowVariableBase(){
-    }    
-});
-
-var TypeNarrowVariable = TypeNarrowVariableBase.extend({
-    init: function TypeNarrowVariable(type, isRef, isReadOnly, code){
-        this.__type = type;
-        this.__isRef = isRef;
-        this.__isReadOnly = isReadOnly;
-        this.__code = code;
-    },
-    type: function(){
-        return this.__type;
-    },
-    isReference: function(){
-        return this.__isRef;
-    },
-    code: function(){
-        return this.__code;
-    },
-    referenceCode: function(){
-        return this.__code;
-    },
-    isReadOnly: function(){
-        return this.__isReadOnly;
-    },
-    idType: function(){
-        return this.__isReadOnly ? "non-VAR formal parameter"
-                                 : TypeNarrowVariableBase.prototype.idType.call(this);
-    },
-    setType: function(type){
-        this.__type = type;
-    }
-});
-
-var DereferencedTypeNarrowVariable = TypeNarrowVariableBase.extend({
-    init: function DereferencedTypeNarrowVariable(v){
-        this.__v = v;
-    },
-    type: function(){
-        return this.__v.type();
-    },
-    isReference: function(){
-        return true;
-    },
-    isReadOnly: function(){
-        return false;
-    },
-    setType: function(type){
-        this.__v.setType(type);
-    },
-    referenceCode: function(){
-        return this.__v.code();
-    }
-});
-
-var InPlaceStringLiteral = TypeNarrowVariable.extend({
+var InPlaceStringLiteral = Class.extend.call(EberonContextDesignator.TypeNarrowVariable, {
     init: function(type){
-        TypeNarrowVariable.prototype.init.call(this, type, false, true);
+        EberonContextDesignator.TypeNarrowVariable.call(this, type, false, true);
     },
     idType: function(){return "string literal";}
 });
 
-var ForEachVariable = TypeNarrowVariable.extend({
+var ForEachVariable = Class.extend.call(EberonContextDesignator.TypeNarrowVariable, {
     init: function(type){
-        TypeNarrowVariable.prototype.init.call(this, type, false, true);
+        EberonContextDesignator.TypeNarrowVariable.call(this, type, false, true);
     },
     idType: function(){return "FOR variable";}
 });
@@ -207,144 +137,6 @@ var Identdef = Class.extend.call(ContextIdentdef.Type, {
 function makeContextCall(context, call){
     return call(ContextHierarchy.makeLanguageContext(context));
     }
-
-function OperatorNewMsg(e){
-    this.expression = e;
-}
-
-function checkMapKeyType(type){
-    if (type != EberonString.string() && !Type.isString(type))
-        throw new Errors.Error("invalid MAP key type: STRING or string literal or ARRAY OF CHAR expected, got '" + type.description() + "'");            
-}
-
-var MapElementVariable = Class.extend.call(Type.Variable, {
-    init: function(type, readOnly, code){
-        this.__type = type;
-        this.__isReadOnly = readOnly;
-        this.__code = code;
-    },
-    type: function(){return this.__type;},
-    isReadOnly: function(){return this.__isReadOnly;},
-    isReference: function(){return false;},
-    referenceCode: function(){
-        if (this.__type.isScalar())
-            throw new Errors.Error("cannot reference map element of type '" 
-                                 + this.__type.description() + "'");
-        return this.__code;        
-    },
-    idType: function(){
-        return (this.__isReadOnly ? "read-only " : "") + "MAP's element";
-    }
-});
-
-var SelfAsPointer = Class.extend.call(Type.Id, {
-    init: function(){
-    },
-    idType: function(){
-        return "SELF(POINTER)";
-    }
-});
-
-var Designator = Class.extend.call(ContextDesignator.Type, {
-    init: function EberonContext$Designator(parent){
-        ContextDesignator.Type.call(this, parent);
-        this.__procCall = undefined;
-    },
-    doCheckIndexType: function(type){
-        if (this.currentType instanceof EberonMap.Type){
-            checkMapKeyType(type);
-            return;
-        }
-        return ContextDesignator.Type.prototype.doCheckIndexType.call(this, type);
-    },
-    doIndexSequence: function(info, code, indexCode){
-        var currentType = this.currentType;
-        if (currentType == EberonString.string())
-            return { length: undefined, 
-                     type: Type.basic().ch,
-                     info: EberonString.makeElementVariable(),
-                     code: this.stringIndexCode(),
-                     lval: ""
-                   };
-
-        if (currentType instanceof EberonMap.Type){
-            var indexType = currentType.valueType;
-            var rval = this.root().language().rtl.getMappedValue(code, indexCode);
-            return { length: undefined, 
-                     type: indexType,
-                     info: new MapElementVariable(indexType, info.isReadOnly(), rval),
-                     code: rval,
-                     lval: code + "[" + indexCode + "]"
-                   };
-        }
-        
-        return ContextDesignator.Type.prototype.doIndexSequence.call(this, info, code, indexCode);
-    },
-    doMakeDerefVar: function(info){
-        if (info instanceof TypeNarrowVariable)
-            return new DereferencedTypeNarrowVariable(info);
-        return ContextDesignator.Type.prototype.doMakeDerefVar.call(this, info);
-    },
-    handleMessage: function(msg){
-        if (msg instanceof ContextDesignator.BeginCallMsg)
-            return this.__beginCall();
-        if (msg instanceof ContextDesignator.EndCallMsg)
-            return this.__endCall();
-        if (msg instanceof OperatorNewMsg){
-            var e = msg.expression;
-            this.advance(e.type(), new ResultVariable(e), e.code(), "");
-            return;
-        }
-
-        // no type promotion after calling functions
-        if (breakTypePromotion(msg))
-            return;
-        
-        return ContextDesignator.Type.prototype.handleMessage.call(this, msg);
-    },
-    handleExpression: function(e){
-        if (this.__procCall)
-            this.__procCall.handleArgument(e);
-        else
-            ContextDesignator.Type.prototype.handleExpression.call(this, e);
-    },
-    handleLiteral: function(s){
-        if (s == "SELF"){
-            var type = this.handleMessage(getMethodSelf);
-            var info = new Variable.DeclaredVariable("this", type);
-            this.advance(type, info, "this", "");
-        } 
-        else if (s == "POINTER"){
-            var typeId = new TypeId.Type(this.handleMessage(getSelfAsPointerMsg));
-            var pointerType = new Record.Pointer("", typeId);
-            this.advance(pointerType, new SelfAsPointer(), "", "");
-        }
-        else if (s == "SUPER"){
-            var ms = this.handleMessage(getMethodSuper);
-            this.advance(ms.info.type, ms.info, ms.code, "");
-        }
-        else 
-            ContextDesignator.Type.prototype.handleLiteral.call(this, s);
-    },
-    __beginCall: function(){
-        var type = this.currentType;
-        var info = this.info;
-        if (info instanceof TypeId.Type && type instanceof Type.Record){
-            this.__procCall = makeContextCall(
-                this, 
-                function(cx){ return EberonConstructor.makeConstructorCall(info, cx, false); }
-                );
-            this.discardCode();
-        }
-        else
-            this.__procCall = ContextProcedure.makeCall(this, type, this.info);
-    },
-    __endCall: function(){
-        var e = this.__procCall.end();
-        this.advance(e.type(), new ResultVariable(e), e.code(), "");
-        this.__procCall = undefined;
-    }
-});
 
 var OperatorNew = ChainedContext.extend({
     init: function EberonContext$OperatorNew(parent){
@@ -383,7 +175,7 @@ var OperatorNew = ChainedContext.extend({
         return ChainedContext.prototype.handleMessage.call(this, msg);
     },
     endParse: function(){
-        this.handleMessage(new OperatorNewMsg(this.__call.end()));
+        this.handleMessage(new EberonContextDesignator.OperatorNewMsg(this.__call.end()));
     }
 });
 
@@ -407,7 +199,7 @@ var InPlaceVariableInit = ChainedContext.extend({
         if (!isString && !(type instanceof Type.StorageType))
             throw new Errors.Error("cannot use " + type.description() + " to initialize variable");
         var v = isString ? new InPlaceStringLiteral(type) 
-                         : new TypeNarrowVariable(type, false, false, this.__id);
+                         : new EberonContextDesignator.TypeNarrowVariable(type, false, false, this.__id);
         this._symbol = new Symbol.Symbol(this.__id, v);
         if (type instanceof Type.Record){
             EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForCopy);
@@ -460,8 +252,8 @@ var ExpressionProcedureCall = ChainedContext.extend({
         var d = this.attributes.designator;
         var info = d.info();
         var e;
-        if (info instanceof ResultVariable){
-            e = info.expression();
+        if (info instanceof EberonContextDesignator.ResultVariable){
+            e = info.expression;
             e = new Expression.Type(d.code(), d.type(), undefined, e.constValue(), e.maxPrecedence());
         }
         else
@@ -488,7 +280,7 @@ var AssignmentOrProcedureCall = ChainedContext.extend({
             var left = Expression.make(d.code(), type, d);
             code = op.assign(left, this.__right, ContextHierarchy.makeLanguageContext(this));
         }
-        else if (!(d.info() instanceof ResultVariable)){
+        else if (!(d.info() instanceof EberonContextDesignator.ResultVariable)){
             var procCall = ContextProcedure.makeCall(this, type, d.info());
             var result = procCall.end();
             Module.assertProcStatementResult(result.type());
@@ -597,17 +389,8 @@ var RecordDecl = Class.extend.call(ContextType.Record, {
     }
 });
 
-function breakTypePromotion(msg){
-    if (msg instanceof TransferPromotedTypesMsg){
-        msg.promotion.clear();
-        return true;
-    }
-    if (msg instanceof PromoteTypeMsg)
-        return true;
-}
-
 function handleTypePromotionMadeInSeparateStatement(msg){
-    if (breakTypePromotion(msg))
+    if (EberonContextDesignator.breakTypePromotion(msg))
         return true;
     if (msg instanceof BeginTypePromotionOrMsg){
         msg.result = new TypePromotion.Or();
@@ -683,12 +466,12 @@ var ProcOrMethodDecl = Class.extend.call(ContextProcedure.Declaration, {
         this.__initedFields = [];
     },
     handleMessage: function(msg){
-        if (msg == getMethodSelf){
+        if (msg instanceof EberonContextDesignator.GetMethodSelfMsg){
             if (!this.__boundType)
                 throw new Errors.Error("SELF can be used only in methods");
             return this.__boundType;
         }
-        if (msg == getSelfAsPointerMsg){
+        if (msg instanceof EberonContextDesignator.GetSelfAsPointerMsg){
             this.__boundType.requireNewOnly();
             return this.__boundType;
         }
@@ -701,7 +484,7 @@ var ProcOrMethodDecl = Class.extend.call(ContextProcedure.Declaration, {
             return this.__handleSuperCall();
         }
 
-        if (msg == getMethodSuper){
+        if (msg instanceof EberonContextDesignator.GetMethodSuperMsg){
             if (this.__isConstructor)
                 throw new Errors.Error("cannot call base constructor from procedure body (use '| SUPER' to pass parameters to base constructor)");
             return this.__handleSuperCall();
@@ -749,10 +532,10 @@ var ProcOrMethodDecl = Class.extend.call(ContextProcedure.Declaration, {
     },
     doMakeArgumentVariable: function(arg, name){
         if (!arg.isVar)
-            return new TypeNarrowVariable(arg.type, false, true, name);
+            return new EberonContextDesignator.TypeNarrowVariable(arg.type, false, true, name);
 
         if (arg.type instanceof Type.Record)
-            return new TypeNarrowVariable(arg.type, true, false, name);
+            return new EberonContextDesignator.TypeNarrowVariable(arg.type, true, false, name);
 
         return ContextProcedure.Declaration.prototype.doMakeArgumentVariable.call(this, arg, name);
     },
@@ -814,12 +597,12 @@ var ProcOrMethodDecl = Class.extend.call(ContextProcedure.Declaration, {
         if (!this.__isConstructor)
             EberonRecord.requireMethodDefinition(baseType, id, "cannot use abstract method(s) in SUPER calls");
         
-        return {
-            info: this.__isConstructor ? undefined
-                                       : new Type.ProcedureId(new EberonTypes.MethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
-            code: this.qualifyScope(baseType.scope)
+        return new EberonContextDesignator.SuperMethodInfo(
+            this.__isConstructor ? undefined
+                                 : new Type.ProcedureId(new EberonTypes.MethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
+            this.qualifyScope(baseType.scope)
                 + Type.typeName(baseType) + ".prototype." + id + ".call"
-        };
+            );
     },
     __handleFieldInit: function(id){
         var fields = this.__boundType.fields;
@@ -876,15 +659,6 @@ var MulOperator = Class.extend.call(ContextExpression.MulOperator, {
     }
 });
 
-function PromoteTypeMsg(info, type){
-    this.info = info;
-    this.type = type;
-}
-
-function TransferPromotedTypesMsg(promotion){
-    this.promotion = promotion;
-}
-
 var RelationOps = Class.extend.call(ContextExpression.RelationOps, {
     init: function EberonContext$RelationOps(){
         ContextExpression.RelationOps.call(this);
@@ -925,8 +699,8 @@ var RelationOps = Class.extend.call(ContextExpression.RelationOps, {
             var d = left.designator();
             if (d){
                 var v = d.info();
-                if (v instanceof TypeNarrowVariableBase)
-                    context.handleMessage(new PromoteTypeMsg(v, ContextExpression.unwrapType(right.designator().info())));
+                if (v instanceof EberonContextDesignator.TypeNarrowVariableBase)
+                    context.handleMessage(new EberonContextDesignator.PromoteTypeMsg(v, ContextExpression.unwrapType(right.designator().info())));
             }
             return impl(left, right);
         };
@@ -955,7 +729,7 @@ var Term = Class.extend.call(ContextExpression.Term, {
         this.__andHandled = false;
     },
     handleMessage: function(msg){
-        if (msg instanceof PromoteTypeMsg) {
+        if (msg instanceof EberonContextDesignator.PromoteTypeMsg) {
             var promoted = msg.info;
             var p = this.getCurrentPromotion();
             if (p)
@@ -1042,7 +816,7 @@ var ExpressionContext = Class.extend.call(ContextExpression.ExpressionNode, {
         this.__currentTypePromotion = undefined;
     },
     handleMessage: function(msg){
-        if (msg instanceof TransferPromotedTypesMsg)
+        if (msg instanceof EberonContextDesignator.TransferPromotedTypesMsg)
             return;
         return ContextExpression.ExpressionNode.prototype.handleMessage.call(this, msg);
     },
@@ -1057,12 +831,12 @@ var ExpressionContext = Class.extend.call(ContextExpression.ExpressionNode, {
     },
     endParse: function(){
         if (this.__currentTypePromotion)
-            this.parent().handleMessage(new TransferPromotedTypesMsg(this.__currentTypePromotion));
+            this.parent().handleMessage(new EberonContextDesignator.TransferPromotedTypesMsg(this.__currentTypePromotion));
         return ContextExpression.ExpressionNode.prototype.endParse.call(this);
     },
     doRelationOperation: function(left, right, relation){
         if (relation == "IN" && right.type() instanceof EberonMap.Type){
-            checkMapKeyType(left.type());
+            EberonContextDesignator.checkMapKeyType(left.type());
             return eOp.inMap;            
         }
         return ContextExpression.ExpressionNode.prototype.doRelationOperation.call(this, left, right, relation);
@@ -1082,9 +856,9 @@ var OperatorScopes = Class.extend({
     handleMessage: function(msg){
         if (this.__ignorePromotions)
             return false;
-        if (msg instanceof TransferPromotedTypesMsg)
+        if (msg instanceof EberonContextDesignator.TransferPromotedTypesMsg)
             return true;
-        if (msg instanceof PromoteTypeMsg){
+        if (msg instanceof EberonContextDesignator.PromoteTypeMsg){
             this.__typePromotion = new TypePromotion.ForVariable(msg.info, msg.type);
             this.__typePromotions.push(this.__typePromotion);
             return true;
@@ -1422,7 +1196,6 @@ exports.ArrayDimensions = ArrayDimensions;
 exports.BaseInit = BaseInit;
 exports.CaseLabel = CaseLabel;
 exports.ConstDecl = ConstDecl;
-exports.Designator = Designator;
 exports.Expression = ExpressionContext;
 exports.ExpressionProcedureCall = ExpressionProcedureCall;
 exports.For = For;
