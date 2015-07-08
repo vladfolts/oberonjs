@@ -27,7 +27,7 @@ TYPE
     END;
 
     TypeNarrowVariable* = RECORD(TypeNarrowVariableBase)
-        PROCEDURE TypeNarrowVariable(type: Types.PStorageType; isRef, isReadOnly: BOOLEAN; code: STRING);
+        PROCEDURE TypeNarrowVariable*(type: Types.PStorageType; isRef, isReadOnly: BOOLEAN; code: STRING);
 
         PROCEDURE setType(type: Types.PStorageType);
 
@@ -78,12 +78,12 @@ TYPE
     END;
 
     SuperMethodInfo* = RECORD(Object.Type)
-        PROCEDURE SuperMethodInfo(info: Types.PProcedureId; code: STRING);
+        PROCEDURE SuperMethodInfo*(info: Types.PProcedureId; code: STRING);
 
         info: Types.PProcedureId;
         code: STRING;
     END;
-    PSuperMethodInfo = POINTER TO SuperMethodInfo;
+    PSuperMethodInfo* = POINTER TO SuperMethodInfo;
 
 VAR
     getMethodSelfMsg: GetMethodSelfMsg;

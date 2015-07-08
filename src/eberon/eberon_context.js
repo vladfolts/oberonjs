@@ -19,6 +19,7 @@ var ContextVar = require("js/ContextVar.js");
 var EberonConstructor = require("js/EberonConstructor.js");
 var EberonContext = require("js/EberonContext.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
+var EberonContextProcedure = require("js/EberonContextProcedure.js");
 var EberonDynamicArray = require("js/EberonDynamicArray.js");
 var EberonMap = require("js/EberonMap.js");
 var EberonRecord = require("js/EberonRecord.js");
@@ -43,17 +44,6 @@ function log(s){
     console.info(s);
 }
 */
-
-function superMethodCallGenerator(context, type){
-    var args = Procedure.makeArgumentsCode(context);
-    args.write(Expression.make("this"));
-    return Procedure.makeProcCallGeneratorWithCustomArgs(context, type, args);
-}
-
-function MethodOrProcMsg(id, type){
-    this.id = id;
-    this.type = type;
-}
 
 var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
@@ -84,7 +74,7 @@ var ProcOrMethodId = ChainedContext.extend({
         if (this.__type && id.exported())
             throw new Errors.Error("method implementation cannot be exported: " + id.id());
         checkOrdinaryExport(id, "procedure");
-        this.handleMessage(new MethodOrProcMsg(id, this.__type));
+        this.handleMessage(new EberonContextProcedure.MethodOrProcMsg(id, this.__type));
     }
 });
 
@@ -101,7 +91,7 @@ var MethodHeading = ChainedContext.extend({
     typeName: function(){return "";},
     setType: function(type){this.__type = type;},
     endParse: function(){
-        this.handleMessage(new MethodOrProcMsg(this.__id, this.__type));
+        this.handleMessage(new EberonContextProcedure.MethodOrProcMsg(this.__id, this.__type));
     }
 });
 
@@ -341,7 +331,7 @@ var RecordDecl = Class.extend.call(ContextType.Record, {
         ContextType.Record.call(this, context, function(name, cons, scope){return new EberonRecord.Record(name, cons, scope); });
     },
     handleMessage: function(msg){
-        if (msg instanceof MethodOrProcMsg){
+        if (msg instanceof EberonContextProcedure.MethodOrProcMsg){
             var methodType = msg.type;
             var boundType = this.type;
             var id = msg.id.id();
@@ -389,23 +379,6 @@ var RecordDecl = Class.extend.call(ContextType.Record, {
     }
 });
 
-function handleTypePromotionMadeInSeparateStatement(msg){
-    if (EberonContextDesignator.breakTypePromotion(msg))
-        return true;
-    if (msg instanceof BeginTypePromotionOrMsg){
-        msg.result = new TypePromotion.Or();
-        return true;
-    }
-    return false;
-}
-
-function getConstructorSuperMsg(){}
-function getConstructorBoundType(){}
-
-function InitFieldMsg(id){
-    this.id = id;
-}
-
 var BaseInit = ChainedContext.extend({
     init: function EberonContext$BaseInit(parent){
         ChainedContext.prototype.init.call(this, parent);
@@ -415,7 +388,7 @@ var BaseInit = ChainedContext.extend({
     },
     type: function(){
         if (!this.__type)
-            this.__type = this.handleMessage(getConstructorBoundType);
+            this.__type = this.handleMessage(new EberonContextProcedure.GetConstructorBoundTypeMsg());
         return this.__type;
     },
     codeGenerator: function(){return CodeGenerator.nullGenerator();},
@@ -434,14 +407,14 @@ var BaseInit = ChainedContext.extend({
     },
     handleIdent: function(id){
         this.__initField = id;
-        this.__initCall = this.handleMessage(new InitFieldMsg(id));
+        this.__initCall = this.handleMessage(new EberonContextProcedure.InitFieldMsg(id));
     },
     handleExpression: function(e){
         this.__initCall.handleArgument(e);
     },
     handleLiteral: function(s){
         if (s == "SUPER"){
-            var ms = this.handleMessage(getConstructorSuperMsg);
+            var ms = this.handleMessage(new EberonContextProcedure.GetConstructorSuperMsg());
             this.__initCall = makeContextCall(
                 this,
                 function(cx){ 
@@ -451,172 +424,6 @@ var BaseInit = ChainedContext.extend({
                     }.bind(this)
                 );
         }
-    }
-});
-
-var ProcOrMethodDecl = Class.extend.call(ContextProcedure.Declaration, {
-    init: function EberonContext$ProcOrMethodDecl(parent, stdSymbols){
-        ContextProcedure.Declaration.call(this, parent, stdSymbols);
-        this.__methodId = undefined;
-        this.__methodType = undefined;
-        this.__boundType = undefined;
-        this.__endingId = undefined;
-        this.__isConstructor = false;
-        this.__baseConstructorWasCalled = false;
-        this.__initedFields = [];
-    },
-    handleMessage: function(msg){
-        if (msg instanceof EberonContextDesignator.GetMethodSelfMsg){
-            if (!this.__boundType)
-                throw new Errors.Error("SELF can be used only in methods");
-            return this.__boundType;
-        }
-        if (msg instanceof EberonContextDesignator.GetSelfAsPointerMsg){
-            this.__boundType.requireNewOnly();
-            return this.__boundType;
-        }
-
-        if (msg == getConstructorBoundType)
-            return this.__boundType;
-
-        if (msg == getConstructorSuperMsg){
-            this.__baseConstructorWasCalled = true;
-            return this.__handleSuperCall();
-        }
-
-        if (msg instanceof EberonContextDesignator.GetMethodSuperMsg){
-            if (this.__isConstructor)
-                throw new Errors.Error("cannot call base constructor from procedure body (use '| SUPER' to pass parameters to base constructor)");
-            return this.__handleSuperCall();
-        }
-
-        if (msg instanceof InitFieldMsg)
-            return this.__handleFieldInit(msg.id);
-
-        if (msg instanceof MethodOrProcMsg){
-            var id = msg.id;
-            var type = msg.type;
-            if (type){
-                this.__methodId = id;
-                this.__boundType = type;
-                var name = Type.typeName(type);
-                this.__isConstructor = name == id.id();
-            }
-
-            ContextProcedure.Declaration.prototype.handleIdentdef.call(this, id);
-            return;
-        }
-
-        if (handleTypePromotionMadeInSeparateStatement(msg))
-            return;
-
-        return ContextProcedure.Declaration.prototype.handleMessage.call(this, msg);
-    },
-    doProlog: function(){
-        return this.__boundType
-            ? this.__isConstructor ? "function " + Type.typeName(this.__boundType) + "("
-                                   : Type.typeName(this.__boundType) + ".prototype." + this.__methodId.id() + " = function("
-            : ContextProcedure.Declaration.prototype.doProlog.call(this);
-    },
-    doEpilog: function(){
-        return this.__boundType && !this.__isConstructor
-            ? ";\n"
-            : ContextProcedure.Declaration.prototype.doEpilog.call(this);
-    },
-    doBeginBody: function(){
-        ContextProcedure.Declaration.prototype.doBeginBody.call(this);
-        if (this.__isConstructor)
-            this.codeGenerator().write(
-                this.__boundType.baseConstructorCallCode
-              + EberonRecord.fieldsInitializationCode(this.__boundType, this));
-    },
-    doMakeArgumentVariable: function(arg, name){
-        if (!arg.isVar)
-            return new EberonContextDesignator.TypeNarrowVariable(arg.type, false, true, name);
-
-        if (arg.type instanceof Type.Record)
-            return new EberonContextDesignator.TypeNarrowVariable(arg.type, true, false, name);
-
-        return ContextProcedure.Declaration.prototype.doMakeArgumentVariable.call(this, arg, name);
-    },
-    setType: function(type){
-        if (this.__methodId){
-            this.__methodType = new EberonTypes.MethodType(this.__methodId.id(), type, Procedure.makeProcCallGenerator);
-            this.type = type;
-            }            
-        else
-            ContextProcedure.Declaration.prototype.setType.call(this, type);
-    },
-    handleIdent: function(id){
-        if (!this.__boundType)
-            ContextProcedure.Declaration.prototype.handleIdent.call(this, id);
-        else if (this.__endingId)
-            this.__endingId = this.__endingId + "." + id;
-        else
-            this.__endingId = id;
-    },
-    endParse: function(){
-        ContextProcedure.Declaration.prototype.endParse.call(this);
-
-        if (this.__boundType){
-            if (this.__endingId){
-                var expected = Type.typeName(this.__boundType) + "." + this.id.id();
-                if (this.__endingId != expected)
-                    throw new Errors.Error(
-                          "mismatched method names: expected '" 
-                        + expected
-                        + "' at the end (or nothing), got '" 
-                        + this.__endingId + "'");
-            }
-
-            if (this.__isConstructor){
-                this.__boundType.defineConstructor(this.__methodType.procType());
-
-                var base = this.__boundType.base;
-                var baseConstructor = base && EberonRecord.constructor$(base);
-                if (!this.__baseConstructorWasCalled && baseConstructor && baseConstructor.args().length)
-                    throw new Errors.Error("base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)");
-                if (this.__baseConstructorWasCalled && (!baseConstructor || !baseConstructor.args().length))
-                    throw new Errors.Error("base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)");
-            }
-            else
-                this.__boundType.defineMethod(this.__methodId, this.__methodType);
-        }
-    },
-    __handleSuperCall: function(){
-        if (!this.__methodId)
-            throw new Errors.Error("SUPER can be used only in methods");
-
-        var baseType = this.__boundType.base;
-        if (!baseType)
-            throw new Errors.Error(
-                  "'" + Type.typeName(this.__boundType)
-                + "' has no base type - SUPER cannot be used");
-
-        var id = this.__methodId.id();
-        if (!this.__isConstructor)
-            EberonRecord.requireMethodDefinition(baseType, id, "cannot use abstract method(s) in SUPER calls");
-        
-        return new EberonContextDesignator.SuperMethodInfo(
-            this.__isConstructor ? undefined
-                                 : new Type.ProcedureId(new EberonTypes.MethodType(id, this.__methodType.procType(), superMethodCallGenerator)),
-            this.qualifyScope(baseType.scope)
-                + Type.typeName(baseType) + ".prototype." + id + ".call"
-            );
-    },
-    __handleFieldInit: function(id){
-        var fields = this.__boundType.fields;
-        if (!fields.hasOwnProperty(id))
-            throw new Errors.Error("'" + id + "' is not record '" + Type.typeName(this.__boundType) + "' own field");
-        
-        if (this.__initedFields.indexOf(id) != -1)
-            throw new Errors.Error("field '" + id + "' is already initialized");
-
-        this.__initedFields.push(id);        
-        var type = fields[id].type();
-        return makeContextCall(
-            this, 
-            function(cx){return EberonConstructor.makeFieldInitCall(type, cx, id);});
     }
 });
 
@@ -717,10 +524,6 @@ function BeginTypePromotionAndMsg(){
     this.result = undefined;
 }
 
-function BeginTypePromotionOrMsg(){
-    this.result = undefined;
-}
-
 var Term = Class.extend.call(ContextExpression.Term, {
     init: function EberonContext$Term(context){
         ContextExpression.Term.call(this, context);
@@ -736,7 +539,7 @@ var Term = Class.extend.call(ContextExpression.Term, {
                 p.promote(promoted, msg.type);
             return;
         }
-        if (msg instanceof BeginTypePromotionOrMsg){
+        if (msg instanceof EberonContextProcedure.BeginTypePromotionOrMsg){
             var cp = this.getCurrentPromotion();
             if (cp)
                 msg.result = cp.makeOr();
@@ -794,7 +597,7 @@ var SimpleExpression = Class.extend.call(ContextExpression.SimpleExpression, {
     },
     __getCurrentPromotion: function(){
         if (!this.__currentPromotion){
-            var msg = new BeginTypePromotionOrMsg();
+            var msg = new EberonContextProcedure.BeginTypePromotionOrMsg();
             this.parent().handleMessage(msg);
             this.__typePromotion = msg.result;
             if (this.__typePromotion){
@@ -863,7 +666,7 @@ var OperatorScopes = Class.extend({
             this.__typePromotions.push(this.__typePromotion);
             return true;
         }
-        if (msg instanceof BeginTypePromotionOrMsg){
+        if (msg instanceof EberonContextProcedure.BeginTypePromotionOrMsg){
             this.__typePromotion = new TypePromotion.Or();
             this.__typePromotions.push(this.__typePromotion);
             msg.result = this.__typePromotion;
@@ -1184,7 +987,7 @@ var ModuleDeclaration = Class.extend.call(ContextModule.Declaration, {
         ContextModule.Declaration.call(this, context);
     },
     handleMessage: function(msg){
-        if (handleTypePromotionMadeInSeparateStatement(msg))
+        if (EberonContextProcedure.handleTypePromotionMadeInSeparateStatement(msg))
             return;
         return ContextModule.Declaration.prototype.handleMessage.call(this, msg);
     }
@@ -1212,7 +1015,6 @@ exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.Factor = Factor;
 exports.MapDecl = MapDecl;
 exports.ProcOrMethodId = ProcOrMethodId;
-exports.ProcOrMethodDecl = ProcOrMethodDecl;
 exports.RecordDecl = RecordDecl;
 exports.Repeat = Repeat;
 exports.SimpleExpression = SimpleExpression;

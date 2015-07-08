@@ -208,7 +208,9 @@ return {
          ["T = POINTER TO POINTER TO RECORD END",
           "RECORD is expected as a POINTER base type, got 'POINTER TO anonymous RECORD'"],
          ["T = POINTER TO RECORD p: POINTER TO T END",
-          "RECORD is expected as a POINTER base type, got 'T'"]
+          "RECORD is expected as a POINTER base type, got 'T'"],
+         ["T = POINTER TO T",
+          "RECORD is expected as a POINTER base type"]
         )
     ),
 "POINTER dereference": testWithContext(

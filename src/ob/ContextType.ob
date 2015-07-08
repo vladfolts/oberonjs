@@ -450,15 +450,18 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE setTypeId(p: Pointer; typeId: TypeId.PType);
+PROCEDURE setPointerTypeId(p: Pointer; typeId: TypeId.PType);
 VAR
     name: STRING;
+    typeDesc: STRING;
 BEGIN
     IF ~(typeId^ IS TypeId.Forward) THEN
         type <- typeId.type();
         IF ~(type IS Types.PRecord) THEN
-            Errors.raise("RECORD is expected as a POINTER base type, got '" 
-                         + type.description() + "'");
+            IF type # NIL THEN
+                typeDesc := ", got '" + type.description() + "'";
+            END;
+            Errors.raise("RECORD is expected as a POINTER base type" + typeDesc);
         END;
     END;
     
@@ -492,14 +495,14 @@ BEGIN
         msg <- NEW ForwardTypeMsg(id);
         info := SELF.parent().handleMessage(msg^)(Types.PId);
     END;
-    setTypeId(SELF, ContextExpression.unwrapTypeId(info));
+    setPointerTypeId(SELF, ContextExpression.unwrapTypeId(info));
 END;
 
 PROCEDURE Pointer.setType(type: Types.PStorageType);
 BEGIN
     typeId <- NEW TypeId.Type(type);
     SELF.root().currentScope().addFinalizer(stripTypeId, typeId);
-    setTypeId(SELF, typeId);
+    setPointerTypeId(SELF, typeId);
 END;
 
 PROCEDURE Pointer.isAnonymousDeclaration(): BOOLEAN;

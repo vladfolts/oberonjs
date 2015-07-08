@@ -6,17 +6,17 @@ IMPORT
     Object, Procedure, Scope, Symbols, TypeId, Types, Variable;
 TYPE
     Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
-        PROCEDURE Declaration(parent: ContextHierarchy.PNode);
+        PROCEDURE Declaration*(parent: ContextHierarchy.PNode);
 
-        PROCEDURE doProlog(): STRING;
-        PROCEDURE doEpilog(): STRING;
-        PROCEDURE doBeginBody();
-        PROCEDURE doMakeArgumentVariable(arg: Types.ProcedureArgument; name: STRING): Types.PVariable;
+        PROCEDURE doProlog*(): STRING;
+        PROCEDURE doEpilog*(): STRING;
+        PROCEDURE doBeginBody*();
+        PROCEDURE doMakeArgumentVariable*(arg: Types.ProcedureArgument; name: STRING): Types.PVariable;
 
         PROCEDURE handleReturn(e: Expression.PType);
 
         outerScope: Scope.PType;
-        id: Context.PIdentdefInfo;
+        id-: Context.PIdentdefInfo;
         type: Procedure.PType;
         multipleArguments: BOOLEAN;
         returnParsed: BOOLEAN;
@@ -60,12 +60,17 @@ PROCEDURE Declaration.Declaration(parent: ContextHierarchy.PNode)
       outerScope(SELF.root().currentScope());
 END;
 
+PROCEDURE handleIdentdef*(VAR d: Declaration; id: Context.PIdentdefInfo);
+BEGIN
+    d.id := id;
+    d.codeGenerator().write(d.doProlog());
+    root <- d.root();
+    root.pushScope(Scope.makeProcedure(root.language().stdSymbols));
+END;
+
 PROCEDURE Declaration.handleIdentdef(id: Context.PIdentdefInfo);
 BEGIN
-    SELF.id := id;
-    SELF.codeGenerator().write(SELF.doProlog());
-    root <- SELF.root();
-    root.pushScope(Scope.makeProcedure(root.language().stdSymbols));
+    handleIdentdef(SELF, id);
 END;
 
 PROCEDURE Declaration.handleIdent(id: STRING);

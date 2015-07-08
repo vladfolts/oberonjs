@@ -20,9 +20,9 @@ TYPE
 
         PROCEDURE declareConstructor(type: Procedure.PType; exported: BOOLEAN);
         PROCEDURE addMethod(methodId: Context.PIdentdefInfo; type: Types.PProcedure);
-        PROCEDURE defineConstructor(type: Procedure.PType);
-        PROCEDURE defineMethod(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
-        PROCEDURE requireNewOnly();
+        PROCEDURE defineConstructor*(type: Procedure.PType);
+        PROCEDURE defineMethod*(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
+        PROCEDURE requireNewOnly*();
         PROCEDURE setBaseConstructorCallCode(code: STRING);
         PROCEDURE setFieldInitializationCode(field: STRING; code: STRING);
         PROCEDURE setRecordInitializationCode(baseConstructorCallCode: STRING);

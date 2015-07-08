@@ -1,0 +1,267 @@
+MODULE EberonContextProcedure;
+IMPORT
+    Chars, Context, ContextHierarchy, ContextProcedure, 
+    EberonConstructor, EberonContextDesignator, EberonRecord, EberonTypePromotion, EberonTypes,
+    Errors, Expression, LanguageContext, Object, Procedure, Types;
+TYPE
+    ProcOrMethodDeclaration* = RECORD(ContextProcedure.Declaration)
+        boundType: EberonRecord.PRecord;
+        baseConstructorWasCalled: BOOLEAN;
+        methodId: Context.PIdentdefInfo;
+        methodType: EberonTypes.PMethodType;
+        isConstructor: BOOLEAN;
+        initedFields: ARRAY * OF STRING;
+        type: Procedure.PType;
+        endingId: STRING;
+    END;
+    PProcOrMethodDeclaration = POINTER TO ProcOrMethodDeclaration;
+
+    GetConstructorBoundTypeMsg* = RECORD(ContextHierarchy.Message)
+    END;
+    GetConstructorSuperMsg* = RECORD(ContextHierarchy.Message)
+    END;
+
+    InitFieldMsg* = RECORD(ContextHierarchy.Message)
+        PROCEDURE InitFieldMsg(id: STRING);
+
+        id: STRING;
+    END;
+
+    MethodOrProcMsg* = RECORD(ContextHierarchy.Message)
+        PROCEDURE MethodOrProcMsg(id: Context.PIdentdefInfo; type: EberonRecord.PRecord);
+        
+        id: Context.PIdentdefInfo; 
+        type: EberonRecord.PRecord;
+    END;
+
+    BeginTypePromotionOrMsg* = RECORD(ContextHierarchy.Message)
+        result: EberonTypePromotion.PCombined;
+    END;
+
+PROCEDURE superMethodCallGenerator(cx: LanguageContext.PType; type: Procedure.Type): Procedure.PCallGenerator;
+BEGIN
+    args <- Procedure.makeArgumentsCode(cx);
+    args.write(Expression.makeSimple("this", NIL), NIL, NIL);
+    RETURN Procedure.makeProcCallGeneratorWithCustomArgs(cx, type, args);
+END;
+
+PROCEDURE handleSuperCall(d: ProcOrMethodDeclaration): EberonContextDesignator.PSuperMethodInfo;
+VAR
+    procId: Types.PProcedureId;
+BEGIN
+    IF d.methodId = NIL THEN
+        Errors.raise("SUPER can be used only in methods");
+    END;
+
+    baseType <- d.boundType.base(EberonRecord.PRecord);
+    IF baseType = NIL THEN
+        Errors.raise(
+              "'" + d.boundType.description()
+            + "' has no base type - SUPER cannot be used");
+    END;
+
+    id <- d.methodId.id();
+    IF ~d.isConstructor THEN
+        EberonRecord.requireMethodDefinition(baseType, id, "cannot use abstract method(s) in SUPER calls");
+        procId := NEW Types.ProcedureId(NEW EberonTypes.MethodType(id, d.methodType.procType(), superMethodCallGenerator));
+    END;
+    
+    RETURN NEW EberonContextDesignator.SuperMethodInfo(
+        procId,
+        d.qualifyScope(baseType.scope) + baseType.description() + ".prototype." + id + ".call");
+END;
+
+PROCEDURE handleFieldInit(d: PProcOrMethodDeclaration; id: STRING): Procedure.PCallGenerator;
+BEGIN
+    IF ~(id IN d.boundType.fields) THEN
+        Errors.raise("'" + id + "' is not record '" + d.boundType.description() + "' own field");
+    END;        
+
+    IF d.initedFields.indexOf(id) # -1 THEN
+        Errors.raise("field '" + id + "' is already initialized");
+    END;
+
+    d.initedFields.add(id);        
+    type <- d.boundType.fields[id].type();
+    RETURN EberonConstructor.makeFieldInitCall(type, ContextHierarchy.makeLanguageContext(d), id);
+END;
+
+PROCEDURE handleTypePromotionMadeInSeparateStatement*(VAR msg: ContextHierarchy.Message): BOOLEAN;
+BEGIN
+    result <- FALSE;
+    IF EberonContextDesignator.breakTypePromotion(msg) THEN
+        result := TRUE;
+    ELSIF msg IS BeginTypePromotionOrMsg THEN
+        msg.result := NEW EberonTypePromotion.Or(FALSE);
+        result := TRUE;
+    END
+    RETURN result;
+END;
+
+PROCEDURE ProcOrMethodDeclaration.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF msg IS EberonContextDesignator.GetMethodSelfMsg THEN
+        IF SELF.boundType = NIL THEN
+            Errors.raise("SELF can be used only in methods");
+        END;
+        result := SELF.boundType;
+    ELSIF msg IS EberonContextDesignator.GetSelfAsPointerMsg THEN
+        SELF.boundType.requireNewOnly();
+        result := SELF.boundType;
+    ELSIF msg IS GetConstructorBoundTypeMsg THEN
+        result := SELF.boundType;
+    ELSIF msg IS GetConstructorSuperMsg THEN
+        SELF.baseConstructorWasCalled := TRUE;
+        result := handleSuperCall(SELF);
+    ELSIF msg IS EberonContextDesignator.GetMethodSuperMsg THEN
+        IF SELF.isConstructor THEN
+            Errors.raise("cannot call base constructor from procedure body (use '| SUPER' to pass parameters to base constructor)");
+        END;
+        result := handleSuperCall(SELF);
+    ELSIF msg IS InitFieldMsg THEN
+        result := handleFieldInit(SELF(POINTER), msg.id);
+    ELSIF msg IS MethodOrProcMsg THEN
+        id <- msg.id;
+        type <- msg.type;
+        IF type # NIL THEN
+            SELF.methodId := id;
+            SELF.boundType := type;
+            SELF.isConstructor := type.name = id.id();
+        END;
+
+        ContextProcedure.handleIdentdef(SELF, id);
+    ELSIF handleTypePromotionMadeInSeparateStatement(msg) THEN
+        (* break message passing *)
+    ELSE
+        result := SUPER(msg);
+    END;
+
+    RETURN result;
+END ProcOrMethodDeclaration.handleMessage;
+
+PROCEDURE ProcOrMethodDeclaration.doProlog(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF SELF.boundType # NIL THEN
+        IF SELF.isConstructor THEN
+            result := "function " + SELF.boundType.name + "(";
+        ELSE
+            result := SELF.boundType.name + ".prototype." + SELF.methodId.id() + " = function(";
+        END;
+    ELSE
+        result := SUPER();
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ProcOrMethodDeclaration.doEpilog(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF (SELF.boundType # NIL) & ~SELF.isConstructor THEN
+        result := ";" + Chars.ln;
+    ELSE
+        result := SUPER();
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ProcOrMethodDeclaration.doBeginBody();
+BEGIN
+    SUPER();
+    IF SELF.isConstructor THEN
+        SELF.codeGenerator().write(
+                SELF.boundType.baseConstructorCallCode
+              + EberonRecord.fieldsInitializationCode(SELF.boundType, SELF(POINTER)));
+    END;
+END;
+
+PROCEDURE ProcOrMethodDeclaration.doMakeArgumentVariable(arg: Types.ProcedureArgument; name: STRING): Types.PVariable;
+VAR
+    result: Types.PVariable;
+BEGIN
+    IF ~arg.isVar THEN
+        result := NEW EberonContextDesignator.TypeNarrowVariable(arg.type, FALSE, TRUE, name);
+    ELSIF arg.type IS Types.PRecord THEN
+        result := NEW EberonContextDesignator.TypeNarrowVariable(arg.type, TRUE, FALSE, name);
+    ELSE
+        result := SUPER(arg, name);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ProcOrMethodDeclaration.setType(type: Types.PStorageType);
+BEGIN
+    IF SELF.methodId # NIL THEN
+        t <- type(Procedure.PType);
+        SELF.methodType := NEW EberonTypes.MethodType(SELF.methodId.id(), t, Procedure.makeProcCallGenerator);
+        SELF.type := t;
+    ELSE
+        SUPER(type);
+    END;
+END;
+
+PROCEDURE ProcOrMethodDeclaration.handleIdent(id: STRING);
+BEGIN
+    IF SELF.boundType = NIL THEN
+        SUPER(id);
+    ELSIF LEN(SELF.endingId) # 0 THEN
+        SELF.endingId := SELF.endingId + "." + id;
+    ELSE
+        SELF.endingId := id;
+    END;
+END;
+
+PROCEDURE ProcOrMethodDeclaration.endParse(): BOOLEAN;
+VAR
+    baseConstructor: Procedure.PType;
+BEGIN
+    result <- SUPER();
+    IF result THEN
+        IF SELF.boundType # NIL THEN
+            IF LEN(SELF.endingId) # 0 THEN
+                expected <- SELF.boundType.name + "." + SELF.id.id();
+                IF SELF.endingId # expected THEN
+                    Errors.raise(
+                          "mismatched method names: expected '" 
+                        + expected
+                        + "' at the end (or nothing), got '" 
+                        + SELF.endingId + "'");
+                END;
+            END;
+
+            IF SELF.isConstructor THEN
+                SELF.boundType.defineConstructor(SELF.methodType.procType());
+
+                base <- SELF.boundType.base;
+                IF base # NIL THEN
+                    baseConstructor := EberonRecord.constructor(base^(EberonRecord.Record));
+                END;
+
+                IF ~SELF.baseConstructorWasCalled & (baseConstructor # NIL) & (LEN(baseConstructor.args()) # 0) THEN
+                    Errors.raise("base record constructor has parameters but was not called (use '| SUPER' to pass parameters to base constructor)");
+                END;
+                IF SELF.baseConstructorWasCalled & ((baseConstructor = NIL) OR (LEN(baseConstructor.args()) = 0)) THEN
+                    Errors.raise("base record constructor has no parameters and will be called automatically (do not use '| SUPER' to call base constructor)");
+                END;
+            ELSE
+                SELF.boundType.defineMethod(SELF.methodId, SELF.methodType);
+            END;
+        END;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE InitFieldMsg.InitFieldMsg(id: STRING)
+    | id(id);
+END;
+
+PROCEDURE MethodOrProcMsg.MethodOrProcMsg(id: Context.PIdentdefInfo; type: EberonRecord.PRecord)
+    | id(id),
+      type(type);
+END;
+
+END EberonContextProcedure.

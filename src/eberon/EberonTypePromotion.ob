@@ -47,7 +47,7 @@ TYPE
     END;
 
     Or* = RECORD(Combined)
-        PROCEDURE Or(inverted: BOOLEAN);
+        PROCEDURE Or*(inverted: BOOLEAN);
     END;
 
     Maybe = RECORD

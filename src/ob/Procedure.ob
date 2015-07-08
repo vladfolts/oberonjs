@@ -33,7 +33,7 @@ TYPE
         check: LenArgumentCheck
     END;
 
-    CallGenerator* = RECORD
+    CallGenerator* = RECORD(Object.Type)
         PROCEDURE handleArgument*(e: Expression.PType);
         PROCEDURE end*(): Expression.PType;
     END;

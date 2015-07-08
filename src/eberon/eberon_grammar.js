@@ -6,6 +6,7 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var ContextType = require("js/ContextType.js");
 var EbContext = require("eberon/eberon_context.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
+var EberonContextProcedure = require("js/EberonContextProcedure.js");
 var Grammar = require("grammar.js");
 var EbRtl = require("js/EberonRtl.js");
 var EbRtlCode = require("eberon/eberon_rtl.js");
@@ -73,7 +74,7 @@ function makeProcedureDeclaration(ident, procedureHeading, procedureBody){
     return context(and(procedureHeading, ";",
                        procedureBody,
                        optional(and(ident, optional(and(".", ident))))),
-                   EbContext.ProcOrMethodDecl);
+                   EberonContextProcedure.ProcOrMethodDeclaration);
 }
 
 function makeMethodHeading(identdef, formalParameters){
