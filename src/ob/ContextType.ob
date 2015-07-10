@@ -48,7 +48,7 @@ TYPE
     PDeclarationAndIdentHandle* = POINTER TO DeclarationAndIdentHandle;
 
     Declaration* = RECORD(DeclarationAndIdentHandle)
-        id: Context.PIdentdefInfo;
+        id-: Context.PIdentdefInfo;
         symbol: Symbols.PSymbol;
     END;
     PDeclaration* = POINTER TO Declaration;
@@ -60,16 +60,16 @@ TYPE
 
         PROCEDURE addField(field: Context.PIdentdefInfo; type: Types.PStorageType);
         PROCEDURE setBaseType(type: Types.PType);
-        PROCEDURE generateInheritance(): STRING;
-        PROCEDURE qualifiedBaseConstructor(): STRING;
+        PROCEDURE generateInheritance*(): STRING;
+        PROCEDURE qualifiedBaseConstructor*(): STRING;
 
-        PROCEDURE doMakeField(field: Context.PIdentdefInfo; type: Types.PStorageType): Types.PField;
+        PROCEDURE doMakeField*(field: Context.PIdentdefInfo; type: Types.PStorageType): Types.PField;
         PROCEDURE doGenerateConstructor(): STRING;
-        PROCEDURE doGenerateBaseConstructorCallCode(): STRING;
+        PROCEDURE doGenerateBaseConstructorCallCode*(): STRING;
 
         declaration: PDeclaration;
         cons: STRING;
-        type: R.PType;
+        type-: R.PType;
     END;
     PRecord = POINTER TO Record;
 

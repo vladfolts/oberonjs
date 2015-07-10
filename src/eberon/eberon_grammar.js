@@ -7,6 +7,7 @@ var ContextType = require("js/ContextType.js");
 var EbContext = require("eberon/eberon_context.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
 var EberonContextProcedure = require("js/EberonContextProcedure.js");
+var EberonContextType = require("js/EberonContextType.js");
 var Grammar = require("grammar.js");
 var EbRtl = require("js/EberonRtl.js");
 var EbRtlCode = require("eberon/eberon_rtl.js");
@@ -36,7 +37,7 @@ function makeStatement(base, statementSequence, ident, expression){
 
 function makeProcedureHeading(ident, identdef, formalParameters){
     return and("PROCEDURE",
-               context(and(optional(and(ident, ".")), identdef), EbContext.ProcOrMethodId),
+               context(and(optional(and(ident, ".")), identdef), EberonContextProcedure.ProcOrMethodId),
                context(optional(formalParameters), EbContext.FormalParametersProcDecl)
                );
 }
@@ -82,7 +83,7 @@ function makeMethodHeading(identdef, formalParameters){
         and("PROCEDURE",
             identdef,
             context(optional(formalParameters), EbContext.FormalParametersProcDecl)),
-        EbContext.MethodHeading);
+        EberonContextType.MethodHeading);
 }
 
 function makeFieldList(identdef, identList, type, formalParameters){
@@ -141,8 +142,8 @@ exports.language = {
         makeReturn,
         { 
             constDeclaration:   EbContext.ConstDecl, 
-            typeDeclaration:    EbContext.TypeDeclaration,
-            recordDecl:         EbContext.RecordDecl,
+            typeDeclaration:    EberonContextType.Declaration,
+            recordDecl:         EberonContextType.Record,
             variableDeclaration: EbContext.VariableDeclaration,
             ArrayDecl:          EbContext.ArrayDecl,
             Factor:             EbContext.Factor,

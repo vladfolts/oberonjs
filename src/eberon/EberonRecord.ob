@@ -16,16 +16,16 @@ TYPE
     MapOfFields = MAP OF Types.PField;
 
     Record* = RECORD(Base.Type)
-        PROCEDURE Record(name: STRING; cons: STRING; scope: ScopeBase.PType);
+        PROCEDURE Record*(name: STRING; cons: STRING; scope: ScopeBase.PType);
 
-        PROCEDURE declareConstructor(type: Procedure.PType; exported: BOOLEAN);
-        PROCEDURE addMethod(methodId: Context.PIdentdefInfo; type: Types.PProcedure);
+        PROCEDURE declareConstructor*(type: Procedure.PType; exported: BOOLEAN);
+        PROCEDURE addMethod*(methodId: Context.PIdentdefInfo; type: Types.PProcedure);
         PROCEDURE defineConstructor*(type: Procedure.PType);
         PROCEDURE defineMethod*(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
         PROCEDURE requireNewOnly*();
         PROCEDURE setBaseConstructorCallCode(code: STRING);
         PROCEDURE setFieldInitializationCode(field: STRING; code: STRING);
-        PROCEDURE setRecordInitializationCode(baseConstructorCallCode: STRING);
+        PROCEDURE setRecordInitializationCode*(baseConstructorCallCode: STRING);
 
         customConstructor-: Procedure.PType;
         customConstructorExported: BOOLEAN;

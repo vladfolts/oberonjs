@@ -1,7 +1,7 @@
 MODULE EberonContextProcedure;
 IMPORT
-    Chars, Context, ContextHierarchy, ContextProcedure, 
-    EberonConstructor, EberonContextDesignator, EberonRecord, EberonTypePromotion, EberonTypes,
+    Chars, Context, ContextExpression, ContextHierarchy, ContextProcedure, ContextType, 
+    EberonConstructor, EberonContext, EberonContextDesignator, EberonRecord, EberonTypePromotion, EberonTypes,
     Errors, Expression, LanguageContext, Object, Procedure, Types;
 TYPE
     ProcOrMethodDeclaration* = RECORD(ContextProcedure.Declaration)
@@ -15,6 +15,13 @@ TYPE
         endingId: STRING;
     END;
     PProcOrMethodDeclaration = POINTER TO ProcOrMethodDeclaration;
+
+    ProcOrMethodId* = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleIdentdef(id: EberonContext.PIdentdefInfo);
+
+        maybeTypeId: STRING;
+        type: EberonRecord.PRecord;
+    END;
 
     GetConstructorBoundTypeMsg* = RECORD(ContextHierarchy.Message)
     END;
@@ -253,6 +260,38 @@ BEGIN
         END;
     END;
     RETURN result;
+END;
+
+PROCEDURE ProcOrMethodId.handleIdent(id: STRING);
+BEGIN
+    SELF.maybeTypeId := id;
+END;
+
+PROCEDURE ProcOrMethodId.handleLiteral(s: STRING);
+BEGIN
+    ss <- ContextHierarchy.getSymbolAndScope(SELF.root()^, SELF.maybeTypeId);
+    type <- ContextExpression.unwrapType(ss.symbol().info());
+    IF ~(type IS EberonRecord.PRecord) THEN
+        Errors.raise(
+              "RECORD type expected in method declaration, got '"
+            + type.description() + "'");
+    ELSIF ss.scope() # SELF.root().currentScope() THEN
+        Errors.raise(
+              "method should be defined in the same scope as its bound type '"
+            + SELF.maybeTypeId
+            + "'");
+    ELSE
+        SELF.type := type;
+    END;
+END;
+
+PROCEDURE ProcOrMethodId.handleIdentdef(id: EberonContext.PIdentdefInfo);
+BEGIN
+    IF (SELF.type # NIL) & id.exported() THEN
+        Errors.raise("method implementation cannot be exported: " + id.id());
+    END;
+    EberonContext.checkOrdinaryExport(id^, "procedure");
+    void <- SELF.handleMessage(NEW MethodOrProcMsg(id, SELF.type)^);
 END;
 
 PROCEDURE InitFieldMsg.InitFieldMsg(id: STRING)

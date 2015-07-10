@@ -1,0 +1,134 @@
+MODULE EberonContextType;
+IMPORT
+    Chars,
+    Context, ContextHierarchy, ContextProcedure, ContextType, 
+    EberonContext, EberonRecord, EberonTypes,
+    Errors,
+    Object, Procedure, R := Record, ScopeBase, Types;
+TYPE
+    Declaration* = RECORD(ContextType.Declaration)
+    END;
+    PDeclaration = POINTER TO Declaration;
+
+    Record* = RECORD(ContextType.Record)
+        PROCEDURE Record*(parent: PDeclaration);
+    END;
+
+    MethodHeading* = RECORD(ContextType.DeclarationAndIdentHandle)
+        id: EberonContext.PIdentdefInfo;
+        type: Procedure.PType;
+    END;
+
+    MethodDeclMsg = RECORD(ContextHierarchy.Message)
+        PROCEDURE MethodDeclMsg(id: Context.PIdentdefInfo; type: Procedure.PType);
+        
+        id: Context.PIdentdefInfo; 
+        type: Procedure.PType;
+    END;
+
+PROCEDURE Declaration.handleIdentdef(id: Context.PIdentdefInfo);
+BEGIN
+    EberonContext.checkOrdinaryExport(id(EberonContext.PIdentdefInfo)^, "type");
+    SUPER(id);
+END;
+
+PROCEDURE recordTypeFactory(name, cons: STRING; scope: ScopeBase.PType): R.PType;
+    RETURN NEW EberonRecord.Record(name, cons, scope);
+END;
+
+PROCEDURE Record.Record(parent: PDeclaration)
+    | SUPER(parent, recordTypeFactory);
+END;
+
+PROCEDURE Record.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF msg IS MethodDeclMsg THEN 
+        methodType <- msg.type;
+        boundType <- SELF.type(EberonRecord.PRecord);
+        id <- msg.id.id();
+        IF boundType.name = id THEN
+            IF msg.id.exported() THEN
+                typeId <- SELF.parent()(PDeclaration).id;
+                IF ~typeId.exported() THEN
+                    Errors.raise("constructor '" + id + "' cannot be exported because record itslef is not exported");
+                END;
+            END;
+            boundType.declareConstructor(methodType, msg.id.exported());
+        ELSE
+            boundType.addMethod(msg.id,
+                                NEW EberonTypes.MethodType(id, methodType, Procedure.makeProcCallGenerator));
+        END;
+    ELSIF msg IS ContextProcedure.EndParametersMsg THEN (* not used *)
+    ELSIF msg IS ContextProcedure.AddArgumentMsg THEN   (* not used *)
+    ELSE
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Record.doMakeField(field: Context.PIdentdefInfo; type: Types.PStorageType): Types.PField;
+BEGIN
+    RETURN NEW EberonRecord.Field(field, type, SELF.type(EberonRecord.PRecord));
+END;
+
+PROCEDURE Record.doGenerateBaseConstructorCallCode(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    base <- SELF.type.base;
+    IF base # NIL THEN
+        baseConstructor <- EberonRecord.constructor(base^(EberonRecord.Record));
+        IF (baseConstructor = NIL) OR (LEN(baseConstructor.args()) = 0) THEN
+            result := SUPER();
+        ELSE        
+            result := SELF.qualifiedBaseConstructor() + ".apply(this, arguments);" + Chars.ln;
+        END;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Record.endParse(): BOOLEAN;
+BEGIN
+    result <- TRUE;
+
+    type <- SELF.type(EberonRecord.PRecord);
+    IF type.customConstructor = NIL THEN
+        result := SUPER();
+    ELSE
+        SELF.codeGenerator().write(SELF.generateInheritance());
+        type.setRecordInitializationCode(
+            SELF.doGenerateBaseConstructorCallCode());
+    END;
+
+    RETURN result;
+END;
+
+PROCEDURE MethodHeading.handleIdentdef(id: Context.PIdentdefInfo);
+BEGIN
+    SELF.id := id(EberonContext.PIdentdefInfo);
+    EberonContext.checkOrdinaryExport(SELF.id^, "method");
+END;
+
+PROCEDURE MethodHeading.typeName(): STRING;
+    RETURN "";
+END;
+
+PROCEDURE MethodHeading.setType(type: Types.PStorageType);
+BEGIN
+    SELF.type := type(Procedure.PType);
+END;
+
+PROCEDURE MethodHeading.endParse(): BOOLEAN;
+BEGIN
+    void <- SELF.handleMessage(NEW MethodDeclMsg(SELF.id, SELF.type)^);
+    RETURN TRUE;
+END;
+
+PROCEDURE MethodDeclMsg.MethodDeclMsg(id: Context.PIdentdefInfo; type: Procedure.PType)
+    | id(id),
+      type(type);
+END;
+
+END EberonContextType.

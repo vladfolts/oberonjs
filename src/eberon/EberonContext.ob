@@ -1,5 +1,6 @@
 MODULE EberonContext;
-IMPORT Context;
+IMPORT 
+    Context, Errors;
 TYPE
     IdentdefInfo* = RECORD(Context.IdentdefInfo)
         PROCEDURE IdentdefInfo(id: STRING; exported: BOOLEAN; ro: BOOLEAN);
@@ -17,6 +18,13 @@ END;
 PROCEDURE IdentdefInfo.IdentdefInfo(id: STRING; exported: BOOLEAN; ro: BOOLEAN)
     | SUPER(id, exported),
       ro(ro);
+END;
+
+PROCEDURE checkOrdinaryExport*(id: IdentdefInfo; hint: STRING);
+BEGIN
+    IF id.isReadOnly() THEN
+        Errors.raise(hint + " cannot be exported as read-only using '-' mark (did you mean '*'?)");
+    END;
 END;
 
 END EberonContext.

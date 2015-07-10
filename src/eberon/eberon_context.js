@@ -20,6 +20,7 @@ var EberonConstructor = require("js/EberonConstructor.js");
 var EberonContext = require("js/EberonContext.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
 var EberonContextProcedure = require("js/EberonContextProcedure.js");
+var EberonContextType = require("js/EberonContextType.js");
 var EberonDynamicArray = require("js/EberonDynamicArray.js");
 var EberonMap = require("js/EberonMap.js");
 var EberonRecord = require("js/EberonRecord.js");
@@ -48,52 +49,6 @@ function log(s){
 var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
-
-var ProcOrMethodId = ChainedContext.extend({
-    init: function EberonContext$ProcOrMethodId(parent){
-        ChainedContext.prototype.init.call(this, parent);
-        this.__maybeTypeId = undefined;
-        this.__type = undefined;
-    },
-    handleIdent: function(id){this.__maybeTypeId = id;},
-    handleLiteral: function(s){
-        var ss = ContextHierarchy.getSymbolAndScope(this.root(), this.__maybeTypeId);
-        var type = ContextExpression.unwrapType(ss.symbol().info());
-        if (!(type instanceof Type.Record))
-            throw new Errors.Error(
-                  "RECORD type expected in method declaration, got '"
-                + type.description() + "'");
-        if (ss.scope() != this.root().currentScope())
-            throw new Errors.Error(
-                  "method should be defined in the same scope as its bound type '"
-                + this.__maybeTypeId
-                + "'");
-        this.__type = type;
-    },
-    handleIdentdef: function(id){
-        if (this.__type && id.exported())
-            throw new Errors.Error("method implementation cannot be exported: " + id.id());
-        checkOrdinaryExport(id, "procedure");
-        this.handleMessage(new EberonContextProcedure.MethodOrProcMsg(id, this.__type));
-    }
-});
-
-var MethodHeading = ChainedContext.extend({
-    init: function EberonContext$MethodHeading(parent){
-        ChainedContext.prototype.init.call(this, parent);
-        this.__id = undefined;
-        this.__type = undefined;
-    },
-    handleIdentdef: function(id){
-        checkOrdinaryExport(id, "method");
-        this.__id = id;
-    },
-    typeName: function(){return "";},
-    setType: function(type){this.__type = type;},
-    endParse: function(){
-        this.handleMessage(new EberonContextProcedure.MethodOrProcMsg(this.__id, this.__type));
-    }
-});
 
 var InPlaceStringLiteral = Class.extend.call(EberonContextDesignator.TypeNarrowVariable, {
     init: function(type){
@@ -285,17 +240,12 @@ var AssignmentOrProcedureCall = ChainedContext.extend({
     }
 });
 
-function checkOrdinaryExport(id, hint){
-    if (id.isReadOnly())
-        throw new Errors.Error(hint + " cannot be exported as read-only using '-' mark (did you mean '*'?)");
-}
-
 var ConstDecl = Class.extend.call(ContextConst.Type, {
     init: function EberonContext$ConstDecl(context){
         ContextConst.Type.call(this, context);
     },
     handleIdentdef: function(id){
-        checkOrdinaryExport(id, "constant");
+        EberonContext.checkOrdinaryExport(id, "constant");
         ContextConst.Type.prototype.handleIdentdef.call(this, id);
     }
 });
@@ -305,7 +255,7 @@ var VariableDeclaration = Class.extend.call(ContextVar.Declaration, {
         ContextVar.Declaration.call(this, context);
     },
     handleIdentdef: function(id){
-        checkOrdinaryExport(id, "variable");
+        EberonContext.checkOrdinaryExport(id, "variable");
         ContextVar.Declaration.prototype.handleIdentdef.call(this, id);
     },
     doInitCode: function(){
@@ -313,69 +263,6 @@ var VariableDeclaration = Class.extend.call(ContextVar.Declaration, {
         if (type instanceof EberonRecord.Record)
             EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForVar);
         return ContextVar.Declaration.prototype.doInitCode.call(this);
-    }
-});
-
-var TypeDeclaration = Class.extend.call(ContextType.Declaration, {
-    init: function EberonContext$TypeDeclaration(context){
-        ContextType.Declaration.call(this, context);
-    },
-    handleIdentdef: function(id){
-        checkOrdinaryExport(id, "type");
-        ContextType.Declaration.prototype.handleIdentdef.call(this, id);
-    }
-});
-
-var RecordDecl = Class.extend.call(ContextType.Record, {
-    init: function EberonContext$RecordDecl(context){
-        ContextType.Record.call(this, context, function(name, cons, scope){return new EberonRecord.Record(name, cons, scope); });
-    },
-    handleMessage: function(msg){
-        if (msg instanceof EberonContextProcedure.MethodOrProcMsg){
-            var methodType = msg.type;
-            var boundType = this.type;
-            var id = msg.id.id();
-            if (Type.typeName(boundType) == id){
-                if (msg.id.exported()){
-                    var typeId = this.parent().id;
-                    if (!typeId.exported())
-                        throw new Errors.Error("constructor '" + id + "' cannot be exported because record itslef is not exported");
-                }
-                boundType.declareConstructor(methodType, msg.id.exported());
-            }
-            else
-                boundType.addMethod(msg.id,
-                                    new EberonTypes.MethodType(id, methodType, Procedure.makeProcCallGenerator));
-            return;
-        }
-
-        if (msg instanceof ContextProcedure.EndParametersMsg) // not used
-            return undefined;
-        if (msg instanceof ContextProcedure.AddArgumentMsg) // not used
-            return undefined;
-        return ContextType.Record.prototype.handleMessage.call(this, msg);
-    },
-    doMakeField: function(field, type){
-        return new EberonRecord.Field(field, type, this.type);
-    },
-    doGenerateBaseConstructorCallCode: function(){
-        var base = this.type.base;
-        if (!base)
-            return "";
-        var baseConstructor = EberonRecord.constructor$(base);
-        if (!baseConstructor || !baseConstructor.args().length)
-            return ContextType.Record.prototype.doGenerateBaseConstructorCallCode.call(this);
-        
-        return this.qualifiedBaseConstructor() + ".apply(this, arguments);\n";
-    },
-    endParse: function(){
-        var type = this.type;
-        if (!type.customConstructor)
-            return ContextType.Record.prototype.endParse.call(this);
-
-        this.codeGenerator().write(this.generateInheritance());
-        type.setRecordInitializationCode(
-            this.doGenerateBaseConstructorCallCode());
     }
 });
 
@@ -1008,20 +895,16 @@ exports.FormalParametersProcDecl = FormalParametersProcDecl;
 exports.FormalType = FormalType;
 exports.Identdef = Identdef;
 exports.If = If;
-exports.MethodHeading = MethodHeading;
 exports.ModuleDeclaration = ModuleDeclaration;
 exports.MulOperator = MulOperator;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.Factor = Factor;
 exports.MapDecl = MapDecl;
-exports.ProcOrMethodId = ProcOrMethodId;
-exports.RecordDecl = RecordDecl;
 exports.Repeat = Repeat;
 exports.SimpleExpression = SimpleExpression;
 exports.InPlaceVariableInit = InPlaceVariableInit;
 exports.InPlaceVariableInitFor = InPlaceVariableInitFor;
 exports.OperatorNew = OperatorNew;
 exports.Term = Term;
-exports.TypeDeclaration = TypeDeclaration;
 exports.VariableDeclaration = VariableDeclaration;
 exports.While = While;
