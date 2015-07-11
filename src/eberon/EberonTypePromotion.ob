@@ -6,7 +6,7 @@ TYPE
         PROCEDURE type(): Types.PType;
         PROCEDURE setType(type: Types.PType);
     END;
-    PVariable = POINTER TO Variable;
+    PVariable* = POINTER TO Variable;
 
     Type = RECORD
         PROCEDURE and();
@@ -26,13 +26,13 @@ TYPE
     END;
 
     Operation = PROCEDURE(p: Type);
-    PMaybe = POINTER TO Maybe;
+    PMaybe* = POINTER TO Maybe;
 
     Combined* = RECORD(Type)
         PROCEDURE Combined(op, invertedOp: Operation; inverted: BOOLEAN);
 
         PROCEDURE clear*();
-        PROCEDURE next(): PMaybe;
+        PROCEDURE next*(): PMaybe;
 
         op, invertedOp: Operation;
         inverted: BOOLEAN;
@@ -53,9 +53,9 @@ TYPE
     Maybe = RECORD
         PROCEDURE Maybe(handler: PCombined);
 
-        PROCEDURE promote(v: PVariable; type: Types.PType);
-        PROCEDURE invert();
-        PROCEDURE makeOr(): PCombined;
+        PROCEDURE promote*(v: PVariable; type: Types.PType);
+        PROCEDURE invert*();
+        PROCEDURE makeOr*(): PCombined;
         PROCEDURE makeAnd(): PCombined;
 
         inverted: BOOLEAN;

@@ -56,10 +56,10 @@ TYPE
     END;
 
     PromoteTypeMsg* = RECORD(ContextHierarchy.Message)
-        PROCEDURE PromoteTypeMsg(info: Types.PId; type: Types.PType);
+        PROCEDURE PromoteTypeMsg(info: EberonTypePromotion.PVariable; type: Types.PType);
 
-        info: Types.PId;
-        type: Types.PType;
+        info-: EberonTypePromotion.PVariable;
+        type-: Types.PType;
     END;
 
     TransferPromotedTypesMsg* = RECORD(ContextHierarchy.Message)
@@ -369,7 +369,7 @@ PROCEDURE OperatorNewMsg.OperatorNewMsg(e: Expression.PType)
     | expression(e);
 END;
 
-PROCEDURE PromoteTypeMsg.PromoteTypeMsg(info: Types.PId; type: Types.PType)
+PROCEDURE PromoteTypeMsg.PromoteTypeMsg(info: EberonTypePromotion.PVariable; type: Types.PType)
     | info(info),
       type(type);
 END;

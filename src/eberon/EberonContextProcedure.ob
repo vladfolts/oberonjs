@@ -42,7 +42,7 @@ TYPE
     END;
 
     BeginTypePromotionOrMsg* = RECORD(ContextHierarchy.Message)
-        result: EberonTypePromotion.PCombined;
+        result*: EberonTypePromotion.PCombined;
     END;
 
 PROCEDURE superMethodCallGenerator(cx: LanguageContext.PType; type: Procedure.Type): Procedure.PCallGenerator;

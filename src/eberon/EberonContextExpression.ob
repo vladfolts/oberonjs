@@ -1,0 +1,87 @@
+MODULE EberonContextExpression;
+IMPORT
+    ContextExpression, ContextHierarchy, 
+    EberonContextDesignator, EberonContextProcedure, EberonTypePromotion, 
+    Object;
+TYPE
+    Term* = RECORD(ContextExpression.Term)
+        PROCEDURE getCurrentPromotion(): EberonTypePromotion.PMaybe;
+        PROCEDURE handleLogicalAnd();
+
+        typePromotion: EberonTypePromotion.PCombined;
+        currentPromotion: EberonTypePromotion.PMaybe;
+        andHandled: BOOLEAN;
+    END;
+
+    Factor* = RECORD(ContextExpression.Factor)
+    END;
+
+    BeginTypePromotionAndMsg* = RECORD(ContextHierarchy.Message)
+        result: EberonTypePromotion.PCombined;
+    END;
+
+    CurrentTypePromotionMsg = RECORD(ContextHierarchy.Message)
+        result: EberonTypePromotion.PMaybe;
+    END;
+
+PROCEDURE Term.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF msg IS EberonContextDesignator.PromoteTypeMsg THEN
+        promoted <- msg.info;
+        p <- SELF.getCurrentPromotion();
+        IF p # NIL THEN
+            p.promote(promoted, msg.type);
+        END;
+    ELSIF msg IS EberonContextProcedure.BeginTypePromotionOrMsg THEN
+        p <- SELF.getCurrentPromotion();
+        IF p # NIL THEN
+            msg.result := p.makeOr();
+        END;
+    ELSIF msg IS CurrentTypePromotionMsg THEN
+        msg.result := SELF.getCurrentPromotion();
+    ELSE
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Term.handleLogicalAnd();
+BEGIN
+    IF SELF.typePromotion # NIL THEN
+        SELF.currentPromotion := SELF.typePromotion.next();
+    ELSE
+        SELF.andHandled := TRUE;
+    END;
+END;
+
+PROCEDURE Term.getCurrentPromotion(): EberonTypePromotion.PMaybe;
+BEGIN
+    IF SELF.currentPromotion = NIL THEN
+        msg <- NEW BeginTypePromotionAndMsg();
+        void <- SELF.parent().handleMessage(msg^);
+        SELF.typePromotion := msg.result;
+        IF SELF.typePromotion # NIL THEN
+            IF SELF.andHandled THEN
+                unused <- SELF.typePromotion.next();
+            END;
+            SELF.currentPromotion := SELF.typePromotion.next();
+        END;
+    END;
+    RETURN SELF.currentPromotion;
+END;
+
+PROCEDURE Factor.handleLogicalNot();
+BEGIN
+    SUPER();
+
+    msg <- NEW CurrentTypePromotionMsg();
+    void <- SELF.handleMessage(msg^);
+    p <- msg.result;
+    IF p # NIL THEN
+        p.invert();
+    END;
+END;
+
+END EberonContextExpression.

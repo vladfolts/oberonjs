@@ -19,6 +19,7 @@ var ContextVar = require("js/ContextVar.js");
 var EberonConstructor = require("js/EberonConstructor.js");
 var EberonContext = require("js/EberonContext.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
+var EberonContextExpression = require("js/EberonContextExpression.js");
 var EberonContextProcedure = require("js/EberonContextProcedure.js");
 var EberonContextType = require("js/EberonContextType.js");
 var EberonDynamicArray = require("js/EberonDynamicArray.js");
@@ -314,21 +315,6 @@ var BaseInit = ChainedContext.extend({
     }
 });
 
-var Factor = Class.extend.call(ContextExpression.Factor, {
-    init: function EberonContext$Factor(context){
-        ContextExpression.Factor.call(this, context);
-    },
-    handleLogicalNot: function(){
-        ContextExpression.Factor.prototype.handleLogicalNot.call(this);
-        var p = this.getCurrentPromotion();
-        if (p)
-            p.invert();
-    },
-    getCurrentPromotion: function(){
-        return this.parent().getCurrentPromotion();
-    }
-});
-
 var AddOperator = Class.extend.call(ContextExpression.AddOperator, {
     init: function EberonContext$AddOperator(context){
         ContextExpression.AddOperator.call(this, context);
@@ -407,54 +393,6 @@ var RelationOps = Class.extend.call(ContextExpression.RelationOps, {
     }
 });
 
-function BeginTypePromotionAndMsg(){
-    this.result = undefined;
-}
-
-var Term = Class.extend.call(ContextExpression.Term, {
-    init: function EberonContext$Term(context){
-        ContextExpression.Term.call(this, context);
-        this.__typePromotion = undefined;
-        this.__currentPromotion = undefined;
-        this.__andHandled = false;
-    },
-    handleMessage: function(msg){
-        if (msg instanceof EberonContextDesignator.PromoteTypeMsg) {
-            var promoted = msg.info;
-            var p = this.getCurrentPromotion();
-            if (p)
-                p.promote(promoted, msg.type);
-            return;
-        }
-        if (msg instanceof EberonContextProcedure.BeginTypePromotionOrMsg){
-            var cp = this.getCurrentPromotion();
-            if (cp)
-                msg.result = cp.makeOr();
-            return;
-        }
-        return ContextExpression.Term.prototype.handleMessage.call(this, msg);
-    },
-    handleLogicalAnd: function(){
-        if (this.__typePromotion)
-            this.__currentPromotion = this.__typePromotion.next();
-        else
-            this.__andHandled = true;
-    },
-    getCurrentPromotion: function(){
-        if (!this.__currentPromotion){
-            var msg = new BeginTypePromotionAndMsg();
-            this.parent().handleMessage(msg);
-            this.__typePromotion = msg.result;
-            if (this.__typePromotion){
-                if (this.__andHandled)
-                    this.__typePromotion.next();
-                this.__currentPromotion = this.__typePromotion.next();
-            }
-        }
-        return this.__currentPromotion;
-    }
-});
-
 var SimpleExpression = Class.extend.call(ContextExpression.SimpleExpression, {
     init: function EberonContext$SimpleExpression(context){
         ContextExpression.SimpleExpression.call(this, context);
@@ -469,7 +407,7 @@ var SimpleExpression = Class.extend.call(ContextExpression.SimpleExpression, {
             this.__orHandled = true;
     },
     handleMessage: function(msg){
-        if (msg instanceof BeginTypePromotionAndMsg){
+        if (msg instanceof EberonContextExpression.BeginTypePromotionAndMsg){
             var p = this.__getCurrentPromotion();
             if (p)
                 msg.result = p.makeAnd();
@@ -898,13 +836,11 @@ exports.If = If;
 exports.ModuleDeclaration = ModuleDeclaration;
 exports.MulOperator = MulOperator;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
-exports.Factor = Factor;
 exports.MapDecl = MapDecl;
 exports.Repeat = Repeat;
 exports.SimpleExpression = SimpleExpression;
 exports.InPlaceVariableInit = InPlaceVariableInit;
 exports.InPlaceVariableInitFor = InPlaceVariableInitFor;
 exports.OperatorNew = OperatorNew;
-exports.Term = Term;
 exports.VariableDeclaration = VariableDeclaration;
 exports.While = While;

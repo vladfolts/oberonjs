@@ -6,6 +6,7 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var ContextType = require("js/ContextType.js");
 var EbContext = require("eberon/eberon_context.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
+var EberonContextExpression = require("js/EberonContextExpression.js");
 var EberonContextProcedure = require("js/EberonContextProcedure.js");
 var EberonContextType = require("js/EberonContextType.js");
 var Grammar = require("grammar.js");
@@ -146,10 +147,10 @@ exports.language = {
             recordDecl:         EberonContextType.Record,
             variableDeclaration: EbContext.VariableDeclaration,
             ArrayDecl:          EbContext.ArrayDecl,
-            Factor:             EbContext.Factor,
+            Factor:             EberonContextExpression.Factor,
             FormalParameters:   EbContext.FormalParameters,
             FormalType:         EbContext.FormalType,
-            Term:               EbContext.Term,
+            Term:               EberonContextExpression.Term,
             AddOperator:        EbContext.AddOperator,
             MulOperator:        EbContext.MulOperator,
             SimpleExpression:   EbContext.SimpleExpression, 

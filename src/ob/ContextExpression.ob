@@ -61,7 +61,7 @@ TYPE
     PFactor = POINTER TO Factor;
 
     Factor* = RECORD(ExpressionHandler)
-        PROCEDURE handleLogicalNot();
+        PROCEDURE handleLogicalNot*();
 
         expression: Expression.PType;
         logicalNot: BOOLEAN;
