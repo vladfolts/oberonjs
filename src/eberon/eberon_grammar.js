@@ -7,6 +7,7 @@ var ContextType = require("js/ContextType.js");
 var EbContext = require("eberon/eberon_context.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
 var EberonContextExpression = require("js/EberonContextExpression.js");
+var EberonContextIdentdef = require("js/EberonContextIdentdef.js");
 var EberonContextProcedure = require("js/EberonContextProcedure.js");
 var EberonContextType = require("js/EberonContextType.js");
 var Grammar = require("grammar.js");
@@ -55,7 +56,7 @@ function makeAssignmentOrProcedureCall(ident, designator, assignment, expression
 }
 
 function makeIdentdef(ident){
-    return context(and(ident, optional(or("*", "-"))), EbContext.Identdef);
+    return context(and(ident, optional(or("*", "-"))), EberonContextIdentdef.Type);
 }
 
 function makeDesignator(ident, qualident, selector, actualParameters){
@@ -106,7 +107,7 @@ function makeForInit(ident, expression, assignment){
 function makeArrayDimensions(constExpression){
     var oneDimension = or("*", constExpression);
     return context(and(oneDimension, repeat(and(",", oneDimension))), 
-                   EbContext.ArrayDimensions);
+                   EberonContextType.ArrayDimensions);
 }
 
 function makeFormalArray(){
@@ -119,7 +120,7 @@ function makeFormalResult(base, ident, actualParameters){
     return or(base, 
               context(and("|", or(and("SUPER", actualParameters, followingFields),
                                   and(initField, followingFields))), 
-                      EbContext.BaseInit));
+                      EberonContextProcedure.BaseInit));
 }
 
 function makeReturn(base){
@@ -146,7 +147,7 @@ exports.language = {
             typeDeclaration:    EberonContextType.Declaration,
             recordDecl:         EberonContextType.Record,
             variableDeclaration: EbContext.VariableDeclaration,
-            ArrayDecl:          EbContext.ArrayDecl,
+            ArrayDecl:          EberonContextType.Array,
             Factor:             EberonContextExpression.Factor,
             FormalParameters:   EbContext.FormalParameters,
             FormalType:         EbContext.FormalType,

@@ -23,8 +23,8 @@ TYPE
         PROCEDURE defineConstructor*(type: Procedure.PType);
         PROCEDURE defineMethod*(methodId: Context.PIdentdefInfo; type: EberonTypes.PMethodType);
         PROCEDURE requireNewOnly*();
-        PROCEDURE setBaseConstructorCallCode(code: STRING);
-        PROCEDURE setFieldInitializationCode(field: STRING; code: STRING);
+        PROCEDURE setBaseConstructorCallCode*(code: STRING);
+        PROCEDURE setFieldInitializationCode*(field: STRING; code: STRING);
         PROCEDURE setRecordInitializationCode*(baseConstructorCallCode: STRING);
 
         customConstructor-: Procedure.PType;

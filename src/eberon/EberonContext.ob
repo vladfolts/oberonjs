@@ -3,7 +3,7 @@ IMPORT
     Context, Errors;
 TYPE
     IdentdefInfo* = RECORD(Context.IdentdefInfo)
-        PROCEDURE IdentdefInfo(id: STRING; exported: BOOLEAN; ro: BOOLEAN);
+        PROCEDURE IdentdefInfo*(id: STRING; exported: BOOLEAN; ro: BOOLEAN);
 
         PROCEDURE isReadOnly*(): BOOLEAN;
         

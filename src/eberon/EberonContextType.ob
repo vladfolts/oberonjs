@@ -2,9 +2,11 @@ MODULE EberonContextType;
 IMPORT
     Chars,
     Context, ContextHierarchy, ContextProcedure, ContextType, 
-    EberonContext, EberonRecord, EberonTypes,
+    EberonContext, EberonDynamicArray, EberonRecord, EberonTypes,
     Errors,
     Object, Procedure, R := Record, ScopeBase, Types;
+CONST
+    dynamicArrayLength = -1;
 TYPE
     Declaration* = RECORD(ContextType.Declaration)
     END;
@@ -12,6 +14,12 @@ TYPE
 
     Record* = RECORD(ContextType.Record)
         PROCEDURE Record*(parent: PDeclaration);
+    END;
+
+    Array* = RECORD(ContextType.Array)
+    END;
+
+    ArrayDimensions* = RECORD(ContextType.ArrayDimensions)
     END;
 
     MethodHeading* = RECORD(ContextType.DeclarationAndIdentHandle)
@@ -103,6 +111,41 @@ BEGIN
     END;
 
     RETURN result;
+END;
+
+PROCEDURE Array.doMakeInit(type: Types.PStorageType; dimensions: STRING; length: INTEGER): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF length = dynamicArrayLength THEN
+        result := "[]";
+    ELSIF (type IS EberonRecord.PRecord) & (EberonRecord.hasParameterizedConstructor(type^)) THEN
+        Errors.raise("cannot use '" + type.description() + "' as an element of static array because it has constructor with parameters");
+    ELSE
+        result := SUPER(type, dimensions, length);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Array.doMakeType(elementsType: Types.PStorageType; init: STRING; length: INTEGER): Types.PStorageType;
+VAR
+    result: Types.PStorageType;
+BEGIN
+    IF length = dynamicArrayLength THEN
+        result := NEW EberonDynamicArray.DynamicArray(elementsType);
+    ELSE
+        result := SUPER(elementsType, init, length);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ArrayDimensions.handleLiteral(s: STRING);
+BEGIN
+    IF s = "*" THEN
+        SELF.doAddDimension(dynamicArrayLength);
+    ELSE
+        SUPER(s);
+    END;
 END;
 
 PROCEDURE MethodHeading.handleIdentdef(id: Context.PIdentdefInfo);

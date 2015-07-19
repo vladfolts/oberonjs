@@ -65,21 +65,6 @@ var ForEachVariable = Class.extend.call(EberonContextDesignator.TypeNarrowVariab
     idType: function(){return "FOR variable";}
 });
 
-var Identdef = Class.extend.call(ContextIdentdef.Type, {
-    init: function(parent){
-        ContextIdentdef.Type.call(this, parent);
-        this.__ro = false;
-    },
-    handleLiteral: function(l){
-        if (l == "-")
-            this.__ro = true;  
-        ContextIdentdef.Type.prototype.handleLiteral.call(this, l);
-    },
-    doMakeIdendef: function(){
-        return new EberonContext.IdentdefInfo(this.id, this.export$, this.__ro);
-    }
-});
-
 function makeContextCall(context, call){
     return call(ContextHierarchy.makeLanguageContext(context));
     }
@@ -267,54 +252,6 @@ var VariableDeclaration = Class.extend.call(ContextVar.Declaration, {
     }
 });
 
-var BaseInit = ChainedContext.extend({
-    init: function EberonContext$BaseInit(parent){
-        ChainedContext.prototype.init.call(this, parent);
-        this.__type = undefined;
-        this.__initCall = undefined;
-        this.__initField = undefined;
-    },
-    type: function(){
-        if (!this.__type)
-            this.__type = this.handleMessage(new EberonContextProcedure.GetConstructorBoundTypeMsg());
-        return this.__type;
-    },
-    codeGenerator: function(){return CodeGenerator.nullGenerator();},
-    handleMessage: function(msg){
-        if (msg instanceof ContextDesignator.BeginCallMsg)
-            return;
-        if (msg instanceof ContextDesignator.EndCallMsg){
-            var e = this.__initCall.end();
-            if (this.__initField)
-                this.type().setFieldInitializationCode(this.__initField, e.code());
-            else
-                this.type().setBaseConstructorCallCode(e.code());
-            return;
-        }
-        return ChainedContext.prototype.handleMessage.call(this, msg);
-    },
-    handleIdent: function(id){
-        this.__initField = id;
-        this.__initCall = this.handleMessage(new EberonContextProcedure.InitFieldMsg(id));
-    },
-    handleExpression: function(e){
-        this.__initCall.handleArgument(e);
-    },
-    handleLiteral: function(s){
-        if (s == "SUPER"){
-            var ms = this.handleMessage(new EberonContextProcedure.GetConstructorSuperMsg());
-            this.__initCall = makeContextCall(
-                this,
-                function(cx){ 
-                    return EberonConstructor.makeBaseConstructorCall(
-                        this.type().base, 
-                        cx);
-                    }.bind(this)
-                );
-        }
-    }
-});
-
 var OperatorScopes = Class.extend({
     init: function EberonContext$OperatorScopes(context){
         this.__context = context;
@@ -473,20 +410,6 @@ var For = Class.extend.call(ContextLoop.For, {
     }
 });
 
-var dynamicArrayLength = -1;
-
-var ArrayDimensions = Class.extend.call(ContextType.ArrayDimensions, {
-    init: function EberonContext$ArrayDimensions(context){
-        ContextType.ArrayDimensions.call(this, context);
-    },
-    handleLiteral: function(s){
-        if ( s == "*" )
-            this.doAddDimension(dynamicArrayLength);
-        else
-            ContextType.ArrayDimensions.prototype.handleLiteral.call(this, s);
-    }
-});
-
 var MapDecl = ChainedContext.extend({
     init: function EberonContext$MapDecl(context){
         ChainedContext.prototype.init.call(this, context);
@@ -557,26 +480,6 @@ var ForEach = ChainedContext.extend({
         var s = new Symbol.Symbol(id, v);
         scope.addSymbol(s);
         return s;
-    }
-});
-
-var ArrayDecl = Class.extend.call(ContextType.Array, {
-    init: function EberonContext$ArrayDecl(context){
-        ContextType.Array.call(this, context);
-    },
-    doMakeInit: function(type, dimensions, length){
-        if (length == dynamicArrayLength)
-            return '[]';
-
-        if (type instanceof EberonRecord.Record && EberonRecord.hasParameterizedConstructor(type))
-            throw new Errors.Error("cannot use '" + Type.typeName(type) + "' as an element of static array because it has constructor with parameters");
-
-        return ContextType.Array.prototype.doMakeInit.call(this, type, dimensions, length);
-    },
-    doMakeType: function(elementsType, init, length){
-        return length == dynamicArrayLength
-            ? new EberonDynamicArray.DynamicArray(elementsType)
-            : ContextType.Array.prototype.doMakeType.call(this, elementsType, init, length);
     }
 });
 
@@ -662,9 +565,6 @@ var ModuleDeclaration = Class.extend.call(ContextModule.Declaration, {
     }
 });
 
-exports.ArrayDecl = ArrayDecl;
-exports.ArrayDimensions = ArrayDimensions;
-exports.BaseInit = BaseInit;
 exports.CaseLabel = CaseLabel;
 exports.ConstDecl = ConstDecl;
 exports.ExpressionProcedureCall = ExpressionProcedureCall;
@@ -673,7 +573,6 @@ exports.ForEach = ForEach;
 exports.FormalParameters = FormalParameters;
 exports.FormalParametersProcDecl = FormalParametersProcDecl;
 exports.FormalType = FormalType;
-exports.Identdef = Identdef;
 exports.If = If;
 exports.ModuleDeclaration = ModuleDeclaration;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;

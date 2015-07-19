@@ -1,0 +1,21 @@
+MODULE EberonContextIdentdef;
+IMPORT
+    Context, ContextIdentdef, EberonContext;
+TYPE
+    Type* = RECORD(ContextIdentdef.Type)
+        ro: BOOLEAN;
+    END;
+
+PROCEDURE Type.handleLiteral(s: STRING);
+BEGIN
+    IF s = "-" THEN
+        SELF.ro := TRUE;
+    END;  
+    SUPER(s);
+END;
+
+PROCEDURE Type.doMakeIdendef(): Context.PIdentdefInfo;
+    RETURN NEW EberonContext.IdentdefInfo(SELF.id, SELF.export, SELF.ro);
+END;
+
+END EberonContextIdentdef.

@@ -1,7 +1,9 @@
 MODULE EberonContextProcedure;
 IMPORT
-    Chars, Context, ContextExpression, ContextHierarchy, ContextProcedure, ContextType, 
-    EberonConstructor, EberonContext, EberonContextDesignator, EberonRecord, EberonTypePromotion, EberonTypes,
+    Chars, CodeGenerator,
+    Context, ContextDesignator, ContextExpression, ContextHierarchy, ContextProcedure, ContextType, 
+    EberonConstructor, EberonContext, EberonContextDesignator, 
+    EberonRecord, EberonTypePromotion, EberonTypes,
     Errors, Expression, LanguageContext, Object, Procedure, Types;
 TYPE
     ProcOrMethodDeclaration* = RECORD(ContextProcedure.Declaration)
@@ -23,12 +25,18 @@ TYPE
         type: EberonRecord.PRecord;
     END;
 
-    GetConstructorBoundTypeMsg* = RECORD(ContextHierarchy.Message)
-    END;
-    GetConstructorSuperMsg* = RECORD(ContextHierarchy.Message)
+    BaseInit* = RECORD(ContextExpression.ExpressionHandler)
+        initCall: Procedure.PCallGenerator;
+        initField: STRING;
+        typeOnDemand: EberonRecord.PRecord;
     END;
 
-    InitFieldMsg* = RECORD(ContextHierarchy.Message)
+    GetConstructorBoundTypeMsg = RECORD(ContextHierarchy.Message)
+    END;
+    GetConstructorSuperMsg = RECORD(ContextHierarchy.Message)
+    END;
+
+    InitFieldMsg = RECORD(ContextHierarchy.Message)
         PROCEDURE InitFieldMsg(id: STRING);
 
         id: STRING;
@@ -292,6 +300,58 @@ BEGIN
     END;
     EberonContext.checkOrdinaryExport(id^, "procedure");
     void <- SELF.handleMessage(NEW MethodOrProcMsg(id, SELF.type)^);
+END;
+
+PROCEDURE baseInitType(VAR b: BaseInit): EberonRecord.PRecord;
+BEGIN
+    IF b.typeOnDemand = NIL THEN
+        b.typeOnDemand := b.handleMessage(NEW GetConstructorBoundTypeMsg()^)(EberonRecord.PRecord);
+    END;
+    RETURN b.typeOnDemand;
+END;
+
+PROCEDURE BaseInit.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN CodeGenerator.nullGenerator;
+END;
+
+PROCEDURE BaseInit.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF msg IS ContextDesignator.BeginCallMsg THEN
+    ELSIF msg IS ContextDesignator.EndCallMsg THEN
+        e <- SELF.initCall.end();
+        IF LEN(SELF.initField) # 0 THEN
+            baseInitType(SELF).setFieldInitializationCode(SELF.initField, e.code());
+        ELSE
+            baseInitType(SELF).setBaseConstructorCallCode(e.code());
+        END;
+    ELSE
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE BaseInit.handleIdent(id: STRING);
+BEGIN
+    SELF.initField := id;
+    SELF.initCall := SELF.handleMessage(NEW InitFieldMsg(id)^)(Procedure.PCallGenerator);
+END;
+
+PROCEDURE BaseInit.handleExpression(e: Expression.PType);
+BEGIN
+    SELF.initCall.handleArgument(e);
+END;
+
+PROCEDURE BaseInit.handleLiteral(s: STRING);
+BEGIN
+    IF s = "SUPER" THEN
+        ms <- SELF.handleMessage(NEW GetConstructorSuperMsg()^);
+        SELF.initCall := EberonConstructor.makeBaseConstructorCall(
+            baseInitType(SELF).base(EberonRecord.PRecord), 
+            ContextHierarchy.makeLanguageContext(SELF(POINTER))
+            );
+    END;
 END;
 
 PROCEDURE InitFieldMsg.InitFieldMsg(id: STRING)

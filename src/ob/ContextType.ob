@@ -18,11 +18,11 @@ TYPE
     END;
 
     Array* = RECORD(HandleSymbolAsType)
-        PROCEDURE Array(parent: PHandleSymbolAsType);
+        PROCEDURE Array*(parent: PHandleSymbolAsType);
 
         PROCEDURE isAnonymousDeclaration(): BOOLEAN;
-        PROCEDURE doMakeInit(type: Types.PStorageType; dimensions: STRING; length: INTEGER): STRING;
-        PROCEDURE doMakeType(elementsType: Types.PType; init: STRING; length: INTEGER): Types.PStorageType;
+        PROCEDURE doMakeInit*(type: Types.PStorageType; dimensions: STRING; length: INTEGER): STRING;
+        PROCEDURE doMakeType*(elementsType: Types.PStorageType; init: STRING; length: INTEGER): Types.PStorageType;
 
         handleType: PHandleSymbolAsType;
         dimensions: POINTER TO ArrayDimensions;
@@ -30,7 +30,7 @@ TYPE
     END;
 
     ArrayDimensions* = RECORD(ContextExpression.ExpressionHandler) 
-        PROCEDURE doAddDimension(size: INTEGER);
+        PROCEDURE doAddDimension*(size: INTEGER);
 
         dimensions: ARRAY * OF INTEGER;
     END;
@@ -182,7 +182,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Array.doMakeType(elementsType: Types.PType; init: STRING; length: INTEGER): Types.PStorageType;
+PROCEDURE Array.doMakeType(elementsType: Types.PStorageType; init: STRING; length: INTEGER): Types.PStorageType;
     RETURN SELF.root().language().types.makeStaticArray(elementsType, init, length);
 END;
 
