@@ -2,9 +2,8 @@ MODULE EberonTypePromotion;
 IMPORT
     Types;
 TYPE
-    Variable = RECORD
-        PROCEDURE type(): Types.PType;
-        PROCEDURE setType(type: Types.PType);
+    Variable* = RECORD(Types.Variable)
+        PROCEDURE setType*(type: Types.PStorageType);
     END;
     PVariable* = POINTER TO Variable;
 
@@ -16,12 +15,12 @@ TYPE
     PType = POINTER TO Type;
 
     ForVariable* = RECORD(Type)
-        PROCEDURE ForVariable(v: PVariable; type: Types.PType; inverted: BOOLEAN);
+        PROCEDURE ForVariable(v: PVariable; type: Types.PStorageType; inverted: BOOLEAN);
 
         PROCEDURE invert();
 
         v: PVariable;
-        type, originalType: Types.PType;
+        type, originalType: Types.PStorageType;
         inverted: BOOLEAN;
     END;
 
@@ -53,16 +52,16 @@ TYPE
     Maybe = RECORD
         PROCEDURE Maybe(handler: PCombined);
 
-        PROCEDURE promote*(v: PVariable; type: Types.PType);
+        PROCEDURE promote*(v: PVariable; type: Types.PStorageType);
         PROCEDURE invert*();
         PROCEDURE makeOr*(): PCombined;
-        PROCEDURE makeAnd(): PCombined;
+        PROCEDURE makeAnd*(): PCombined;
 
         inverted: BOOLEAN;
         handler: PCombined;
     END;
 
-PROCEDURE ForVariable.ForVariable(v: PVariable; type: Types.PType; inverted: BOOLEAN)
+PROCEDURE ForVariable.ForVariable(v: PVariable; type: Types.PStorageType; inverted: BOOLEAN)
     | v(v),
       type(type),
       originalType(v.type()),
@@ -104,7 +103,7 @@ BEGIN
     handler.current := p;
 END;
 
-PROCEDURE Maybe.promote(v: PVariable; type: Types.PType);
+PROCEDURE Maybe.promote(v: PVariable; type: Types.PStorageType);
 BEGIN
     handlePromotion(SELF.handler^, NEW ForVariable(v, type, SELF.inverted));
 END;

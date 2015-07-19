@@ -315,162 +315,6 @@ var BaseInit = ChainedContext.extend({
     }
 });
 
-var AddOperator = Class.extend.call(ContextExpression.AddOperator, {
-    init: function EberonContext$AddOperator(context){
-        ContextExpression.AddOperator.call(this, context);
-    },
-    doMatchPlusOperator: function(type){
-        if (type == EberonString.string() || type instanceof Type.String)
-            return eOp.addStr;
-        return ContextExpression.AddOperator.prototype.doMatchPlusOperator.call(this, type);
-    },
-    doExpectPlusOperator: function(){return "numeric type or SET or STRING";},
-    endParse: function(){
-        this.parent().handleLogicalOr();
-    }
-});
-
-var MulOperator = Class.extend.call(ContextExpression.MulOperator, {
-    init: function EberonContext$MulOperator(context){
-        ContextExpression.MulOperator.call(this, context);
-    },
-    endParse: function(s){
-        this.parent().handleLogicalAnd();
-    }
-});
-
-var RelationOps = Class.extend.call(ContextExpression.RelationOps, {
-    init: function EberonContext$RelationOps(){
-        ContextExpression.RelationOps.call(this);
-    },
-    eq: function(type){
-        return type == EberonString.string() 
-            ? eOp.equalStr
-            : ContextExpression.RelationOps.prototype.eq.call(this, type);
-    },
-    notEq: function(type){
-        return type == EberonString.string() 
-            ? eOp.notEqualStr
-            : ContextExpression.RelationOps.prototype.notEq.call(this, type);
-    },
-    less: function(type){
-        return type == EberonString.string() 
-            ? eOp.lessStr
-            : ContextExpression.RelationOps.prototype.less.call(this, type);
-    },
-    greater: function(type){
-        return type == EberonString.string() 
-            ? eOp.greaterStr
-            : ContextExpression.RelationOps.prototype.greater.call(this, type);
-    },
-    lessEq: function(type){
-        return type == EberonString.string() 
-            ? eOp.lessEqualStr
-            : ContextExpression.RelationOps.prototype.lessEq.call(this, type);
-    },
-    greaterEq: function(type){
-        return type == EberonString.string() 
-            ? eOp.greaterEqualStr
-            : ContextExpression.RelationOps.prototype.greaterEq.call(this, type);
-    },
-    is: function(context){
-        var impl = ContextExpression.RelationOps.prototype.is.call(this, context);
-        return function(left, right){
-            var d = left.designator();
-            if (d){
-                var v = d.info();
-                if (v instanceof EberonContextDesignator.TypeNarrowVariableBase)
-                    context.handleMessage(new EberonContextDesignator.PromoteTypeMsg(v, ContextExpression.unwrapType(right.designator().info())));
-            }
-            return impl(left, right);
-        };
-    },
-    coalesceType: function(leftType, rightType){
-        if ((leftType == EberonString.string() && rightType instanceof Type.String)
-            || (rightType == EberonString.string() && leftType instanceof Type.String))
-            return EberonString.string();
-        return ContextExpression.RelationOps.prototype.coalesceType.call(this, leftType, rightType);
-    }
-});
-
-var SimpleExpression = Class.extend.call(ContextExpression.SimpleExpression, {
-    init: function EberonContext$SimpleExpression(context){
-        ContextExpression.SimpleExpression.call(this, context);
-        this.__typePromotion = undefined;
-        this.__currentTypePromotion = undefined;
-        this.__orHandled = false;
-    },
-    handleLogicalOr: function(){
-        if (this.__typePromotion)
-            this.__currentPromotion = this.__typePromotion.next();
-        else
-            this.__orHandled = true;
-    },
-    handleMessage: function(msg){
-        if (msg instanceof EberonContextExpression.BeginTypePromotionAndMsg){
-            var p = this.__getCurrentPromotion();
-            if (p)
-                msg.result = p.makeAnd();
-            return;
-        }
-        return ContextExpression.SimpleExpression.prototype.handleMessage.call(this, msg);
-    },
-    endParse: function(){
-        if (this.__typePromotion)
-            this.parent().handleTypePromotion(this.__typePromotion);
-        ContextExpression.SimpleExpression.prototype.endParse.call(this);
-    },
-    __getCurrentPromotion: function(){
-        if (!this.__currentPromotion){
-            var msg = new EberonContextProcedure.BeginTypePromotionOrMsg();
-            this.parent().handleMessage(msg);
-            this.__typePromotion = msg.result;
-            if (this.__typePromotion){
-                if (this.__orHandled)
-                    this.__typePromotion.next();
-                this.__currentPromotion = this.__typePromotion.next();
-            }
-        }
-        return this.__currentPromotion;
-    }
-});
-
-var relationOps = new RelationOps();
-
-var ExpressionContext = Class.extend.call(ContextExpression.ExpressionNode, {
-    init: function EberonContext$Expression(context){
-        ContextExpression.ExpressionNode.call(this, context, relationOps);
-        this.__typePromotion = undefined;
-        this.__currentTypePromotion = undefined;
-    },
-    handleMessage: function(msg){
-        if (msg instanceof EberonContextDesignator.TransferPromotedTypesMsg)
-            return;
-        return ContextExpression.ExpressionNode.prototype.handleMessage.call(this, msg);
-    },
-    handleTypePromotion: function(t){
-        this.__currentTypePromotion = t;
-    },
-    handleLiteral: function(s){
-        if (this.__currentTypePromotion){
-            this.__currentTypePromotion.clear();
-        }
-        ContextExpression.ExpressionNode.prototype.handleLiteral.call(this, s);
-    },
-    endParse: function(){
-        if (this.__currentTypePromotion)
-            this.parent().handleMessage(new EberonContextDesignator.TransferPromotedTypesMsg(this.__currentTypePromotion));
-        return ContextExpression.ExpressionNode.prototype.endParse.call(this);
-    },
-    doRelationOperation: function(left, right, relation){
-        if (relation == "IN" && right.type() instanceof EberonMap.Type){
-            EberonContextDesignator.checkMapKeyType(left.type());
-            return eOp.inMap;            
-        }
-        return ContextExpression.ExpressionNode.prototype.doRelationOperation.call(this, left, right, relation);
-    }
-});
-
 var OperatorScopes = Class.extend({
     init: function EberonContext$OperatorScopes(context){
         this.__context = context;
@@ -818,13 +662,11 @@ var ModuleDeclaration = Class.extend.call(ContextModule.Declaration, {
     }
 });
 
-exports.AddOperator = AddOperator;
 exports.ArrayDecl = ArrayDecl;
 exports.ArrayDimensions = ArrayDimensions;
 exports.BaseInit = BaseInit;
 exports.CaseLabel = CaseLabel;
 exports.ConstDecl = ConstDecl;
-exports.Expression = ExpressionContext;
 exports.ExpressionProcedureCall = ExpressionProcedureCall;
 exports.For = For;
 exports.ForEach = ForEach;
@@ -834,11 +676,9 @@ exports.FormalType = FormalType;
 exports.Identdef = Identdef;
 exports.If = If;
 exports.ModuleDeclaration = ModuleDeclaration;
-exports.MulOperator = MulOperator;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.MapDecl = MapDecl;
 exports.Repeat = Repeat;
-exports.SimpleExpression = SimpleExpression;
 exports.InPlaceVariableInit = InPlaceVariableInit;
 exports.InPlaceVariableInitFor = InPlaceVariableInitFor;
 exports.OperatorNew = OperatorNew;

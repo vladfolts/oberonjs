@@ -35,7 +35,9 @@ var temporaryValues = {
         + "PDerived = POINTER TO Derived;"
         + "PDerived2 = POINTER TO Derived2;"
         + "VAR pBase: POINTER TO Base; bVar: BOOLEAN;"
-        + "PROCEDURE proc(b: BOOLEAN): BOOLEAN; RETURN b END proc;"),
+        + "PROCEDURE proc(b: BOOLEAN): BOOLEAN; RETURN b END proc;"
+        + "PROCEDURE passPDerived(p: PDerived): BOOLEAN; RETURN TRUE END;"
+        ),
     __expression: function(e){
         return "PROCEDURE p(); BEGIN b <- pBase; b2 <- pBase; ASSERT(" + e + "); END p;";
     },
@@ -853,7 +855,9 @@ exports.suite = {
     "type promotion after dereferencing": testWithContext(
         temporaryValues.context,
         temporaryValues.passExpressions(
-            "(b^ IS Derived) & b.flag")
+            "(b^ IS Derived) & b.flag",
+            "(b^ IS Derived) & passPDerived(b)"
+            )
         ),
     "IS expression after type promotion": testWithContext(
         temporaryValues.context,

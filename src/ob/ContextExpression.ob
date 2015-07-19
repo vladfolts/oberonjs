@@ -9,31 +9,31 @@ TYPE
     END;
     PExpressionHandler* = POINTER TO ExpressionHandler;
 
-    BinaryOperator = PROCEDURE(l, r: Expression.PType): Expression.PType;
-    BinaryOperatorCx = PROCEDURE(l, r: Expression.PType; cx: LanguageContext.PType): Expression.PType;
+    BinaryOperator* = PROCEDURE(l, r: Expression.PType): Expression.PType;
+    BinaryOperatorCx* = PROCEDURE(l, r: Expression.PType; cx: LanguageContext.PType): Expression.PType;
 
     RelationOps* = RECORD
-        PROCEDURE eq(type: Types.PType): BinaryOperatorCx;
-        PROCEDURE notEq(type: Types.PType): BinaryOperatorCx;
-        PROCEDURE less(type: Types.PType): BinaryOperatorCx;
-        PROCEDURE greater(type: Types.PType): BinaryOperatorCx;
-        PROCEDURE lessEq(type: Types.PType): BinaryOperatorCx;
-        PROCEDURE greaterEq(type: Types.PType): BinaryOperatorCx;
-        PROCEDURE is(cx: Context.Type): BinaryOperatorCx;
+        PROCEDURE eq*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE notEq*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE less*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE greater*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE lessEq*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE greaterEq*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE is*(cx: ContextHierarchy.Node): BinaryOperatorCx;
 
         PROCEDURE eqExpect(): STRING;
         PROCEDURE strongRelExpect(): STRING;
         PROCEDURE relExpect(): STRING;
 
-        PROCEDURE coalesceType(leftType, rightType: Types.PType): Types.PType;
+        PROCEDURE coalesceType*(leftType, rightType: Types.PType): Types.PType;
     END;
     PRelationOps = POINTER TO RelationOps;
 
     ExpressionNode* = RECORD(ContextHierarchy.Node)
-        PROCEDURE ExpressionNode(parent: PExpressionHandler; ops: PRelationOps);
+        PROCEDURE ExpressionNode*(parent: PExpressionHandler; ops: PRelationOps);
 
         PROCEDURE handleSimpleExpression(e: Expression.PType);
-        PROCEDURE doRelationOperation(left, right: Expression.PType; relation: STRING): BinaryOperatorCx;
+        PROCEDURE doRelationOperation*(left, right: Expression.PType; relation: STRING): BinaryOperatorCx;
 
         expressionHandler: PExpressionHandler;
         relOps: PRelationOps;
@@ -43,7 +43,7 @@ TYPE
     PExpressionNode = POINTER TO ExpressionNode;
 
     SimpleExpression* = RECORD(ContextHierarchy.Node)
-        PROCEDURE SimpleExpression(parent: PExpressionNode);
+        PROCEDURE SimpleExpression*(parent: PExpressionNode);
 
         PROCEDURE handleTerm(e: Expression.PType);
         PROCEDURE type(): Types.PType;
@@ -80,8 +80,8 @@ TYPE
     END;
 
     AddOperator* = RECORD(ContextHierarchy.Node)
-        PROCEDURE doMatchPlusOperator(type: Types.PType): BinaryOperator;
-        PROCEDURE doExpectPlusOperator(): STRING;
+        PROCEDURE doMatchPlusOperator*(type: Types.PType): BinaryOperator;
+        PROCEDURE doExpectPlusOperator*(): STRING;
     END;
 
     Const = RECORD(ContextHierarchy.Node)
@@ -431,7 +431,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.is(cx: Context.Type): BinaryOperatorCx;
+PROCEDURE RelationOps.is(cx: ContextHierarchy.Node): BinaryOperatorCx;
 VAR
     r: BinaryOperatorCx;
 

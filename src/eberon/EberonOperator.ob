@@ -45,31 +45,31 @@ PROCEDURE addStr*(left, right: Expression.PType): Expression.PType;
     RETURN Operator.binaryWithCode(left, right, opAddStr, " + ", CodePrecedence.addSub)
 END addStr;
 
-PROCEDURE equalStr*(left, right: Expression.PType): Expression.PType;
+PROCEDURE equalStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN Operator.equal(left, right, opEqualStr, Operator.equalCode)
 END equalStr;
 
-PROCEDURE notEqualStr*(left, right: Expression.PType): Expression.PType;
+PROCEDURE notEqualStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN Operator.equal(left, right, opNotEqualStr, Operator.notEqualCode)
 END notEqualStr;
 
-PROCEDURE lessStr*(left, right: Expression.PType): Expression.PType;
+PROCEDURE lessStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN Operator.relational(left, right, opLessStr, " < ")
 END lessStr;
 
-PROCEDURE greaterStr*(left, right: Expression.PType): Expression.PType;
+PROCEDURE greaterStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN Operator.relational(left, right, opGreaterStr, " > ")
 END greaterStr;
 
-PROCEDURE lessEqualStr*(left, right: Expression.PType): Expression.PType;
+PROCEDURE lessEqualStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN Operator.relational(left, right, opLessEqualStr, " <= ")
 END lessEqualStr;
 
-PROCEDURE greaterEqualStr*(left, right: Expression.PType): Expression.PType;
+PROCEDURE greaterEqualStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN Operator.relational(left, right, opGraterEqualStr, " >= ")
 END greaterEqualStr;
 
-PROCEDURE inMap*(left, right: Expression.PType; rtl: OberonRtl.PType): Expression.PType;
+PROCEDURE inMap*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN Expression.makeSimple("Object.prototype.hasOwnProperty.call(" + right.code() + ", " + left.code() + ")",
                                  Types.basic.bool);
 END;

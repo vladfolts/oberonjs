@@ -23,13 +23,8 @@ TYPE
         expression: Expression.PType;
     END;
 
-    TypeNarrowVariableBase* = RECORD(Types.Variable)
-    END;
-
-    TypeNarrowVariable* = RECORD(TypeNarrowVariableBase)
+    TypeNarrowVariable* = RECORD(EberonTypePromotion.Variable)
         PROCEDURE TypeNarrowVariable*(type: Types.PStorageType; isRef, isReadOnly: BOOLEAN; code: STRING);
-
-        PROCEDURE setType(type: Types.PStorageType);
 
         mType: Types.PStorageType;
         isRef: BOOLEAN;
@@ -38,10 +33,8 @@ TYPE
     END;
     PTypeNarrowVariable = POINTER TO TypeNarrowVariable;
 
-    DereferencedTypeNarrowVariable = RECORD(TypeNarrowVariableBase)
+    DereferencedTypeNarrowVariable = RECORD(EberonTypePromotion.Variable)
         PROCEDURE DereferencedTypeNarrowVariable(var: PTypeNarrowVariable);
-
-        PROCEDURE setType(type: Types.PStorageType);
 
         var: PTypeNarrowVariable;
     END;
@@ -56,14 +49,14 @@ TYPE
     END;
 
     PromoteTypeMsg* = RECORD(ContextHierarchy.Message)
-        PROCEDURE PromoteTypeMsg(info: EberonTypePromotion.PVariable; type: Types.PType);
+        PROCEDURE PromoteTypeMsg*(info: EberonTypePromotion.PVariable; type: Types.PStorageType);
 
         info-: EberonTypePromotion.PVariable;
-        type-: Types.PType;
+        type-: Types.PStorageType;
     END;
 
     TransferPromotedTypesMsg* = RECORD(ContextHierarchy.Message)
-        PROCEDURE TransferPromotedTypesMsg(p: EberonTypePromotion.PCombined); 
+        PROCEDURE TransferPromotedTypesMsg*(p: EberonTypePromotion.PCombined); 
 
         promotion: EberonTypePromotion.PCombined;
     END;
@@ -177,6 +170,12 @@ BEGIN
     RETURN result;
 END;
 
+PROCEDURE makePointer(type: Types.PStorageType): Record.PPointer;
+BEGIN
+    typeId <- NEW TypeId.Type(type);
+    RETURN NEW Record.Pointer("", typeId);
+END;
+
 PROCEDURE Type.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
 VAR
     result: Object.PType;
@@ -212,9 +211,7 @@ BEGIN
         ContextDesignator.advance(SELF, type, info, "this", "", FALSE);
     ELSIF s = "POINTER" THEN
         type <- SELF.handleMessage(getSelfAsPointerMsg)(Types.PStorageType);
-        typeId <- NEW TypeId.Type(type);
-        pointerType <- NEW Record.Pointer("", typeId);
-        ContextDesignator.advance(SELF, pointerType, NEW SelfAsPointer(), "", "", FALSE);
+        ContextDesignator.advance(SELF, makePointer(type), NEW SelfAsPointer(), "", "", FALSE);
     ELSIF s = "SUPER" THEN
         ms <- SELF.handleMessage(getMethodSuperMsg)(PSuperMethodInfo);
         ContextDesignator.advance(SELF, ms.info.type, ms.info, ms.code, "", FALSE);
@@ -340,12 +337,12 @@ PROCEDURE DereferencedTypeNarrowVariable.DereferencedTypeNarrowVariable(var: PTy
 END;
 
 PROCEDURE DereferencedTypeNarrowVariable.type(): Types.PStorageType;
-    RETURN SELF.var.type();
+    RETURN Record.pointerBase(SELF.var.type()(Record.PPointer)^);
 END;
 
 PROCEDURE DereferencedTypeNarrowVariable.setType(type: Types.PStorageType);
 BEGIN
-    SELF.var.setType(type);
+    SELF.var.setType(makePointer(type));
 END;
 
 PROCEDURE DereferencedTypeNarrowVariable.isReference(): BOOLEAN;
@@ -369,7 +366,7 @@ PROCEDURE OperatorNewMsg.OperatorNewMsg(e: Expression.PType)
     | expression(e);
 END;
 
-PROCEDURE PromoteTypeMsg.PromoteTypeMsg(info: EberonTypePromotion.PVariable; type: Types.PType)
+PROCEDURE PromoteTypeMsg.PromoteTypeMsg(info: EberonTypePromotion.PVariable; type: Types.PStorageType)
     | info(info),
       type(type);
 END;

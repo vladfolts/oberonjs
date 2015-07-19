@@ -1,9 +1,32 @@
 MODULE EberonContextExpression;
 IMPORT
-    ContextExpression, ContextHierarchy, 
-    EberonContextDesignator, EberonContextProcedure, EberonTypePromotion, 
-    Object;
+    Context, ContextExpression, ContextHierarchy, 
+    EberonContextDesignator, EberonContextProcedure, 
+    EberonMap, EberonOperator, EberonString, EberonTypePromotion, 
+    Expression, LanguageContext,
+    JS,
+    Object, Types;
 TYPE
+    ExpressionNode* = RECORD(ContextExpression.ExpressionNode)
+        PROCEDURE ExpressionNode(parent: ContextExpression.PExpressionHandler);
+
+        PROCEDURE handleTypePromotion(promotion: EberonTypePromotion.PCombined);
+
+        currentTypePromotion: EberonTypePromotion.PCombined;
+    END;
+    PExpressionNode = POINTER TO ExpressionNode;
+
+    SimpleExpression* = RECORD(ContextExpression.SimpleExpression)
+        PROCEDURE SimpleExpression(parent: PExpressionNode);
+
+        PROCEDURE handleLogicalOr();
+
+        parentExppression: PExpressionNode;
+        typePromotion: EberonTypePromotion.PCombined;
+        currentPromotion: EberonTypePromotion.PMaybe;
+        orHandled: BOOLEAN;
+    END;
+
     Term* = RECORD(ContextExpression.Term)
         PROCEDURE getCurrentPromotion(): EberonTypePromotion.PMaybe;
         PROCEDURE handleLogicalAnd();
@@ -16,13 +39,128 @@ TYPE
     Factor* = RECORD(ContextExpression.Factor)
     END;
 
-    BeginTypePromotionAndMsg* = RECORD(ContextHierarchy.Message)
+    AddOperator* = RECORD(ContextExpression.AddOperator)
+    END;
+
+    MulOperator* = RECORD(ContextExpression.MulOperator)
+    END;
+
+    RelationOps = RECORD(ContextExpression.RelationOps)
+    END;
+
+    BeginTypePromotionAndMsg = RECORD(ContextHierarchy.Message)
         result: EberonTypePromotion.PCombined;
     END;
 
     CurrentTypePromotionMsg = RECORD(ContextHierarchy.Message)
         result: EberonTypePromotion.PMaybe;
     END;
+
+VAR
+    relationOps: POINTER TO RelationOps;
+
+PROCEDURE ExpressionNode.ExpressionNode(parent: ContextExpression.PExpressionHandler)
+    | SUPER(parent, relationOps);
+END;
+
+PROCEDURE ExpressionNode.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF msg IS EberonContextDesignator.TransferPromotedTypesMsg THEN
+    ELSE
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ExpressionNode.handleTypePromotion(promotion: EberonTypePromotion.PCombined);
+BEGIN
+    SELF.currentTypePromotion := promotion;
+END;
+
+PROCEDURE ExpressionNode.handleLiteral(s: STRING);
+BEGIN
+    IF SELF.currentTypePromotion # NIL THEN
+        SELF.currentTypePromotion.clear();
+    END;
+    SUPER(s);
+END;
+
+PROCEDURE ExpressionNode.doRelationOperation(left, right: Expression.PType; relation: STRING): ContextExpression.BinaryOperatorCx;
+VAR
+    result: ContextExpression.BinaryOperatorCx;
+BEGIN
+    IF (relation = "IN") & (right.type() IS EberonMap.PType) THEN
+        EberonContextDesignator.checkMapKeyType(left.type());
+        result := EberonOperator.inMap;            
+    ELSE
+        result := SUPER(left, right, relation);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ExpressionNode.endParse(): BOOLEAN;
+BEGIN
+    IF SELF.currentTypePromotion # NIL THEN
+        void <- SELF.parent().handleMessage(
+            NEW EberonContextDesignator.TransferPromotedTypesMsg(SELF.currentTypePromotion)^);
+    END;
+    RETURN SUPER();
+END;
+
+PROCEDURE SimpleExpression.SimpleExpression(parent: PExpressionNode)
+    | SUPER(parent),
+      parentExppression(parent);
+END;
+
+PROCEDURE SimpleExpression.handleLogicalOr();
+BEGIN
+    IF SELF.typePromotion # NIL THEN
+        SELF.currentPromotion := SELF.typePromotion.next();
+    ELSE
+        SELF.orHandled := TRUE;
+    END;
+END;
+
+PROCEDURE getCurrentPromotion(VAR e: SimpleExpression): EberonTypePromotion.PMaybe;
+BEGIN
+    IF e.currentPromotion = NIL THEN
+        msg <- NEW EberonContextProcedure.BeginTypePromotionOrMsg();
+        void <- e.parent().handleMessage(msg^);
+        e.typePromotion := msg.result;
+        IF e.typePromotion # NIL THEN
+            IF e.orHandled THEN
+                unused <- e.typePromotion.next();
+            END;
+            e.currentPromotion := e.typePromotion.next();
+        END;
+    END;
+    RETURN e.currentPromotion;
+END;
+
+PROCEDURE SimpleExpression.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF msg IS BeginTypePromotionAndMsg THEN
+        p <- getCurrentPromotion(SELF);
+        IF p # NIL THEN
+            msg.result := p.makeAnd();
+        END;
+    ELSE
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE SimpleExpression.endParse(): BOOLEAN;
+BEGIN
+    IF SELF.typePromotion # NIL THEN
+        SELF.parentExppression.handleTypePromotion(SELF.typePromotion);
+    END;
+    RETURN SUPER();
+END;
 
 PROCEDURE Term.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
 VAR
@@ -84,4 +222,144 @@ BEGIN
     END;
 END;
 
+PROCEDURE AddOperator.doMatchPlusOperator(type: Types.PType): ContextExpression.BinaryOperator;
+VAR
+    result: ContextExpression.BinaryOperator;
+BEGIN
+    IF (type = EberonString.string) OR (type IS Types.PString) THEN
+        result := EberonOperator.addStr;
+    ELSE
+        result := SUPER(type);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE AddOperator.doExpectPlusOperator(): STRING;
+    RETURN "numeric type or SET or STRING";
+END;
+
+PROCEDURE AddOperator.endParse(): BOOLEAN;
+BEGIN
+    SELF.parent()^(SimpleExpression).handleLogicalOr();
+    RETURN TRUE;
+END;
+
+PROCEDURE MulOperator.endParse(): BOOLEAN;
+BEGIN
+    SELF.parent()^(Term).handleLogicalAnd();
+    RETURN TRUE;
+END;
+
+PROCEDURE RelationOps.eq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+VAR
+    result: ContextExpression.BinaryOperatorCx;
+BEGIN
+    IF type = EberonString.string THEN
+        result := EberonOperator.equalStr;
+    ELSE
+        result := SUPER(type);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE RelationOps.notEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+VAR
+    result: ContextExpression.BinaryOperatorCx;
+BEGIN
+    IF type = EberonString.string THEN
+        result := EberonOperator.notEqualStr;
+    ELSE
+        result := SUPER(type);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE RelationOps.less(type: Types.PType): ContextExpression.BinaryOperatorCx;
+VAR
+    result: ContextExpression.BinaryOperatorCx;
+BEGIN
+    IF type = EberonString.string THEN
+        result := EberonOperator.lessStr;
+    ELSE
+        result := SUPER(type);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE RelationOps.greater(type: Types.PType): ContextExpression.BinaryOperatorCx;
+VAR
+    result: ContextExpression.BinaryOperatorCx;
+BEGIN
+    IF type = EberonString.string THEN
+        result := EberonOperator.greaterStr;
+    ELSE
+        result := SUPER(type);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE RelationOps.lessEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+VAR
+    result: ContextExpression.BinaryOperatorCx;
+BEGIN
+    IF type = EberonString.string THEN
+        result := EberonOperator.lessEqualStr;
+    ELSE
+        result := SUPER(type);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE RelationOps.greaterEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+VAR
+    result: ContextExpression.BinaryOperatorCx;
+BEGIN
+    IF type = EberonString.string THEN
+        result := EberonOperator.greaterEqualStr;
+    ELSE
+        result := SUPER(type);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE RelationOps.is(cx: ContextHierarchy.Node): ContextExpression.BinaryOperatorCx;
+VAR
+    impl: ContextExpression.BinaryOperatorCx;
+    r: ContextExpression.BinaryOperatorCx;
+
+    PROCEDURE is(left, right: Expression.PType; lcx: LanguageContext.PType): Expression.PType;
+    BEGIN
+        d <- left.designator();
+        IF d # NIL THEN
+            v <- d.info();
+            IF v IS EberonTypePromotion.PVariable THEN
+                void <- cx.handleMessage(
+                    NEW EberonContextDesignator.PromoteTypeMsg(
+                        v, 
+                        ContextExpression.unwrapType(right.designator().info()))^);
+            END;
+        END;
+        RETURN impl(left, right, lcx);
+    END;
+BEGIN
+    impl := SUPER(cx);
+    JS.do("r = is"); (*allow closure*)
+    RETURN r;
+END;
+
+PROCEDURE RelationOps.coalesceType(leftType, rightType: Types.PType): Types.PType;
+VAR
+    result: Types.PType;
+BEGIN
+    IF     (((leftType = EberonString.string) & (rightType IS Types.PString))
+        OR ((rightType = EberonString.string) & (leftType IS Types.PString))) THEN
+        result := EberonString.string;
+    ELSE
+        result := SUPER(leftType, rightType);
+    END;
+    RETURN result;
+END;
+
+BEGIN
+    NEW(relationOps);
 END EberonContextExpression.
