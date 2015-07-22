@@ -7,15 +7,15 @@ TYPE
     END;
     PVariable* = POINTER TO Variable;
 
-    Type = RECORD
-        PROCEDURE and();
-        PROCEDURE or();
-        PROCEDURE reset();
+    Type* = RECORD
+        PROCEDURE and*();
+        PROCEDURE or*();
+        PROCEDURE reset*();
     END;
-    PType = POINTER TO Type;
+    PType* = POINTER TO Type;
 
     ForVariable* = RECORD(Type)
-        PROCEDURE ForVariable(v: PVariable; type: Types.PStorageType; inverted: BOOLEAN);
+        PROCEDURE ForVariable*(v: PVariable; type: Types.PStorageType; inverted: BOOLEAN);
 
         PROCEDURE invert();
 
@@ -49,7 +49,7 @@ TYPE
         PROCEDURE Or*(inverted: BOOLEAN);
     END;
 
-    Maybe = RECORD
+    Maybe* = RECORD
         PROCEDURE Maybe(handler: PCombined);
 
         PROCEDURE promote*(v: PVariable; type: Types.PStorageType);

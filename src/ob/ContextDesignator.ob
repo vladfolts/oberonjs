@@ -117,14 +117,14 @@ PROCEDURE handleDeref(VAR designator: Type);
 BEGIN
     t <- designator.currentType;
     IF t IS Record.PPointer THEN
-        designator.currentType := Record.pointerBase(t^);
+        base <- Record.pointerBase(t^);
+        IF base.finalizedAsNonExported THEN
+            Errors.raise("POINTER TO non-exported RECORD type cannot be dereferenced");
+        END;
+        designator.currentType := base;
     ELSE
         Errors.raise("POINTER TO type expected, got '"
                      + designator.currentType.description() + "'");
-    END;
-    
-    IF designator.currentType IS Record.PNonExported THEN
-        Errors.raise("POINTER TO non-exported RECORD type cannot be dereferenced");
     END;
     
     designator.lval := "";

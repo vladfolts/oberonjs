@@ -1071,6 +1071,13 @@ return {
          ["MODULE m; IMPORT test; VAR p: test.TP; BEGIN p := test.makeTP(); p.i := 123; END m.",
           "POINTER TO non-exported RECORD type cannot be dereferenced"])
     ),
+"imported pointer type can be used as a base of derived type even if pointer's record type is not exported": testWithModule(
+    "MODULE test;"
+    + "TYPE B = RECORD END; PB* = POINTER TO B; T* = RECORD(B) END;"
+    + "END test.",
+    pass("MODULE m; IMPORT test; VAR pb: test.PB; p: POINTER TO test.T; BEGIN pb := p; END m."),
+    fail()
+    ),
 "imported pointer variable: anonymous record field cannot be used": testWithModule(
     "MODULE test; VAR p*: POINTER TO RECORD i: INTEGER END; END test.",
     pass(),

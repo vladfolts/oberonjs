@@ -153,12 +153,12 @@ exports.suite = {
 "new method declaration": testWithContext(
     context(grammar.declarationSequence, 
             "TYPE T = RECORD PROCEDURE p(); intField: INTEGER END; A = ARRAY 1 OF INTEGER;"),
-    pass("PROCEDURE T.p(); END T.p;"
+    pass("PROCEDURE T.p(); END T.p;",
+         "PROCEDURE T.p(); END;"
          ),
-        fail(["PROCEDURE TUnk.p(), NEW; END TUnk.p;", "undeclared identifier: 'TUnk'"],
-         ["PROCEDURE A.p(), NEW; END A.p;",
+    fail(["PROCEDURE TUnk.p(); END TUnk.p;", "undeclared identifier: 'TUnk'"],
+         ["PROCEDURE A.p(); END A.p;",
           "RECORD type expected in method declaration, got 'ARRAY 1 OF INTEGER'"],
-         ["PROCEDURE T.p(), NEW; END;", "not parsed"],
          ["PROCEDURE T.p(); END p;",
           "mismatched method names: expected 'T.p' at the end (or nothing), got 'p'"],
          ["PROCEDURE T.p(); END T2.p;",
@@ -322,7 +322,9 @@ exports.suite = {
             ),
     pass(),
     fail(["PROCEDURE T.p*(); END T.p;",
-          "method implementation cannot be exported: p"])
+          "method implementation cannot be exported: p"],
+         ["TYPE R = RECORD PROCEDURE m*(); END;",
+          "method 'm' cannot be exported because record itslef is not exported"] )
     ),
 "import method": testWithModule(
       "MODULE test;"

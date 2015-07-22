@@ -67,7 +67,7 @@ TYPE
         PROCEDURE doGenerateConstructor(): STRING;
         PROCEDURE doGenerateBaseConstructorCallCode*(): STRING;
 
-        declaration: PDeclaration;
+        declaration-: PDeclaration;
         cons: STRING;
         type-: R.PType;
     END;

@@ -24,6 +24,7 @@ var EberonContextProcedure = require("js/EberonContextProcedure.js");
 var EberonContextType = require("js/EberonContextType.js");
 var EberonDynamicArray = require("js/EberonDynamicArray.js");
 var EberonMap = require("js/EberonMap.js");
+var EberonOperatorScopes = require("js/EberonOperatorScopes.js");
 var EberonRecord = require("js/EberonRecord.js");
 var EberonScope = require("js/EberonScope.js");
 var EberonString = require("js/EberonString.js");
@@ -252,67 +253,10 @@ var VariableDeclaration = Class.extend.call(ContextVar.Declaration, {
     }
 });
 
-var OperatorScopes = Class.extend({
-    init: function EberonContext$OperatorScopes(context){
-        this.__context = context;
-        this.__scope = undefined;
-
-        this.__typePromotion = undefined;
-        this.__typePromotions = [];
-        this.__ignorePromotions = false;
-        this.alternate();
-    },
-    handleMessage: function(msg){
-        if (this.__ignorePromotions)
-            return false;
-        if (msg instanceof EberonContextDesignator.TransferPromotedTypesMsg)
-            return true;
-        if (msg instanceof EberonContextDesignator.PromoteTypeMsg){
-            this.__typePromotion = new TypePromotion.ForVariable(msg.info, msg.type);
-            this.__typePromotions.push(this.__typePromotion);
-            return true;
-        }
-        if (msg instanceof EberonContextProcedure.BeginTypePromotionOrMsg){
-            this.__typePromotion = new TypePromotion.Or();
-            this.__typePromotions.push(this.__typePromotion);
-            msg.result = this.__typePromotion;
-            return true;
-        }
-        return false;
-    },
-    doThen: function(){
-        if (this.__typePromotion)
-            this.__typePromotion.and();
-        this.__ignorePromotions = true;
-    },
-    alternate: function(){
-        var root = this.__context.root();
-        if (this.__scope)
-            root.popScope();
-        this.__scope = EberonScope.makeOperator(
-            root.currentScope(),
-            root.language().stdSymbols);
-        root.pushScope(this.__scope);
-
-        if (this.__typePromotion){
-            this.__typePromotion.reset();
-            this.__typePromotion.or();
-            this.__typePromotion = undefined;
-        }
-        this.__ignorePromotions = false;
-    },
-    reset: function(){
-        this.__context.root().popScope();
-        for(var i = 0; i < this.__typePromotions.length; ++i){
-            this.__typePromotions[i].reset();
-        }
-    }
-});
-
 var While = Class.extend.call(ContextLoop.While, {
     init: function EberonContext$While(context){
         ContextLoop.While.call(this, context);
-        this.__scopes = new OperatorScopes(this);
+        this.__scopes = new EberonOperatorScopes.Type(this);
     },
     handleLiteral: function(s){
         ContextLoop.While.prototype.handleLiteral.call(this, s);
@@ -336,7 +280,7 @@ var While = Class.extend.call(ContextLoop.While, {
 var If = Class.extend.call(ContextIf.Type, {
     init: function EberonContext$If(context){
         ContextIf.Type.call(this, context);
-        this.__scopes = new OperatorScopes(this);
+        this.__scopes = new EberonOperatorScopes.Type(this);
     },
     handleMessage: function(msg){
         if (this.__scopes.handleMessage(msg))

@@ -18,13 +18,9 @@ TYPE
         base-:   PType;
         cons-:   STRING;
         scope-:  ScopeBase.PType;
-        notExported: ARRAY * OF STRING
+        notExported: ARRAY * OF STRING;
+        finalizedAsNonExported-: BOOLEAN;
     END;
-
-    NonExported = RECORD(Type)
-        PROCEDURE NonExported(cons: STRING; scope: ScopeBase.PType; base: PType);
-    END;
-    PNonExported* = POINTER TO NonExported;
 
     Field* = RECORD(Types.Field)
         PROCEDURE Field*(identdef: Context.PIdentdefInfo; type: Types.PStorageType);
@@ -88,12 +84,6 @@ PROCEDURE Type.Type(name: STRING; cons: STRING; scope: ScopeBase.PType)
 BEGIN
     scope.addFinalizer(finalizeRecord, SELF(POINTER));
 END;
-
-PROCEDURE NonExported.NonExported(cons: STRING; scope: ScopeBase.PType; base: PType)
-    | SUPER("", cons, scope);
-BEGIN
-    SELF.base := base;
-END;    
 
 PROCEDURE Type.description(): STRING;
 VAR
@@ -211,7 +201,7 @@ PROCEDURE stripTypeId*(VAR id: TypeId.Type);
 BEGIN
     r <- id.type();
     IF r IS PType THEN
-        id.reset(NEW NonExported(r.cons, r.scope, r.base));
+        r.finalizedAsNonExported := TRUE;
     ELSE
         id.reset(NIL);
     END;

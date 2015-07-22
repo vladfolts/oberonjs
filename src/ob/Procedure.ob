@@ -333,7 +333,7 @@ PROCEDURE makeNew(): Symbols.PSymbol;
                          + argType.description() + "'");
         ELSE
             baseType <- Record.pointerBase(argType^);
-            IF baseType IS Record.PNonExported THEN
+            IF baseType.finalizedAsNonExported THEN
                 Errors.raise("non-exported RECORD type cannot be used in NEW");
             END;
             right <- Expression.makeSimple(baseType.codeForNew(cx.cx^), argType);

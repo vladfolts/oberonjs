@@ -48,6 +48,13 @@ PROCEDURE Record.Record(parent: PDeclaration)
     | SUPER(parent, recordTypeFactory);
 END;
 
+PROCEDURE checkMethodExport(record: Record; method: Context.PIdentdefInfo; hint: STRING);
+BEGIN
+    IF ~record.declaration.id.exported() & method.exported() THEN
+        Errors.raise(hint + " '" + method.id() + "' cannot be exported because record itslef is not exported");
+    END;
+END;
+
 PROCEDURE Record.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
 VAR
     result: Object.PType;
@@ -57,16 +64,12 @@ BEGIN
         boundType <- SELF.type(EberonRecord.PRecord);
         id <- msg.id.id();
         IF boundType.name = id THEN
-            IF msg.id.exported() THEN
-                typeId <- SELF.parent()(PDeclaration).id;
-                IF ~typeId.exported() THEN
-                    Errors.raise("constructor '" + id + "' cannot be exported because record itslef is not exported");
-                END;
-            END;
+            checkMethodExport(SELF, msg.id, "constructor");
             boundType.declareConstructor(methodType, msg.id.exported());
         ELSE
             boundType.addMethod(msg.id,
                                 NEW EberonTypes.MethodType(id, methodType, Procedure.makeProcCallGenerator));
+            checkMethodExport(SELF, msg.id, "method");
         END;
     ELSIF msg IS ContextProcedure.EndParametersMsg THEN (* not used *)
     ELSIF msg IS ContextProcedure.AddArgumentMsg THEN   (* not used *)

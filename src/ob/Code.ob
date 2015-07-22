@@ -46,7 +46,7 @@ VAR
     result: STRING;
 BEGIN
     r <- Record.pointerBase(type);
-    IF LEN(Types.typeName(r^)) = 0 THEN
+    IF r.finalizedAsNonExported THEN
         result := r.cons;
     END;
     RETURN result
