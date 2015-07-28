@@ -654,28 +654,26 @@ exports.suite = {
 "in place variables": {
     "initialization": testWithContext(
         context(grammar.statement,
-                "VAR i: INTEGER;"
+                "VAR i: INTEGER; s: STRING;"
                 + "PROCEDURE p(): BOOLEAN; RETURN FALSE END p;"
                 + "PROCEDURE void(); END void;"
                ),
         pass("v <- 0",
              "v <- 1.23",
-             "v <- \"abc\"",
              "v <- TRUE",
              "v <- i",
              "v <- i + i",
+             "v <- \"abc\" + s",
+             "v <- s + \"abc\"",
              "v <- p()",
              "v <- void" // procedure type
             ),
         fail(["v <-", "initialization expression expected"],
              ["v <- void()", "procedure returning no result cannot be used in an expression"],
-             ["v <- NIL", "cannot use NIL to initialize variable"])
-        ),
-    "read-only if initialized with string literal": testWithContext(
-        context(grammar.declarationSequence, ""),
-        pass(),
-        fail(["PROCEDURE p(); BEGIN s <- \"abc\"; s := \"def\"; END p;", "cannot assign to string literal"],
-             ["PROCEDURE p(); BEGIN s <- \"abc\"; s[0] := \"d\"; END p;", "cannot assign to read-only array's element"])
+             ["v <- NIL", "cannot use NIL to initialize variable"],
+             ["v <- \"abc\"", "cannot use multi-character string to initialize variable"],
+             ["v <- \"abc\" + \"def\"", "cannot use multi-character string to initialize variable"]
+             )
         ),
     "scope": testWithContext(
         temporaryValues.context,

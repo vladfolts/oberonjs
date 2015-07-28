@@ -1,0 +1,96 @@
+MODULE EberonContextInPlace;
+IMPORT
+    CodeGenerator, 
+    ContextExpression, ContextHierarchy, 
+    EberonContextDesignator, EberonRecord,
+    Errors, Expression, LanguageContext, Symbols, Types;
+TYPE
+    VariableInit* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE onParsed();
+
+        id: STRING;
+        code: STRING;
+        symbol: Symbols.PSymbol;
+    END;
+
+    For = RECORD(ContextHierarchy.Node)
+        PROCEDURE handleInPlaceInit(symbol: Symbols.PSymbol; code: STRING);
+    END;
+    PFor = POINTER TO For;
+
+    VariableInitFor* = RECORD(VariableInit)
+        PROCEDURE VariableInitFor(cx: PFor);
+
+        parentFor: PFor;
+    END;
+
+PROCEDURE VariableInit.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN CodeGenerator.nullGenerator;
+END;
+
+PROCEDURE VariableInit.handleIdent(id: STRING);
+BEGIN
+    SELF.id := id;
+END;
+
+PROCEDURE VariableInit.handleLiteral(s: STRING);
+BEGIN
+    SELF.code := "var " + SELF.id + " = ";
+END;
+
+PROCEDURE VariableInit.handleExpression(e: Expression.PType);
+VAR
+    cloneOp: LanguageContext.PCastOp;
+BEGIN
+    type <- e.type();
+    IF ~(type IS Types.PStorageType) THEN
+        Errors.raise("cannot use " + type.description() + " to initialize variable");
+    ELSIF type IS Types.POpenArray THEN
+        Errors.raise("cannot initialize variable '" + SELF.id + "' with open array");
+    ELSE
+        v <- NEW EberonContextDesignator.TypeNarrowVariable(type, FALSE, FALSE, SELF.id);
+        SELF.symbol := NEW Symbols.Symbol(SELF.id, v);
+
+        IF type IS EberonRecord.PRecord THEN
+            EberonRecord.ensureCanBeInstantiated(SELF, type, EberonRecord.instantiateForCopy);
+            IF e.designator() # NIL THEN
+                l <- SELF.root().language();
+                SELF.code := SELF.code + l.rtl.clone(e.code(), l.types.typeInfo(type), "undefined");
+            ELSE (* do not clone if it is temporary, e.g. constructor call *)
+                SELF.code := SELF.code + e.code();
+            END;
+        ELSE
+            l <- SELF.root().language();
+            void <- l.types.implicitCast(type, type, FALSE, cloneOp);
+            SELF.code := SELF.code + cloneOp.clone(ContextHierarchy.makeLanguageContext(SELF(POINTER)), e);
+        END;
+    END;
+END;
+
+PROCEDURE VariableInit.onParsed();
+BEGIN
+    SELF.parent().codeGenerator().write(SELF.code);
+END;
+
+PROCEDURE VariableInit.endParse(): BOOLEAN;
+BEGIN
+    result <- FALSE;
+    IF SELF.symbol # NIL THEN
+        SELF.root().currentScope().addSymbol(SELF.symbol, FALSE);
+        SELF.onParsed();
+        result := TRUE;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE VariableInitFor.VariableInitFor(cx: PFor)
+    | SUPER(cx),
+      parentFor(cx);
+END;
+
+PROCEDURE VariableInitFor.onParsed();
+BEGIN
+    SELF.parentFor.handleInPlaceInit(SELF.symbol, SELF.code);
+END;
+
+END EberonContextInPlace.

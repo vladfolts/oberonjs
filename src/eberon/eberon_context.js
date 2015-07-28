@@ -52,13 +52,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-var InPlaceStringLiteral = Class.extend.call(EberonContextDesignator.TypeNarrowVariable, {
-    init: function(type){
-        EberonContextDesignator.TypeNarrowVariable.call(this, type, false, true);
-    },
-    idType: function(){return "string literal";}
-});
-
 var ForEachVariable = Class.extend.call(EberonContextDesignator.TypeNarrowVariable, {
     init: function(type){
         EberonContextDesignator.TypeNarrowVariable.call(this, type, false, true);
@@ -108,69 +101,6 @@ var OperatorNew = ChainedContext.extend({
     },
     endParse: function(){
         this.handleMessage(new EberonContextDesignator.OperatorNewMsg(this.__call.end()));
-    }
-});
-
-var InPlaceVariableInit = ChainedContext.extend({
-    init: function EberonContext$InPlaceVariableInit(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__id = undefined;
-        this._symbol = undefined;
-        this._code = undefined;
-    },
-    codeGenerator: function(){return CodeGenerator.nullGenerator();},
-    handleIdent: function(id){
-        this.__id = id;
-    },
-    handleLiteral: function(){
-        this._code = "var " + this.__id + " = ";
-    },
-    handleExpression: function(e){
-        var type = e.type();
-        var isString = Type.isString(type);
-        if (!isString && !(type instanceof Type.StorageType))
-            throw new Errors.Error("cannot use " + type.description() + " to initialize variable");
-        var v = isString ? new InPlaceStringLiteral(type) 
-                         : new EberonContextDesignator.TypeNarrowVariable(type, false, false, this.__id);
-        this._symbol = new Symbol.Symbol(this.__id, v);
-        if (type instanceof Type.Record){
-            EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForCopy);
-            if (e.designator()){
-                var l = this.root().language();
-                this._code += l.rtl.clone(e.code(), l.types.typeInfo(type));
-            }
-            else // do not clone if it is temporary, e.g. constructor call
-                this._code += e.code();
-        }
-        else {
-            if (type instanceof Type.OpenArray)
-                throw new Errors.Error("cannot initialize variable '" + this.__id + "' with open array");
-          
-            var language = this.root().language();
-            var cloneOp;
-            language.types.implicitCast(type, type, false, {set: function(v){cloneOp = v;}, get:function(){return cloneOp;}});
-            this._code += cloneOp.clone(ContextHierarchy.makeLanguageContext(this), e);
-        }
-    },
-    _onParsed: function(){
-        this.parent().codeGenerator().write(this._code);
-    },
-    endParse: function(){
-        if (!this._symbol)
-            return false;
-
-        this.root().currentScope().addSymbol(this._symbol);
-        this._onParsed();
-        return true;
-    }
-});
-
-var InPlaceVariableInitFor = InPlaceVariableInit.extend({
-    init: function EberonContext$InPlaceVariableInitFor(context){
-        InPlaceVariableInit.prototype.init.call(this, context);
-    },
-    _onParsed: function(){
-        this.parent().handleInPlaceInit(this._symbol, this._code);
     }
 });
 
@@ -522,8 +452,6 @@ exports.ModuleDeclaration = ModuleDeclaration;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.MapDecl = MapDecl;
 exports.Repeat = Repeat;
-exports.InPlaceVariableInit = InPlaceVariableInit;
-exports.InPlaceVariableInitFor = InPlaceVariableInitFor;
 exports.OperatorNew = OperatorNew;
 exports.VariableDeclaration = VariableDeclaration;
 exports.While = While;

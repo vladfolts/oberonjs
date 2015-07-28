@@ -1,5 +1,8 @@
 MODULE EberonOperator;
-IMPORT Cast, CodePrecedence, ConstValue, EberonMap, Expression, LanguageContext, OberonRtl, Operator, Record, Types;
+IMPORT 
+    Cast, CodePrecedence, ConstValue, 
+    EberonMap, EberonString, Expression, LanguageContext, 
+    OberonRtl, Operator, Record, Types;
 TYPE
     CastOpRecord = RECORD(Cast.CastOpRecord)
     END;
@@ -42,8 +45,16 @@ PROCEDURE opGraterEqualStr(left, right: ConstValue.PType): ConstValue.PType;
 END opGraterEqualStr;
 
 PROCEDURE addStr*(left, right: Expression.PType): Expression.PType;
-    RETURN Operator.binaryWithCode(left, right, opAddStr, " + ", CodePrecedence.addSub)
-END addStr;
+BEGIN
+    result <- Operator.binaryWithCode(left, right, opAddStr, " + ", CodePrecedence.addSub);
+    l <- left.type();
+    r <- right.type();
+    IF (l # r) & ((l = EberonString.string) OR (r = EberonString.string)) THEN
+        (* change expression type to STRING *)
+        result := NEW Expression.Type(result.code(), EberonString.string, result.designator(), result.constValue(), result.maxPrecedence());
+    END;
+    RETURN result;
+END;
 
 PROCEDURE equalStr*(left, right: Expression.PType; cx: LanguageContext.PType): Expression.PType;
     RETURN Operator.equal(left, right, opEqualStr, Operator.equalCode)

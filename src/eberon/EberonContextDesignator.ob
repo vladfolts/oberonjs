@@ -31,7 +31,7 @@ TYPE
         readOnly: BOOLEAN;
         code: STRING;
     END;
-    PTypeNarrowVariable = POINTER TO TypeNarrowVariable;
+    PTypeNarrowVariable* = POINTER TO TypeNarrowVariable;
 
     DereferencedTypeNarrowVariable = RECORD(EberonTypePromotion.Variable)
         PROCEDURE DereferencedTypeNarrowVariable(var: PTypeNarrowVariable);

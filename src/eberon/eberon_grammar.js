@@ -8,6 +8,7 @@ var EbContext = require("eberon/eberon_context.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
 var EberonContextExpression = require("js/EberonContextExpression.js");
 var EberonContextIdentdef = require("js/EberonContextIdentdef.js");
+var EberonContextInPlace = require("js/EberonContextInPlace.js");
 var EberonContextProcedure = require("js/EberonContextProcedure.js");
 var EberonContextType = require("js/EberonContextType.js");
 var Grammar = require("grammar.js");
@@ -50,7 +51,7 @@ function makeInPlaceInit(ident, expression, inPlaceContext){
 
 function makeAssignmentOrProcedureCall(ident, designator, assignment, expression){
     return or(
-        makeInPlaceInit(ident, expression, EbContext.InPlaceVariableInit),
+        makeInPlaceInit(ident, expression, EberonContextInPlace.VariableInit),
         context(and(designator, optional(assignment)), EbContext.AssignmentOrProcedureCall)
         );
 }
@@ -100,7 +101,7 @@ function makeFieldListSequence(base){
 }
 
 function makeForInit(ident, expression, assignment){
-    return or(makeInPlaceInit(ident, expression, EbContext.InPlaceVariableInitFor), 
+    return or(makeInPlaceInit(ident, expression, EberonContextInPlace.VariableInitFor), 
               and(ident, assignment));
 }
 
