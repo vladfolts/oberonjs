@@ -42,7 +42,14 @@ TYPE
     SelfAsPointer = RECORD(Types.Id)
     END;
 
-    OperatorNewMsg* = RECORD(ContextHierarchy.Message)
+    OperatorNew* = RECORD(ContextDesignator.QIdentHandler)
+        PROCEDURE handleExpression(e: Expression.PType);
+
+        info: TypeId.PType;
+        call: Procedure.PCallGenerator;
+    END;
+
+    OperatorNewMsg = RECORD(ContextHierarchy.Message)
         PROCEDURE OperatorNewMsg(e: Expression.PType);
 
         expression: Expression.PType;
@@ -360,6 +367,50 @@ END;
 
 PROCEDURE SelfAsPointer.idType(): STRING;
     RETURN "SELF(POINTER)";
+END;
+
+PROCEDURE OperatorNew.handleQIdent(q: ContextHierarchy.QIdent);
+BEGIN
+    found <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
+    s <- found.symbol();
+    info <- s.info();
+
+    IF ~(info IS TypeId.PType) THEN
+        Errors.raise("record type is expected in operator NEW, got '" + info.idType() + "'");
+    ELSE
+        type <- info.type();
+        IF ~(type IS Types.PRecord) THEN
+            Errors.raise("record type is expected in operator NEW, got '" + type.description() + "'");
+        END;
+        SELF.info := info;        
+    END;
+END;
+
+PROCEDURE OperatorNew.handleExpression(e: Expression.PType);
+BEGIN
+    SELF.call.handleArgument(e);
+END;    
+
+PROCEDURE OperatorNew.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF msg IS ContextDesignator.BeginCallMsg THEN
+        SELF.call := EberonConstructor.makeConstructorCall(
+            SELF.info, 
+            ContextHierarchy.makeLanguageContext(SELF(POINTER)), 
+            TRUE);
+    ELSIF msg IS ContextDesignator.EndCallMsg THEN
+    ELSE
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE OperatorNew.endParse(): BOOLEAN;
+BEGIN
+    void <- SELF.handleMessage(NEW OperatorNewMsg(SELF.call.end())^);
+    RETURN TRUE;
 END;
 
 PROCEDURE OperatorNewMsg.OperatorNewMsg(e: Expression.PType)

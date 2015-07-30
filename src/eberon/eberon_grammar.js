@@ -63,7 +63,7 @@ function makeIdentdef(ident){
 
 function makeDesignator(ident, qualident, selector, actualParameters){
     var self = and("SELF", optional(and("(", "POINTER", ")")));
-    var operatorNew = and("NEW", context(and(qualident, actualParameters), EbContext.OperatorNew));
+    var operatorNew = and("NEW", context(and(qualident, actualParameters), EberonContextDesignator.OperatorNew));
     var designator = context(
         and(or(self, "SUPER", operatorNew, qualident), 
             repeat(or(selector, actualParameters))), EberonContextDesignator.Type);

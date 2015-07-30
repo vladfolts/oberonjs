@@ -52,51 +52,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-function makeContextCall(context, call){
-    return call(ContextHierarchy.makeLanguageContext(context));
-    }
-
-var OperatorNew = ChainedContext.extend({
-    init: function EberonContext$OperatorNew(parent){
-        ChainedContext.prototype.init.call(this, parent);
-        this.__info = undefined;
-        this.__call = undefined;
-    },
-    handleQIdent: function(q){
-        var found = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        var s = found.symbol();
-        var info = s.info();
-
-        if (!(info instanceof TypeId.Type))
-            throw new Errors.Error("record type is expected in operator NEW, got '" + info.idType() + "'");
-
-        var type = info.type();
-        if (!(type instanceof Type.Record))
-            throw new Errors.Error("record type is expected in operator NEW, got '" + type.description() + "'");
-        
-        this.__info = info;        
-    },
-    handleExpression: function(e){
-        this.__call.handleArgument(e);
-    },
-    handleMessage: function(msg){
-        if (msg instanceof ContextDesignator.BeginCallMsg){
-            this.__call = makeContextCall(
-                this,
-                function(cx){ return EberonConstructor.makeConstructorCall(this.__info, cx, true); }.bind(this)
-                );
-            return;
-        }
-        if (msg instanceof ContextDesignator.EndCallMsg)
-            return;
-
-        return ChainedContext.prototype.handleMessage.call(this, msg);
-    },
-    endParse: function(){
-        this.handleMessage(new EberonContextDesignator.OperatorNewMsg(this.__call.end()));
-    }
-});
-
 var ExpressionProcedureCall = ChainedContext.extend({
     init: function EberonContext$init(context){
         ChainedContext.prototype.init.call(this, context);
@@ -392,6 +347,5 @@ exports.ModuleDeclaration = ModuleDeclaration;
 exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.MapDecl = MapDecl;
 exports.Repeat = Repeat;
-exports.OperatorNew = OperatorNew;
 exports.VariableDeclaration = VariableDeclaration;
 exports.While = While;
