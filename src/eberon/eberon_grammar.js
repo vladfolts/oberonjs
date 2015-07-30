@@ -9,6 +9,7 @@ var EberonContextDesignator = require("js/EberonContextDesignator.js");
 var EberonContextExpression = require("js/EberonContextExpression.js");
 var EberonContextIdentdef = require("js/EberonContextIdentdef.js");
 var EberonContextInPlace = require("js/EberonContextInPlace.js");
+var EberonContextLoop = require("js/EberonContextLoop.js");
 var EberonContextProcedure = require("js/EberonContextProcedure.js");
 var EberonContextType = require("js/EberonContextType.js");
 var Grammar = require("grammar.js");
@@ -33,7 +34,7 @@ function makeStrucType(base, type){
 function makeStatement(base, statementSequence, ident, expression){
     return or(context(and("FOR", ident, ",", ident, "IN", expression, "DO", 
                           statementSequence, required("END", "END expected (FOR)")), 
-                      EbContext.ForEach),
+                      EberonContextLoop.ForEach),
               base
               );
 }

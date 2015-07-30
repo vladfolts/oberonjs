@@ -52,13 +52,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-var ForEachVariable = Class.extend.call(EberonContextDesignator.TypeNarrowVariable, {
-    init: function(type){
-        EberonContextDesignator.TypeNarrowVariable.call(this, type, false, true);
-    },
-    idType: function(){return "FOR variable";}
-});
-
 function makeContextCall(context, call){
     return call(ContextHierarchy.makeLanguageContext(context));
     }
@@ -305,58 +298,6 @@ var MapDecl = ChainedContext.extend({
     }
 });
 
-var ForEach = ChainedContext.extend({
-    init: function EberonContext$MapDecl(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__valueId = undefined;
-        this.__keyId = undefined;
-        this.__scopeWasCreated = false;
-        this.__codeGenerator = CodeGenerator.nullGenerator();
-    },
-    handleIdent: function(id){
-        if (!this.__keyId)
-                this.__keyId = id;
-            else
-                this.__valueId = id;
-    },
-    codeGenerator: function(){return this.__codeGenerator;},
-    handleExpression: function(e){
-        var type = e.type();
-        if (!(type instanceof EberonMap.Type))
-            throw new Errors.Error("expression of type MAP is expected in FOR, got '" 
-                                 + type.description() + "'");
-
-        var root = this.root();
-        var scope = EberonScope.makeOperator(
-            root.currentScope(),
-            root.language().stdSymbols);
-        root.pushScope(scope);
-        this.__scopeWasCreated = true;
-
-        var code = this.parent().codeGenerator();
-        var mapVar = root.currentScope().generateTempVar("map");
-        code.write("var " + mapVar + " = " + e.code() + ";\n");
-        code.write("for(var " + this.__keyId + " in " + mapVar + ")");
-        code.openScope();
-        code.write("var " + this.__valueId + " = " + mapVar + "[" + this.__keyId + "];\n");
-        this.__codeGenerator = code;
-
-        this.__makeVariable(this.__keyId, EberonString.string(), scope);
-        this.__makeVariable(this.__valueId, type.valueType, scope);
-    },
-    endParse: function(){
-        this.__codeGenerator.closeScope("");
-        if (this.__scopeWasCreated)
-            this.root().popScope();
-    },
-    __makeVariable: function(id, type, scope){
-        var v = new ForEachVariable(type);
-        var s = new Symbol.Symbol(id, v);
-        scope.addSymbol(s);
-        return s;
-    }
-});
-
 function assertArgumentIsNotNonVarDynamicArray(msg){
     if (msg instanceof ContextProcedure.AddArgumentMsg){
         var arg = msg.arg;
@@ -443,7 +384,6 @@ exports.CaseLabel = CaseLabel;
 exports.ConstDecl = ConstDecl;
 exports.ExpressionProcedureCall = ExpressionProcedureCall;
 exports.For = For;
-exports.ForEach = ForEach;
 exports.FormalParameters = FormalParameters;
 exports.FormalParametersProcDecl = FormalParametersProcDecl;
 exports.FormalType = FormalType;

@@ -1,0 +1,98 @@
+MODULE EberonContextLoop;
+IMPORT
+    Chars, CodeGenerator, 
+    ContextLoop, ContextExpression, ContextHierarchy,
+    Errors, Expression,
+    EberonContextDesignator, 
+    EberonMap, EberonScope, EberonString,
+    Scope, Symbols, Types, Variable;
+TYPE
+    ForEachVariable = RECORD(Variable.TypedVariable)
+    END;
+
+    ForEach* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE ForEach(parent: ContextHierarchy.PNode);
+
+        keyId, valueId: STRING;
+        code: CodeGenerator.PIGenerator;
+        scopeWasCreated: BOOLEAN;
+    END;
+
+PROCEDURE ForEachVariable.idType(): STRING;
+    RETURN "FOR variable";
+END;
+
+PROCEDURE ForEachVariable.referenceCode(): STRING;
+    RETURN "";
+END;
+
+PROCEDURE ForEachVariable.isReference(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE ForEachVariable.isReadOnly(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE ForEach.ForEach(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      code(CodeGenerator.nullGenerator);
+END;
+
+PROCEDURE ForEach.handleIdent(id: STRING);
+BEGIN
+    IF LEN(SELF.keyId) = 0 THEN
+        SELF.keyId := id;
+    ELSE
+        SELF.valueId := id;
+    END;
+END;
+
+PROCEDURE ForEach.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN SELF.code;
+END;
+
+PROCEDURE makeVariable(id: STRING; type: Types.PStorageType; scope: Scope.PType);
+BEGIN
+    v <- NEW ForEachVariable(type);
+    s <- NEW Symbols.Symbol(id, v);
+    scope.addSymbol(s, FALSE);
+END;
+
+PROCEDURE ForEach.handleExpression(e: Expression.PType);
+BEGIN
+    type <- e.type();
+    IF ~(type IS EberonMap.PType) THEN
+        Errors.raise("expression of type MAP is expected in FOR, got '" 
+                     + type.description() + "'");
+    ELSE
+        root <- SELF.root();
+        scope <- EberonScope.makeOperator(
+            root.currentScope(),
+            root.language().stdSymbols);
+        root.pushScope(scope);
+        SELF.scopeWasCreated := TRUE;
+
+        code <- SELF.parent().codeGenerator();
+        mapVar <- root.currentScope().generateTempVar("map");
+        code.write("var " + mapVar + " = " + e.code() + ";" + Chars.ln);
+        code.write("for(var " + SELF.keyId + " in " + mapVar + ")");
+        code.openScope();
+        code.write("var " + SELF.valueId + " = " + mapVar + "[" + SELF.keyId + "];" + Chars.ln);
+        SELF.code := code;
+
+        makeVariable(SELF.keyId, EberonString.string, scope);
+        makeVariable(SELF.valueId, type.valueType, scope);
+    END;
+END;
+
+PROCEDURE ForEach.endParse(): BOOLEAN;
+BEGIN
+    SELF.code.closeScope("");
+    IF SELF.scopeWasCreated THEN
+        SELF.root().popScope();
+    END;
+    RETURN TRUE;
+END;
+
+END EberonContextLoop.
