@@ -52,59 +52,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-var ExpressionProcedureCall = ChainedContext.extend({
-    init: function EberonContext$init(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.attributes = {};
-    },
-    endParse: function(){
-        var parent = this.parent();
-        var d = this.attributes.designator;
-        var info = d.info();
-        var e;
-        if (info instanceof EberonContextDesignator.ResultVariable){
-            e = info.expression;
-            e = new Expression.Type(d.code(), d.type(), undefined, e.constValue(), e.maxPrecedence());
-        }
-        else
-            e = ContextExpression.designatorAsExpression(d);
-        parent.handleExpression(e);
-    }
-});
-
-var AssignmentOrProcedureCall = ChainedContext.extend({
-    init: function EberonContext$init(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.attributes = {};
-        this.__right = undefined;
-    },
-    handleExpression: function(e){
-        this.__right = e;
-    },
-    codeGenerator: function(){return CodeGenerator.nullGenerator();},
-    endParse: function(){
-        var d = this.attributes.designator;
-        var type = d.type();
-        var code;
-        if (this.__right){
-            var left = Expression.make(d.code(), type, d);
-            code = op.assign(left, this.__right, ContextHierarchy.makeLanguageContext(this));
-        }
-        else if (!(d.info() instanceof EberonContextDesignator.ResultVariable)){
-            var procCall = ContextProcedure.makeCall(this, type, d.info());
-            var result = procCall.end();
-            Module.assertProcStatementResult(result.type());
-            code = d.code() + result.code();
-        }
-        else{
-            Module.assertProcStatementResult(type);
-            code = d.code();
-        }
-    
-    this.parent().codeGenerator().write(code);
-    }
-});
-
 var ConstDecl = Class.extend.call(ContextConst.Type, {
     init: function EberonContext$ConstDecl(context){
         ContextConst.Type.call(this, context);
@@ -337,14 +284,12 @@ var ModuleDeclaration = Class.extend.call(ContextModule.Declaration, {
 
 exports.CaseLabel = CaseLabel;
 exports.ConstDecl = ConstDecl;
-exports.ExpressionProcedureCall = ExpressionProcedureCall;
 exports.For = For;
 exports.FormalParameters = FormalParameters;
 exports.FormalParametersProcDecl = FormalParametersProcDecl;
 exports.FormalType = FormalType;
 exports.If = If;
 exports.ModuleDeclaration = ModuleDeclaration;
-exports.AssignmentOrProcedureCall = AssignmentOrProcedureCall;
 exports.MapDecl = MapDecl;
 exports.Repeat = Repeat;
 exports.VariableDeclaration = VariableDeclaration;

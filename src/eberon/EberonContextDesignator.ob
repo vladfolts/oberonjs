@@ -1,8 +1,9 @@
 MODULE EberonContextDesignator;
 IMPORT
-    ContextDesignator, ContextHierarchy, ContextProcedure,
+    CodeGenerator,
+    ContextDesignator, ContextExpression, ContextHierarchy, ContextProcedure,
     EberonConstructor, EberonMap, EberonRtl, EberonString, EberonTypePromotion,
-    Errors, Expression, Object, Procedure, Record, TypeId, Types, Variable;
+    Errors, Expression, Module, Object, Operator, Procedure, Record, TypeId, Types, Variable;
 TYPE
     Type* = RECORD(ContextDesignator.Type)
         procCall: Procedure.PCallGenerator;
@@ -17,7 +18,7 @@ TYPE
         code: STRING;
     END;
 
-    ResultVariable* = RECORD(Types.Variable)
+    ResultVariable = RECORD(Types.Variable)
         PROCEDURE ResultVariable(e: Expression.PType);
 
         expression: Expression.PType;
@@ -40,6 +41,14 @@ TYPE
     END;
 
     SelfAsPointer = RECORD(Types.Id)
+    END;
+
+    ExpressionProcedureCall* = RECORD(ContextHierarchy.Node)
+        PROCEDURE ExpressionProcedureCall(parent: ContextHierarchy.PNode);
+    END;
+
+    AssignmentOrProcedureCall* = RECORD(ContextExpression.ExpressionHandler)
+        right: Expression.PType;
     END;
 
     OperatorNew* = RECORD(ContextDesignator.QIdentHandler)
@@ -367,6 +376,60 @@ END;
 
 PROCEDURE SelfAsPointer.idType(): STRING;
     RETURN "SELF(POINTER)";
+END;
+
+PROCEDURE ExpressionProcedureCall.ExpressionProcedureCall(parent: ContextHierarchy.PNode)
+    | SUPER(parent);
+BEGIN
+    NEW(SELF.attributes);
+END;
+
+PROCEDURE ExpressionProcedureCall.endParse(): BOOLEAN;
+VAR
+    e: Expression.PType;
+BEGIN
+    d <- SELF.attributes.designator;
+    info <- d.info();
+    IF info^ IS ResultVariable THEN
+        e := info.expression;
+        e := NEW Expression.Type(d.code(), d.type(), NIL, e.constValue(), e.maxPrecedence());
+    ELSE
+        e := ContextExpression.designatorAsExpression(d);
+    END;
+    SELF.parent()^(ContextExpression.ExpressionHandler).handleExpression(e);
+    RETURN TRUE;
+END;
+
+PROCEDURE AssignmentOrProcedureCall.handleExpression(e: Expression.PType);
+BEGIN
+    SELF.right := e;
+END;
+
+PROCEDURE AssignmentOrProcedureCall.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN CodeGenerator.nullGenerator;
+END;
+
+PROCEDURE AssignmentOrProcedureCall.endParse(): BOOLEAN;
+VAR
+    code: STRING;
+BEGIN
+    d <- SELF.attributes.designator;
+    type <- d.type();
+    IF SELF.right # NIL THEN
+        left <- Expression.make(d.code(), type, d, NIL);
+        code := Operator.assign(left, SELF.right, ContextHierarchy.makeLanguageContext(SELF(POINTER)));
+    ELSIF ~(d.info()^ IS ResultVariable) THEN
+        procCall <- ContextProcedure.makeCall(SELF(POINTER), type, d.info());
+        result <- procCall.end();
+        Module.assertProcStatementResult(result.type());
+        code := d.code() + result.code();
+    ELSE
+        Module.assertProcStatementResult(type);
+        code := d.code();
+    END;
+
+    SELF.parent().codeGenerator().write(code);
+    RETURN TRUE;
 END;
 
 PROCEDURE OperatorNew.handleQIdent(q: ContextHierarchy.QIdent);

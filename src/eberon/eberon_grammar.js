@@ -53,7 +53,7 @@ function makeInPlaceInit(ident, expression, inPlaceContext){
 function makeAssignmentOrProcedureCall(ident, designator, assignment, expression){
     return or(
         makeInPlaceInit(ident, expression, EberonContextInPlace.VariableInit),
-        context(and(designator, optional(assignment)), EbContext.AssignmentOrProcedureCall)
+        context(and(designator, optional(assignment)), EberonContextDesignator.AssignmentOrProcedureCall)
         );
 }
 
@@ -68,7 +68,7 @@ function makeDesignator(ident, qualident, selector, actualParameters){
         and(or(self, "SUPER", operatorNew, qualident), 
             repeat(or(selector, actualParameters))), EberonContextDesignator.Type);
     return { 
-        factor: context(designator, EbContext.ExpressionProcedureCall),
+        factor: context(designator, EberonContextDesignator.ExpressionProcedureCall),
         assignmentOrProcedureCall: function(assignment, expression){
             return makeAssignmentOrProcedureCall(ident, designator, assignment, expression);
         }
