@@ -4,7 +4,7 @@ IMPORT
     Errors, Expression, Symbols, Types;
 TYPE
     Type* = RECORD(ContextExpression.ExpressionHandler)
-        PROCEDURE handleIdentdef(id: Context.PIdentdefInfo);
+        PROCEDURE handleIdentdef*(id: Context.PIdentdefInfo);
 
         id: Context.PIdentdefInfo;
         type: Types.PType;

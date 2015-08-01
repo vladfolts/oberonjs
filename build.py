@@ -129,8 +129,8 @@ def recompile(bin):
     compiler = os.path.join(root, 'src', 'oc_nodejs.js')
     sources = ['ContextAssignment.ob', 'ContextCase.ob', 'ContextConst.ob', 
                'ContextIdentdef.ob', 'ContextLoop.ob', 'ContextModule.ob', 'ContextProcedure.ob', 
-               'ContextVar.ob', 'EberonSymbols.ob', 'EberonCast.ob', 
-               'EberonContextExpression.ob', 'EberonContextIdentdef.ob', 'EberonContextInPlace.ob', 'EberonContextLoop.ob', 'EberonContextType.ob', 'EberonOperatorScopes.ob',
+               'EberonSymbols.ob', 'EberonCast.ob', 
+               'EberonContextExpression.ob', 'EberonContextIdentdef.ob', 'EberonContextInPlace.ob', 'EberonContextLoop.ob', 'EberonContextType.ob', 'EberonContextVar.ob', 'EberonOperatorScopes.ob',
                'OberonContext.ob', 'OberonContextType.ob', 'OberonContextVar.ob',
                'OberonSymbols.ob', 'Lexer.ob', 'Module.ob']
     

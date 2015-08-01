@@ -4,7 +4,7 @@ IMPORT
     Object, Symbols, Types, Variable;
 TYPE
     Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
-        PROCEDURE doInitCode(): STRING;
+        PROCEDURE doInitCode*(): STRING;
         PROCEDURE doCheckExport*(name: STRING);
 
         idents: ARRAY * OF Context.PIdentdefInfo;

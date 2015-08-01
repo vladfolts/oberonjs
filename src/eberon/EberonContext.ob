@@ -1,6 +1,6 @@
 MODULE EberonContext;
 IMPORT 
-    Context, Errors;
+    Context, ContextConst, ContextVar, Errors;
 TYPE
     IdentdefInfo* = RECORD(Context.IdentdefInfo)
         PROCEDURE IdentdefInfo*(id: STRING; exported: BOOLEAN; ro: BOOLEAN);
@@ -10,6 +10,9 @@ TYPE
         ro: BOOLEAN;
     END;
     PIdentdefInfo* = POINTER TO IdentdefInfo;
+
+    ConstDeclaration* = RECORD(ContextConst.Type)
+    END;
 
 PROCEDURE IdentdefInfo.isReadOnly(): BOOLEAN;
     RETURN SELF.ro;
@@ -25,6 +28,12 @@ BEGIN
     IF id.isReadOnly() THEN
         Errors.raise(hint + " cannot be exported as read-only using '-' mark (did you mean '*'?)");
     END;
+END;
+
+PROCEDURE ConstDeclaration.handleIdentdef(id: Context.PIdentdefInfo);
+BEGIN
+    checkOrdinaryExport(id^(IdentdefInfo), "constant");
+    SUPER(id);
 END;
 
 END EberonContext.

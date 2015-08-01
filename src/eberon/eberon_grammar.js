@@ -5,6 +5,7 @@ var EbArray = require("js/EberonArray.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var ContextType = require("js/ContextType.js");
 var EbContext = require("eberon/eberon_context.js");
+var EberonContext = require("js/EberonContext.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
 var EberonContextExpression = require("js/EberonContextExpression.js");
 var EberonContextIdentdef = require("js/EberonContextIdentdef.js");
@@ -12,6 +13,7 @@ var EberonContextInPlace = require("js/EberonContextInPlace.js");
 var EberonContextLoop = require("js/EberonContextLoop.js");
 var EberonContextProcedure = require("js/EberonContextProcedure.js");
 var EberonContextType = require("js/EberonContextType.js");
+var EberonContextVar = require("js/EberonContextVar.js");
 var Grammar = require("grammar.js");
 var EbRtl = require("js/EberonRtl.js");
 var EbRtlCode = require("eberon/eberon_rtl.js");
@@ -145,10 +147,10 @@ exports.language = {
         makeFormalResult,
         makeReturn,
         { 
-            constDeclaration:   EbContext.ConstDecl, 
+            constDeclaration:   EberonContext.ConstDeclaration, 
             typeDeclaration:    EberonContextType.Declaration,
             recordDecl:         EberonContextType.Record,
-            variableDeclaration: EbContext.VariableDeclaration,
+            variableDeclaration: EberonContextVar.Declaration,
             ArrayDecl:          EberonContextType.Array,
             Factor:             EberonContextExpression.Factor,
             FormalParameters:   EbContext.FormalParameters,

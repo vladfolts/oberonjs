@@ -1,0 +1,24 @@
+MODULE EberonContextVar;
+IMPORT
+    Context, ContextVar, EberonContext, EberonRecord;
+TYPE
+
+    Declaration* = RECORD(ContextVar.Declaration)
+    END;
+
+PROCEDURE Declaration.handleIdentdef(id: Context.PIdentdefInfo);
+BEGIN
+    EberonContext.checkOrdinaryExport(id^(EberonContext.IdentdefInfo), "variable");
+    SUPER(id);
+END;
+
+PROCEDURE Declaration.doInitCode(): STRING;
+BEGIN
+    type <- SELF.type;
+    IF type IS EberonRecord.PRecord THEN
+        EberonRecord.ensureCanBeInstantiated(SELF, type, EberonRecord.instantiateForVar);
+    END;
+    RETURN SUPER();
+END;
+
+END EberonContextVar.

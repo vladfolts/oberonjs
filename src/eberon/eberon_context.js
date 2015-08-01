@@ -52,32 +52,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-var ConstDecl = Class.extend.call(ContextConst.Type, {
-    init: function EberonContext$ConstDecl(context){
-        ContextConst.Type.call(this, context);
-    },
-    handleIdentdef: function(id){
-        EberonContext.checkOrdinaryExport(id, "constant");
-        ContextConst.Type.prototype.handleIdentdef.call(this, id);
-    }
-});
-
-var VariableDeclaration = Class.extend.call(ContextVar.Declaration, {
-    init: function EberonContext$VariableDeclaration(context){
-        ContextVar.Declaration.call(this, context);
-    },
-    handleIdentdef: function(id){
-        EberonContext.checkOrdinaryExport(id, "variable");
-        ContextVar.Declaration.prototype.handleIdentdef.call(this, id);
-    },
-    doInitCode: function(){
-        var type = this.type;
-        if (type instanceof EberonRecord.Record)
-            EberonRecord.ensureCanBeInstantiated(this, type, EberonRecord.instantiateForVar);
-        return ContextVar.Declaration.prototype.doInitCode.call(this);
-    }
-});
-
 var While = Class.extend.call(ContextLoop.While, {
     init: function EberonContext$While(context){
         ContextLoop.While.call(this, context);
@@ -283,7 +257,6 @@ var ModuleDeclaration = Class.extend.call(ContextModule.Declaration, {
 });
 
 exports.CaseLabel = CaseLabel;
-exports.ConstDecl = ConstDecl;
 exports.For = For;
 exports.FormalParameters = FormalParameters;
 exports.FormalParametersProcDecl = FormalParametersProcDecl;
@@ -292,5 +265,4 @@ exports.If = If;
 exports.ModuleDeclaration = ModuleDeclaration;
 exports.MapDecl = MapDecl;
 exports.Repeat = Repeat;
-exports.VariableDeclaration = VariableDeclaration;
 exports.While = While;
