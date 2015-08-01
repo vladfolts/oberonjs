@@ -6,6 +6,7 @@ var CodeGenerator = require("js/CodeGenerator.js");
 var ContextType = require("js/ContextType.js");
 var EbContext = require("eberon/eberon_context.js");
 var EberonContext = require("js/EberonContext.js");
+var EberonContextCase = require("js/EberonContextCase.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
 var EberonContextExpression = require("js/EberonContextExpression.js");
 var EberonContextIdentdef = require("js/EberonContextIdentdef.js");
@@ -164,7 +165,7 @@ exports.language = {
             For:                EberonContextLoop.For,
             While:              EberonContextLoop.While,
             If:                 EberonContextIf.Type,
-            CaseLabel:          EbContext.CaseLabel,
+            CaseLabel:          EberonContextCase.Label,
             Repeat:             EberonContextLoop.Repeat,
             ModuleDeclaration:  EbContext.ModuleDeclaration
         },

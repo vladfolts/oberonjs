@@ -65,36 +65,22 @@ BEGIN
     RETURN SUPER();
 END;
 
-PROCEDURE startLoopScope(cx: ContextHierarchy.Node);
-BEGIN
-    root <- cx.root();
-    scope <- EberonScope.makeOperator(
-        root.currentScope(),
-        root.language().stdSymbols);
-    root.pushScope(scope);
-END;
-
-PROCEDURE endLoopScope(cx: ContextHierarchy.Node);
-BEGIN
-    cx.root().popScope();
-END;
-
 PROCEDURE Repeat.Repeat(parent: ContextHierarchy.PNode)
     | SUPER(parent);
 BEGIN
-    startLoopScope(SELF);
+    EberonScope.startOperatorScope(SELF);
 END;
 
 PROCEDURE Repeat.endParse(): BOOLEAN;
 BEGIN
-    endLoopScope(SELF);
+    EberonScope.endOperatorScope(SELF);
     RETURN TRUE;
 END;
 
 PROCEDURE For.For(parent: ContextHierarchy.PNode)
     | SUPER(parent);
 BEGIN
-    startLoopScope(SELF);
+    EberonScope.startOperatorScope(SELF);
 END;
 
 PROCEDURE For.handleInPlaceInit(symbol: Symbols.PSymbol; code: STRING);
@@ -105,7 +91,7 @@ END;
 
 PROCEDURE For.endParse(): BOOLEAN;
 BEGIN
-    endLoopScope(SELF);
+    EberonScope.endOperatorScope(SELF);
     RETURN SUPER();
 END;
 

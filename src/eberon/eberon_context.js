@@ -52,25 +52,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-var CaseLabel = Class.extend.call(ContextCase.Label, {
-    init: function EberonContext$CaseLabel(context){
-        ContextCase.Label.call(this, context);
-    },
-    handleLiteral: function(s){
-        if (s == ':'){ // statement sequence is expected now
-            var root = this.root();
-            var scope = EberonScope.makeOperator(
-                root.currentScope(),
-                root.language().stdSymbols);
-            root.pushScope(scope);
-        }
-    },
-    endParse: function(){
-        this.root().popScope();
-        ContextCase.Label.prototype.endParse.call(this);
-    }
-});
-
 var MapDecl = ChainedContext.extend({
     init: function EberonContext$MapDecl(context){
         ChainedContext.prototype.init.call(this, context);
@@ -174,7 +155,6 @@ var ModuleDeclaration = Class.extend.call(ContextModule.Declaration, {
     }
 });
 
-exports.CaseLabel = CaseLabel;
 exports.FormalParameters = FormalParameters;
 exports.FormalParametersProcDecl = FormalParametersProcDecl;
 exports.FormalType = FormalType;

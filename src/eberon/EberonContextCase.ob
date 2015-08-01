@@ -1,0 +1,21 @@
+MODULE EberonContextCase;
+IMPORT
+    ContextCase, EberonScope;
+TYPE
+    Label* = RECORD(ContextCase.Label)
+    END;
+
+PROCEDURE Label.handleLiteral(s: STRING);
+BEGIN
+    IF s = ":" THEN (* statement sequence is expected now *)
+        EberonScope.startOperatorScope(SELF);
+    END;
+END;
+
+PROCEDURE Label.endParse(): BOOLEAN;
+BEGIN
+    EberonScope.endOperatorScope(SELF);
+    RETURN SUPER();
+END;
+
+END EberonContextCase.

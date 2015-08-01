@@ -1,5 +1,6 @@
 MODULE EberonScope;
-IMPORT Errors, Scope, Symbols;
+IMPORT 
+    ContextHierarchy, Errors, Scope, Symbols;
 TYPE
     Operator = RECORD(Scope.Type)
         parent: Scope.PType
@@ -39,6 +40,20 @@ BEGIN
     result <- NEW Operator(stdSymbols);
     result.parent := parent;
     RETURN result
+END;
+
+PROCEDURE startOperatorScope*(cx: ContextHierarchy.Node);
+BEGIN
+    root <- cx.root();
+    scope <- makeOperator(
+        root.currentScope(),
+        root.language().stdSymbols);
+    root.pushScope(scope);
+END;
+
+PROCEDURE endOperatorScope*(cx: ContextHierarchy.Node);
+BEGIN
+    cx.root().popScope();
 END;
 
 END EberonScope.
