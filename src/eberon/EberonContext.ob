@@ -1,6 +1,6 @@
 MODULE EberonContext;
 IMPORT 
-    Context, ContextConst, ContextVar, Errors;
+    Context, ContextConst, Errors;
 TYPE
     IdentdefInfo* = RECORD(Context.IdentdefInfo)
         PROCEDURE IdentdefInfo*(id: STRING; exported: BOOLEAN; ro: BOOLEAN);

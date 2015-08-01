@@ -52,30 +52,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-var If = Class.extend.call(ContextIf.Type, {
-    init: function EberonContext$If(context){
-        ContextIf.Type.call(this, context);
-        this.__scopes = new EberonOperatorScopes.Type(this);
-    },
-    handleMessage: function(msg){
-        if (this.__scopes.handleMessage(msg))
-            return;
-
-        return ContextIf.Type.prototype.handleMessage.call(this, msg);
-    },
-    handleLiteral: function(s){
-        ContextIf.Type.prototype.handleLiteral.call(this, s);
-        if (s == "THEN")
-            this.__scopes.doThen();
-        else if (s == "ELSIF" || s == "ELSE")
-            this.__scopes.alternate();
-    },
-    endParse: function(){
-        this.__scopes.reset();
-        ContextIf.Type.prototype.endParse.call(this);
-    }
-});
-
 var CaseLabel = Class.extend.call(ContextCase.Label, {
     init: function EberonContext$CaseLabel(context){
         ContextCase.Label.call(this, context);
@@ -202,6 +178,5 @@ exports.CaseLabel = CaseLabel;
 exports.FormalParameters = FormalParameters;
 exports.FormalParametersProcDecl = FormalParametersProcDecl;
 exports.FormalType = FormalType;
-exports.If = If;
 exports.ModuleDeclaration = ModuleDeclaration;
 exports.MapDecl = MapDecl;

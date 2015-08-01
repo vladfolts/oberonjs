@@ -1,0 +1,42 @@
+MODULE EberonContextIf;
+IMPORT
+    ContextIf, ContextHierarchy, EberonOperatorScopes, Object;
+TYPE
+    Type* = RECORD(ContextIf.Type)
+        PROCEDURE Type(parent: ContextHierarchy.PNode);
+
+        scopes: EberonOperatorScopes.Type;
+    END;
+
+PROCEDURE Type.Type(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      scopes(parent);
+END;
+
+PROCEDURE Type.handleLiteral(s: STRING);
+BEGIN
+    SUPER(s);
+    IF s = "THEN" THEN
+        SELF.scopes.doThen();
+    ELSIF (s = "ELSIF") OR (s = "ELSE") THEN
+        SELF.scopes.alternate();
+    END;
+END;
+
+PROCEDURE Type.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF ~SELF.scopes.handleMessage(msg) THEN
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Type.endParse(): BOOLEAN;
+BEGIN
+    SELF.scopes.reset();
+    RETURN SUPER();
+END;
+
+END EberonContextIf.

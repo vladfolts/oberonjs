@@ -127,10 +127,12 @@ def run_tests(bin, unit_test=None, code_test=None):
 def recompile(bin):
     print('recompile oberon sources using "%s"...' % bin)
     compiler = os.path.join(root, 'src', 'oc_nodejs.js')
-    sources = ['ContextAssignment.ob', 'ContextCase.ob', 'ContextConst.ob', 
-               'ContextIdentdef.ob', 'ContextLoop.ob', 'ContextModule.ob', 'ContextProcedure.ob', 
+    sources = ['ContextAssignment.ob', 'ContextCase.ob', 
+               'ContextIdentdef.ob', 'ContextModule.ob', 
                'EberonSymbols.ob', 'EberonCast.ob', 
-               'EberonContextExpression.ob', 'EberonContextIdentdef.ob', 'EberonContextInPlace.ob', 'EberonContextLoop.ob', 'EberonContextType.ob', 'EberonContextVar.ob', 'EberonOperatorScopes.ob',
+               'EberonContextExpression.ob', 'EberonContextIdentdef.ob', 'EberonContextIf.ob', 
+               'EberonContextInPlace.ob', 'EberonContextLoop.ob', 'EberonContextType.ob', 
+               'EberonContextVar.ob', 'EberonOperatorScopes.ob',
                'OberonContext.ob', 'OberonContextType.ob', 'OberonContextVar.ob',
                'OberonSymbols.ob', 'Lexer.ob', 'Module.ob']
     

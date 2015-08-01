@@ -3,7 +3,7 @@ IMPORT
     ContextExpression, ContextHierarchy, Errors, Expression, Types;
 TYPE
     Type* = RECORD(ContextExpression.ExpressionHandler)
-        PROCEDURE Type(parent: ContextHierarchy.PNode);
+        PROCEDURE Type*(parent: ContextHierarchy.PNode);
     END;
 
 PROCEDURE handleIfExpression*(e: Expression.PType);

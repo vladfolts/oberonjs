@@ -9,6 +9,7 @@ var EberonContext = require("js/EberonContext.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
 var EberonContextExpression = require("js/EberonContextExpression.js");
 var EberonContextIdentdef = require("js/EberonContextIdentdef.js");
+var EberonContextIf = require("js/EberonContextIf.js");
 var EberonContextInPlace = require("js/EberonContextInPlace.js");
 var EberonContextLoop = require("js/EberonContextLoop.js");
 var EberonContextProcedure = require("js/EberonContextProcedure.js");
@@ -162,7 +163,7 @@ exports.language = {
             Expression:         EberonContextExpression.ExpressionNode,
             For:                EberonContextLoop.For,
             While:              EberonContextLoop.While,
-            If:                 EbContext.If,
+            If:                 EberonContextIf.Type,
             CaseLabel:          EbContext.CaseLabel,
             Repeat:             EberonContextLoop.Repeat,
             ModuleDeclaration:  EbContext.ModuleDeclaration
