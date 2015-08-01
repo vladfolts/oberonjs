@@ -4,9 +4,25 @@ IMPORT
     ContextLoop, ContextExpression, ContextHierarchy,
     Errors, Expression,
     EberonContextDesignator, 
-    EberonMap, EberonScope, EberonString,
-    Scope, Symbols, Types, Variable;
+    EberonMap, EberonOperatorScopes, EberonScope, EberonString,
+    Object, Scope, Symbols, Types, Variable;
 TYPE
+    While* = RECORD(ContextLoop.While)
+        PROCEDURE While(parent: ContextHierarchy.PNode);
+
+        scopes: EberonOperatorScopes.Type;
+    END;
+
+    Repeat* = RECORD(ContextLoop.Repeat)
+        PROCEDURE Repeat(parent: ContextHierarchy.PNode);
+    END;
+
+    For* = RECORD(ContextLoop.For)
+        PROCEDURE For(parent: ContextHierarchy.PNode);
+
+        PROCEDURE handleInPlaceInit*(symbol: Symbols.PSymbol; code: STRING);
+    END;
+
     ForEachVariable = RECORD(Variable.TypedVariable)
     END;
 
@@ -17,6 +33,81 @@ TYPE
         code: CodeGenerator.PIGenerator;
         scopeWasCreated: BOOLEAN;
     END;
+
+PROCEDURE While.While(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      scopes(parent);
+END;
+
+PROCEDURE While.handleLiteral(s: STRING);
+BEGIN
+    SUPER(s);
+    IF s = "DO" THEN
+        SELF.scopes.doThen();
+    ELSIF s = "ELSIF" THEN
+        SELF.scopes.alternate();
+    END;
+END;
+
+PROCEDURE While.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF ~SELF.scopes.handleMessage(msg) THEN
+        result := SUPER(msg);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE While.endParse(): BOOLEAN;
+BEGIN
+    SELF.scopes.reset();
+    RETURN SUPER();
+END;
+
+PROCEDURE startLoopScope(cx: ContextHierarchy.Node);
+BEGIN
+    root <- cx.root();
+    scope <- EberonScope.makeOperator(
+        root.currentScope(),
+        root.language().stdSymbols);
+    root.pushScope(scope);
+END;
+
+PROCEDURE endLoopScope(cx: ContextHierarchy.Node);
+BEGIN
+    cx.root().popScope();
+END;
+
+PROCEDURE Repeat.Repeat(parent: ContextHierarchy.PNode)
+    | SUPER(parent);
+BEGIN
+    startLoopScope(SELF);
+END;
+
+PROCEDURE Repeat.endParse(): BOOLEAN;
+BEGIN
+    endLoopScope(SELF);
+    RETURN TRUE;
+END;
+
+PROCEDURE For.For(parent: ContextHierarchy.PNode)
+    | SUPER(parent);
+BEGIN
+    startLoopScope(SELF);
+END;
+
+PROCEDURE For.handleInPlaceInit(symbol: Symbols.PSymbol; code: STRING);
+BEGIN
+    SELF.doHandleInitCode(symbol.id(), "for (" + code);
+    SELF.doHandleInitExpression(symbol.info()(Types.PVariable).type());
+END;
+
+PROCEDURE For.endParse(): BOOLEAN;
+BEGIN
+    endLoopScope(SELF);
+    RETURN SUPER();
+END;
 
 PROCEDURE ForEachVariable.idType(): STRING;
     RETURN "FOR variable";

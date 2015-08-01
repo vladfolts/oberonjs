@@ -52,30 +52,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-var While = Class.extend.call(ContextLoop.While, {
-    init: function EberonContext$While(context){
-        ContextLoop.While.call(this, context);
-        this.__scopes = new EberonOperatorScopes.Type(this);
-    },
-    handleLiteral: function(s){
-        ContextLoop.While.prototype.handleLiteral.call(this, s);
-        if (s == "DO")
-            this.__scopes.doThen();
-        else if (s == "ELSIF")
-            this.__scopes.alternate();
-    },
-    handleMessage: function(msg){
-        if (this.__scopes.handleMessage(msg))
-            return;
-
-        return ContextLoop.While.prototype.handleMessage.call(this, msg);
-    },
-    endParse: function(){
-        this.__scopes.reset();
-        ContextLoop.While.prototype.endParse.call(this);
-    }
-});
-
 var If = Class.extend.call(ContextIf.Type, {
     init: function EberonContext$If(context){
         ContextIf.Type.call(this, context);
@@ -116,40 +92,6 @@ var CaseLabel = Class.extend.call(ContextCase.Label, {
     endParse: function(){
         this.root().popScope();
         ContextCase.Label.prototype.endParse.call(this);
-    }
-});
-
-var Repeat = Class.extend.call(ContextLoop.Repeat, {
-    init: function EberonContext$Repeat(context){
-        ContextLoop.Repeat.call(this, context);
-        var root = this.root();
-        var scope = EberonScope.makeOperator(
-            root.currentScope(),
-            root.language().stdSymbols);
-        root.pushScope(scope);
-    },
-    endParse: function(){
-        this.root().popScope();
-        //Context.Repeat.prototype.endParse.call(this);
-    }
-});
-
-var For = Class.extend.call(ContextLoop.For, {
-    init: function EberonContext$Repeat(context){
-        ContextLoop.For.call(this, context);
-        var root = this.root();
-        var scope = EberonScope.makeOperator(
-            root.currentScope(),
-            root.language().stdSymbols);
-        root.pushScope(scope);
-    },
-    handleInPlaceInit: function(symbol, code){
-        this.doHandleInitCode(symbol.id(), "for (" + code);
-        this.doHandleInitExpression(symbol.info().type());
-    },
-    endParse: function(){
-        this.root().popScope();
-        ContextLoop.For.prototype.endParse.call(this);
     }
 });
 
@@ -257,12 +199,9 @@ var ModuleDeclaration = Class.extend.call(ContextModule.Declaration, {
 });
 
 exports.CaseLabel = CaseLabel;
-exports.For = For;
 exports.FormalParameters = FormalParameters;
 exports.FormalParametersProcDecl = FormalParametersProcDecl;
 exports.FormalType = FormalType;
 exports.If = If;
 exports.ModuleDeclaration = ModuleDeclaration;
 exports.MapDecl = MapDecl;
-exports.Repeat = Repeat;
-exports.While = While;

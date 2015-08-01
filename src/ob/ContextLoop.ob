@@ -4,11 +4,11 @@ IMPORT
     Errors, Expression, Operator, String, Types;
 TYPE
     While* = RECORD(ContextExpression.ExpressionHandler)
-        PROCEDURE While(parent: ContextHierarchy.PNode);
+        PROCEDURE While*(parent: ContextHierarchy.PNode);
     END;
 
     Repeat* = RECORD(ContextHierarchy.Node)
-        PROCEDURE Repeat(parent: ContextHierarchy.PNode);
+        PROCEDURE Repeat*(parent: ContextHierarchy.PNode);
     END;
 
     Until* = RECORD(ContextExpression.ExpressionHandler)
@@ -16,10 +16,10 @@ TYPE
     END;
 
     For* = RECORD(ContextExpression.ExpressionHandler)
-        PROCEDURE For(parent: ContextHierarchy.PNode);
+        PROCEDURE For*(parent: ContextHierarchy.PNode);
 
-        PROCEDURE doHandleInitCode(id, code: STRING);
-        PROCEDURE doHandleInitExpression(type: Types.PType);
+        PROCEDURE doHandleInitCode*(id, code: STRING);
+        PROCEDURE doHandleInitExpression*(type: Types.PType);
 
         toExpr: CodeGenerator.PIGenerator;
         var: STRING;

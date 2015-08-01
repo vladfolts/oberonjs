@@ -2,8 +2,8 @@ MODULE EberonContextInPlace;
 IMPORT
     CodeGenerator, 
     ContextExpression, ContextHierarchy, 
-    EberonContextDesignator, EberonRecord,
-    Errors, Expression, LanguageContext, Symbols, Types;
+    EberonContextDesignator, EberonContextLoop,
+    EberonRecord, Errors, Expression, LanguageContext, Symbols, Types;
 TYPE
     VariableInit* = RECORD(ContextExpression.ExpressionHandler)
         PROCEDURE onParsed();
@@ -13,15 +13,7 @@ TYPE
         symbol: Symbols.PSymbol;
     END;
 
-    For = RECORD(ContextHierarchy.Node)
-        PROCEDURE handleInPlaceInit(symbol: Symbols.PSymbol; code: STRING);
-    END;
-    PFor = POINTER TO For;
-
     VariableInitFor* = RECORD(VariableInit)
-        PROCEDURE VariableInitFor(cx: PFor);
-
-        parentFor: PFor;
     END;
 
 PROCEDURE VariableInit.codeGenerator(): CodeGenerator.PIGenerator;
@@ -83,14 +75,9 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE VariableInitFor.VariableInitFor(cx: PFor)
-    | SUPER(cx),
-      parentFor(cx);
-END;
-
 PROCEDURE VariableInitFor.onParsed();
 BEGIN
-    SELF.parentFor.handleInPlaceInit(SELF.symbol, SELF.code);
+    SELF.parent()^(EberonContextLoop.For).handleInPlaceInit(SELF.symbol, SELF.code);
 END;
 
 END EberonContextInPlace.

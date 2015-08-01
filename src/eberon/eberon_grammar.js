@@ -160,11 +160,11 @@ exports.language = {
             MulOperator:        EberonContextExpression.MulOperator,
             SimpleExpression:   EberonContextExpression.SimpleExpression, 
             Expression:         EberonContextExpression.ExpressionNode,
-            For:                EbContext.For,
-            While:              EbContext.While,
+            For:                EberonContextLoop.For,
+            While:              EberonContextLoop.While,
             If:                 EbContext.If,
             CaseLabel:          EbContext.CaseLabel,
-            Repeat:             EbContext.Repeat,
+            Repeat:             EberonContextLoop.Repeat,
             ModuleDeclaration:  EbContext.ModuleDeclaration
         },
         Grammar.reservedWords + " SELF SUPER MAP"

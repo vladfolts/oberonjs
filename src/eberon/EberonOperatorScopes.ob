@@ -6,12 +6,12 @@ IMPORT
     Scope;
 TYPE
     Type* = RECORD
-        PROCEDURE Type(cx: ContextHierarchy.PNode);
+        PROCEDURE Type*(cx: ContextHierarchy.PNode);
 
-        PROCEDURE handleMessage(VAR msg: ContextHierarchy.Message): BOOLEAN;
-        PROCEDURE doThen();
-        PROCEDURE alternate();
-        PROCEDURE reset();
+        PROCEDURE handleMessage*(VAR msg: ContextHierarchy.Message): BOOLEAN;
+        PROCEDURE doThen*();
+        PROCEDURE alternate*();
+        PROCEDURE reset*();
 
         context: ContextHierarchy.PNode;
         scope: Scope.PType;
