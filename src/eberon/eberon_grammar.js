@@ -31,7 +31,7 @@ var repeat = Parser.repeat;
 var required = Parser.required;
 
 function makeStrucType(base, type){
-    var mapType = context(and("MAP", "OF", type), EbContext.MapDecl);
+    var mapType = context(and("MAP", "OF", type), EberonContextType.Map);
     return or(base, mapType);
 }
 
@@ -46,7 +46,7 @@ function makeStatement(base, statementSequence, ident, expression){
 function makeProcedureHeading(ident, identdef, formalParameters){
     return and("PROCEDURE",
                context(and(optional(and(ident, ".")), identdef), EberonContextProcedure.ProcOrMethodId),
-               context(optional(formalParameters), EbContext.FormalParametersProcDecl)
+               context(optional(formalParameters), EberonContextProcedure.FormalParametersProcDecl)
                );
 }
 
@@ -90,7 +90,7 @@ function makeMethodHeading(identdef, formalParameters){
     return context(
         and("PROCEDURE",
             identdef,
-            context(optional(formalParameters), EbContext.FormalParametersProcDecl)),
+            context(optional(formalParameters), EberonContextProcedure.FormalParametersProcDecl)),
         EberonContextType.MethodHeading);
 }
 
@@ -155,7 +155,7 @@ exports.language = {
             variableDeclaration: EberonContextVar.Declaration,
             ArrayDecl:          EberonContextType.Array,
             Factor:             EberonContextExpression.Factor,
-            FormalParameters:   EbContext.FormalParameters,
+            FormalParameters:   EberonContextProcedure.FormalParameters,
             FormalType:         EbContext.FormalType,
             Term:               EberonContextExpression.Term,
             AddOperator:        EberonContextExpression.AddOperator,

@@ -3,7 +3,7 @@ IMPORT
     Chars, CodeGenerator,
     Context, ContextDesignator, ContextExpression, ContextHierarchy, ContextProcedure, ContextType, 
     EberonConstructor, EberonContext, EberonContextDesignator, 
-    EberonRecord, EberonTypePromotion, EberonTypes,
+    EberonDynamicArray, EberonRecord, EberonTypePromotion, EberonTypes,
     Errors, Expression, LanguageContext, Object, Procedure, Types;
 TYPE
     ProcOrMethodDeclaration* = RECORD(ContextProcedure.Declaration)
@@ -29,6 +29,12 @@ TYPE
         initCall: Procedure.PCallGenerator;
         initField: STRING;
         typeOnDemand: EberonRecord.PRecord;
+    END;
+
+    FormalParameters* = RECORD(ContextProcedure.FormalParameters)
+    END;
+
+    FormalParametersProcDecl* = RECORD(ContextProcedure.FormalParametersProcDecl)
     END;
 
     GetConstructorBoundTypeMsg = RECORD(ContextHierarchy.Message)
@@ -351,6 +357,50 @@ BEGIN
             baseInitType(SELF).base(EberonRecord.PRecord), 
             ContextHierarchy.makeLanguageContext(SELF(POINTER))
             );
+    END;
+END;
+
+PROCEDURE assertArgumentIsNotNonVarDynamicArray(VAR msg: ContextHierarchy.Message);
+VAR
+    type: Types.PStorageType;
+BEGIN
+    IF msg IS ContextProcedure.AddArgumentMsg THEN
+        arg <- msg.arg;
+        IF ~arg.isVar THEN
+            type := arg.type;
+            WHILE type IS Types.PArray DO
+                IF type IS EberonDynamicArray.PDynamicArray THEN
+                    Errors.raise("dynamic array has no use as non-VAR argument '" + msg.name + "'");
+                END;
+                type := type(Types.PArray).elementsType;
+            END;
+        END;
+    END;
+END;
+
+PROCEDURE FormalParameters.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+BEGIN
+    assertArgumentIsNotNonVarDynamicArray(msg);
+    RETURN SUPER(msg);
+END;
+
+PROCEDURE FormalParameters.doCheckResultType(type: Types.PStorageType);
+BEGIN
+    IF ~(type IS EberonDynamicArray.PDynamicArray) THEN
+        SUPER(type);
+    END;
+END;
+
+PROCEDURE FormalParametersProcDecl.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+BEGIN
+    assertArgumentIsNotNonVarDynamicArray(msg);
+    RETURN SUPER(msg);
+END;
+
+PROCEDURE FormalParametersProcDecl.doCheckResultType(type: Types.PStorageType);
+BEGIN
+    IF ~(type IS EberonDynamicArray.PDynamicArray) THEN
+        SUPER(type);
     END;
 END;
 

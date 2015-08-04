@@ -24,10 +24,10 @@ TYPE
     PDeclaration = POINTER TO Declaration;
 
     FormalParameters* = RECORD(ContextHierarchy.Node)
-        PROCEDURE FormalParameters(parent: ContextType.PDeclarationAndIdentHandle);
+        PROCEDURE FormalParameters*(parent: ContextType.PDeclarationAndIdentHandle);
 
         PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
-        PROCEDURE doCheckResultType(type: Types.PStorageType);
+        PROCEDURE doCheckResultType*(type: Types.PStorageType);
 
         arguments: ARRAY * OF Types.PProcedureArgument;
         type: Procedure.PDefined;
@@ -48,8 +48,8 @@ TYPE
     AddArgumentMsg* = RECORD(ContextHierarchy.Message)
         PROCEDURE AddArgumentMsg(name: STRING; arg: Types.PProcedureArgument);
 
-        name: STRING;
-        arg: Types.PProcedureArgument;
+        name-: STRING;
+        arg-: Types.PProcedureArgument;
     END;
 
     EndParametersMsg* = RECORD(ContextHierarchy.Message)

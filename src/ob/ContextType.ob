@@ -5,7 +5,7 @@ IMPORT
     Scope, ScopeBase, String, Symbols, TypeId, Types;
 TYPE
     HandleSymbolAsType* = RECORD(ContextHierarchy.Node)
-        PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
+        PROCEDURE handleQIdent*(q: ContextHierarchy.QIdent);
         PROCEDURE setType*(type: Types.PStorageType);
     END;
     PHandleSymbolAsType = POINTER TO HandleSymbolAsType;

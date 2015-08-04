@@ -1,8 +1,8 @@
 MODULE EberonContextType;
 IMPORT
     Chars,
-    Context, ContextHierarchy, ContextProcedure, ContextType, 
-    EberonContext, EberonDynamicArray, EberonRecord, EberonTypes,
+    Context, ContextExpression, ContextHierarchy, ContextProcedure, ContextType, 
+    EberonContext, EberonDynamicArray, EberonMap, EberonRecord, EberonTypes,
     Errors,
     Object, Procedure, R := Record, ScopeBase, Types;
 CONST
@@ -25,6 +25,13 @@ TYPE
     MethodHeading* = RECORD(ContextType.DeclarationAndIdentHandle)
         id: EberonContext.PIdentdefInfo;
         type: Procedure.PType;
+    END;
+
+    Map* = RECORD(ContextType.HandleSymbolAsType)
+        PROCEDURE isAnonymousDeclaration*(): BOOLEAN;
+        PROCEDURE typeName*(): STRING;
+
+        type: Types.PStorageType;
     END;
 
     MethodDeclMsg = RECORD(ContextHierarchy.Message)
@@ -169,6 +176,33 @@ END;
 PROCEDURE MethodHeading.endParse(): BOOLEAN;
 BEGIN
     void <- SELF.handleMessage(NEW MethodDeclMsg(SELF.id, SELF.type)^);
+    RETURN TRUE;
+END;
+
+PROCEDURE Map.handleQIdent(q: ContextHierarchy.QIdent);
+BEGIN
+    s <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
+    type <- ContextExpression.unwrapType(s.symbol().info());
+    SELF.setType(type);
+END;
+
+PROCEDURE Map.setType(type: Types.PStorageType);
+BEGIN
+    SELF.type := type;
+END;
+
+(* anonymous types can be used in map declaration *)
+PROCEDURE Map.isAnonymousDeclaration(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE Map.typeName(): STRING;
+    RETURN "";
+END;
+
+PROCEDURE Map.endParse(): BOOLEAN;
+BEGIN
+    SELF.parent()^(ContextType.HandleSymbolAsType).setType(NEW EberonMap.Type(SELF.type));
     RETURN TRUE;
 END;
 

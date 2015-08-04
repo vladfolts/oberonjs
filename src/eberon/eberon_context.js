@@ -52,56 +52,6 @@ var ChainedContext = ContextHierarchy.Node;
 ChainedContext.extend = Class.extend;
 ChainedContext.prototype.init = ContextHierarchy.Node;
 
-var MapDecl = ChainedContext.extend({
-    init: function EberonContext$MapDecl(context){
-        ChainedContext.prototype.init.call(this, context);
-        this.__type = undefined;
-    },
-    handleQIdent: function(q){
-        var s = ContextHierarchy.getQIdSymbolAndScope(this.root(), q);
-        var type = ContextExpression.unwrapType(s.symbol().info());
-        this.setType(type);
-    },
-    // anonymous types can be used in map declaration
-    setType: function(type){
-        this.__type = type;
-    },
-    isAnonymousDeclaration: function(){return true;},
-    typeName: function(){return "";},
-    endParse: function(){
-        this.parent().setType(new EberonMap.Type(this.__type));
-    }
-});
-
-function assertArgumentIsNotNonVarDynamicArray(msg){
-    if (msg instanceof ContextProcedure.AddArgumentMsg){
-        var arg = msg.arg;
-        if (!arg.isVar){
-            var type = arg.type;
-            while (type instanceof Type.Array){
-                if (type instanceof EberonDynamicArray.DynamicArray)
-                    throw new Errors.Error("dynamic array has no use as non-VAR argument '" + msg.name + "'");
-                type = type.elementsType;
-            }
-        }
-    }
-}
-
-var FormalParameters = Class.extend.call(ContextProcedure.FormalParameters, {
-    init: function EberonContext$FormalParameters(context){
-        ContextProcedure.FormalParameters.call(this, context);
-    },
-    handleMessage: function(msg){
-        assertArgumentIsNotNonVarDynamicArray(msg);
-        return ContextProcedure.FormalParameters.prototype.handleMessage.call(this, msg);
-    },
-    doCheckResultType: function(type){
-        if (type instanceof EberonDynamicArray.DynamicArray)
-            return;
-        ContextProcedure.FormalParameters.prototype.doCheckResultType.call(this, type);
-    }
-});
-
 var FormalType = Class.extend.call(ContextType.HandleSymbolAsType, {
     init: function EberonContext$FormalType(context){
         ContextType.HandleSymbolAsType.call(this, context);
@@ -129,21 +79,6 @@ var FormalType = Class.extend.call(ContextType.HandleSymbolAsType, {
     }
 });
 
-var FormalParametersProcDecl = Class.extend.call(ContextProcedure.FormalParametersProcDecl, {
-    init: function EberonContext$FormalParametersProcDecl(context){
-        ContextProcedure.FormalParametersProcDecl.call(this, context);
-    },
-    handleMessage: function(msg){
-        assertArgumentIsNotNonVarDynamicArray(msg);
-        return ContextProcedure.FormalParametersProcDecl.prototype.handleMessage.call(this, msg);
-    },
-    doCheckResultType: function(type){
-        if (type instanceof EberonDynamicArray.DynamicArray)
-            return;
-        ContextProcedure.FormalParametersProcDecl.prototype.doCheckResultType.call(this, type);
-    }
-});
-
 var ModuleDeclaration = Class.extend.call(ContextModule.Declaration, {
     init: function EberonContext$ModuleDeclaration(context){
         ContextModule.Declaration.call(this, context);
@@ -155,8 +90,5 @@ var ModuleDeclaration = Class.extend.call(ContextModule.Declaration, {
     }
 });
 
-exports.FormalParameters = FormalParameters;
-exports.FormalParametersProcDecl = FormalParametersProcDecl;
 exports.FormalType = FormalType;
 exports.ModuleDeclaration = ModuleDeclaration;
-exports.MapDecl = MapDecl;
