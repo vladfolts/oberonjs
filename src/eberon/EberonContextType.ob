@@ -12,6 +12,11 @@ TYPE
     END;
     PDeclaration = POINTER TO Declaration;
 
+    FormalType* = RECORD(ContextType.HandleSymbolAsType)
+        arrayDimensions: ARRAY * OF BOOLEAN;
+        dynamicDimension: BOOLEAN;
+    END;
+
     Record* = RECORD(ContextType.Record)
         PROCEDURE Record*(parent: PDeclaration);
     END;
@@ -45,6 +50,29 @@ PROCEDURE Declaration.handleIdentdef(id: Context.PIdentdefInfo);
 BEGIN
     EberonContext.checkOrdinaryExport(id(EberonContext.PIdentdefInfo)^, "type");
     SUPER(id);
+END;
+
+PROCEDURE FormalType.setType(type: Types.PStorageType);
+BEGIN
+    result <- type;
+    FOR i <- LEN(SELF.arrayDimensions) - 1 TO 0 BY -1 DO
+        IF SELF.arrayDimensions[i] THEN
+            result := NEW EberonDynamicArray.DynamicArray(result);
+        ELSE
+            result := SELF.root().language().types.makeOpenArray(result);
+        END;
+    END;
+    SELF.parent()^(ContextType.HandleSymbolAsType).setType(result);
+END;
+
+PROCEDURE FormalType.handleLiteral(s: STRING);
+BEGIN
+    IF s = "*" THEN
+        SELF.dynamicDimension := TRUE;
+    ELSIF s = "OF" THEN
+        SELF.arrayDimensions.add(SELF.dynamicDimension);
+        SELF.dynamicDimension := FALSE;
+    END;
 END;
 
 PROCEDURE recordTypeFactory(name, cons: STRING; scope: ScopeBase.PType): R.PType;

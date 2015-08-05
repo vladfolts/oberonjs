@@ -4,7 +4,6 @@ var Cast = require("js/EberonCast.js");
 var EbArray = require("js/EberonArray.js");
 var CodeGenerator = require("js/CodeGenerator.js");
 var ContextType = require("js/ContextType.js");
-var EbContext = require("eberon/eberon_context.js");
 var EberonContext = require("js/EberonContext.js");
 var EberonContextCase = require("js/EberonContextCase.js");
 var EberonContextDesignator = require("js/EberonContextDesignator.js");
@@ -156,7 +155,7 @@ exports.language = {
             ArrayDecl:          EberonContextType.Array,
             Factor:             EberonContextExpression.Factor,
             FormalParameters:   EberonContextProcedure.FormalParameters,
-            FormalType:         EbContext.FormalType,
+            FormalType:         EberonContextType.FormalType,
             Term:               EberonContextExpression.Term,
             AddOperator:        EberonContextExpression.AddOperator,
             MulOperator:        EberonContextExpression.MulOperator,
@@ -167,7 +166,7 @@ exports.language = {
             If:                 EberonContextIf.Type,
             CaseLabel:          EberonContextCase.Label,
             Repeat:             EberonContextLoop.Repeat,
-            ModuleDeclaration:  EbContext.ModuleDeclaration
+            ModuleDeclaration:  EberonContextProcedure.ModuleDeclaration
         },
         Grammar.reservedWords + " SELF SUPER MAP"
         ),

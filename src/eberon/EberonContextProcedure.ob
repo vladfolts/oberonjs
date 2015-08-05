@@ -1,7 +1,8 @@
 MODULE EberonContextProcedure;
 IMPORT
     Chars, CodeGenerator,
-    Context, ContextDesignator, ContextExpression, ContextHierarchy, ContextProcedure, ContextType, 
+    Context, ContextDesignator, ContextExpression, ContextHierarchy, ContextModule, 
+    ContextProcedure, ContextType, 
     EberonConstructor, EberonContext, EberonContextDesignator, 
     EberonDynamicArray, EberonRecord, EberonTypePromotion, EberonTypes,
     Errors, Expression, LanguageContext, Object, Procedure, Types;
@@ -35,6 +36,9 @@ TYPE
     END;
 
     FormalParametersProcDecl* = RECORD(ContextProcedure.FormalParametersProcDecl)
+    END;
+
+    ModuleDeclaration* = RECORD(ContextModule.Declaration)
     END;
 
     GetConstructorBoundTypeMsg = RECORD(ContextHierarchy.Message)
@@ -107,7 +111,7 @@ BEGIN
     RETURN EberonConstructor.makeFieldInitCall(type, ContextHierarchy.makeLanguageContext(d), id);
 END;
 
-PROCEDURE handleTypePromotionMadeInSeparateStatement*(VAR msg: ContextHierarchy.Message): BOOLEAN;
+PROCEDURE handleTypePromotionMadeInSeparateStatement(VAR msg: ContextHierarchy.Message): BOOLEAN;
 BEGIN
     result <- FALSE;
     IF EberonContextDesignator.breakTypePromotion(msg) THEN
@@ -402,6 +406,16 @@ BEGIN
     IF ~(type IS EberonDynamicArray.PDynamicArray) THEN
         SUPER(type);
     END;
+END;
+
+PROCEDURE ModuleDeclaration.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF ~handleTypePromotionMadeInSeparateStatement(msg) THEN
+        result := SUPER(msg);
+    END;
+    RETURN result;
 END;
 
 PROCEDURE InitFieldMsg.InitFieldMsg(id: STRING)
