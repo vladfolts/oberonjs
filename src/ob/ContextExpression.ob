@@ -40,17 +40,13 @@ TYPE
         expression: Expression.PType;
         relation: STRING;
     END;
-    PExpressionNode = POINTER TO ExpressionNode;
 
     SimpleExpression* = RECORD(ContextHierarchy.Node)
-        PROCEDURE SimpleExpression*(parent: PExpressionNode);
-
         PROCEDURE handleTerm(e: Expression.PType);
         PROCEDURE type(): Types.PType;
         PROCEDURE setType(type: Types.PType);
         PROCEDURE handleOperator(op: BinaryOperator);
 
-        parentExpression: PExpressionNode;  
         mType: Types.PType;
         unaryOperator: STRING;
         binaryOperator: BinaryOperator;
@@ -85,9 +81,6 @@ TYPE
     END;
 
     Const = RECORD(ContextHierarchy.Node)
-        PROCEDURE Const(parent: PExpressionHandler);
-
-        parentExpression: PExpressionHandler;
     END;
 
     Integer* = RECORD(Const)
@@ -631,11 +624,6 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE SimpleExpression.SimpleExpression(parent: PExpressionNode)
-    | SUPER(parent),
-      parentExpression(parent);
-END;
-
 PROCEDURE SimpleExpression.handleTerm(e: Expression.PType);
 VAR
     o: PROCEDURE(e: Expression.PType): Expression.PType;
@@ -698,7 +686,7 @@ END;
 
 PROCEDURE SimpleExpression.endParse(): BOOLEAN;
 BEGIN
-    SELF.parentExpression.handleSimpleExpression(SELF.expression);
+    SELF.parent()^(ExpressionNode).handleSimpleExpression(SELF.expression);
     RETURN TRUE;
 END;
 
@@ -865,14 +853,9 @@ PROCEDURE AddOperator.doExpectPlusOperator(): STRING;
     RETURN "numeric type or SET";
 END;
 
-PROCEDURE Const.Const(parent: PExpressionHandler)
-    | SUPER(parent),
-      parentExpression(parent);
-END;
-
 PROCEDURE Integer.handleInt(n: INTEGER);
 BEGIN
-    SELF.parentExpression.handleExpression(expressionFromConst(
+    SELF.parent()^(ExpressionHandler).handleExpression(expressionFromConst(
         Types.basic.integer, 
         NEW ConstValue.Int(n), 
         String.fromInt(n)));
@@ -880,7 +863,7 @@ END;
 
 PROCEDURE Real.handleReal(r: REAL);
 BEGIN
-    SELF.parentExpression.handleExpression(expressionFromConst(
+    SELF.parent()^(ExpressionHandler).handleExpression(expressionFromConst(
         Types.basic.real, 
         NEW ConstValue.Real(r), 
         String.fromReal(r)));
@@ -922,7 +905,7 @@ END;
 
 PROCEDURE Str.handleStr(s: STRING);
 BEGIN
-    SELF.parentExpression.handleExpression(expressionFromConst(
+    SELF.parent()^(ExpressionHandler).handleExpression(expressionFromConst(
         NEW Types.String(s), 
         NEW ConstValue.String(s), 
         escapeString(s)));
