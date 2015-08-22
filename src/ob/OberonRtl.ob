@@ -10,7 +10,7 @@ TYPE
         setInclR*: PROCEDURE(l, r: STRING): STRING;
         assertId*: PROCEDURE(): STRING;
         makeRef*: PROCEDURE(derefCode, propCode: STRING): STRING;
-        PROCEDURE extend*(cons, base: STRING): STRING;
+        PROCEDURE extend*(cons, base, scope: STRING): STRING;
         PROCEDURE makeArray*(dimensions: STRING): STRING;
         PROCEDURE makeCharArray*(dimensions: STRING): STRING;
         PROCEDURE typeGuard*(from, to: STRING): STRING;

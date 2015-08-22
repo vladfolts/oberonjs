@@ -148,7 +148,7 @@ exports.language = {
         makeOpenArray: function(type){return new Types.OpenArray(type); }
     },
     codeGenerator: {
-        make: CodeGenerator.makeGenerator,
+        make: function(){ return new CodeGenerator.Generator(); },
         nil: CodeGenerator.nullGenerator()
     },
     rtl: {

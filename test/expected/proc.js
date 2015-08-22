@@ -4,6 +4,7 @@ var i = 0;
 var byte = 0;
 
 function p1(arg1/*INTEGER*/){
+	var $scope1 = $scope + ".p1";
 	function T1(){
 		this.field1 = 0;
 	}
@@ -11,7 +12,7 @@ function p1(arg1/*INTEGER*/){
 		T1.call(this);
 		this.field2 = false;
 	}
-	RTL$.extend(T2, T1);
+	RTL$.extend(T2, T1, $scope1);
 	var i = 0;var j = 0;
 	var b = false;
 	var t1 = new T1();
@@ -68,6 +69,26 @@ function withByteResult4(){
 	var b = 0;
 	b = 0 & 0xFF;
 	return b;
+}
+
+function inner1(){
+	var $scope1 = $scope + ".inner1";
+	
+	function inner2(){
+		var $scope2 = $scope1 + ".inner2";
+		
+		function inner3(){
+			var $scope3 = $scope2 + ".inner3";
+			function T(){
+			}
+		}
+	}
+	
+	function inner22(){
+		var $scope2 = $scope1 + ".inner22";
+		function T(){
+		}
+	}
 }
 byte = withByteResult();
 i = withByteResult();

@@ -101,7 +101,7 @@ END;
 
 PROCEDURE For.For(parent: ContextHierarchy.PNode)
     | SUPER(parent),
-      toExpr(CodeGenerator.makeSimpleGenerator()),
+      toExpr(NEW CodeGenerator.SimpleGenerator()),
       by(1);
 END;
 

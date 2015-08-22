@@ -69,13 +69,14 @@ function NestedForEach(){
 }
 
 function put(){
+	var $scope1 = $scope + ".put";
 	function T(){
 		this.field = 0;
 	}
 	function Derived(){
 		T.call(this);
 	}
-	RTL$.extend(Derived, T);
+	RTL$.extend(Derived, T, $scope1);
 	var m = {};
 	var s = '';
 	var a = RTL$.makeCharArray(3);
@@ -148,6 +149,7 @@ function assign(a/*MAP OF INTEGER*/){
 }
 
 function copyMapOfRecord(){
+	var $scope1 = $scope + ".copyMapOfRecord";
 	function T(){
 	}
 	var r1 = {};var r2 = {};
@@ -155,6 +157,7 @@ function copyMapOfRecord(){
 }
 
 function cloneMapOfRecord(){
+	var $scope1 = $scope + ".cloneMapOfRecord";
 	function T(){
 	}
 	var r1 = {};

@@ -1,0 +1,24 @@
+MODULE m1;
+TYPE
+    T* = RECORD
+    END;
+
+END m1.
+
+MODULE m2;
+IMPORT m1;
+PROCEDURE p1();
+    TYPE
+        T = RECORD(m1.T)
+        END;
+        PT = POINTER TO T;
+    VAR
+        p: POINTER TO m1.T;
+BEGIN
+    NEW(p);
+    ASSERT(p(PT) # NIL);
+END p1;
+
+BEGIN
+    p1();
+END m2.

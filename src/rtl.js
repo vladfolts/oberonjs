@@ -29,11 +29,12 @@ Class.extend = function extend(methods){
     };
 
 var methods = {
-    extend: function(cons, base){
+    extend: function(cons, base, scope){
         function Type(){}
         Type.prototype = base.prototype;
         cons.prototype = new Type();
         cons.prototype.constructor = cons;
+        cons.prototype.$scope = scope;
     },
     typeGuard: function(from, to){
         if (!from)
@@ -42,19 +43,25 @@ var methods = {
             var fromStr;
             var toStr;
             
-            if (from && from.constructor && from.constructor.name)
-                fromStr = "" + from.constructor.name;
+            if (from && from.constructor && from.constructor.name){
+                var name = from.constructor.name;
+                var scope = from.$scope;
+                fromStr = scope ? scope + "." + name : name;
+            }
             else
                 fromStr = "" + from;
             
-            if (to.name)
+            if (to.name){
                 toStr = "" + to.name;
+                var scope = to.prototype.$scope;
+                toStr = scope ? scope + "." + toStr : toStr;
+            }
             else
                 toStr = "" + to;
             
-            var msg = "typeguard assertion failed";
+            var msg = "cannot cast";
             if (fromStr || toStr)               
-                msg += ": '" + fromStr + "' is not an extension of '" + toStr + "'";
+                msg += " to '" + toStr + "' from '" + fromStr + "'";
             throw new Error(msg);
         }
         return from;

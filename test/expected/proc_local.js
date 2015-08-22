@@ -1,6 +1,7 @@
 var m = function (){
 
 function p1(arg1/*INTEGER*/){
+	var $scope1 = $scope + ".p1";
 	function T1(){
 		this.field1 = 0;
 	}
@@ -8,6 +9,7 @@ function p1(arg1/*INTEGER*/){
 	var t1 = new T1();
 	
 	function p2(arg2/*BOOLEAN*/){
+		var $scope2 = $scope1 + ".p2";
 		function T2(){
 			this.field2 = false;
 		}

@@ -913,7 +913,7 @@ END;
 
 PROCEDURE SetElement.SetElement(parent: PSet)
     | SUPER(parent),
-      code(CodeGenerator.makeSimpleGenerator());
+      code(NEW CodeGenerator.SimpleGenerator());
 END;
 
 PROCEDURE SetElement.codeGenerator(): CodeGenerator.PIGenerator;
@@ -926,7 +926,7 @@ BEGIN
     IF LEN(SELF.from) = 0 THEN
         SELF.from := SELF.code.result();
         SELF.fromValue := value;
-        SELF.code := CodeGenerator.makeSimpleGenerator();
+        SELF.code := NEW CodeGenerator.SimpleGenerator();
     ELSE
         SELF.to := SELF.code.result();
         SELF.toValue := value;

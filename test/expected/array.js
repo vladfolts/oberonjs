@@ -22,6 +22,7 @@ function p2(a/*VAR ARRAY 10 OF INTEGER*/){
 }
 
 function testAssign(){
+	var $scope1 = $scope + ".testAssign";
 	function T(){
 	}
 	var aInts1 = RTL$.makeArray(3, 0);var aInts2 = RTL$.makeArray(3, 0);

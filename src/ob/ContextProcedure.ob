@@ -20,6 +20,7 @@ TYPE
         type: Procedure.PType;
         multipleArguments: BOOLEAN;
         returnParsed: BOOLEAN;
+        scopeInfo: ContextType.PScopeInfoGenerator;
     END;
     PDeclaration = POINTER TO Declaration;
 
@@ -92,7 +93,9 @@ END;
 
 PROCEDURE Declaration.doBeginBody();
 BEGIN
-    SELF.codeGenerator().openScope();
+    code <- SELF.codeGenerator();
+    code.openScope();
+    SELF.scopeInfo := NEW ContextType.ScopeInfoGenerator(SELF.id.id(), code, SELF.parent());
 END;
 
 PROCEDURE Declaration.typeName(): STRING;
@@ -140,6 +143,7 @@ BEGIN
     ELSIF msg IS AddArgumentMsg THEN
         ASSERT(msg.arg # NIL);
         addArgument(SELF, msg.name, msg.arg^);
+    ELSIF ContextType.handleDescribeScopeMsg(msg, SELF.scopeInfo^) THEN
     ELSE
         result := SUPER(msg);
     END;

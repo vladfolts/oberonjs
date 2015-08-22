@@ -77,39 +77,7 @@ var TestVar = Class.extend({
     type: function(){return this.__type;},
     setType: function(type){this.__type = type;}
 });
-/*
-function makeCodeSuite(){
-    return {
-        "insertion": pass(
-            function(){
-                var g = EberonCodeGenerator.makeGenerator();
-                g.write("a");
-                var i = g.makeInsertion();
-                g.write("b");
-                g.insert(i, "c");
-                assert(g.result() == "acb");
-            },
-            function(){
-                var g = EberonCodeGenerator.makeGenerator();
-                g.write("ab");
-                var i1 = g.makeInsertion();
-                var i2 = g.makeInsertion();
-                g.write("cd");
-                g.insert(i1, "123");
-                g.insert(i2, "345");
-                assert(g.result() == "ab123345cd");
-            },
-            function(){
-                var g = EberonCodeGenerator.makeGenerator();
-                g.write("ab");
-                var i = g.makeInsertion();
-                g.write("cd");
-                assert(g.result() == "abcd");
-            }
-        )
-    };
-}
-*/
+
 exports.suite = {
 //"code": makeCodeSuite(),
 "arithmetic operators": testWithContext(

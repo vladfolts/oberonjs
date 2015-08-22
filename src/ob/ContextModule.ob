@@ -1,7 +1,7 @@
 MODULE ContextModule;
 IMPORT
-    ContextHierarchy, Errors, LanguageContext, 
-    Scope, ScopeBase, String, Symbols, Types;
+    ContextHierarchy, ContextType, Errors, LanguageContext, 
+    Object, Scope, ScopeBase, String, Symbols, Types;
 TYPE
     Declaration* = RECORD(ContextHierarchy.Node)
         PROCEDURE findModule(name: STRING): Types.PModule;
@@ -11,6 +11,7 @@ TYPE
         imports: MAP OF Symbols.PSymbol;
         moduleScope: Scope.PModule;
         moduleGen: LanguageContext.PModuleGenerator;
+        scopeInfo: ContextType.PScopeInfoGenerator;
     END;
     PDeclaration = POINTER TO Declaration;
 
@@ -60,7 +61,10 @@ BEGIN
     SELF.moduleGen := root.language().moduleGenerator(
             SELF.name,
             moduleAliases);
-    SELF.codeGenerator().write(SELF.moduleGen.prolog());
+
+    code <- SELF.codeGenerator();
+    code.write(SELF.moduleGen.prolog());
+    SELF.scopeInfo := NEW ContextType.ScopeInfoGenerator(SELF.name, code, NIL);
 END;
 
 PROCEDURE Declaration.qualifyScope(scope: ScopeBase.PType): STRING;
@@ -79,6 +83,16 @@ BEGIN
         ELSE
             result := SELF.imports[id].id() + ".";
         END;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Declaration.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+VAR
+    result: Object.PType;
+BEGIN
+    IF ~ContextType.handleDescribeScopeMsg(msg, SELF.scopeInfo^) THEN
+        result := SUPER(msg);
     END;
     RETURN result;
 END;

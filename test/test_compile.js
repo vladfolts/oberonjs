@@ -13,6 +13,11 @@ function normalizeLineEndings(text){
                .replace(/\s+$/,''); // ending spaces
 }
 
+function filterOutScopes(text){
+    return text.replace(/.*\$scope =.+\n/g, "")
+               .replace(/, \$scope\)/g, ")");
+}
+
 function filterOutRtlCode(text){
     var prefix = "var RTL$ = {";
     if (text.substr(0, prefix.length) != prefix)
@@ -27,6 +32,7 @@ function filterOutRtlCode(text){
 
 function compareResults(result, name, dirs){
     result = filterOutRtlCode(result);
+    result = filterOutScopes(result);
     fs.writeFileSync(path.join(dirs.output, name), result);
     var expected = fs.readFileSync(path.join(dirs.expected, name), "utf8");
     if (normalizeLineEndings(result) != normalizeLineEndings(expected))
@@ -88,6 +94,20 @@ function run(src, dirs, language){
     require(resultPath);
 }
 
+function expectRuntimeError(src, dirs, language){
+    var error = "";
+    try {
+        run(src, dirs, language);
+    }
+    catch (x){
+        error += x;
+    }
+    if (!error.length)
+        throw new Test.TestError("runtime error expected");
+    var resultName = path.basename(src).replace(".ob", ".txt");
+    compareResults(error, resultName, dirs);
+}
+
 function makeTest(test, src, dirs, grammar){
     return function(){test(src, dirs, grammar);};
 }
@@ -96,7 +116,7 @@ function makeTests(test, dirs, grammar){
     var output = dirs.output;
     if (fs.existsSync(output))
         rmTree(output);
-    fs.mkdirSync(output);
+    mkTree(output);
 
     var sources = fs.readdirSync(dirs.input);
     var tests = {};
@@ -107,6 +127,14 @@ function makeTests(test, dirs, grammar){
             tests[source] = makeTest(test, filePath, dirs, grammar);
     }
     return tests;
+}
+
+function mkTree(p){
+    if (fs.existsSync(p))
+        return;
+
+    mkTree(path.dirname(p));
+    fs.mkdirSync(p);
 }
 
 function rmTree(root){
@@ -156,6 +184,7 @@ function outputSubdir(dirs, subdir){
 function main(){
     var okDirs = makeTestDirs();
     var errDirs = makeTestDirs("errors");
+    var errRuntimeDirs = makeTestDirs("errorsRT");
     var runDirs = makeTestDirs("run");
     var nodejsDirs = makeTestDirs("nodejs");
     var oberonDirs = makeTestDirs("oberon");
@@ -167,6 +196,7 @@ function main(){
         return {
             "expect OK": makeTests(expectOk, outputSubdir(okDirs, subdir), language),
             "expect compile error": makeTests(expectError, outputSubdir(errDirs, subdir), language),
+            "expect runtime error": makeTests(expectRuntimeError, outputSubdir(errRuntimeDirs, subdir), language),
             "run": makeTests(run, outputSubdir(runDirs, subdir), language),
             "nodejs": makeTests(compileNodejs, outputSubdir(nodejsDirs, subdir), language)
         };

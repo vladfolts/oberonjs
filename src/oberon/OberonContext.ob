@@ -29,7 +29,7 @@ TYPE
 
 PROCEDURE ProcedureCall.ProcedureCall(parent: ContextHierarchy.PNode)
     | SUPER(parent),
-      code(CodeGenerator.makeSimpleGenerator());
+      code(NEW CodeGenerator.SimpleGenerator());
 BEGIN
     NEW(SELF.attributes);
 END;

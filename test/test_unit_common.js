@@ -3,6 +3,7 @@
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
+var ContextType = require("js/ContextType.js");
 var Errors = require("js/Errors.js");
 var oc = require("oc.js");
 var makeRTL = require("rtl_code.js").makeRTL;
@@ -40,7 +41,10 @@ var TestContext = Class.extend.call(ContextHierarchy.Root, {
         this.pushScope(new Scope.Module("test", language.stdSymbols));
     },
     qualifyScope: function(){return "";},
-    handleMessage: function(){},
+    handleMessage: function(msg){
+        if (msg instanceof ContextType.DescribeScopeMsg)
+            msg.result = new ContextType.ScopeInfo("test", 0);
+    },
     handleExpression: function(){},
     handleLiteral: function(){}
 });

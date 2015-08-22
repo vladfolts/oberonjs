@@ -73,6 +73,18 @@ BEGIN
 	RETURN b
 END withByteResult4;
 
+PROCEDURE inner1();
+    PROCEDURE inner2();
+        PROCEDURE inner3();
+            TYPE T = RECORD END;
+        END inner3;
+    END inner2;
+    
+    PROCEDURE inner22();
+        TYPE T = RECORD END;
+    END inner22;
+END inner1;
+
 BEGIN
 	byte := withByteResult();
 	i := withByteResult();

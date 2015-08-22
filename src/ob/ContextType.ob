@@ -105,6 +105,29 @@ TYPE
         id-: STRING;
     END;
 
+    ScopeInfo* = RECORD
+        PROCEDURE ScopeInfo(id: STRING; depth: INTEGER);
+
+        id: STRING;
+        depth: INTEGER;
+    END;
+    PScopeInfo = POINTER TO ScopeInfo;
+
+    ScopeInfoGenerator* = RECORD
+        PROCEDURE ScopeInfoGenerator*(name: STRING; code: CodeGenerator.PIGenerator; parent: ContextHierarchy.PNode);
+
+        name: STRING;
+        code: CodeGenerator.PIGenerator;
+        parent: ContextHierarchy.PNode;
+        codeBegin: CodeGenerator.PInsertion;
+        info: PScopeInfo;
+    END;
+    PScopeInfoGenerator* = POINTER TO ScopeInfoGenerator;
+
+    DescribeScopeMsg* = RECORD(ContextHierarchy.Message)
+        result: PScopeInfo;
+    END;
+
 PROCEDURE HandleSymbolAsType.handleQIdent(q: ContextHierarchy.QIdent);
 BEGIN
     s <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
@@ -361,7 +384,7 @@ END;
 
 PROCEDURE Record.doGenerateConstructor(): STRING;
 BEGIN
-    gen <- CodeGenerator.makeGenerator();
+    gen <- NEW CodeGenerator.Generator();
     gen.write("function " + SELF.cons + "()");
     gen.openScope();
     gen.write(SELF.doGenerateBaseConstructorCallCode() 
@@ -374,10 +397,16 @@ PROCEDURE Record.generateInheritance(): STRING;
 VAR
     result: STRING;
 BEGIN
+    scopeMsg <- DescribeScopeMsg();
+    void <- SELF.parent().handleMessage(scopeMsg);
+    scope <- scopeMsg.result.id;
+
     base <- SELF.type.base;
-    IF base # NIL THEN
+    IF base = NIL THEN
+        result := SELF.cons + ".prototype.$scope = " + scope + ";" + Chars.ln;
+    ELSE
         qualifiedBase <- SELF.qualifyScope(base.scope) + base.name; 
-        result := SELF.root().language().rtl.extend(SELF.cons, qualifiedBase) + ";" + Chars.ln;
+        result := SELF.root().language().rtl.extend(SELF.cons, qualifiedBase, scope) + ";" + Chars.ln;
     END;
     RETURN result;
 END;
@@ -403,6 +432,8 @@ BEGIN
 END;
 
 PROCEDURE Record.endParse(): BOOLEAN;
+VAR
+    scopeMsg: DescribeScopeMsg;
 BEGIN
     SELF.codeGenerator().write(
           SELF.doGenerateConstructor()
@@ -549,6 +580,55 @@ END;
 
 PROCEDURE ForwardTypeMsg.ForwardTypeMsg(id: STRING)
     | id(id);
+END;
+
+PROCEDURE ScopeInfo.ScopeInfo(id: STRING; depth: INTEGER)
+    | id(id),
+      depth(depth);
+END;
+
+PROCEDURE ScopeInfoGenerator.ScopeInfoGenerator(name: STRING; code: CodeGenerator.PIGenerator; parent: ContextHierarchy.PNode)
+    | name(name),
+      code(code),
+      parent(parent),
+      codeBegin(code.makeInsertion());
+BEGIN
+END;
+
+PROCEDURE makeScopeInfo(name: STRING; code: CodeGenerator.IGenerator; parent: ContextHierarchy.PNode): PScopeInfo;
+VAR
+    id, description: STRING;
+BEGIN
+    id := "$scope";
+    depth <- 0;
+        
+    IF parent = NIL THEN
+        description := Chars.doubleQuote + name + Chars.doubleQuote;
+    ELSE
+        msg <- DescribeScopeMsg();
+        void <- parent.handleMessage(msg);
+        depth := msg.result.depth + 1;
+        description := msg.result.id + " + " + Chars.doubleQuote + "." + name + Chars.doubleQuote;
+        id := id + String.fromInt(depth);
+    END;
+
+    code.write("var " + id + " = " + description + ";" + Chars.ln);
+    RETURN NEW ScopeInfo(id, depth);
+END;
+
+PROCEDURE handleDescribeScopeMsg*(VAR msg: ContextHierarchy.Message; VAR s: ScopeInfoGenerator): BOOLEAN;
+BEGIN
+    result <- FALSE;
+    IF msg IS DescribeScopeMsg THEN
+        IF s.info = NIL THEN
+            code <- CodeGenerator.Generator();
+            s.info := makeScopeInfo(s.name, code, s.parent);
+            s.code.insert(s.codeBegin^, code.result());
+        END;
+        msg.result := s.info;
+        result := TRUE;
+    END;
+    RETURN result;
 END;
 
 END ContextType.

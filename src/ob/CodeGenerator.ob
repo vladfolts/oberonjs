@@ -4,10 +4,21 @@ IMPORT
 CONST
     kTab* = 09X;
 TYPE
+    Insertion* = RECORD
+        PROCEDURE Insertion(index: INTEGER);
+
+        index: INTEGER;
+    END;
+    PInsertion* = POINTER TO Insertion;
+
     IGenerator* = RECORD
         PROCEDURE write*(s: STRING);
         PROCEDURE openScope*();
         PROCEDURE closeScope*(ending: STRING);
+
+        PROCEDURE makeInsertion*(): PInsertion;
+        PROCEDURE insert*(i: Insertion; s: STRING);
+
         PROCEDURE result*(): STRING;
     END;
 
@@ -16,27 +27,42 @@ TYPE
     NullGenerator = RECORD(IGenerator)
     END;
 
-    SimpleGenerator = RECORD(NullGenerator)
+    SimpleGenerator* = RECORD(NullGenerator)
         mResult: STRING
     END;
 
     Indent* = RECORD
+        PROCEDURE Indent(indent: INTEGER);
+
         indent*: INTEGER;
         result*: STRING;
     END;
 
-    Generator = RECORD(IGenerator)
-        indent: Indent;
+    Generator* = RECORD(IGenerator)
+        PROCEDURE Generator*();
+
+        indents: ARRAY * OF Indent;
     END;
 
 VAR
     nullGenerator*: POINTER TO NullGenerator;
+
+PROCEDURE Insertion.Insertion(index: INTEGER)
+    | index(index);
+END;
 
 PROCEDURE NullGenerator.write(s: STRING); END;
 
 PROCEDURE NullGenerator.openScope(); END;
 
 PROCEDURE NullGenerator.closeScope(ending: STRING); END;
+
+PROCEDURE NullGenerator.makeInsertion(): PInsertion;
+    RETURN NIL;
+END;
+
+PROCEDURE NullGenerator.insert(i: Insertion; s: STRING);
+END;
 
 PROCEDURE NullGenerator.result(): STRING;
     RETURN "";
@@ -61,7 +87,7 @@ BEGIN
     RETURN result
 END;
 
-PROCEDURE indentText*(s: STRING; indent: INTEGER): STRING;
+PROCEDURE indentText(s: STRING; indent: INTEGER): STRING;
 VAR
     result: STRING;
 BEGIN
@@ -76,21 +102,22 @@ BEGIN
     RETURN result + String.substr(s, pos, LEN(s) - pos);
 END;
 
-PROCEDURE addIndentedText*(s: STRING; VAR indent: Indent);
+PROCEDURE addIndentedText(s: STRING; VAR indent: Indent);
 BEGIN
     indent.result := indent.result + indentText(s, indent.indent);
 END;
 
-PROCEDURE openScope*(VAR indent: Indent);
+PROCEDURE openScope(VAR indent: Indent);
 BEGIN
     INC(indent.indent);
     indent.result := indent.result + "{" + Stream.kCR + makeIndent(indent.indent);
 END;
 
-PROCEDURE closeScope*(ending: STRING; VAR indent: Indent);
+PROCEDURE closeScope(ending: STRING; VAR indent: Indent);
 BEGIN
     DEC(indent.indent);
-    indent.result := String.substr(indent.result, 0, LEN(indent.result) - 1) + "}";
+    lenWithoutLastIndent <- LEN(indent.result) - 1;
+    indent.result := String.substr(indent.result, 0, lenWithoutLastIndent) + "}";
     IF LEN(ending) # 0 THEN
         addIndentedText(ending, indent);
     ELSE
@@ -100,29 +127,55 @@ END;
 
 PROCEDURE Generator.write(s: STRING);
 BEGIN
-    addIndentedText(s, SELF.indent);
+    addIndentedText(s, SELF.indents[LEN(SELF.indents) - 1]);
 END;
 
 PROCEDURE Generator.openScope();
 BEGIN
-    openScope(SELF.indent);
+    openScope(SELF.indents[LEN(SELF.indents) - 1]);
 END;
 
 PROCEDURE Generator.closeScope(ending: STRING);
 BEGIN
-    closeScope(ending, SELF.indent);
+    i <- LEN(SELF.indents) - 1;
+    WHILE LEN(SELF.indents[i].result) = 0 DO
+        SELF.indents.remove(i);
+        DEC(i);
+    END;
+
+    closeScope(ending, SELF.indents[i]);
+END;
+
+PROCEDURE Generator.makeInsertion(): PInsertion;
+BEGIN
+    index <- LEN(SELF.indents) - 1;
+    result <- NEW Insertion(index);
+    SELF.indents.add(Indent(SELF.indents[index].indent));
+    RETURN result;
+END;
+
+PROCEDURE Generator.insert(i: Insertion; s: STRING);
+BEGIN
+    addIndentedText(s, SELF.indents[i.index]);
 END;
 
 PROCEDURE Generator.result(): STRING;
-    RETURN SELF.indent.result
+VAR
+    result: STRING;
+BEGIN
+    FOR i <- 0 TO LEN(SELF.indents) - 1 DO
+        result := result + SELF.indents[i].result;
+    END;
+    RETURN result;
 END;
 
-PROCEDURE makeSimpleGenerator*(): PIGenerator;
-    RETURN NEW SimpleGenerator();
+PROCEDURE Indent.Indent(indent: INTEGER)
+    | indent(indent);
 END;
 
-PROCEDURE makeGenerator*(): PIGenerator;
-    RETURN NEW Generator();
+PROCEDURE Generator.Generator();
+BEGIN
+    SELF.indents.add(Indent(0));
 END;
 
 BEGIN

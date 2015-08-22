@@ -180,9 +180,9 @@ exports.language = {
         makeOpenArray: function(type){return new EbArray.OpenArray(type); }
     },
     codeGenerator: {
-        make: CodeGenerator.makeGenerator,
+        make: function(){ return new CodeGenerator.Generator(); },                                                                                                                                                                                          
         nil: CodeGenerator.nullGenerator()
-    },
+    },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
     rtl: {
         base: EbRtl.Type,
         methods: EbRtlCode.rtl.methods,

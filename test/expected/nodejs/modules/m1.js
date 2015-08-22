@@ -1,22 +1,26 @@
 var RTL$ = require("test_rtl.js");
+var $scope = "m1";
 var ci = 123;
 function Base(){
 	this.i = 0;
 }
+Base.prototype.$scope = $scope;
 function T(){
 	Base.call(this);
 }
-RTL$.extend(T, Base);
+RTL$.extend(T, Base, $scope);
 function TPA(){
 }
+TPA.prototype.$scope = $scope;
 function ExportPointerOnly(){
 	Base.call(this);
 }
-RTL$.extend(ExportPointerOnly, Base);
+RTL$.extend(ExportPointerOnly, Base, $scope);
 var i = 0;
 function anonymous$1(){
 	this.i = 0;
 }
+anonymous$1.prototype.$scope = $scope;
 var pr = null;
 var pr2 = null;
 
