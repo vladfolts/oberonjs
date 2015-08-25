@@ -10,21 +10,19 @@ TYPE
     END;
     PHandleSymbolAsType = POINTER TO HandleSymbolAsType;
 
-    FormalType* = RECORD(HandleSymbolAsType)
-        PROCEDURE FormalType(parent: PHandleSymbolAsType);
+    DeclarationHandle* = RECORD(HandleSymbolAsType)
+        PROCEDURE isAnonymousDeclaration*(): BOOLEAN;
+    END;
+    PDeclarationHandle* = POINTER TO DeclarationHandle;
 
-        handleType: PHandleSymbolAsType;
+    FormalType* = RECORD(HandleSymbolAsType)
         dimensionCount: INTEGER;
     END;
 
-    Array* = RECORD(HandleSymbolAsType)
-        PROCEDURE Array*(parent: PHandleSymbolAsType);
-
-        PROCEDURE isAnonymousDeclaration(): BOOLEAN;
+    Array* = RECORD(DeclarationHandle)
         PROCEDURE doMakeInit*(type: Types.PStorageType; dimensions: STRING; length: INTEGER): STRING;
         PROCEDURE doMakeType*(elementsType: Types.PStorageType; init: STRING; length: INTEGER): Types.PStorageType;
 
-        handleType: PHandleSymbolAsType;
         dimensions: POINTER TO ArrayDimensions;
         type: Types.PStorageType;
     END;
@@ -35,13 +33,11 @@ TYPE
         dimensions: ARRAY * OF INTEGER;
     END;
 
-    DeclarationHandle* = RECORD(HandleSymbolAsType)
-        PROCEDURE isAnonymousDeclaration*(): BOOLEAN;
+    HavingFieldsDeclaration* = RECORD(DeclarationHandle)
         PROCEDURE exportField*(name: STRING);
     END;
-    PDeclarationHandle* = POINTER TO DeclarationHandle;
 
-    DeclarationAndIdentHandle* = RECORD(DeclarationHandle)
+    DeclarationAndIdentHandle* = RECORD(HavingFieldsDeclaration)
         PROCEDURE handleIdentdef*(id: Context.PIdentdefInfo);
         PROCEDURE typeName*(): STRING;
     END;
@@ -82,10 +78,7 @@ TYPE
         type: Types.PStorageType;
     END;
 
-    Pointer* = RECORD(DeclarationHandle)
-        PROCEDURE Pointer(parent: PDeclarationHandle);
-
-        declParent: PDeclarationHandle;
+    Pointer* = RECORD(HavingFieldsDeclaration)
     END;
 
     Section* = RECORD(ContextHierarchy.Node)
@@ -134,11 +127,6 @@ BEGIN
     SELF.setType(ContextExpression.unwrapType(s.symbol().info()));
 END;
 
-PROCEDURE FormalType.FormalType(parent: PHandleSymbolAsType)
-    | SUPER(parent),
-      handleType(parent);
-END;
-
 PROCEDURE FormalType.setType(type: Types.PStorageType);
 BEGIN
     result <- type;
@@ -146,7 +134,7 @@ BEGIN
     FOR i <- 0 TO SELF.dimensionCount - 1 DO
         result := types.makeOpenArray(result);
     END;
-    SELF.handleType.setType(result);
+    SELF.parent()(PHandleSymbolAsType).setType(result);
 END;
 
 PROCEDURE FormalType.handleLiteral(s: STRING);
@@ -154,11 +142,6 @@ BEGIN
     IF s = "ARRAY" THEN
         INC(SELF.dimensionCount);
     END;
-END;
-
-PROCEDURE Array.Array(parent: PHandleSymbolAsType)
-    | SUPER(parent),
-      handleType(parent);
 END;
 
 PROCEDURE Array.setType(elementsType: Types.PStorageType);
@@ -211,7 +194,7 @@ END;
 
 PROCEDURE Array.endParse(): BOOLEAN;
 BEGIN
-    SELF.handleType.setType(SELF.type);
+    SELF.parent()(PHandleSymbolAsType).setType(SELF.type);
     RETURN TRUE;
 END;
 
@@ -496,17 +479,12 @@ BEGIN
         END;
     END;
     
-    parent <- p.declParent;
+    parent <- p.parent()(PDeclarationHandle);
     IF ~parent.isAnonymousDeclaration() THEN
         name := parent.genTypeName();
     END;
 
     parent.setType(NEW R.Pointer(name, typeId));
-END;
-
-PROCEDURE Pointer.Pointer(parent: PDeclarationHandle)
-    | SUPER(parent),
-      declParent(parent);
 END;
 
 PROCEDURE Pointer.handleQIdent(q: ContextHierarchy.QIdent);

@@ -32,8 +32,7 @@ TYPE
         type: Procedure.PType;
     END;
 
-    Map* = RECORD(ContextType.HandleSymbolAsType)
-        PROCEDURE isAnonymousDeclaration*(): BOOLEAN;
+    Map* = RECORD(ContextType.DeclarationHandle)
         PROCEDURE typeName*(): STRING;
 
         type: Types.PStorageType;
