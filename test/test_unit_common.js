@@ -2,6 +2,7 @@
 
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
+var ContextExpression = require("js/ContextExpression.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var ContextType = require("js/ContextType.js");
 var Errors = require("js/Errors.js");
@@ -27,8 +28,8 @@ var TestModuleGenerator = Class.extend({
     epilog: function(){return undefined;}
 });
 
-var TestContext = Class.extend.call(ContextHierarchy.Root, {
-    init: function TestContext(language){
+var TestContextRoot = Class.extend.call(ContextHierarchy.Root, {
+    init: function TestContextRoot(language){
         var rtl = new makeRTL(language.rtl);
         ContextHierarchy.Root.call(
                 this,
@@ -45,8 +46,14 @@ var TestContext = Class.extend.call(ContextHierarchy.Root, {
         if (msg instanceof ContextType.DescribeScopeMsg)
             msg.result = new ContextType.ScopeInfo("test", 0);
     },
-    handleExpression: function(){},
     handleLiteral: function(){}
+});
+
+var TestContext = Class.extend.call(ContextExpression.ExpressionHandler, {
+    init: function TestContext(language){
+        ContextExpression.ExpressionHandler.call(this, new TestContextRoot(language));
+    },
+    handleExpression: function(){}
 });
 
 function makeContext(language){return new TestContext(language);}
@@ -116,7 +123,8 @@ function parseUsingGrammar(parser, language, s, cxFactory){
     var baseContext = makeContext(language);
     var context = cxFactory ? cxFactory(baseContext) : baseContext;
     parseInContext(parser, s, context);
-    context.currentScope().close();
+    if (context.root)
+        context.root().currentScope().close();
 }
 
 function setupParser(parser, language, contextFactory){
@@ -160,9 +168,8 @@ function testWithGrammar(parser, language, pass, fail){
 var TestContextWithModule = TestContext.extend({
     init: function(module, language){
         TestContext.prototype.init.call(this, language);
-        this.__module = module;
-    },
-    findModule: function(){return this.__module;}
+        this.root().findModule = function(){return module;};
+    }
 });
 
 function testWithModule(src, language, pass, fail){

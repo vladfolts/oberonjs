@@ -35,7 +35,6 @@ TYPE
         PROCEDURE handleSimpleExpression(e: Expression.PType);
         PROCEDURE doRelationOperation*(left, right: Expression.PType; relation: STRING): BinaryOperatorCx;
 
-        expressionHandler: PExpressionHandler;
         relOps: PRelationOps;
         expression: Expression.PType;
         relation: STRING;
@@ -493,7 +492,6 @@ END;
 
 PROCEDURE ExpressionNode.ExpressionNode(parent: PExpressionHandler; ops: PRelationOps)
     | SUPER(parent),
-      expressionHandler(parent),
       relOps(ops);
 BEGIN
     IF ops = NIL THEN
@@ -617,7 +615,7 @@ BEGIN
         Errors.raise("procedure returning no result cannot be used in an expression");
     END;
 
-    parent <- SELF.expressionHandler;
+    parent <- SELF.parent()(PExpressionHandler);
     parent.codeGenerator().write(SELF.expression.code());
     parent.handleExpression(SELF.expression);
 

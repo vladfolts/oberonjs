@@ -19,8 +19,8 @@ TYPE
     END;
     PQIdentHandler* = POINTER TO QIdentHandler;
 
-    Type* = RECORD(QIdentHandler)
-        PROCEDURE handleExpression*(e: Expression.PType);
+    Type* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE handleQIdent(q: ContextHierarchy.QIdent);
         PROCEDURE handleTypeCast(type: Types.PType);
 
         PROCEDURE doCheckIndexType*(type: Types.PType);

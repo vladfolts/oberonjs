@@ -113,7 +113,6 @@ return {
             handleIdent: function(id){this.__ident = id;},
             ident: function() {return this.__ident;},
             getResult: function() {return this.__ident;},
-            currentScope: function(){return {close: function(){}};}
         });
         function makeContext() {return new IdentDeclarationContext();}
 
