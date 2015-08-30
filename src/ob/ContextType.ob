@@ -25,7 +25,6 @@ TYPE
         PROCEDURE doMakeType*(elementsType: Types.PStorageType; init: STRING; length: INTEGER): Types.PStorageType;
 
         dimensions: POINTER TO ArrayDimensions;
-        type: Types.PStorageType;
     END;
 
     ArrayDimensions* = RECORD(ContextExpression.ExpressionHandler) 
@@ -166,7 +165,7 @@ BEGIN
         type := SELF.doMakeType(type, arrayInit, length);
     END;
 
-    SELF.type := type;
+    SELF.parent()(PHandleSymbolAsType).setType(type);
 END;
 
 PROCEDURE Array.isAnonymousDeclaration(): BOOLEAN;
@@ -194,12 +193,6 @@ END;
 
 PROCEDURE Array.doMakeType(elementsType: Types.PStorageType; init: STRING; length: INTEGER): Types.PStorageType;
     RETURN SELF.root().language().types.makeStaticArray(elementsType, init, length);
-END;
-
-PROCEDURE Array.endParse(): BOOLEAN;
-BEGIN
-    SELF.parent()(PHandleSymbolAsType).setType(SELF.type);
-    RETURN TRUE;
 END;
 
 PROCEDURE ArrayDimensions.handleExpression(e: Expression.PType);

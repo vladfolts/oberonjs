@@ -33,7 +33,6 @@ TYPE
     END;
 
     Map* = RECORD(ContextType.DeclarationHandle)
-        type: Types.PStorageType;
     END;
 
     MethodDeclMsg = RECORD(ContextHierarchy.Message)
@@ -213,7 +212,7 @@ END;
 
 PROCEDURE Map.setType(type: Types.PStorageType);
 BEGIN
-    SELF.type := type;
+    SELF.parent()^(ContextType.HandleSymbolAsType).setType(NEW EberonMap.Type(type));
 END;
 
 (* anonymous types can be used in map declaration *)
@@ -223,12 +222,6 @@ END;
 
 PROCEDURE Map.typeName(): STRING;
     RETURN "";
-END;
-
-PROCEDURE Map.endParse(): BOOLEAN;
-BEGIN
-    SELF.parent()^(ContextType.HandleSymbolAsType).setType(NEW EberonMap.Type(SELF.type));
-    RETURN TRUE;
 END;
 
 PROCEDURE MethodDeclMsg.MethodDeclMsg(id: Context.PIdentdefInfo; type: Procedure.PType)

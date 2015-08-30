@@ -145,7 +145,8 @@ return {
          ["T = RECORD a: ARRAY 3 OF ARRAY 5 OF T END", "recursive field definition: 'a'"],
          ["T = RECORD r: RECORD rr: T END END", "recursive field definition: 'r'"],
          ["T = RECORD (T) END", "recursive inheritance: 'T'"],
-         ["T = RECORD r: RECORD (T) END END", "recursive field definition: 'r'"]
+         ["T = RECORD r: RECORD (T) END END", "recursive field definition: 'r'"],
+         ["T = RECORD p: PROCEDURE(): T END", "procedure cannot return T"]
          )
     ),
 "record cannot have forward type as a base": testWithGrammar(
@@ -200,8 +201,8 @@ return {
          "T = PROCEDURE(a: INTEGER; b: BOOLEAN)",
          "T = PROCEDURE(): T"),
     fail(["T = PROCEDURE(): A;", "procedure cannot return ARRAY 3 OF INTEGER"],
-         ["T = PROCEDURE(): R;", "procedure cannot return R"]
-         //TODO:["T = ARRAY 3 OF PROCEDURE(): T;", "test"]
+         ["T = PROCEDURE(): R;", "procedure cannot return R"],
+         ["T = ARRAY 3 OF PROCEDURE(): T;", "procedure cannot return ARRAY 3 OF PROCEDURE"]
         )
     ),
 "POINTER declaration": testWithGrammar(
