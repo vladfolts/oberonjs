@@ -130,7 +130,7 @@ BEGIN
             "",
             "");
     ELSIF currentType IS EberonMap.PType THEN
-        indexType <- currentType.valueType;
+        indexType <- currentType.elementsType;
         rtl <- SELF.root().language().rtl(EberonRtl.PType);
         rval <- rtl.getMappedValue(code, indexCode);
         lval <- code + "[" + indexCode + "]";

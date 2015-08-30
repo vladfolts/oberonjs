@@ -89,7 +89,7 @@ BEGIN
             result := Cast.errNo;
         END;
     ELSIF (from IS EberonMap.PType) & (to IS EberonMap.PType) THEN
-        IF Cast.areTypesExactlyMatch(from.valueType, to.valueType) THEN
+        IF Cast.areTypesExactlyMatch(from.elementsType, to.elementsType) THEN
             op := castOpToMap;
             result := Cast.errNo;
         ELSE

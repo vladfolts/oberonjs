@@ -214,10 +214,8 @@ END;
 
 PROCEDURE FormalParameters.doCheckResultType(type: Types.PStorageType);
 BEGIN
-    IF type IS Types.PArray THEN
-        Errors.raise("the result type of a procedure cannot be an ARRAY");
-    ELSIF type IS Types.PRecord THEN
-        Errors.raise("the result type of a procedure cannot be a RECORD");
+    IF ~type.isScalar() THEN
+        Errors.raise("procedure cannot return " + type.description());
     END;
 END;
 

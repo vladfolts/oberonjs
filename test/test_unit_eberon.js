@@ -953,6 +953,7 @@ exports.suite = {
                      "TYPE P = PROCEDURE(): DA;",
                      "TYPE P = PROCEDURE(VAR a: DA): DA;",
                      "TYPE P = PROCEDURE(VAR a: ARRAY * OF INTEGER): DA;",
+                     "TYPE T = RECORD a: ARRAY * OF T END;",
                      "VAR a: ARRAY * OF INTEGER;",
                      "PROCEDURE p(VAR a: ARRAY * OF INTEGER);END p;",
                      "PROCEDURE p(VAR a: ARRAY * OF ARRAY * OF INTEGER);END p;",
@@ -1336,6 +1337,14 @@ exports.suite = {
          ["NEW undeclared()", "undeclared identifier: 'undeclared'"]
          )
     ),
+"FOR..IN": {
+    "array": testWithContext(
+        context(grammar.statement, 
+                "VAR a: ARRAY 3 OF BOOLEAN;"),
+        pass("FOR i, v IN a DO END"),
+        fail()
+    ),
+},
 "map": {
     "declaration": testWithGrammar(
         grammar.declarationSequence, 
@@ -1343,7 +1352,7 @@ exports.suite = {
              "TYPE M = MAP OF PROCEDURE;",
              "TYPE M = MAP OF PROCEDURE();",
              "TYPE M = MAP OF PROCEDURE(): INTEGER;",
-             "TYPE M = MAP OF PROCEDURE(): M;",
+             //TODO:"TYPE M = MAP OF PROCEDURE(): M;",
              "TYPE M = MAP OF RECORD END;",
              "TYPE M = MAP OF POINTER TO RECORD END;",
              "TYPE M = MAP OF MAP OF INTEGER;",
@@ -1468,6 +1477,11 @@ exports.suite = {
         fail(["PROCEDURE p(m: M); BEGIN; m.remove(\"abc\"); END;", "method 'remove' cannot be applied to non-VAR MAP"],
              ["PROCEDURE p(m: M); BEGIN; m.clear(); END;", "method 'clear' cannot be applied to non-VAR MAP"]
             )
+        ),
+    "return": testWithContext(
+        context(grammar.declarationSequence,
+                "TYPE M = MAP OF INTEGER;"),
+        pass("PROCEDURE p(): M; VAR m: M; BEGIN; RETURN m; END;")
         )
     }
 };

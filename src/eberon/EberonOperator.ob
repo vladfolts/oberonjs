@@ -90,7 +90,7 @@ VAR
     result: STRING;
 BEGIN
     IF type IS EberonMap.PType THEN
-        result := "{map: " + generateTypeInfo(type.valueType) + "}";
+        result := "{map: " + generateTypeInfo(type.elementsType) + "}";
     ELSE
         result := Record.generateTypeInfo(type);
     END;

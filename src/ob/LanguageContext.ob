@@ -15,6 +15,7 @@ TYPE
     Types* = RECORD         
         PROCEDURE implicitCast*(from, to: T.PType; toVar: BOOLEAN; VAR op: PCastOp): INTEGER;
         PROCEDURE typeInfo*(type: T.PType): STRING;
+        PROCEDURE isRecursive*(type, base: T.PType): BOOLEAN;
         PROCEDURE makeOpenArray*(type: T.PType): T.PStorageType;
         PROCEDURE makeStaticArray*(type: T.PType; init: STRING; length: INTEGER): T.PStorageType;
     END;

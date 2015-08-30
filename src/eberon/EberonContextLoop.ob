@@ -139,7 +139,7 @@ END;
 PROCEDURE ForEach.handleExpression(e: Expression.PType);
 BEGIN
     type <- e.type();
-    IF ~(type IS EberonMap.PType) THEN
+    IF ~(type IS Types.PArray) THEN
         Errors.raise("expression of type MAP is expected in FOR, got '" 
                      + type.description() + "'");
     ELSE
@@ -159,7 +159,7 @@ BEGIN
         SELF.code := code;
 
         makeVariable(SELF.keyId, EberonString.string, scope);
-        makeVariable(SELF.valueId, type.valueType, scope);
+        makeVariable(SELF.valueId, type.elementsType, scope);
     END;
 END;
 

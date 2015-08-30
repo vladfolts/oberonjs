@@ -148,6 +148,12 @@ return {
          ["T = RECORD r: RECORD (T) END END", "recursive field definition: 'r'"]
          )
     ),
+"record cannot have forward type as a base": testWithGrammar(
+    grammar.declarationSequence,
+    pass(),
+    fail(["TYPE PForward = POINTER TO Forward; T = RECORD (Forward) END;", 
+          "undeclared identifier: 'Forward'"])
+    ),
 "record extension": testWithContext(
     context(grammar.typeDeclaration,
             "TYPE B = RECORD END;"),
@@ -193,8 +199,9 @@ return {
          "T = PROCEDURE(a: INTEGER)",
          "T = PROCEDURE(a: INTEGER; b: BOOLEAN)",
          "T = PROCEDURE(): T"),
-    fail(["T = PROCEDURE(): A;", "the result type of a procedure cannot be an ARRAY"],
-         ["T = PROCEDURE(): R;", "the result type of a procedure cannot be a RECORD"]
+    fail(["T = PROCEDURE(): A;", "procedure cannot return ARRAY 3 OF INTEGER"],
+         ["T = PROCEDURE(): R;", "procedure cannot return R"]
+         //TODO:["T = ARRAY 3 OF PROCEDURE(): T;", "test"]
         )
     ),
 "POINTER declaration": testWithGrammar(
@@ -1275,11 +1282,11 @@ return {
          ["PROCEDURE p(): undeclared; END p", "undeclared identifier: 'undeclared'"],
          ["PROCEDURE p(): i; END p", "type name expected"],
          ["PROCEDURE p(): INTEGER; RETURN TRUE END p", "RETURN 'INTEGER' expected, got 'BOOLEAN'"],
-         ["PROCEDURE p(a: A): A; RETURN a END p", "the result type of a procedure cannot be an ARRAY"],
-         ["PROCEDURE p(): A; VAR a: A; RETURN a END p", "the result type of a procedure cannot be an ARRAY"],
-         ["PROCEDURE p(r: R): R; RETURN r END p", "the result type of a procedure cannot be a RECORD"],
-         ["PROCEDURE p(): R; VAR r: R; RETURN r END p", "the result type of a procedure cannot be a RECORD"],
-         ["PROCEDURE p(pr: PR): R; RETURN pr END p", "the result type of a procedure cannot be a RECORD"]
+         ["PROCEDURE p(a: A): A; RETURN a END p", "procedure cannot return ARRAY 3 OF INTEGER"],
+         ["PROCEDURE p(): A; VAR a: A; RETURN a END p", "procedure cannot return ARRAY 3 OF INTEGER"],
+         ["PROCEDURE p(r: R): R; RETURN r END p", "procedure cannot return R"],
+         ["PROCEDURE p(): R; VAR r: R; RETURN r END p", "procedure cannot return R"],
+         ["PROCEDURE p(pr: PR): R; RETURN pr END p", "procedure cannot return R"]
          )
     ),
 "pass VAR argument as VAR parameter": testWithContext(

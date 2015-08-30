@@ -10,7 +10,7 @@ function anonymous$1(){
 	this.m = {};
 }
 var r = new anonymous$1();
-var a = RTL$.makeArray(1, {});
+var a = RTL$.makeArray(1, function(){return {};});
 function RecordWithMapInitializedInConstructor(m/*MAP OF INTEGER*/){
 	this.m = RTL$.clone(m, {map: null}, undefined);
 }

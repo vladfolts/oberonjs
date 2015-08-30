@@ -33,8 +33,6 @@ TYPE
     END;
 
     Map* = RECORD(ContextType.DeclarationHandle)
-        PROCEDURE typeName*(): STRING;
-
         type: Types.PStorageType;
     END;
 
@@ -236,6 +234,16 @@ END;
 PROCEDURE MethodDeclMsg.MethodDeclMsg(id: Context.PIdentdefInfo; type: Procedure.PType)
     | id(id),
       type(type);
+END;
+
+PROCEDURE isTypeRecursive*(type, base: Types.PType): BOOLEAN;
+BEGIN
+    result <- ~(type IS EberonDynamicArray.PDynamicArray) 
+            & ~(type IS EberonMap.PType);
+    IF result THEN
+        result := ContextType.isTypeRecursive(type, base);
+    END;
+    RETURN result;
 END;
 
 END EberonContextType.

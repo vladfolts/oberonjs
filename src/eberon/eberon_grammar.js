@@ -176,6 +176,7 @@ exports.language = {
             return Cast.implicit(from, to, toVar, EbOperator.castOperations(), op);
         },
         typeInfo: function(type){return EbOperator.generateTypeInfo(type);},
+        isRecursive: function(type, base){return EberonContextType.isTypeRecursive(type, base);},
         makeStaticArray: function(type, init, length){ return new EbArray.StaticArray(init, type, length); },
         makeOpenArray: function(type){return new EbArray.OpenArray(type); }
     },

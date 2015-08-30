@@ -11,6 +11,7 @@ TYPE
     PHandleSymbolAsType = POINTER TO HandleSymbolAsType;
 
     DeclarationHandle* = RECORD(HandleSymbolAsType)
+        PROCEDURE typeName*(): STRING;
         PROCEDURE isAnonymousDeclaration*(): BOOLEAN;
     END;
     PDeclarationHandle* = POINTER TO DeclarationHandle;
@@ -39,7 +40,6 @@ TYPE
 
     DeclarationAndIdentHandle* = RECORD(HavingFieldsDeclaration)
         PROCEDURE handleIdentdef*(id: Context.PIdentdefInfo);
-        PROCEDURE typeName*(): STRING;
     END;
     PDeclarationAndIdentHandle* = POINTER TO DeclarationAndIdentHandle;
 
@@ -144,6 +144,10 @@ BEGIN
     END;
 END;
 
+PROCEDURE Array.typeName(): STRING;
+    RETURN "";
+END;
+
 PROCEDURE Array.setType(elementsType: Types.PStorageType);
 VAR
     dimensions: STRING;
@@ -230,7 +234,7 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE isTypeRecursive(type, base: Types.PType): BOOLEAN;
+PROCEDURE isTypeRecursive*(type, base: Types.PType): BOOLEAN;
 BEGIN
     result <- FALSE;
     IF type = base THEN
@@ -324,7 +328,7 @@ END;
 
 PROCEDURE Record.addField(field: Context.PIdentdefInfo; type: Types.PStorageType);
 BEGIN
-    IF isTypeRecursive(type, SELF.type) THEN
+    IF SELF.root().language().types.isRecursive(type, SELF.type) THEN
         Errors.raise("recursive field definition: '" + field.id() + "'");
     END;
     SELF.type.addField(SELF.doMakeField(field, type));
@@ -341,7 +345,7 @@ BEGIN
             + type.description()
             + "'");
     ELSE
-        IF isTypeRecursive(type, SELF.type) THEN
+        IF type = SELF.type THEN
             Errors.raise("recursive inheritance: '"
                          + SELF.type.description() + "'");
         END;

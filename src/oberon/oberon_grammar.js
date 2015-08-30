@@ -144,6 +144,7 @@ exports.language = {
             return Cast.implicit(from, to, toVar, Operator.castOperations(), op);
         },
         typeInfo: function(type){return Record.generateTypeInfo(type);},
+        isRecursive: function(type, base){return ContextType.isTypeRecursive(type, base);},
         makeStaticArray: function(type, init, length){ return new Types.StaticArray(init, type, length); },
         makeOpenArray: function(type){return new Types.OpenArray(type); }
     },

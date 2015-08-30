@@ -5,10 +5,7 @@ CONST
     removeMethodName = "remove";
     clearMethodName = "clear";
 TYPE
-    Type* = RECORD(Types.StorageType)
-        PROCEDURE Type*(type: Types.PStorageType);
-
-        valueType*: Types.PStorageType;
+    Type* = RECORD(Types.Array)
     END;
     PType* = POINTER TO Type;
 
@@ -45,11 +42,7 @@ PROCEDURE Type.initializer(cx: Context.Type): STRING;
 END;
 
 PROCEDURE Type.description(): STRING;
-    RETURN "MAP OF " + SELF.valueType.description();
-END;
-
-PROCEDURE Type.Type(valueType: Types.PStorageType)
-    | valueType(valueType);
+    RETURN "MAP OF " + SELF.elementsType.description();
 END;
 
 PROCEDURE Type.denote(id: STRING; isReadObly: BOOLEAN): Types.PField;
