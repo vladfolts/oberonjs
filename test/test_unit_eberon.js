@@ -1341,7 +1341,8 @@ exports.suite = {
     "array": testWithContext(
         context(grammar.statement, 
                 "VAR a: ARRAY 3 OF BOOLEAN;"),
-        pass("FOR i, v IN a DO END"),
+        pass("FOR i, v IN a DO END",
+             "FOR i, v IN a DO ASSERT(a[i] = v); END"),
         fail()
     ),
 },
@@ -1439,7 +1440,7 @@ exports.suite = {
              ["FOR k, m IN m DO END", "'m' already declared in module scope"],
              ["FOR k, v IN m DO k := \"\"; END", "cannot assign to FOR variable"],
              ["FOR k, v IN m DO v := 0; END", "cannot assign to FOR variable"],
-             ["FOR k, v IN r DO END", "expression of type MAP is expected in FOR, got 'T'"],
+             ["FOR k, v IN r DO END", "expression of type ARRAY or MAP is expected in FOR, got 'T'"],
              ["FOR k, v IN T DO END", "type name 'T' cannot be used as an expression"]
             )
         ),

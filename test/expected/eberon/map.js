@@ -17,9 +17,9 @@ function RecordWithMapInitializedInConstructor(m/*MAP OF INTEGER*/){
 
 function ForEach(){
 	var m = {};
-	var $map1 = m;
-	for(var k in $map1){
-		var v = $map1[k];
+	var $seq1 = m;
+	for(var k in $seq1){
+		var v = $seq1[k];
 		RTL$.assert(v == 0);
 		RTL$.assert(k != "");
 	}
@@ -31,9 +31,9 @@ function makeMap(){
 }
 
 function ForEachWithExpression(){
-	var $map1 = makeMap();
-	for(var k in $map1){
-		var v = $map1[k];
+	var $seq1 = makeMap();
+	for(var k in $seq1){
+		var v = $seq1[k];
 	}
 }
 
@@ -41,29 +41,29 @@ function NestedForEach(){
 	var m = {};
 	
 	function inner(){
-		var $map1 = m;
-		for(var k in $map1){
-			var v = $map1[k];
-			var $map2 = m;
-			for(var k2 in $map2){
-				var v2 = $map2[k2];
+		var $seq1 = m;
+		for(var k in $seq1){
+			var v = $seq1[k];
+			var $seq2 = m;
+			for(var k2 in $seq2){
+				var v2 = $seq2[k2];
 			}
 		}
 	}
-	var $map1 = m;
-	for(var k in $map1){
-		var v = $map1[k];
-		var $map2 = m;
-		for(var k2 in $map2){
-			var v2 = $map2[k2];
+	var $seq1 = m;
+	for(var k in $seq1){
+		var v = $seq1[k];
+		var $seq2 = m;
+		for(var k2 in $seq2){
+			var v2 = $seq2[k2];
 		}
 	}
-	var $map3 = m;
-	for(var k3 in $map3){
-		var v3 = $map3[k3];
-		var $map4 = m;
-		for(var k in $map4){
-			var v = $map4[k];
+	var $seq3 = m;
+	for(var k3 in $seq3){
+		var v3 = $seq3[k3];
+		var $seq4 = m;
+		for(var k in $seq4){
+			var v = $seq4[k];
 		}
 	}
 }
@@ -177,12 +177,12 @@ function passMapMapElementByRef(m/*VAR MAP OF INTEGER*/){
 
 function passMapArrayElementByRef(a/*VAR ARRAY * OF INTEGER*/){
 }
-var $map1 = m;
-for(var k in $map1){
-	var v = $map1[k];
-	var $map2 = m;
-	for(var k2 in $map2){
-		var v2 = $map2[k2];
+var $seq1 = m;
+for(var k in $seq1){
+	var v = $seq1[k];
+	var $seq2 = m;
+	for(var k2 in $seq2){
+		var v2 = $seq2[k2];
 	}
 }
 passByRef(m);

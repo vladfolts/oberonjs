@@ -1,0 +1,12 @@
+MODULE test;
+
+PROCEDURE array();
+VAR
+    a: ARRAY 3 OF BOOLEAN;
+BEGIN
+    FOR i, v IN a DO
+        ASSERT(a[i] = v);
+    END;
+END;
+
+END test.

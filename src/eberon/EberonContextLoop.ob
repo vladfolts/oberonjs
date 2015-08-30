@@ -140,7 +140,7 @@ PROCEDURE ForEach.handleExpression(e: Expression.PType);
 BEGIN
     type <- e.type();
     IF ~(type IS Types.PArray) THEN
-        Errors.raise("expression of type MAP is expected in FOR, got '" 
+        Errors.raise("expression of type ARRAY or MAP is expected in FOR, got '" 
                      + type.description() + "'");
     ELSE
         root <- SELF.root();
@@ -151,14 +151,19 @@ BEGIN
         SELF.scopeWasCreated := TRUE;
 
         code <- SELF.parent().codeGenerator();
-        mapVar <- root.currentScope().generateTempVar("map");
+        mapVar <- root.currentScope().generateTempVar("seq");
         code.write("var " + mapVar + " = " + e.code() + ";" + Chars.ln);
         code.write("for(var " + SELF.keyId + " in " + mapVar + ")");
         code.openScope();
         code.write("var " + SELF.valueId + " = " + mapVar + "[" + SELF.keyId + "];" + Chars.ln);
         SELF.code := code;
 
-        makeVariable(SELF.keyId, EberonString.string, scope);
+        keyType <- Types.basic.integer;
+        IF type IS EberonMap.PType THEN
+            keyType := EberonString.string;
+        END;
+
+        makeVariable(SELF.keyId, keyType, scope);
         makeVariable(SELF.valueId, type.elementsType, scope);
     END;
 END;
