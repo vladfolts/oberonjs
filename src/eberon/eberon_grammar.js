@@ -35,7 +35,7 @@ function makeStrucType(base, type){
 }
 
 function makeStatement(base, statementSequence, ident, expression){
-    return or(context(and("FOR", ident, ",", ident, "IN", expression, "DO", 
+    return or(context(and("FOR", ident, optional(and(",", ident)), "IN", expression, "DO", 
                           statementSequence, required("END", "END expected (FOR)")), 
                       EberonContextLoop.ForEach),
               base

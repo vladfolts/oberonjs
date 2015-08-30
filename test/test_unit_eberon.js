@@ -1342,9 +1342,36 @@ exports.suite = {
         context(grammar.statement, 
                 "VAR a: ARRAY 3 OF BOOLEAN;"),
         pass("FOR i, v IN a DO END",
-             "FOR i, v IN a DO ASSERT(a[i] = v); END"),
+             "FOR i, v IN a DO ASSERT(a[i] = v); END",
+             "FOR v IN a DO END",
+             "FOR v IN a DO ASSERT(~v) END"),
         fail()
     ),
+    "map": testWithContext(
+        context(grammar.statement,
+                "TYPE T = RECORD END;"
+              + "VAR m: MAP OF INTEGER; r: T;"),
+        pass("FOR k, v IN m DO END",
+             "FOR k, v IN m DO ASSERT(k # \"abc\"); END",
+             "FOR k, v IN m DO ASSERT(v # 123); END"
+            ),
+        fail(["FOR k, k IN m DO END", "'k' already declared"],
+             ["FOR m, v IN m DO END", "'m' already declared in module scope"],
+             ["FOR k, m IN m DO END", "'m' already declared in module scope"],
+             ["FOR k, v IN m DO k := \"\"; END", "cannot assign to FOR variable"],
+             ["FOR k, v IN m DO v := 0; END", "cannot assign to FOR variable"],
+             ["FOR k, v IN r DO END", "expression of type ARRAY or MAP is expected in FOR, got 'T'"],
+             ["FOR k, v IN T DO END", "type name 'T' cannot be used as an expression"]
+            )
+        ),
+    "scope": testWithContext(
+        context(grammar.declarationSequence,
+                "VAR m: MAP OF INTEGER;"),
+        pass(),
+        fail(["PROCEDURE p(); BEGIN FOR k, v IN m DO END; ASSERT(k # \"abc\"); END;", "undeclared identifier: 'k'"],
+             ["PROCEDURE p(); BEGIN FOR k, v IN m DO END; ASSERT(v # 123); END;", "undeclared identifier: 'v'"]
+             )
+        )
 },
 "map": {
     "declaration": testWithGrammar(
@@ -1426,31 +1453,6 @@ exports.suite = {
                 "TYPE M = MAP OF INTEGER;"),
         pass(),
         fail(["PROCEDURE p(m: M); BEGIN m[\"abc\"] := 123; END;", "cannot assign to read-only MAP's element"])
-        ),
-    "FOR": testWithContext(
-        context(grammar.statement,
-                "TYPE T = RECORD END;"
-              + "VAR m: MAP OF INTEGER; r: T;"),
-        pass("FOR k, v IN m DO END",
-             "FOR k, v IN m DO ASSERT(k # \"abc\"); END",
-             "FOR k, v IN m DO ASSERT(v # 123); END"
-            ),
-        fail(["FOR k, k IN m DO END", "'k' already declared"],
-             ["FOR m, v IN m DO END", "'m' already declared in module scope"],
-             ["FOR k, m IN m DO END", "'m' already declared in module scope"],
-             ["FOR k, v IN m DO k := \"\"; END", "cannot assign to FOR variable"],
-             ["FOR k, v IN m DO v := 0; END", "cannot assign to FOR variable"],
-             ["FOR k, v IN r DO END", "expression of type ARRAY or MAP is expected in FOR, got 'T'"],
-             ["FOR k, v IN T DO END", "type name 'T' cannot be used as an expression"]
-            )
-        ),
-    "FOR scope": testWithContext(
-        context(grammar.declarationSequence,
-                "VAR m: MAP OF INTEGER;"),
-        pass(),
-        fail(["PROCEDURE p(); BEGIN FOR k, v IN m DO END; ASSERT(k # \"abc\"); END;", "undeclared identifier: 'k'"],
-             ["PROCEDURE p(); BEGIN FOR k, v IN m DO END; ASSERT(v # 123); END;", "undeclared identifier: 'v'"]
-             )
         ),
     "remove": testWithContext(
         context(grammar.statement,

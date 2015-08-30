@@ -9,4 +9,22 @@ BEGIN
     END;
 END;
 
+PROCEDURE arrayWithValueOnly();
+VAR
+    a: ARRAY 3 OF BOOLEAN;
+BEGIN
+    FOR v IN a DO
+        ASSERT(~v);
+    END;
+END;
+
+PROCEDURE mapWithValueOnly();
+VAR
+    a: MAP OF BOOLEAN;
+BEGIN
+    FOR v IN a DO
+        ASSERT(~v);
+    END;
+END;
+
 END test.

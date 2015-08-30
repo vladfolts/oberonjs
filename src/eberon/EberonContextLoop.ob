@@ -144,18 +144,25 @@ BEGIN
                      + type.description() + "'");
     ELSE
         root <- SELF.root();
-        scope <- EberonScope.makeOperator(
-            root.currentScope(),
-            root.language().stdSymbols);
+        currentScope <- root.currentScope();
+        scope <- EberonScope.makeOperator(currentScope, root.language().stdSymbols);
         root.pushScope(scope);
         SELF.scopeWasCreated := TRUE;
 
         code <- SELF.parent().codeGenerator();
-        mapVar <- root.currentScope().generateTempVar("seq");
+        mapVar <- currentScope.generateTempVar("seq");
         code.write("var " + mapVar + " = " + e.code() + ";" + Chars.ln);
-        code.write("for(var " + SELF.keyId + " in " + mapVar + ")");
+        
+        keyId <- SELF.keyId;
+        valueId <- SELF.valueId;
+        IF LEN(valueId) = 0 THEN
+            valueId := keyId;
+            keyId := currentScope.generateTempVar("key");
+        END;
+
+        code.write("for(var " + keyId + " in " + mapVar + ")");
         code.openScope();
-        code.write("var " + SELF.valueId + " = " + mapVar + "[" + SELF.keyId + "];" + Chars.ln);
+        code.write("var " + valueId + " = " + mapVar + "[" + keyId + "];" + Chars.ln);
         SELF.code := code;
 
         keyType <- Types.basic.integer;
@@ -163,8 +170,10 @@ BEGIN
             keyType := EberonString.string;
         END;
 
-        makeVariable(SELF.keyId, keyType, scope);
-        makeVariable(SELF.valueId, type.elementsType, scope);
+        IF LEN(valueId) # 0 THEN
+            makeVariable(keyId, keyType, scope);
+        END;
+        makeVariable(valueId, type.elementsType, scope);
     END;
 END;
 
