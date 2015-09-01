@@ -165,7 +165,7 @@ BEGIN
         IF isMap THEN
             code.write("for(var " + keyId + " in " + mapVar + ")");
         ELSE
-            code.write("for(var " + keyId + " = 0; " + keyId + " < " + mapVar + ".length; ++" + keyId);
+            code.write("for(var " + keyId + " = 0; " + keyId + " < " + mapVar + ".length; ++" + keyId + ")");
         END;
 
         code.openScope();

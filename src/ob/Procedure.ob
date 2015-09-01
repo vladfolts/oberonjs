@@ -131,13 +131,9 @@ PROCEDURE checkArgumentsType(
     types: LanguageContext.PTypes
     );
 BEGIN
-    FOR i <- 0 TO LEN(actual) - 1 DO
-        checkArgument(actual[i], expected[i], i, code, types);
-    END;
-    (*
     FOR i, a IN actual DO
         checkArgument(a, expected[i], i, code, types);
-    END;*)
+    END;
 END;
 
 PROCEDURE checkArgumentsCount*(actual, expected: INTEGER);
