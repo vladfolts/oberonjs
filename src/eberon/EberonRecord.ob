@@ -108,8 +108,7 @@ PROCEDURE ensureMethodDefinitionsForEach(key: STRING; ids: ARRAY OF STRING; r: P
 VAR
     report: ARRAY * OF STRING;
 BEGIN
-    FOR i <- 0 TO LEN(ids) - 1 DO
-        m <- ids[i];
+    FOR m IN ids DO
         IF ~hasMethodDefinition(r, m) THEN
             report.add(m);
         END;
@@ -446,8 +445,7 @@ BEGIN
         methods := selfMethods;
     END;
 
-    FOR i <- 0 TO LEN(methods) - 1 DO
-        m <- methods[i];
+    FOR m IN methods DO
         IF r.definedMethods.indexOf(m) = -1 THEN
             r.abstractMethods.add(m);
         END;
@@ -458,8 +456,7 @@ PROCEDURE checkIfFieldsInited(r: Record);
 VAR
     fieldsWereNotInited: ARRAY * OF STRING;
 BEGIN
-    FOR i <- 0 TO LEN(r.customInitedfields) - 1 DO
-        f <- r.customInitedfields[i];
+    FOR f IN r.customInitedfields DO
         IF ~(f IN r.fieldsInit) THEN
             fieldsWereNotInited.add(f);
         END;
@@ -490,8 +487,8 @@ BEGIN
     
     ensureMethodDefinitions(SELF(POINTER), SELF.lazyDefinitions);
 
-    FOR i <- 0 TO LEN(SELF.nonExportedMethods) - 1 DO
-        SELF.declaredMethods.remove(SELF.nonExportedMethods[i]);
+    FOR m IN SELF.nonExportedMethods DO
+        SELF.declaredMethods.remove(m);
     END;
 
     checkIfFieldsInited(SELF);

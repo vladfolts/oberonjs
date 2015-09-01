@@ -51,8 +51,7 @@ VAR
 BEGIN
     root <- SELF.root();
     scope <- root.currentScope();
-    FOR i <- 0 TO LEN(modules) - 1 DO
-        s <- modules[i];
+    FOR s IN modules DO
         name <- s.info()(Types.PModule).name;
         SELF.imports[name] := s;
         scope.addSymbol(s, FALSE);

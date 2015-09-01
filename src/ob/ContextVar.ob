@@ -56,8 +56,7 @@ END;
 PROCEDURE Declaration.endParse(): BOOLEAN;
 BEGIN
     gen <- SELF.codeGenerator();
-    FOR i <- 0 TO LEN(SELF.idents) - 1 DO
-        id <-SELF.idents[i];
+    FOR id IN SELF.idents DO
         varName <- id.id();
         IF id.exported() THEN
             SELF.doCheckExport(varName);

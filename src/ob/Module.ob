@@ -118,8 +118,8 @@ END AnyTypeProc.callGenerator;
 PROCEDURE AnyProcCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
-    FOR i <- 0 TO LEN(args) - 1 DO
-        argCode.write(args[i], NIL, NIL);
+    FOR a IN args DO
+        argCode.write(a, NIL, NIL);
     END;
     RETURN Expression.makeSimple("(" + argCode.result() + ")", any)
 END AnyProcCall.make;

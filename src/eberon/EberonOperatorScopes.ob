@@ -77,8 +77,8 @@ END;
 PROCEDURE Type.reset();
 BEGIN
     SELF.context.root().popScope();
-    FOR i <- 0 TO LEN(SELF.typePromotions) - 1 DO
-        SELF.typePromotions[i].reset();
+    FOR p IN SELF.typePromotions DO
+        p.reset();
     END;
 END;
 

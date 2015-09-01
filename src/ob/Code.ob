@@ -124,7 +124,7 @@ PROCEDURE ModuleGenerator.epilog(exports: Symbols.Map): STRING;
 VAR
     result: STRING;
 BEGIN
-    FOR k, s IN exports DO
+    FOR s IN exports DO
         code <- genExport(s^);
         IF LEN(code) # 0 THEN
             IF LEN(result) # 0 THEN

@@ -134,7 +134,11 @@ BEGIN
     FOR i <- 0 TO LEN(actual) - 1 DO
         checkArgument(actual[i], expected[i], i, code, types);
     END;
-END checkArgumentsType;
+    (*
+    FOR i, a IN actual DO
+        checkArgument(a, expected[i], i, code, types);
+    END;*)
+END;
 
 PROCEDURE checkArgumentsCount*(actual, expected: INTEGER);
 BEGIN
@@ -143,7 +147,7 @@ BEGIN
             String.fromInt(expected) + " argument(s) expected, got " 
             + String.fromInt(actual));
     END;
-END checkArgumentsCount;
+END;
 
 PROCEDURE processArguments*(
     actual: ARRAY OF Expression.PType;
@@ -154,7 +158,7 @@ PROCEDURE processArguments*(
 BEGIN
     checkArgumentsCount(LEN(actual), LEN(expected));
     checkArgumentsType(actual, expected, code, types);
-END processArguments;
+END;
 
 PROCEDURE checkArguments(actual: ARRAY OF Expression.PType; expected: ARRAY OF Types.PProcedureArgument; types: LanguageContext.PTypes);
 BEGIN
@@ -790,18 +794,16 @@ PROCEDURE dumpProcArgs(proc: Defined): STRING;
 VAR
     result: STRING;
 BEGIN
-    len <- LEN(proc.mArgs);
-    IF len = 0 THEN
+    IF LEN(proc.mArgs) = 0 THEN
         IF proc.mResult # NIL THEN
             result := "()";
         END;
     ELSE
         result := "(";
-        FOR i <- 0 TO len - 1 DO
+        FOR i, arg IN proc.mArgs DO
             IF i # 0 THEN
                 result := result + ", ";
             END;
-            arg <- proc.mArgs[i];
             ASSERT(arg.type # NIL);
             result := result + arg.type.description();
         END;
@@ -830,13 +832,10 @@ END;
 
 PROCEDURE Defined.define(args: ARRAY OF Types.PProcedureArgument; result: Types.PType);
 BEGIN
-    FOR i <- 0 TO LEN(args) - 1 DO
-        ASSERT(args[i].type # NIL);
+    FOR a IN args DO
+        ASSERT(a.type # NIL);
     END;
     SELF.mArgs := args;
-    FOR i <- 0 TO LEN(SELF.mArgs) - 1 DO
-        ASSERT(SELF.mArgs[i].type # NIL);
-    END;
     SELF.mResult := result;
 END;
 

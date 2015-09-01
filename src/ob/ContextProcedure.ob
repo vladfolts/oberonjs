@@ -257,8 +257,7 @@ END;
 
 PROCEDURE DefinedParameters.setType(type: Types.PStorageType);
 BEGIN
-    FOR i <- 0 TO LEN(SELF.argNamesForType) - 1 DO
-        name <- SELF.argNamesForType[i];
+    FOR name IN SELF.argNamesForType DO
         void <- SELF.handleMessage(
             NEW AddArgumentMsg(name, NEW Types.ProcedureArgument(type, SELF.isVar))^);
     END;

@@ -236,7 +236,7 @@ BEGIN
         IF isTypeRecursive(type.base, base) THEN
             result := TRUE;
         ELSE
-            FOR name, field IN type.fields DO
+            FOR field IN type.fields DO
                 IF ~result & isTypeRecursive(field.type(), base) THEN
                     result := TRUE;
                 END;
@@ -256,8 +256,7 @@ END;
 
 PROCEDURE checkIfFieldCanBeExported*(name: STRING; idents: ARRAY OF Context.PIdentdefInfo; hint: STRING);
 BEGIN
-    FOR i <- 0 TO LEN(idents) - 1 DO
-        id <- idents[i];
+    FOR id IN idents DO
         IF ~id.exported() THEN
             Errors.raise(
                 "field '" + name + "' can be exported only if " + hint + " '" +
@@ -455,8 +454,8 @@ END;
 PROCEDURE FieldList.endParse(): BOOLEAN;
 BEGIN
     parent <- SELF.parent()(PRecord);
-    FOR i <- 0 TO LEN(SELF.idents) - 1 DO
-        parent.addField(SELF.idents[i], SELF.type);
+    FOR id IN SELF.idents DO
+        parent.addField(id, SELF.type);
     END;
     RETURN TRUE;
 END;

@@ -75,8 +75,7 @@ BEGIN
     addSymbol(Types.basic.real);
     addSymbol(Types.basic.set); 
 
-    FOR i <- 0 TO LEN(Procedures.predefined) - 1 DO
-        proc <- Procedures.predefined[i];
+    FOR proc IN Procedures.predefined DO
         result[proc.id()] := proc;
     END;
     RETURN result
@@ -132,8 +131,7 @@ END;
 
 PROCEDURE Type.close();
 BEGIN
-    FOR i <- 0 TO LEN(SELF.finalizers) - 1 DO
-        finalizer <- SELF.finalizers[i];
+    FOR finalizer IN SELF.finalizers DO
         finalizer.proc(finalizer.closure);
     END;
 

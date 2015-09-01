@@ -63,8 +63,8 @@ END;
 
 PROCEDURE Type.finalize();
 BEGIN
-    FOR i <- 0 TO LEN(SELF.notExported) - 1 DO
-        SELF.fields.remove(SELF.notExported[i])
+    FOR f IN SELF.notExported DO
+        SELF.fields.remove(f)
     END;
     SELF.notExported.clear();
 END Type.finalize;
