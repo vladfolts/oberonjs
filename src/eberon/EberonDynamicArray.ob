@@ -124,9 +124,17 @@ BEGIN
     
     t <- e.type();
     IF t IS Types.PArray THEN
-        SELF.code := Cast.cloneArray(t, SELF.code, SELF.cx);
+        IF Expression.isTemporary(e^) THEN
+            SELF.code := e.code();
+        ELSE
+            SELF.code := Cast.cloneArray(t, SELF.code, SELF.cx);
+        END;
     ELSIF t IS Record.PType THEN
-        SELF.code := SELF.cx.language.rtl.clone(SELF.code, EberonOperator.generateTypeInfo(t), Record.constructor(SELF.cx.cx^, t^));
+        IF Expression.isTemporary(e^) THEN
+            SELF.code := e.code();
+        ELSE
+            SELF.code := SELF.cx.language.rtl.clone(SELF.code, EberonOperator.generateTypeInfo(t), Record.constructor(SELF.cx.cx^, t^));
+        END;
     END;
 END AddCallGenerator.handleArgument;
 

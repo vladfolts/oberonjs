@@ -45,11 +45,11 @@ BEGIN
 
         IF type IS EberonRecord.PRecord THEN
             EberonRecord.ensureCanBeInstantiated(SELF, type, EberonRecord.instantiateForCopy);
-            IF e.designator() # NIL THEN
+            IF Expression.isTemporary(e^) THEN
+                SELF.code := SELF.code + e.code();
+            ELSE
                 l <- SELF.root().language();
                 SELF.code := SELF.code + l.rtl.clone(e.code(), l.types.typeInfo(type), "undefined");
-            ELSE (* do not clone if it is temporary, e.g. constructor call *)
-                SELF.code := SELF.code + e.code();
             END;
         ELSE
             l <- SELF.root().language();

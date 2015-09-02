@@ -105,4 +105,8 @@ BEGIN
     RETURN result
 END;
 
+PROCEDURE isTemporary*(e: Type): BOOLEAN;
+    RETURN e.designator() = NIL;
+END;
+
 END Expression.

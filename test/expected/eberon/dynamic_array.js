@@ -42,6 +42,24 @@ function passArrayOfArraysByRef(a/*VAR ARRAY *, 3 OF INTEGER*/){
 	var result = [];
 	RTL$.copy(result, a, {array: {array: null}});
 }
+
+function arrayOfRecords(){
+	var $scope1 = $scope + ".arrayOfRecords";
+	function T(){
+	}
+	var a = [];
+	a.push(new T());
+}
+
+function arrayOfArrays(){
+	var aa = [];
+	
+	function f(){
+		var a = [];
+		return a.slice();
+	}
+	aa.push(f());
+}
 dynamicInt.push(3);
 dynamicInt.push(i);
 dynamicInt.push(byte);

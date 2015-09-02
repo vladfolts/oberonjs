@@ -56,6 +56,31 @@ BEGIN
     a := result;
 END passArrayOfArraysByRef;
 
+PROCEDURE arrayOfRecords();
+TYPE
+    T = RECORD END;
+VAR
+    a: ARRAY * OF T;
+BEGIN
+    a.add(T());
+END;
+
+PROCEDURE arrayOfArrays();
+TYPE
+    A = ARRAY * OF INTEGER;
+VAR
+    aa: ARRAY * OF A;
+
+    PROCEDURE f(): A;
+    VAR
+        a: A;
+    BEGIN
+        RETURN a;
+    END;
+BEGIN
+    aa.add(f());
+END;
+
 BEGIN
     dynamicInt.add(3);
     dynamicInt.add(i);
