@@ -19,12 +19,8 @@ Keyword *IN* is used to test whether element with specified key is present in th
     
     IF key IN m THEN
 
-It is also possible to iterate through associative array keys/values using *FOR..IN* loop:
+It is also possible to iterate through associative array keys/values using [[FOR..IN|eberon-FOR..IN]] loop.
     
-    FOR key, value IN m DO END
-
-Here _key_ and _value_ are variables assigned to each key/value pair while iterating through array. These variables have no a separate declaration and their visibility scope is inside loop only. Also these variables are read-only - similar to non-VAR parameters.
-
 To remove element from array *remove* method is used:
     
     m.remove(key)
