@@ -31,6 +31,24 @@ function varArgs(r/*VAR Derived*/, i/*VAR INTEGER*/, a/*ARRAY 10 OF INTEGER*/){
 	var v2 = i.get();
 	var v3 = a.slice();
 }
+
+function optimizeTempArray(){
+	
+	function returnA(){
+		var a = [];
+		return a.slice();
+	}
+	var tempA = returnA();
+}
+
+function optimizeTempMap(){
+	
+	function returnM(){
+		var m = {};
+		return RTL$.clone(m, {map: null}, undefined);
+	}
+	var tempM = returnM();
+}
 var v1 = 0;
 var v2 = 1.23;
 var v4 = true;

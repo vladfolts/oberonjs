@@ -52,9 +52,13 @@ BEGIN
                 SELF.code := SELF.code + l.rtl.clone(e.code(), l.types.typeInfo(type), "undefined");
             END;
         ELSE
-            l <- SELF.root().language();
-            void <- l.types.implicitCast(type, type, FALSE, cloneOp);
-            SELF.code := SELF.code + cloneOp.clone(ContextHierarchy.makeLanguageContext(SELF(POINTER)), e);
+            IF Expression.isTemporary(e^) & (type IS Types.PArray) THEN
+                SELF.code := SELF.code + e.code();
+            ELSE
+                l <- SELF.root().language();
+                void <- l.types.implicitCast(type, type, FALSE, cloneOp);
+                SELF.code := SELF.code + cloneOp.clone(ContextHierarchy.makeLanguageContext(SELF(POINTER)), e);
+            END;
         END;
     END;
 END;

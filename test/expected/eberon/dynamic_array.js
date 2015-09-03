@@ -60,6 +60,16 @@ function arrayOfArrays(){
 	}
 	aa.push(f());
 }
+
+function arrayOfMaps(){
+	var aa = [];
+	
+	function f(){
+		var a = {};
+		return RTL$.clone(a, {map: null}, undefined);
+	}
+	aa.push(f());
+}
 dynamicInt.push(3);
 dynamicInt.push(i);
 dynamicInt.push(byte);

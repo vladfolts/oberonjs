@@ -81,6 +81,22 @@ BEGIN
     aa.add(f());
 END;
 
+PROCEDURE arrayOfMaps();
+TYPE
+    A = MAP OF INTEGER;
+VAR
+    aa: ARRAY * OF A;
+
+    PROCEDURE f(): A;
+    VAR
+        a: A;
+    BEGIN
+        RETURN a;
+    END;
+BEGIN
+    aa.add(f());
+END;
+
 BEGIN
     dynamicInt.add(3);
     dynamicInt.add(i);

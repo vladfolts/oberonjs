@@ -144,8 +144,8 @@ function assign(a/*MAP OF INTEGER*/){
 	RTL$.copy(a, v, {map: null});
 	var v2 = RTL$.clone(a, {map: null}, undefined);
 	var v3 = RTL$.clone(v2, {map: null}, undefined);
-	var v4 = RTL$.clone(returnLocalMap(), {map: null}, undefined);
-	var v5 = RTL$.clone(returnNonLocalMap(v), {map: null}, undefined);
+	var v4 = returnLocalMap();
+	var v5 = returnNonLocalMap(v);
 }
 
 function copyMapOfRecord(){

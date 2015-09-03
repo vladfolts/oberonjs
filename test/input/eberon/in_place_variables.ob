@@ -45,6 +45,35 @@ END pCharArray;
 PROCEDURE pString(s: STRING);
 END pString;
 *)
+
+PROCEDURE optimizeTempArray();
+TYPE
+    A = ARRAY * OF INTEGER;
+
+    PROCEDURE returnA(): A;
+    VAR
+        a: A;
+    BEGIN
+        RETURN a;
+    END returnA;
+BEGIN
+    tempA <- returnA();
+END;
+
+PROCEDURE optimizeTempMap();
+TYPE
+    M = MAP OF INTEGER;
+
+    PROCEDURE returnM(): M;
+    VAR
+        m: M;
+    BEGIN
+        RETURN m;
+    END returnM;
+BEGIN
+    tempM <- returnM();
+END;
+
 BEGIN
     v1 <- 0;
     v2 <- 1.23;
