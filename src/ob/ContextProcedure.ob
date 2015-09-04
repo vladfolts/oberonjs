@@ -12,6 +12,7 @@ TYPE
         PROCEDURE doEpilog*(): STRING;
         PROCEDURE doBeginBody*();
         PROCEDURE doMakeArgumentVariable*(arg: Types.ProcedureArgument; name: STRING): Types.PVariable;
+        PROCEDURE doMakeReturnCode*(e: Expression.PType; op: LanguageContext.CastOp): STRING;
 
         PROCEDURE handleReturn(e: Expression.PType);
 
@@ -150,6 +151,10 @@ BEGIN
     RETURN result;
 END;
 
+PROCEDURE Declaration.doMakeReturnCode(e: Expression.PType; op: LanguageContext.CastOp): STRING;
+    RETURN op.clone(ContextHierarchy.makeLanguageContext(SELF(POINTER)), e);
+END;
+
 PROCEDURE Declaration.handleReturn(e: Expression.PType);
 VAR
     op: LanguageContext.PCastOp;
@@ -167,7 +172,7 @@ BEGIN
             + type.description() + "'");
     END;
 
-    SELF.codeGenerator().write("return " + op.clone(ContextHierarchy.makeLanguageContext(SELF(POINTER)), e) + ";" + Chars.ln);
+    SELF.codeGenerator().write("return " + SELF.doMakeReturnCode(e, op^) + ";" + Chars.ln);
 
     SELF.returnParsed := TRUE;
 END;

@@ -73,10 +73,6 @@ PROCEDURE Type.isScalar(): BOOLEAN;
     RETURN FALSE;
 END;
 
-PROCEDURE recordOwnFields*(r: Type): FieldsMap;
-    RETURN r.fields;
-END;
-
 PROCEDURE Type.Type(name: STRING; cons: STRING; scope: ScopeBase.PType)
     | SUPER(name),
       cons(cons),

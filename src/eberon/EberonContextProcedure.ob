@@ -5,7 +5,7 @@ IMPORT
     ContextProcedure, ContextType, 
     EberonConstructor, EberonContext, EberonContextDesignator, 
     EberonDynamicArray, EberonMap, EberonRecord, EberonTypePromotion, EberonTypes,
-    Errors, Expression, LanguageContext, Object, Procedure, Types;
+    Errors, Expression, LanguageContext, Object, Procedure, Record, Types, Variable;
 TYPE
     ProcOrMethodDeclaration* = RECORD(ContextProcedure.Declaration)
         boundType: EberonRecord.PRecord;
@@ -18,6 +18,9 @@ TYPE
         endingId: STRING;
     END;
     PProcOrMethodDeclaration = POINTER TO ProcOrMethodDeclaration;
+
+    ArgumentVariable = RECORD(Variable.ArgumentVariable)
+    END;
 
     ProcOrMethodId* = RECORD(ContextHierarchy.Node)
         PROCEDURE handleIdentdef(id: EberonContext.PIdentdefInfo);
@@ -208,12 +211,33 @@ PROCEDURE ProcOrMethodDeclaration.doMakeArgumentVariable(arg: Types.ProcedureArg
 VAR
     result: Types.PVariable;
 BEGIN
-    IF ~arg.isVar THEN
-        result := NEW EberonContextDesignator.TypeNarrowVariable(arg.type, FALSE, TRUE, name);
-    ELSIF arg.type IS Types.PRecord THEN
-        result := NEW EberonContextDesignator.TypeNarrowVariable(arg.type, TRUE, FALSE, name);
+    IF (arg.type IS Types.PRecord) OR (~arg.isVar & (arg.type IS Record.PPointer)) THEN
+        result := NEW EberonContextDesignator.TypeNarrowVariable(arg.type, arg.isVar, ~arg.isVar, name);
     ELSE
-        result := SUPER(arg, name);
+        result := NEW ArgumentVariable(name, arg.type, arg.isVar);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ProcOrMethodDeclaration.doMakeReturnCode(e: Expression.PType; op: LanguageContext.CastOp): STRING;
+VAR
+    result: STRING;
+BEGIN
+    optimize <- FALSE;
+    IF e.type() IS Types.PArray THEN
+        IF Expression.isTemporary(e^) THEN
+            optimize := TRUE;
+        ELSE
+            d <- e.designator();
+            optimize := (d.scope() = SELF.root().currentScope())
+                & ~(d.info()^ IS Variable.ArgumentVariable);
+        END;
+    END;
+    
+    IF optimize THEN
+        result := e.code();
+    ELSE
+        result := SUPER(e, op);
     END;
     RETURN result;
 END;
@@ -278,6 +302,10 @@ BEGIN
         END;
     END;
     RETURN result;
+END;
+
+PROCEDURE ArgumentVariable.isReadOnly(): BOOLEAN;
+    RETURN ~SELF.var;
 END;
 
 PROCEDURE ProcOrMethodId.handleIdent(id: STRING);

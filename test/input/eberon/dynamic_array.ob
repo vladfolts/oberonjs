@@ -81,6 +81,43 @@ BEGIN
     aa.add(f());
 END;
 
+PROCEDURE optimizeTemporartArrayReturn(): DynamicInt;
+    PROCEDURE f(): DynamicInt;
+    VAR
+        a: DynamicInt;
+    BEGIN
+        RETURN a;
+    END;
+BEGIN
+    RETURN f();
+END;
+
+PROCEDURE optimizeLocalArrayReturn(): DynamicInt;
+VAR
+    a: DynamicInt;
+BEGIN
+    RETURN a;
+END;
+
+PROCEDURE optimizeLocalArrayReturnWhenStatic(): DynamicInt;
+VAR
+    a: ARRAY 3 OF INTEGER;
+BEGIN
+    RETURN a;
+END;
+
+PROCEDURE cannotOptimizeArgArrayReturn(a: ARRAY OF INTEGER): DynamicInt;
+    RETURN a;
+END;
+
+PROCEDURE cannotOptimizeVarArgArrayReturn(VAR a: ARRAY OF INTEGER): DynamicInt;
+    RETURN a;
+END;
+
+PROCEDURE cannotOptimizeVarArgDynamicArrayReturn(VAR a: DynamicInt): DynamicInt;
+    RETURN a;
+END;
+
 PROCEDURE arrayOfMaps();
 TYPE
     A = MAP OF INTEGER;

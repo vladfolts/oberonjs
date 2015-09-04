@@ -38,6 +38,10 @@ BEGIN
     RETURN m;
 END;
 
+PROCEDURE returnTemporaryMap(): MapOfInteger;
+    RETURN makeMap();
+END;
+
 PROCEDURE ForEachWithExpression();
 BEGIN
     FOR k, v IN makeMap() DO
@@ -147,8 +151,34 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE returnNonLocalMap(m: MapOfInteger): MapOfInteger;
+PROCEDURE returnNonLocalMap(): MapOfInteger;
     RETURN m;
+END;
+
+PROCEDURE returnArgMap(m: MapOfInteger): MapOfInteger;
+    RETURN m;
+END;
+
+PROCEDURE returnNonLocalFieldMap(): MapOfInteger;
+    RETURN r.m;
+END;
+
+PROCEDURE returnLocalFieldMap(): MapOfInteger;
+VAR
+    r: RECORD m: MapOfInteger; END;
+BEGIN
+    RETURN r.m;
+END;
+
+PROCEDURE returnMapFromLocalProc(): MapOfInteger;
+VAR
+    m: MapOfInteger;
+
+    PROCEDURE local(): MapOfInteger;
+        RETURN m;
+    END;
+BEGIN
+    RETURN local();
 END;
 
 PROCEDURE assign(a: MapOfInteger);
@@ -159,7 +189,7 @@ BEGIN
     v2 <- a;
     v3 <- v2;
     v4 <- returnLocalMap();
-    v5 <- returnNonLocalMap(v);
+    v5 <- returnArgMap(v);
 END;
 
 PROCEDURE copyMapOfRecord();

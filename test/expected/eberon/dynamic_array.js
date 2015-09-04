@@ -56,9 +56,40 @@ function arrayOfArrays(){
 	
 	function f(){
 		var a = [];
-		return a.slice();
+		return a;
 	}
 	aa.push(f());
+}
+
+function optimizeTemporartArrayReturn(){
+	
+	function f(){
+		var a = [];
+		return a;
+	}
+	return f();
+}
+
+function optimizeLocalArrayReturn(){
+	var a = [];
+	return a;
+}
+
+function optimizeLocalArrayReturnWhenStatic(){
+	var a = RTL$.makeArray(3, 0);
+	return a;
+}
+
+function cannotOptimizeArgArrayReturn(a/*ARRAY OF INTEGER*/){
+	return a.slice();
+}
+
+function cannotOptimizeVarArgArrayReturn(a/*VAR ARRAY OF INTEGER*/){
+	return a.slice();
+}
+
+function cannotOptimizeVarArgDynamicArrayReturn(a/*VAR ARRAY * OF INTEGER*/){
+	return a.slice();
 }
 
 function arrayOfMaps(){
@@ -66,7 +97,7 @@ function arrayOfMaps(){
 	
 	function f(){
 		var a = {};
-		return RTL$.clone(a, {map: null}, undefined);
+		return a;
 	}
 	aa.push(f());
 }

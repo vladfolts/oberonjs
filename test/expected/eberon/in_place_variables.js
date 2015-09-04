@@ -36,7 +36,7 @@ function optimizeTempArray(){
 	
 	function returnA(){
 		var a = [];
-		return a.slice();
+		return a;
 	}
 	var tempA = returnA();
 }
@@ -45,7 +45,7 @@ function optimizeTempMap(){
 	
 	function returnM(){
 		var m = {};
-		return RTL$.clone(m, {map: null}, undefined);
+		return m;
 	}
 	var tempM = returnM();
 }

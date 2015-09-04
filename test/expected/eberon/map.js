@@ -27,7 +27,11 @@ function ForEach(){
 
 function makeMap(){
 	var m = {};
-	return RTL$.clone(m, {map: null}, undefined);
+	return m;
+}
+
+function returnTemporaryMap(){
+	return makeMap();
 }
 
 function ForEachWithExpression(){
@@ -132,11 +136,37 @@ function clear(){
 
 function returnLocalMap(){
 	var result = {};
-	return RTL$.clone(result, {map: null}, undefined);
+	return result;
 }
 
-function returnNonLocalMap(m/*MAP OF INTEGER*/){
+function returnNonLocalMap(){
 	return RTL$.clone(m, {map: null}, undefined);
+}
+
+function returnArgMap(m/*MAP OF INTEGER*/){
+	return RTL$.clone(m, {map: null}, undefined);
+}
+
+function returnNonLocalFieldMap(){
+	return RTL$.clone(r.m, {map: null}, undefined);
+}
+
+function returnLocalFieldMap(){
+	var $scope1 = $scope + ".returnLocalFieldMap";
+	function anonymous$2(){
+		this.m = {};
+	}
+	var r = new anonymous$2();
+	return RTL$.clone(r.m, {map: null}, undefined);
+}
+
+function returnMapFromLocalProc(){
+	var m = {};
+	
+	function local(){
+		return RTL$.clone(m, {map: null}, undefined);
+	}
+	return local();
 }
 
 function assign(a/*MAP OF INTEGER*/){
@@ -145,7 +175,7 @@ function assign(a/*MAP OF INTEGER*/){
 	var v2 = RTL$.clone(a, {map: null}, undefined);
 	var v3 = RTL$.clone(v2, {map: null}, undefined);
 	var v4 = returnLocalMap();
-	var v5 = returnNonLocalMap(v);
+	var v5 = returnArgMap(v);
 }
 
 function copyMapOfRecord(){
