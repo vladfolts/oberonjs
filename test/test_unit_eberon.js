@@ -1337,7 +1337,7 @@ exports.suite = {
          ["NEW undeclared()", "undeclared identifier: 'undeclared'"]
          )
     ),
-"FOR..IN": {
+"FOR IN": {
     "array": testWithContext(
         context(grammar.statement, 
                 "VAR a: ARRAY 3 OF BOOLEAN;"),
@@ -1346,6 +1346,19 @@ exports.suite = {
              "FOR v IN a DO END",
              "FOR v IN a DO ASSERT(~v) END"),
         fail()
+    ),
+    "string": testWithContext(
+        context(grammar.statement,
+                "CONST cc = 22X; cs = \"abc\";"
+              + "VAR s: STRING; as: ARRAY 3 OF CHAR;"),
+        pass("FOR c IN s DO END",
+             "FOR c IN cc DO END",
+             "FOR c IN cs DO END",
+             "FOR c IN as DO END",
+             "FOR c IN \"abc\" DO END",
+             "FOR c IN 22X DO END"
+            ),
+        fail(["FOR c IN as DO c := 22X; END", "cannot assign to FOR variable"])
     ),
     "map": testWithContext(
         context(grammar.statement,
@@ -1360,7 +1373,7 @@ exports.suite = {
              ["FOR k, m IN m DO END", "'m' already declared in module scope"],
              ["FOR k, v IN m DO k := \"\"; END", "cannot assign to FOR variable"],
              ["FOR k, v IN m DO v := 0; END", "cannot assign to FOR variable"],
-             ["FOR k, v IN r DO END", "expression of type ARRAY or MAP is expected in FOR, got 'T'"],
+             ["FOR k, v IN r DO END", "expression of type ARRAY, STRING or MAP is expected in FOR, got 'T'"],
              ["FOR k, v IN T DO END", "type name 'T' cannot be used as an expression"]
             )
         ),

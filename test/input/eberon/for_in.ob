@@ -27,4 +27,33 @@ BEGIN
     END;
 END;
 
+PROCEDURE string();
+VAR
+    s: STRING;
+BEGIN
+    FOR i, c IN s DO
+        ASSERT(s[i] = c);
+    END;
+
+    FOR c IN s DO
+        ASSERT(ORD(c) # 0);
+    END;
+END;
+
+PROCEDURE literal();
+BEGIN
+    FOR i, c IN "abc" DO
+    END;
+
+    FOR c IN "abc" DO
+        ASSERT(ORD(c) # 0);
+    END;
+
+    FOR i, c IN 22X DO
+    END;
+
+    FOR c IN 22X DO
+    END;
+END;
+
 END test.

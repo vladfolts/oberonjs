@@ -137,51 +137,65 @@ BEGIN
 END;
 
 PROCEDURE ForEach.handleExpression(e: Expression.PType);
+VAR
+    elementsType: Types.PStorageType;
+    isString: BOOLEAN;
 BEGIN
     type <- e.type();
-    IF ~(type IS Types.PArray) THEN
-        Errors.raise("expression of type ARRAY or MAP is expected in FOR, got '" 
-                     + type.description() + "'");
+    IF type IS Types.PArray THEN
+        elementsType := type.elementsType;
+    ELSIF (type = EberonString.string) OR Types.isString(type) THEN
+        elementsType := Types.basic.ch;
+        isString := TRUE;
     ELSE
-        root <- SELF.root();
-        currentScope <- root.currentScope();
-        scope <- EberonScope.makeOperator(currentScope, root.language().stdSymbols);
-        root.pushScope(scope);
-        SELF.scopeWasCreated := TRUE;
-
-        code <- SELF.parent().codeGenerator();
-        mapVar <- currentScope.generateTempVar("seq");
-        code.write("var " + mapVar + " = " + e.code() + ";" + Chars.ln);
-        
-        keyId <- SELF.keyId;
-        valueId <- SELF.valueId;
-        IF LEN(valueId) = 0 THEN
-            valueId := keyId;
-            keyId := currentScope.generateTempVar("key");
-        END;
-
-        isMap <- type IS EberonMap.PType;
-
-        IF isMap THEN
-            code.write("for(var " + keyId + " in " + mapVar + ")");
-        ELSE
-            code.write("for(var " + keyId + " = 0; " + keyId + " < " + mapVar + ".length; ++" + keyId + ")");
-        END;
-
-        code.openScope();
-        code.write("var " + valueId + " = " + mapVar + "[" + keyId + "];" + Chars.ln);
-        SELF.code := code;
-
-        keyType <- Types.basic.integer;
-        IF isMap THEN
-            keyType := EberonString.string;
-        END;
-
-        IF LEN(valueId) # 0 THEN
-            makeVariable(keyId, keyType, scope);
-        END;
-        makeVariable(valueId, type.elementsType, scope);
+        Errors.raise("expression of type ARRAY, STRING or MAP is expected in FOR, got '" 
+                     + type.description() + "'");
     END;
+
+    root <- SELF.root();
+    currentScope <- root.currentScope();
+    scope <- EberonScope.makeOperator(currentScope, root.language().stdSymbols);
+    root.pushScope(scope);
+    SELF.scopeWasCreated := TRUE;
+
+    code <- SELF.parent().codeGenerator();
+    mapVar <- currentScope.generateTempVar("seq");
+    code.write("var " + mapVar + " = " + e.code() + ";" + Chars.ln);
+    
+    keyId <- SELF.keyId;
+    valueId <- SELF.valueId;
+    IF LEN(valueId) = 0 THEN
+        valueId := keyId;
+        keyId := currentScope.generateTempVar("key");
+    END;
+
+    isMap <- type IS EberonMap.PType;
+
+    IF isMap THEN
+        code.write("for(var " + keyId + " in " + mapVar + ")");
+    ELSE
+        code.write("for(var " + keyId + " = 0; " + keyId + " < " + mapVar + ".length; ++" + keyId + ")");
+    END;
+
+    code.openScope();
+    code.write("var " + valueId + " = " + mapVar);
+    IF isString THEN
+        code.write(".charCodeAt(" + keyId + ")");
+    ELSE
+        code.write("[" + keyId + "];");
+    END;
+    code.write(Chars.ln);
+    SELF.code := code;
+
+    keyType <- Types.basic.integer;
+    IF isMap THEN
+        keyType := EberonString.string;
+    END;
+
+    IF LEN(valueId) # 0 THEN
+        makeVariable(keyId, keyType, scope);
+    END;
+    makeVariable(valueId, elementsType, scope);
 END;
 
 PROCEDURE ForEach.endParse(): BOOLEAN;
