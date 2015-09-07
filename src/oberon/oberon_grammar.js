@@ -66,6 +66,10 @@ function makeDesignator(ident, qualident, selector, actualParameters){
     };
 }
 
+function makeExpression(base){
+    return context(base, ContextExpression.ExpressionNode);
+}
+
 function makeProcedureDeclaration(ident, procedureHeading, procedureBody){
     return context(and(procedureHeading, ";",
                        procedureBody,
@@ -104,6 +108,7 @@ exports.language = {
     grammar: Grammar.make(
         makeIdentdef,
         makeDesignator,
+        makeExpression,
         makeStrucType,
         makeStatement,
         makeProcedureHeading,
@@ -128,7 +133,6 @@ exports.language = {
             AddOperator:        ContextExpression.AddOperator,
             MulOperator:        ContextExpression.MulOperator,
             SimpleExpression:   ContextExpression.SimpleExpression, 
-            Expression:         ContextExpression.ExpressionNode,
             For:                ContextLoop.For,
             While:              ContextLoop.While,
             If:                 ContextIf.Type,

@@ -78,6 +78,17 @@ function makeDesignator(ident, qualident, selector, actualParameters){
     };
 }
 
+function makeExpression(base){
+    var relExp = context(base, EberonContextExpression.RelationExpression);
+    var expression = context(
+        and(relExp, optional(and("?", relExp, 
+                                 required(":", "expected \":\" after \"?\" in ternary operator"), 
+                                 required(function(){ return expression.apply(this, arguments);}, 
+                                          "expression is expected after \":\" in ternary operator")))),
+        EberonContextExpression.ExpressionNode);
+    return expression;
+}
+
 function makeProcedureDeclaration(ident, procedureHeading, procedureBody){
     return context(and(procedureHeading, ";",
                        procedureBody,
@@ -136,6 +147,7 @@ exports.language = {
     grammar: Grammar.make(
         makeIdentdef,
         makeDesignator,
+        makeExpression,
         makeStrucType,
         makeStatement,
         makeProcedureHeading,
@@ -160,7 +172,6 @@ exports.language = {
             AddOperator:        EberonContextExpression.AddOperator,
             MulOperator:        EberonContextExpression.MulOperator,
             SimpleExpression:   EberonContextExpression.SimpleExpression, 
-            Expression:         EberonContextExpression.ExpressionNode,
             For:                EberonContextLoop.For,
             While:              EberonContextLoop.While,
             If:                 EberonContextIf.Type,

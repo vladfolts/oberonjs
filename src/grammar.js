@@ -28,6 +28,7 @@ var reservedWords = "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONS
 
 function make(makeIdentdef,
               makeDesignator,
+              makeExpression,
               makeStrucType,
               makeStatement,
               makeProcedureHeading, 
@@ -100,8 +101,7 @@ var simpleExpression = context(
           , repeat(and(addOperator, term)))
       , contexts.SimpleExpression);
 var relation = or("=", "#", "<=", "<", ">=", ">", "IN", "IS");
-var expression = context(and(simpleExpression, optional(and(relation, simpleExpression)))
-                       , contexts.Expression);
+var expression = makeExpression(and(simpleExpression, optional(and(relation, simpleExpression))));
 var constExpression = expression;
 
 var element = context(and(expression, optional(and("..", expression))), ContextExpression.SetElement);

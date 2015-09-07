@@ -1499,5 +1499,39 @@ exports.suite = {
                 "TYPE M = MAP OF INTEGER;"),
         pass("PROCEDURE p(): M; VAR m: M; BEGIN; RETURN m; END;")
         )
-    }
+    },
+"ternary operator": testWithContext(
+        context(grammar.expression,
+                "TYPE Base = RECORD END; Derived = RECORD(Base) END;"
+                    + "Derived2 = RECORD(Base) END; Derived3 = RECORD(Base) END;" 
+                + "VAR b: BOOLEAN; i1, i2: INTEGER; s: STRING; byte: BYTE;"
+                + "rb: Base; rd: Derived; rd2: Derived2; rd3: Derived3;"
+                + "pb: POINTER TO Base; pd: POINTER TO Derived; pd2: POINTER TO Derived2; pd3: POINTER TO Derived3;"
+                + "PROCEDURE passBase(b: Base): BOOLEAN; RETURN TRUE END;"
+                + "PROCEDURE passDerived(d: Derived): BOOLEAN; RETURN TRUE END;"
+                ),
+        pass("b ? i1 : i2",
+             "(b ? i1 : i2) # 0",
+             "FLT(b ? i1 : i2)",
+             "b ? i1 : byte",
+             "b ? byte : i1",
+             "b ? pb : pd",
+             "b ? pd : pb",
+             "passBase(b ? pb : pd)",
+             "passBase(b ? pd : pb)",
+             "passBase(b ? pd2 : pd3)",
+             "passBase(b ? rb : rd)",
+             "passBase(b ? rd : rb)",
+             "passBase(b ? rd2 : rd3)",
+             "b ? i1 : b ? i1 : i2"
+             ),
+        fail(["b ?", "not parsed"],
+             ["b ? i1", "expected \":\" after \"?\" in ternary operator"],
+             ["b ? i1 :", "expression is expected after \":\" in ternary operator"],
+             ["b ? i1 : s", "incompatible types in ternary operator: 'INTEGER' and 'STRING'"],
+             ["passDerived(b ? pb : pd)", "type mismatch for argument 1: 'Base' cannot be converted to 'Derived'"],
+             ["passDerived(b ? pd : pb)", "type mismatch for argument 1: 'Base' cannot be converted to 'Derived'"],
+             ["b ? b ? i1 : i2 : i1", "expected \":\" after \"?\" in ternary operator"]
+             )
+    )
 };

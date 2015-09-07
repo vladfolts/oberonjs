@@ -1,27 +1,28 @@
 MODULE EberonContextExpression;
 IMPORT
+    Cast,
     Context, ContextExpression, ContextHierarchy, 
     EberonContextDesignator, EberonContextProcedure, 
     EberonMap, EberonOperator, EberonString, EberonTypePromotion, 
-    Expression, LanguageContext,
+    Errors, Expression, LanguageContext,
     JS,
-    Object, Types;
+    Object, Record, Types;
 TYPE
-    ExpressionNode* = RECORD(ContextExpression.ExpressionNode)
-        PROCEDURE ExpressionNode(parent: ContextExpression.PExpressionHandler);
+    ExpressionNode* = RECORD(ContextExpression.ExpressionHandler)
+        condition, first, second: Expression.PType;
+    END;
+
+    RelationExpression* = RECORD(ContextExpression.ExpressionNode)
+        PROCEDURE RelationExpression(parent: ContextExpression.PExpressionHandler);
 
         PROCEDURE handleTypePromotion(promotion: EberonTypePromotion.PCombined);
 
         currentTypePromotion: EberonTypePromotion.PCombined;
     END;
-    PExpressionNode = POINTER TO ExpressionNode;
 
     SimpleExpression* = RECORD(ContextExpression.SimpleExpression)
-        PROCEDURE SimpleExpression(parent: PExpressionNode);
-
         PROCEDURE handleLogicalOr();
 
-        parentExppression: PExpressionNode;
         typePromotion: EberonTypePromotion.PCombined;
         currentPromotion: EberonTypePromotion.PMaybe;
         orHandled: BOOLEAN;
@@ -59,11 +60,100 @@ TYPE
 VAR
     relationOps: POINTER TO RelationOps;
 
-PROCEDURE ExpressionNode.ExpressionNode(parent: ContextExpression.PExpressionHandler)
+PROCEDURE hierarchyDepth(t: Record.Type): INTEGER;
+BEGIN
+    result <- 0;
+    base <- t.base;
+    WHILE base # NIL DO
+        INC(result);
+        base := base.base;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE getNthBase(t: Record.PType; n: INTEGER): Record.PType;
+BEGIN
+    result <- t;
+    i <- n;
+    WHILE i # 0 DO
+        result := result.base;
+        DEC(i);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE findCommonBase(t1, t2: Record.PType): Record.PType;
+VAR
+    result: Record.PType;
+BEGIN
+    depth1 <- hierarchyDepth(t1^);
+    depth2 <- hierarchyDepth(t2^);
+    commonBase1 <- t1;
+    commonBase2 <- t2;
+    IF depth1 > depth2 THEN
+        commonBase1 := getNthBase(commonBase1, depth1 - depth2);
+    ELSE
+        commonBase2 := getNthBase(commonBase2, depth2 - depth1);
+    END;
+
+    WHILE commonBase1 # commonBase2 DO
+        commonBase1 := commonBase1.base;
+        commonBase2 := commonBase2.base;
+    END;
+
+    RETURN commonBase1;
+END;
+
+PROCEDURE ExpressionNode.handleExpression(e: Expression.PType);
+BEGIN
+    IF SELF.condition = NIL THEN
+        SELF.condition := e;
+    ELSIF SELF.first = NIL THEN
+        SELF.first := e;
+    ELSE
+        SELF.second := e;
+    END;
+END;
+
+PROCEDURE ExpressionNode.endParse(): BOOLEAN;
+VAR
+    resultType: Types.PType;
+    op: LanguageContext.PCastOp;
+BEGIN
+    result <- SELF.first;
+    IF result = NIL THEN
+        result := SELF.condition;
+    ELSE
+        firstType <- SELF.first.type();
+        secondType <- SELF.second.type();
+        IF (firstType IS Record.PType) & (secondType IS Record.PType) THEN
+            resultType := findCommonBase(firstType, secondType);
+        ELSIF (firstType IS Record.PPointer) & (secondType IS Record.PPointer) THEN
+            resultType := findCommonBase(Record.pointerBase(firstType^), Record.pointerBase(secondType^));
+        END;
+
+        IF resultType = NIL THEN 
+            IF SELF.root().language().types.implicitCast(firstType, secondType, FALSE, op) # Cast.errNo THEN
+                Errors.raise("incompatible types in ternary operator: '" 
+                             + firstType.description() + "' and '" + secondType.description() + "'");
+            END;
+            resultType := firstType;
+        END;
+
+        result := Expression.makeSimple(SELF.condition.code() + " ? " 
+                                        + SELF.first.code() + " : "
+                                        + SELF.second.code(),
+                                        resultType);
+    END;
+    SELF.parent()(ContextExpression.PExpressionHandler).handleExpression(result);
+    RETURN TRUE;
+END;
+
+PROCEDURE RelationExpression.RelationExpression(parent: ContextExpression.PExpressionHandler)
     | SUPER(parent, relationOps);
 END;
 
-PROCEDURE ExpressionNode.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
+PROCEDURE RelationExpression.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
 VAR
     result: Object.PType;
 BEGIN
@@ -74,12 +164,12 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE ExpressionNode.handleTypePromotion(promotion: EberonTypePromotion.PCombined);
+PROCEDURE RelationExpression.handleTypePromotion(promotion: EberonTypePromotion.PCombined);
 BEGIN
     SELF.currentTypePromotion := promotion;
 END;
 
-PROCEDURE ExpressionNode.handleLiteral(s: STRING);
+PROCEDURE RelationExpression.handleLiteral(s: STRING);
 BEGIN
     IF SELF.currentTypePromotion # NIL THEN
         SELF.currentTypePromotion.clear();
@@ -87,7 +177,7 @@ BEGIN
     SUPER(s);
 END;
 
-PROCEDURE ExpressionNode.doRelationOperation(left, right: Expression.PType; relation: STRING): ContextExpression.BinaryOperatorCx;
+PROCEDURE RelationExpression.doRelationOperation(left, right: Expression.PType; relation: STRING): ContextExpression.BinaryOperatorCx;
 VAR
     result: ContextExpression.BinaryOperatorCx;
 BEGIN
@@ -100,18 +190,13 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE ExpressionNode.endParse(): BOOLEAN;
+PROCEDURE RelationExpression.endParse(): BOOLEAN;
 BEGIN
     IF SELF.currentTypePromotion # NIL THEN
         void <- SELF.parent().handleMessage(
             NEW EberonContextDesignator.TransferPromotedTypesMsg(SELF.currentTypePromotion)^);
     END;
     RETURN SUPER();
-END;
-
-PROCEDURE SimpleExpression.SimpleExpression(parent: PExpressionNode)
-    | SUPER(parent),
-      parentExppression(parent);
 END;
 
 PROCEDURE SimpleExpression.handleLogicalOr();
@@ -157,7 +242,7 @@ END;
 PROCEDURE SimpleExpression.endParse(): BOOLEAN;
 BEGIN
     IF SELF.typePromotion # NIL THEN
-        SELF.parentExppression.handleTypePromotion(SELF.typePromotion);
+        SELF.parent()^(RelationExpression).handleTypePromotion(SELF.typePromotion);
     END;
     RETURN SUPER();
 END;
