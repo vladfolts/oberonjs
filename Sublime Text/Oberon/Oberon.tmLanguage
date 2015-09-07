@@ -33,7 +33,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>\b(POINTER|RECORD|ARRAY|OF)\b</string>
+			<string>\b(POINTER|RECORD|ARRAY|MAP|OF)\b</string>
 			<key>name</key>
 			<string>storage.type.oberon</string>
 		</dict>
