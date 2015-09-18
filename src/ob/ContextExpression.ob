@@ -29,10 +29,9 @@ TYPE
     END;
     PRelationOps = POINTER TO RelationOps;
 
-    ExpressionNode* = RECORD(ContextHierarchy.Node)
+    ExpressionNode* = RECORD(ExpressionHandler)
         PROCEDURE ExpressionNode*(parent: PExpressionHandler; ops: PRelationOps);
 
-        PROCEDURE handleSimpleExpression(e: Expression.PType);
         PROCEDURE doRelationOperation*(left, right: Expression.PType; relation: STRING): BinaryOperatorCx;
 
         relOps: PRelationOps;
@@ -40,8 +39,7 @@ TYPE
         relation: STRING;
     END;
 
-    SimpleExpression* = RECORD(ContextHierarchy.Node)
-        PROCEDURE handleTerm(e: Expression.PType);
+    SimpleExpression* = RECORD(ExpressionHandler)
         PROCEDURE type(): Types.PType;
         PROCEDURE setType(type: Types.PType);
         PROCEDURE handleOperator(op: BinaryOperator);
@@ -499,7 +497,7 @@ BEGIN
     END;
 END;
 
-PROCEDURE ExpressionNode.handleSimpleExpression(e: Expression.PType);
+PROCEDURE ExpressionNode.handleExpression(e: Expression.PType);
 BEGIN
     IF SELF.expression = NIL THEN
         SELF.expression := e;
@@ -622,7 +620,7 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE SimpleExpression.handleTerm(e: Expression.PType);
+PROCEDURE SimpleExpression.handleExpression(e: Expression.PType);
 VAR
     o: PROCEDURE(e: Expression.PType): Expression.PType;
 BEGIN
@@ -684,7 +682,7 @@ END;
 
 PROCEDURE SimpleExpression.endParse(): BOOLEAN;
 BEGIN
-    SELF.parent()^(ExpressionNode).handleSimpleExpression(SELF.expression);
+    SELF.parent()^(ExpressionNode).handleExpression(SELF.expression);
     RETURN TRUE;
 END;
 
@@ -768,7 +766,7 @@ BEGIN
         END;
         e := Expression.make(d.code(), d.type(), d, const);
     END;
-    SELF.parent()(PSimpleExpression).handleTerm(e);
+    SELF.parent()(PSimpleExpression).handleExpression(e);
     RETURN TRUE;
 END;
 
