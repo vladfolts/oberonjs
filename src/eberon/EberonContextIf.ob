@@ -10,7 +10,7 @@ TYPE
 
 PROCEDURE Type.Type(parent: ContextHierarchy.PNode)
     | SUPER(parent),
-      scopes(parent);
+      scopes(parent.root());
 END;
 
 PROCEDURE Type.handleLiteral(s: STRING);

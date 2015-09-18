@@ -36,7 +36,7 @@ TYPE
 
 PROCEDURE While.While(parent: ContextHierarchy.PNode)
     | SUPER(parent),
-      scopes(parent);
+      scopes(parent.root());
 END;
 
 PROCEDURE While.handleLiteral(s: STRING);

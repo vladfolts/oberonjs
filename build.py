@@ -203,14 +203,17 @@ def build_html(options):
         with open(build_version_path, 'w') as f:
             f.write(version)
 
-def recompile_with_replace(bin, skip_tests = False):
+def recompile_with_replace(bin, skip_tests = False, out_bin = None):
     recompiled = recompile(bin)
     if not skip_tests:
         run_tests(recompiled)
     
-    print('%s -> %s' % (recompiled, bin))
-    cleanup(bin)
-    os.rename(recompiled, bin)
+    if out_bin is None:
+        out_bin = bin
+
+    print('%s -> %s' % (recompiled, out_bin))
+    cleanup(out_bin)
+    os.rename(recompiled, out_bin)
 
 def pre_commit_check(options):
     bin = os.path.join(root, 'bin')
@@ -230,6 +233,17 @@ class compile_target(object):
 
     def __init__(self, options):
         compile_using_snapshot(options.file)
+
+class recompile_target(object):
+    name = 'recompile'
+    description = 'recompile all oberon source files using the snapshot'
+
+    @staticmethod
+    def setup_options(parser):
+        pass
+
+    def __init__(self, options):
+        recompile_with_replace(snapshot_root, True, os.path.join(root, 'bin'))
 
 class self_recompile_target(object):
     name = 'self-recompile'
@@ -299,7 +313,7 @@ class snapshot_target(object):
             os.rename(snapshot_root, old_dir)
         os.rename(new_dir, snapshot_root)
 
-targets = [compile_target, self_recompile_target, html_target, tests_target, pre_commit_target, snapshot_target]
+targets = [compile_target, recompile_target, self_recompile_target, html_target, tests_target, pre_commit_target, snapshot_target]
 
 def build(target, options):
     targets[target](options)

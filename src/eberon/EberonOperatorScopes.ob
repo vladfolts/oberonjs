@@ -1,85 +1,62 @@
 MODULE EberonOperatorScopes;
 IMPORT
-    ContextHierarchy, 
-    EberonContextDesignator, EberonContextProcedure, EberonScope,
-    EberonTypePromotion,
-    Scope;
+    ContextHierarchy, EberonContextTypePromotion, EberonScope, Scope;
 TYPE
+    PRoot = POINTER TO ContextHierarchy.Root;
+
     Type* = RECORD
-        PROCEDURE Type*(cx: ContextHierarchy.PNode);
+        PROCEDURE Type*(cx: PRoot);
 
         PROCEDURE handleMessage*(VAR msg: ContextHierarchy.Message): BOOLEAN;
         PROCEDURE doThen*();
         PROCEDURE alternate*();
         PROCEDURE reset*();
 
-        context: ContextHierarchy.PNode;
+        root: PRoot;
+        typePromotion: EberonContextTypePromotion.Type;
         scope: Scope.PType;
-        ignorePromotions: BOOLEAN;
-        typePromotion: EberonTypePromotion.PType;
-        typePromotions: ARRAY * OF EberonTypePromotion.PType;
     END;
+    PType* = POINTER TO Type;
 
-PROCEDURE Type.Type(cx: ContextHierarchy.PNode)
-    | context(cx);
+PROCEDURE newScope(root: PRoot): Scope.PType;
 BEGIN
-    SELF.alternate();
+    scope <- EberonScope.makeOperator(
+        root.currentScope(),
+        root.language().stdSymbols);
+    root.pushScope(scope);
+    RETURN scope;
+END;    
+
+PROCEDURE Type.Type(root: PRoot)
+    | root(root),
+      scope(newScope(root));
+BEGIN
 END;
 
 PROCEDURE Type.handleMessage(VAR msg: ContextHierarchy.Message): BOOLEAN;
-BEGIN
-    result <- FALSE;
-
-    IF SELF.ignorePromotions THEN
-    ELSIF msg IS EberonContextDesignator.TransferPromotedTypesMsg THEN
-        result := TRUE;
-    ELSIF msg IS EberonContextDesignator.PromoteTypeMsg THEN
-        SELF.typePromotion := NEW EberonTypePromotion.ForVariable(msg.info, msg.type, FALSE);
-        SELF.typePromotions.add(SELF.typePromotion);
-        result := TRUE;
-    ELSIF msg IS EberonContextProcedure.BeginTypePromotionOrMsg THEN
-        tp <- NEW EberonTypePromotion.Or(FALSE);
-        SELF.typePromotion := tp;
-        SELF.typePromotions.add(tp);
-        msg.result := tp;
-        result := TRUE;
-    END;
-    RETURN result;
+    RETURN SELF.typePromotion.handleMessage(msg);
 END;
 
 PROCEDURE Type.doThen();
 BEGIN
-    IF SELF.typePromotion # NIL THEN
-        SELF.typePromotion.and();
-    END;
-    SELF.ignorePromotions := TRUE;
+    SELF.typePromotion.doThen();
 END;
 
 PROCEDURE Type.alternate();
 BEGIN
-    root <- SELF.context.root();
+    root <- SELF.root;
     IF SELF.scope # NIL THEN
         root.popScope();
     END;
-    SELF.scope := EberonScope.makeOperator(
-        root.currentScope(),
-        root.language().stdSymbols);
-    root.pushScope(SELF.scope);
+    SELF.scope := newScope(root);
 
-    IF SELF.typePromotion # NIL THEN
-        SELF.typePromotion.reset();
-        SELF.typePromotion.or();
-        SELF.typePromotion := NIL;
-    END;
-    SELF.ignorePromotions := FALSE;
+    SELF.typePromotion.alternate();
 END;
 
 PROCEDURE Type.reset();
 BEGIN
-    SELF.context.root().popScope();
-    FOR p IN SELF.typePromotions DO
-        p.reset();
-    END;
+    SELF.root.popScope();
+    SELF.typePromotion.reset();
 END;
 
 END EberonOperatorScopes.

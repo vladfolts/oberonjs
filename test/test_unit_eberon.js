@@ -738,6 +738,12 @@ exports.suite = {
             "bVar := (b IS PDerived) & bVar; ASSERT(b.flag)"
             )
         ),
+    "type promotion in ternary operator": testWithContext(
+        temporaryValues.context,
+        temporaryValues.passExpressions(
+            //"b IS PDerived ? b.flag : FALSE"
+            )
+        ),
     "type promotion in IF": testWithContext(
         temporaryValues.context,
         temporaryValues.passStatements(

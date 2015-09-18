@@ -1,0 +1,65 @@
+MODULE EberonContextTypePromotion;
+IMPORT
+    ContextHierarchy, 
+    EberonContextDesignator, EberonContextProcedure,
+    EberonTypePromotion;
+TYPE
+    Type* = RECORD
+        PROCEDURE handleMessage*(VAR msg: ContextHierarchy.Message): BOOLEAN;
+        PROCEDURE doThen*();
+        PROCEDURE alternate*();
+        PROCEDURE reset*();
+
+        ignorePromotions: BOOLEAN;
+        typePromotion: EberonTypePromotion.PType;
+        typePromotions-: ARRAY * OF EberonTypePromotion.PType;
+    END;
+    PType* = POINTER TO Type;
+
+PROCEDURE Type.handleMessage(VAR msg: ContextHierarchy.Message): BOOLEAN;
+BEGIN
+    result <- FALSE;
+
+    IF SELF.ignorePromotions THEN
+    ELSIF msg IS EberonContextDesignator.TransferPromotedTypesMsg THEN
+        result := TRUE;
+    ELSIF msg IS EberonContextDesignator.PromoteTypeMsg THEN
+        SELF.typePromotion := NEW EberonTypePromotion.ForVariable(msg.info, msg.type, FALSE);
+        SELF.typePromotions.add(SELF.typePromotion);
+        result := TRUE;
+    ELSIF msg IS EberonContextProcedure.BeginTypePromotionOrMsg THEN
+        tp <- NEW EberonTypePromotion.Or(FALSE);
+        SELF.typePromotion := tp;
+        SELF.typePromotions.add(tp);
+        msg.result := tp;
+        result := TRUE;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Type.doThen();
+BEGIN
+    IF SELF.typePromotion # NIL THEN
+        SELF.typePromotion.and();
+    END;
+    SELF.ignorePromotions := TRUE;
+END;
+
+PROCEDURE Type.alternate();
+BEGIN
+    IF SELF.typePromotion # NIL THEN
+        SELF.typePromotion.reset();
+        SELF.typePromotion.or();
+        SELF.typePromotion := NIL;
+    END;
+    SELF.ignorePromotions := FALSE;
+END;
+
+PROCEDURE Type.reset();
+BEGIN
+    FOR p IN SELF.typePromotions DO
+        p.reset();
+    END;
+END;
+
+END EberonContextTypePromotion.
