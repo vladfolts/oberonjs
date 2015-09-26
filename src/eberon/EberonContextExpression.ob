@@ -29,7 +29,6 @@ TYPE
     END;
 
     Term* = RECORD(ContextExpression.Term)
-        PROCEDURE getCurrentPromotion(): EberonTypePromotion.PMaybe;
         PROCEDURE handleLogicalAnd();
 
         typePromotion: EberonTypePromotion.PCombined;
@@ -208,11 +207,11 @@ BEGIN
     END;
 END;
 
-PROCEDURE getCurrentPromotion(VAR e: SimpleExpression): EberonTypePromotion.PMaybe;
+PROCEDURE setSimpleExpressionTypePromotion(VAR e: SimpleExpression): EberonTypePromotion.PMaybe;
 BEGIN
     IF e.currentPromotion = NIL THEN
-        msg <- NEW EberonContextProcedure.BeginTypePromotionOrMsg();
-        void <- e.parent().handleMessage(msg^);
+        msg <- EberonContextProcedure.BeginTypePromotionOrMsg();
+        void <- e.parent().handleMessage(msg);
         e.typePromotion := msg.result;
         IF e.typePromotion # NIL THEN
             IF e.orHandled THEN
@@ -229,7 +228,7 @@ VAR
     result: Object.PType;
 BEGIN
     IF msg IS BeginTypePromotionAndMsg THEN
-        p <- getCurrentPromotion(SELF);
+        p <- setSimpleExpressionTypePromotion(SELF);
         IF p # NIL THEN
             msg.result := p.makeAnd();
         END;
@@ -247,23 +246,39 @@ BEGIN
     RETURN SUPER();
 END;
 
+PROCEDURE setTermTypePromotion(VAR term: Term): EberonTypePromotion.PMaybe;
+BEGIN
+    IF term.currentPromotion = NIL THEN
+        msg <- BeginTypePromotionAndMsg();
+        void <- term.parent().handleMessage(msg);
+        term.typePromotion := msg.result;
+        IF term.typePromotion # NIL THEN
+            IF term.andHandled THEN
+                unused <- term.typePromotion.next();
+            END;
+            term.currentPromotion := term.typePromotion.next();
+        END;
+    END;
+    RETURN term.currentPromotion;
+END;
+
 PROCEDURE Term.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
 VAR
     result: Object.PType;
 BEGIN
     IF msg IS EberonContextDesignator.PromoteTypeMsg THEN
         promoted <- msg.info;
-        p <- SELF.getCurrentPromotion();
+        p <- setTermTypePromotion(SELF);
         IF p # NIL THEN
             p.promote(promoted, msg.type);
         END;
     ELSIF msg IS EberonContextProcedure.BeginTypePromotionOrMsg THEN
-        p <- SELF.getCurrentPromotion();
+        p <- setTermTypePromotion(SELF);
         IF p # NIL THEN
             msg.result := p.makeOr();
         END;
     ELSIF msg IS CurrentTypePromotionMsg THEN
-        msg.result := SELF.getCurrentPromotion();
+        msg.result := setTermTypePromotion(SELF);
     ELSE
         result := SUPER(msg);
     END;
@@ -279,28 +294,12 @@ BEGIN
     END;
 END;
 
-PROCEDURE Term.getCurrentPromotion(): EberonTypePromotion.PMaybe;
-BEGIN
-    IF SELF.currentPromotion = NIL THEN
-        msg <- NEW BeginTypePromotionAndMsg();
-        void <- SELF.parent().handleMessage(msg^);
-        SELF.typePromotion := msg.result;
-        IF SELF.typePromotion # NIL THEN
-            IF SELF.andHandled THEN
-                unused <- SELF.typePromotion.next();
-            END;
-            SELF.currentPromotion := SELF.typePromotion.next();
-        END;
-    END;
-    RETURN SELF.currentPromotion;
-END;
-
 PROCEDURE Factor.handleLogicalNot();
 BEGIN
     SUPER();
 
-    msg <- NEW CurrentTypePromotionMsg();
-    void <- SELF.handleMessage(msg^);
+    msg <- CurrentTypePromotionMsg();
+    void <- SELF.handleMessage(msg);
     p <- msg.result;
     IF p # NIL THEN
         p.invert();
@@ -418,10 +417,10 @@ VAR
         IF d # NIL THEN
             v <- d.info();
             IF v IS EberonTypePromotion.PVariable THEN
-                void <- cx.handleMessage(
-                    NEW EberonContextDesignator.PromoteTypeMsg(
-                        v, 
-                        ContextExpression.unwrapType(right.designator().info()))^);
+                msg <- EberonContextDesignator.PromoteTypeMsg(
+                            v, 
+                            ContextExpression.unwrapType(right.designator().info()));
+                void <- cx.handleMessage(msg);
             END;
         END;
         RETURN impl(left, right, lcx);
