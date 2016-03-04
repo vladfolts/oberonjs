@@ -30,8 +30,12 @@ TYPE
         PROCEDURE isReference*(): BOOLEAN;
         PROCEDURE referenceCode*(): STRING;
     END;
-
     PVariable* = POINTER TO Variable;
+
+    DeclaredVariable* = RECORD(Variable)
+        PROCEDURE id*(): STRING;
+    END;
+    PDeclaredVariable* = POINTER TO DeclaredVariable;
 
     PProcedure* = POINTER TO Procedure;
 

@@ -67,7 +67,7 @@ BEGIN
     d.id := id;
     d.codeGenerator().write(d.doProlog());
     root <- d.root();
-    root.pushScope(Scope.makeProcedure(root.language().stdSymbols));
+    root.pushScope(NEW Scope.Procedure(root.language().stdSymbols));
 END;
 
 PROCEDURE Declaration.handleIdentdef(id: Context.PIdentdefInfo);

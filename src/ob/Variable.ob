@@ -2,19 +2,22 @@ MODULE Variable;
 IMPORT
     OberonRtl, Types;
 TYPE
+
     TypedVariable* = RECORD(Types.Variable)
         PROCEDURE TypedVariable*(type: Types.PStorageType);
 
         mType: Types.PStorageType;
     END;
 
-    DeclaredVariable* = RECORD(TypedVariable)
-        PROCEDURE DeclaredVariable*(id: STRING; type: Types.PStorageType);
+    Declared* = RECORD(Types.DeclaredVariable)
+        PROCEDURE Declared*(id: STRING; type: Types.PStorageType);
 
-        id-: STRING;
+        mType: Types.PStorageType;
+        mId: STRING;
     END;
+    PDeclared* = POINTER TO Declared;
 
-    ArgumentVariable* = RECORD(DeclaredVariable)
+    ArgumentVariable* = RECORD(Declared)
         PROCEDURE ArgumentVariable*(id: STRING; type: Types.PStorageType; var: BOOLEAN);
 
         var-: BOOLEAN;
@@ -43,21 +46,29 @@ PROCEDURE TypedVariable.type(): Types.PStorageType;
     RETURN SELF.mType
 END;
 
-PROCEDURE DeclaredVariable.referenceCode(): STRING;
+PROCEDURE Declared.referenceCode(): STRING;
 BEGIN
-    result <- SELF.id;
+    result <- SELF.mId;
     IF SELF.mType.isScalar() THEN
         result := "{set: function($v){" + result + " = $v;}, get: function(){return " + result + ";}}";
     END;
     RETURN result;
 END;
 
-PROCEDURE DeclaredVariable.isReference(): BOOLEAN;
+PROCEDURE Declared.isReference(): BOOLEAN;
     RETURN FALSE;
 END;
 
-PROCEDURE DeclaredVariable.isReadOnly(): BOOLEAN;
+PROCEDURE Declared.isReadOnly(): BOOLEAN;
     RETURN FALSE;
+END;
+
+PROCEDURE Declared.type(): Types.PStorageType;
+    RETURN SELF.mType
+END;
+
+PROCEDURE Declared.id(): STRING;
+    RETURN SELF.mId;
 END;
 
 PROCEDURE PropertyVariable.idType(): STRING;
@@ -124,9 +135,9 @@ PROCEDURE TypedVariable.TypedVariable(type: Types.PStorageType)
     | mType(type);
 END;
 
-PROCEDURE DeclaredVariable.DeclaredVariable(id: STRING; type: Types.PStorageType)
-    | SUPER(type),
-      id(id);
+PROCEDURE Declared.Declared(id: STRING; type: Types.PStorageType)
+    | mType(type),
+      mId(id);
 END;
 
 PROCEDURE PropertyVariable.PropertyVariable(type: Types.PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType)
@@ -177,7 +188,7 @@ VAR
     result: STRING;
 BEGIN
     IF SELF.var THEN
-        result := SELF.id;
+        result := SELF.mId;
     ELSE
         result := SUPER();
     END;

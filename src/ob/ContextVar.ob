@@ -62,7 +62,7 @@ BEGIN
             SELF.doCheckExport(varName);
         END;
 
-        v <- NEW Variable.DeclaredVariable(varName, SELF.type);
+        v <- NEW Variable.Declared(varName, SELF.type);
         SELF.root().currentScope().addSymbol(NEW Symbols.Symbol(varName, v), id.exported());
         gen.write("var " + varName + " = " + SELF.doInitCode() + ";");
     END;

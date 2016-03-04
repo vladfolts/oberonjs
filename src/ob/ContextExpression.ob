@@ -421,6 +421,23 @@ BEGIN
     RETURN result;
 END;
 
+PROCEDURE typeTest*(left: Expression.PType; right: Types.PId; cx: ContextHierarchy.Node): Expression.PType;
+VAR
+    leftVar: Types.PVariable;
+BEGIN
+    d <- left.designator();
+    IF d # NIL THEN
+        info <- d.info();
+        IF info IS Types.PVariable THEN
+            leftVar := info;
+        END;
+    END;
+
+    rightType <- unwrapType(right);
+    checkTypeCast(leftVar, left.type(), rightType, "type test");
+    RETURN Operator.is(left, Expression.makeSimple(castCode(rightType, cx), NIL));
+END;
+
 PROCEDURE RelationOps.is(cx: ContextHierarchy.Node): BinaryOperatorCx;
 VAR
     r: BinaryOperatorCx;
@@ -428,23 +445,12 @@ VAR
     PROCEDURE is(left, right: Expression.PType; unused: LanguageContext.PType): Expression.PType;
     VAR
         result: Expression.PType;
-        leftVar: Types.PVariable;
     BEGIN
-        d <- left.designator();
-        IF d # NIL THEN
-            info <- d.info();
-            IF info IS Types.PVariable THEN
-                leftVar := info;
-            END;
-        END;
-
         rightDesignator <- right.designator();
         IF rightDesignator = NIL THEN
             throwTypeNameExpected();
         ELSE
-            rightType <- unwrapType(rightDesignator.info());
-            checkTypeCast(leftVar, left.type(), rightType, "type test");
-            result := Operator.is(left, Expression.makeSimple(castCode(rightType, cx), NIL));
+            result := typeTest(left, rightDesignator.info(), cx);
         END;
         RETURN result;
     END;

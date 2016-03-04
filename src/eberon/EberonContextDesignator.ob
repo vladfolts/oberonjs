@@ -223,7 +223,7 @@ PROCEDURE Type.handleLiteral(s: STRING);
 BEGIN
     IF s = "SELF" THEN
         type <- SELF.handleMessage(getMethodSelfMsg)(Types.PStorageType);
-        info <- NEW Variable.DeclaredVariable("this", type);
+        info <- NEW Variable.Declared("this", type);
         ContextDesignator.advance(SELF, type, info, "this", "", FALSE);
     ELSIF s = "POINTER" THEN
         type <- SELF.handleMessage(getSelfAsPointerMsg)(Types.PStorageType);
@@ -336,6 +336,11 @@ BEGIN
     RETURN SELF.code;        
 END;
 
+PROCEDURE TypeNarrowVariable.id(): STRING;
+BEGIN
+    RETURN SELF.code;        
+END;
+
 PROCEDURE TypeNarrowVariable.idType(): STRING;
 VAR
     result: STRING;
@@ -372,6 +377,11 @@ END;
 PROCEDURE DereferencedTypeNarrowVariable.referenceCode(): STRING;
 BEGIN
     RETURN SELF.var.code;        
+END;
+
+PROCEDURE DereferencedTypeNarrowVariable.id(): STRING;
+BEGIN
+    RETURN SELF.var.id();        
 END;
 
 PROCEDURE SelfAsPointer.idType(): STRING;

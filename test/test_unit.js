@@ -634,9 +634,10 @@ return {
          ["IF b1 (*THEN*) i1 := 0 END", "THEN expected"],
          ["IF b1 THEN i1 := 0 ELSIF ~b1 (*THEN*) i1 := 0 END", "THEN expected"])
     ),
-"CASE statement": testWithContext(
+"CASE statement with integer or char": testWithContext(
     context(grammar.statement,
               "CONST ci = 15; cc = \"A\"; cb = TRUE; cs = \"abc\";"
+            + "TYPE T = RECORD END;"
             + "VAR c1: CHAR; b1: BOOLEAN; i1, i2: INTEGER; byte: BYTE; p: POINTER TO RECORD END;"),
     pass("CASE i1 OF END",
          "CASE i1 OF | END",
@@ -659,12 +660,14 @@ return {
           "undeclared identifier: 'undefined'"],
          ["CASE i1 OF i2: b1 := TRUE END",
           "'i2' is not a constant"],
-         ["CASE b1 OF END", "'INTEGER' or 'BYTE' or 'CHAR' expected as CASE expression"],
-         ["CASE \"AA\" OF \"A\": b1 := TRUE END", "'INTEGER' or 'BYTE' or 'CHAR' expected as CASE expression"],
+         ["CASE b1 OF END", "'RECORD' or 'POINTER' or 'INTEGER' or 'BYTE' or 'CHAR' expected as CASE expression"],
+         ["CASE \"AA\" OF \"A\": b1 := TRUE END", "'RECORD' or 'POINTER' or 'INTEGER' or 'BYTE' or 'CHAR' expected as CASE expression"],
          ["CASE i1 OF \"A\": b1 := TRUE END",
           "label must be 'INTEGER' (the same as case expression), got 'CHAR'"],
          ["CASE i1 OF p: b1 := TRUE END",
           "'p' is not a constant"],
+         ["CASE i1 OF T: b1 := TRUE END",
+          "'T' is not a constant"],
          ["CASE c1 OF \"A\", 1: b1 := TRUE END",
           "label must be 'CHAR' (the same as case expression), got 'INTEGER'"],
          ["CASE c1 OF \"A\"..1: b1 := TRUE END",
@@ -672,6 +675,57 @@ return {
          ["CASE c1 OF cs: b1 := TRUE END", "single-character string expected"],
          ["CASE ci OF cb: b1 := TRUE END", "label must be 'INTEGER' (the same as case expression), got 'BOOLEAN'"],
          ["CASE ci OF TRUE: b1 := TRUE END", "not parsed"]
+         )
+    ),
+"CASE statement with type guard": testWithContext(
+    context(grammar.statement,
+              "CONST c = 0;"
+            + "TYPE Base = RECORD END;" 
+            + "Derived = RECORD (Base) i: INTEGER END; PDerived = POINTER TO Derived;"
+            + "Derived2 = RECORD (Base) i2: INTEGER END; PDerived2 = POINTER TO Derived2;"
+            + "    T2 = RECORD i: INTEGER; b: Base END; PT2 = POINTER TO T2;"
+            + "VAR b: Base; pb: POINTER TO Base; t2: T2;"),
+    pass("CASE pb OF END",
+         "CASE pb OF PDerived: pb.i := 0 END",
+         "CASE pb OF PDerived: pb.i := 0 | PDerived2: pb.i2 := 0 END"
+         ),
+    fail(["CASE b OF END", "only records passed as VAR argument can be used to test type in CASE"],
+         ["CASE t2.b OF END", "only records passed as VAR argument can be used to test type in CASE"],
+         ["CASE pb OF Derived END", "invalid type test: POINTER type expected as an argument of POINTER type test, got 'Derived'"],
+         ["CASE pb OF 123 END", "type's name expected in label, got expression: 123"],
+         ["CASE pb OF \"a\" END", "type's name expected in label, got expression: \"a\""],
+         ["CASE pb OF c END", "'c' is not a type"],
+         ["CASE pb OF PT2: pb.i := 0 END", "invalid type test: 'T2' is not an extension of 'Base'"]
+         )
+    ),
+"CASE statement with type guard for VAR argument": testWithContext(
+    context(grammar.declarationSequence,
+              "TYPE Base = RECORD END; Derived = RECORD (Base) i: INTEGER END; PDerived = POINTER TO Derived;"),
+    pass("PROCEDURE p(VAR b: Base); BEGIN CASE b OF END END p;",
+         "PROCEDURE p(VAR b: Base); BEGIN CASE b OF Derived: b.i := 0 END END p;"
+        ),
+    fail(["PROCEDURE p(b: Base); BEGIN CASE b OF END END p;", "only records passed as VAR argument can be used to test type in CASE"])
+    ),
+"CASE statement with type guard scope": testWithContext(
+    context(grammar.declarationSequence,
+            "TYPE Base = RECORD END; Derived = RECORD (Base) i: INTEGER END; Derived2 = RECORD (Base) i2: INTEGER END;"),
+    pass(),
+    fail(["PROCEDURE p(VAR b: Base); BEGIN CASE b OF Derived: END; b.i := 0; END p;", "type 'Base' has no 'i' field"],
+         ["PROCEDURE p(VAR b: Base); BEGIN CASE b OF Derived: | Derived2: b.i := 0 END; END p;", "type 'Derived2' has no 'i' field"])
+    ),
+"CASE statement with type guard and non-variable expression": testWithContext(
+    context(grammar.statement,
+              "TYPE Base = RECORD pb: POINTER TO Base END; Derived = RECORD (Base) i: INTEGER END; PDerived = POINTER TO Derived;"
+            + "    T2 = RECORD i: INTEGER END;"
+            + "VAR b: Base; pb: POINTER TO Base;"),
+    pass("CASE pb^ OF END",
+         "CASE pb^ OF Derived: ASSERT(TRUE) END",
+         "CASE b.pb OF END",
+         "CASE b.pb OF PDerived: ASSERT(TRUE) END",
+         "CASE b.pb^ OF END",
+         "CASE b.pb^ OF Derived: ASSERT(TRUE) END"
+        ),
+    fail(["CASE pb^ OF Derived: pb.i := 0 END", "type 'Base' has no 'i' field"]
          )
     ),
 "WHILE statement": testWithContext(

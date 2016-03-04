@@ -1,7 +1,7 @@
 MODULE ContextCase;
 IMPORT
     Cast, Chars, CodeGenerator, ConstValue, ContextExpression, ContextHierarchy, 
-    Errors, Expression, String, Types;
+    Errors, Expression, Record, Scope, String, Symbols, TypeId, Types, Variable;
 TYPE
     Type* = RECORD(ContextExpression.ExpressionHandler)
         PROCEDURE Type(parent: ContextHierarchy.PNode);
@@ -11,12 +11,16 @@ TYPE
 
         var: STRING;
         type: Types.PType;
+        guardVar: Types.PDeclaredVariable;
+        typeTest: Expression.PType;
         firstCaseParsed: BOOLEAN;
     END;
+    PType = POINTER TO Type;
 
     Label* = RECORD(ContextHierarchy.Node)
         PROCEDURE caseLabelBegin();
         PROCEDURE caseLabelEnd();
+        PROCEDURE handleTypeGuard(e: Expression.PType; info: TypeId.PType);
     END;
     PLabel = POINTER TO Label;
 
@@ -28,6 +32,13 @@ TYPE
 
     Range* = RECORD(ContextExpression.ExpressionHandler)
         from, to: ConstValue.PInt;
+    END;
+
+    GuardedVariable = RECORD(Types.Variable)
+        PROCEDURE GuardedVariable(caseVariable: Types.PVariable; guardedType: Types.PStorageType);
+
+        caseVariable: Types.PVariable;
+        guardedType: Types.PStorageType;
     END;
 
 PROCEDURE Type.Type(parent: ContextHierarchy.PNode)
@@ -48,9 +59,23 @@ BEGIN
         SELF.type := Types.basic.ch;
     ELSIF Types.isInt(type) OR (type = Types.basic.ch) THEN
         SELF.type := type;
+    ELSIF (type IS Record.PPointer) OR (type IS Types.PRecord) THEN
+        d <- e.designator();
+        IF d # NIL THEN
+            info <- e.designator().info();
+            IF info IS Types.PVariable THEN
+                IF ~info.isReference() & (type IS Types.PRecord) THEN
+                    Errors.raise("only records passed as VAR argument can be used to test type in CASE");
+                END;
+                IF info IS Types.PDeclaredVariable THEN
+                    SELF.guardVar := info;
+                END;
+            END;
+        END;
+        SELF.typeTest := e;
     ELSE
-        Errors.raise(Types.intsDescription() 
-                     + " or 'CHAR' expected as CASE expression");
+        Errors.raise("'RECORD' or 'POINTER' or "
+                     + Types.intsDescription() + " or 'CHAR' expected as CASE expression");
     END;
     gen.write(";" + Chars.ln);
 END;
@@ -99,9 +124,13 @@ BEGIN
     RETURN TRUE;
 END;
 
+PROCEDURE contextFromLabel(l: Label): PType;
+    RETURN l.parent()(PType);
+END;
+
 PROCEDURE Label.caseLabelBegin();
 BEGIN
-    SELF.parent()^(Type).beginCase();
+    contextFromLabel(SELF).beginCase();
     SELF.codeGenerator().write("if (");
 END;
 
@@ -112,15 +141,39 @@ BEGIN
     gen.openScope();
 END;
 
+PROCEDURE Label.handleTypeGuard(e: Expression.PType; info: TypeId.PType);
+BEGIN
+    guardVar <- contextFromLabel(SELF).guardVar;
+    IF guardVar # NIL THEN
+        root <- SELF.root();
+        scope <- NEW Scope.Procedure(root.language().stdSymbols);
+        root.pushScope(scope);
+        scope.addSymbol(NEW Symbols.Symbol(guardVar.id(), NEW GuardedVariable(guardVar, info.type())), FALSE);
+    END;
+
+    SELF.codeGenerator().write(ContextExpression.typeTest(e, info, SELF).code());
+END;
+
 PROCEDURE Label.endParse(): BOOLEAN;
 BEGIN
+    IF contextFromLabel(SELF).guardVar # NIL THEN
+        SELF.root().popScope();
+    END;
     SELF.codeGenerator().closeScope("");
     RETURN TRUE;
 END;
 
+PROCEDURE labelContext(VAR r: Range): PLabel;
+    RETURN r.parent().parent()(PLabel);
+END;
+
+PROCEDURE caseContext(VAR r: Range): PType;
+    RETURN labelContext(r).parent()(PType);
+END;
+
 PROCEDURE handleLabel(VAR r: Range; type: Types.PType; v: ConstValue.PInt);
 BEGIN
-    r.parent().parent().parent()^(Type).handleLabelType(type);
+    caseContext(r).handleLabelType(type);
     IF r.from = NIL THEN
         r.from := v;
     ELSE
@@ -136,6 +189,10 @@ PROCEDURE Range.handleExpression(e: Expression.PType);
 VAR
     c: CHAR;
 BEGIN
+    IF caseContext(SELF).typeTest # NIL THEN
+        Errors.raise("type's name expected in label, got expression: " + e.code());
+    END;
+
     type <- e.type();
     IF type IS Types.PString THEN
         IF ~Types.stringAsChar(type^, c) THEN
@@ -150,7 +207,14 @@ END;
 PROCEDURE Range.handleIdent(id: STRING);
 BEGIN
     info <- ContextHierarchy.getSymbol(SELF.root()^, id).info();
-    IF ~(info IS Types.PConst) THEN
+    typeTest <- caseContext(SELF).typeTest;
+    IF typeTest # NIL THEN
+        IF info IS TypeId.PType THEN
+            labelContext(SELF).handleTypeGuard(typeTest, info);
+        ELSE
+            Errors.raise("'" + id + "' is not a type");
+        END;
+    ELSIF ~(info IS Types.PConst) THEN
         Errors.raise("'" + id + "' is not a constant");
     ELSE
         type <- info.type;
@@ -164,8 +228,31 @@ END;
 
 PROCEDURE Range.endParse(): BOOLEAN;
 BEGIN
-    SELF.parent()^(LabelList).handleRange(SELF.from, SELF.to);
+    IF SELF.from # NIL THEN
+        SELF.parent()^(LabelList).handleRange(SELF.from, SELF.to);
+    END;
     RETURN TRUE;
+END;
+
+PROCEDURE GuardedVariable.GuardedVariable(caseVariable: Types.PVariable; guardedType: Types.PStorageType)
+    | caseVariable(caseVariable),
+      guardedType(guardedType);
+END;
+
+PROCEDURE GuardedVariable.type(): Types.PStorageType;
+    RETURN SELF.guardedType;
+END;
+
+PROCEDURE GuardedVariable.isReadOnly(): BOOLEAN;
+    RETURN SELF.caseVariable.isReadOnly();
+END;
+
+PROCEDURE GuardedVariable.isReference(): BOOLEAN;
+    RETURN SELF.caseVariable.isReference();
+END;
+
+PROCEDURE GuardedVariable.referenceCode(): STRING;
+    RETURN SELF.caseVariable.referenceCode();
 END;
 
 END ContextCase.

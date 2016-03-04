@@ -2,7 +2,7 @@ MODULE EberonTypePromotion;
 IMPORT
     Types;
 TYPE
-    Variable* = RECORD(Types.Variable)
+    Variable* = RECORD(Types.DeclaredVariable)
         PROCEDURE setType*(type: Types.PStorageType);
     END;
     PVariable* = POINTER TO Variable;

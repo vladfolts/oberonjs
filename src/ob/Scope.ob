@@ -208,10 +208,6 @@ PROCEDURE Module.generateTempVar(pattern: STRING): STRING;
     RETURN generateTempVar(pattern, SELF.tempVarCounter);
 END;
 
-PROCEDURE makeProcedure*(stdSymbols: Symbols.Map): PType;
-    RETURN NEW Procedure(stdSymbols);
-END;
-
 PROCEDURE defineExports*(m: Module);
 BEGIN
     cm <- m.symbol.info()(PCompiledModule);
