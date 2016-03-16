@@ -291,7 +291,7 @@ BEGIN
     END;
 
     IF ~pointerExpected THEN
-        IF ~fromInfo.isReference() THEN
+        IF (fromInfo # NIL) & ~fromInfo.isReference() THEN
             Errors.raise(
                 prefix + ": a value variable cannot be used");
         ELSIF ~(toType IS Record.PType) THEN

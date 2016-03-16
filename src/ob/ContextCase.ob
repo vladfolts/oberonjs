@@ -1,7 +1,8 @@
 MODULE ContextCase;
 IMPORT
-    Cast, Chars, CodeGenerator, ConstValue, ContextExpression, ContextHierarchy, 
-    Errors, Expression, Record, Scope, String, Symbols, TypeId, Types, Variable;
+    Cast, Chars, CodeGenerator, ConstValue, ContextExpression, ContextHierarchy,
+    Designator, Errors, Expression, 
+    Record, Scope, String, Symbols, TypeId, Types, Variable;
 TYPE
     Type* = RECORD(ContextExpression.ExpressionHandler)
         PROCEDURE Type(parent: ContextHierarchy.PNode);
@@ -9,6 +10,7 @@ TYPE
         PROCEDURE beginCase();
         PROCEDURE handleLabelType(type: Types.PType);
 
+        mCodeGenerator: CodeGenerator.PIGenerator;
         var: STRING;
         type: Types.PType;
         guardVar: Types.PDeclaredVariable;
@@ -43,41 +45,69 @@ TYPE
 
 PROCEDURE Type.Type(parent: ContextHierarchy.PNode)
     | SUPER(parent),
-      var(SELF.root().currentScope().generateTempVar("case"));
-BEGIN
-    SELF.codeGenerator().write("var " + SELF.var + " = ");
+      mCodeGenerator(CodeGenerator.nullGenerator);
+END;
+
+PROCEDURE Type.codeGenerator(): CodeGenerator.PIGenerator;
+    RETURN SELF.mCodeGenerator;
 END;
 
 PROCEDURE Type.handleExpression(e: Expression.PType);
 VAR
     c: CHAR;
-BEGIN
-    type <- e.type();
-    gen <- SELF.codeGenerator();
-    IF (type IS Types.PString) & Types.stringAsChar(type^, c) THEN
-        gen.write(String.fromChar(c));
-        SELF.type := Types.basic.ch;
-    ELSIF Types.isInt(type) OR (type = Types.basic.ch) THEN
-        SELF.type := type;
-    ELSIF (type IS Record.PPointer) OR (type IS Types.PRecord) THEN
+    declVar: Types.PDeclaredVariable;
+
+    PROCEDURE infoFromExpression(): Types.PId;
+    VAR
+        result: Types.PId;
+    BEGIN
         d <- e.designator();
         IF d # NIL THEN
-            info <- e.designator().info();
-            IF info IS Types.PVariable THEN
-                IF ~info.isReference() & (type IS Types.PRecord) THEN
-                    Errors.raise("only records passed as VAR argument can be used to test type in CASE");
-                END;
-                IF info IS Types.PDeclaredVariable THEN
-                    SELF.guardVar := info;
-                END;
+            result := d.info();
+        END;
+        RETURN result;
+    END;
+
+BEGIN
+    normExp <- e;
+    type <- e.type();
+    IF (type IS Types.PString) & Types.stringAsChar(type^, c) THEN
+        normExp := Expression.makeSimple(String.fromInt(ORD(c)), Types.basic.ch);
+    ELSE
+        info <- infoFromExpression();
+        IF info IS Types.PDeclaredVariable THEN
+            declVar := info;
+            IF ~info.isReference() THEN
+                SELF.var := declVar.id();
             END;
         END;
-        SELF.typeTest := e;
-    ELSE
-        Errors.raise("'RECORD' or 'POINTER' or "
-                     + Types.intsDescription() + " or 'CHAR' expected as CASE expression");
+
+        IF (type IS Types.PRecord) OR (type IS Record.PPointer) THEN
+            isReference <- (info IS Types.PVariable) & info.isReference();
+            IF (type IS Types.PRecord) & ~isReference THEN
+                Errors.raise("only records passed as VAR argument can be used to test type in CASE");
+            ELSIF ~(type IS Record.PPointer) OR ~isReference THEN
+                SELF.guardVar := declVar;
+            END;
+
+            SELF.typeTest := e;
+        ELSIF ~Types.isInt(type) & (type # Types.basic.ch) THEN
+            Errors.raise("'RECORD' or 'POINTER' or "
+                         + Types.intsDescription() + " or 'CHAR' expected as CASE expression");
+        END;
     END;
-    gen.write(";" + Chars.ln);
+
+    SELF.type := normExp.type();
+
+    SELF.mCodeGenerator := SELF.parent().codeGenerator();
+    IF LEN(SELF.var) = 0 THEN
+        SELF.var := SELF.root().currentScope().generateTempVar("case");
+        SELF.mCodeGenerator.write("var " + SELF.var + " = " + Expression.deref(normExp).code() + ";" + Chars.ln);
+        
+        IF SELF.typeTest # NIL THEN
+            SELF.typeTest := Expression.makeSimple(SELF.var, type);
+        END;
+    END;
 END;
 
 PROCEDURE Type.beginCase();
@@ -106,12 +136,14 @@ BEGIN
         parent.caseLabelBegin();
     END;
 
-    v <- parent.parent()^(Type).var;
-    IF to = NIL THEN
-        cond := v + " === " + String.fromInt(from.value);
-    ELSE
-        cond := "(" + v + " >= " + String.fromInt(from.value)
-              + " && " + v + " <= " + String.fromInt(to.value) + ")";
+    IF from # NIL THEN
+        v <- parent.parent()^(Type).var;
+        IF to = NIL THEN
+            cond := v + " === " + String.fromInt(from.value);
+        ELSE
+            cond := "(" + v + " >= " + String.fromInt(from.value)
+                  + " && " + v + " <= " + String.fromInt(to.value) + ")";
+        END;
     END;
 
     SELF.codeGenerator().write(SELF.glue + cond);
@@ -143,6 +175,7 @@ END;
 
 PROCEDURE Label.handleTypeGuard(e: Expression.PType; info: TypeId.PType);
 BEGIN
+    SELF.caseLabelBegin();
     guardVar <- contextFromLabel(SELF).guardVar;
     IF guardVar # NIL THEN
         root <- SELF.root();

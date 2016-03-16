@@ -89,6 +89,10 @@ PROCEDURE makeSimple*(code: STRING; type: Types.PType): PType;
     RETURN make(code, type, NIL, NIL)
 END;
 
+PROCEDURE derefCode*(code: STRING): STRING;
+    RETURN code + ".get()";
+END;
+
 PROCEDURE deref*(e: PType): PType;
 BEGIN
     result <- e;
@@ -99,7 +103,7 @@ BEGIN
         
         info <- designator.info();
         IF ((info IS Types.PVariable) & info.isReference()) THEN
-            result := makeSimple(e.code() + ".get()", type);
+            result := makeSimple(derefCode(e.code()), type);
         END;
     END;
     RETURN result

@@ -122,6 +122,11 @@ BEGIN
             Errors.raise("POINTER TO non-exported RECORD type cannot be dereferenced");
         END;
         designator.currentType := base;
+
+        info <- designator.info;
+        IF (info IS Types.PVariable) & info.isReference() THEN
+            designator.code := Expression.derefCode(designator.code);
+        END;
     ELSE
         Errors.raise("POINTER TO type expected, got '"
                      + designator.currentType.description() + "'");

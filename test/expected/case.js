@@ -1,74 +1,143 @@
+<rtl code>
 var m = function (){
 var ch1 = "a";
 var constI = 12;
+function Base(){
+}
+function Derived(){
+	Base.call(this);
+	this.i = 0;
+}
+RTL$.extend(Derived, Base);
+function Derived2(){
+	Base.call(this);
+	this.i2 = 0;
+}
+RTL$.extend(Derived2, Base);
+function T(){
+	this.b = null;
+}
 var i = 0;
 var b1 = false;
 var i1 = 0;
 var byte = 0;
 var c = 0;
-var $case1 = i1;
-var $case2 = i1;
-var $case3 = i1;
-if ($case3 === 1){
+
+function caseIntByVar(i/*VAR INTEGER*/){
+	var $case1 = i.get();
+	if ($case1 === 1){
+		i.set(1);
+	}
+}
+
+function casePointer(p/*PBase*/){
+	if (p instanceof Derived){
+	}
+	if (p instanceof Derived){
+		p.i = 0;
+	}
+	if (p instanceof Derived){
+		p.i = 0;
+	}
+	else if (p instanceof Derived2){
+		p.i2 = 0;
+	}
+}
+
+function caseExpression(r/*T*/){
+	var $case1 = r.b;
+	if ($case1 instanceof Derived){
+	}
+	else if ($case1 instanceof Derived2){
+	}
+}
+
+function casePointerDereference(p/*PBase*/){
+	var $case1 = p;
+	if ($case1 instanceof Derived){
+	}
+	else if ($case1 instanceof Derived2){
+	}
+}
+
+function casePointerByVar(p/*VAR PBase*/){
+	var $case1 = p.get();
+	if ($case1 instanceof Derived){
+	}
+	else if ($case1 instanceof Derived2){
+	}
+}
+if (i1 === 1){
 	b1 = false;
 }
-var $case4 = 123;
-if ($case4 === 1){
+var $case1 = 123;
+if ($case1 === 1){
 	b1 = true;
 }
-var $case5 = i1;
-if ($case5 === 1){
+if (i1 === 1){
 	i = 2;
 }
-else if ($case5 === 2){
+else if (i1 === 2){
 	i = 3;
 	b1 = false;
 }
-var $case6 = i1;
-if ($case6 === 1){
+if (i1 === 1){
 	i = 2;
 }
-else if ($case6 === 2){
+else if (i1 === 2){
 	i = 3;
 	b1 = false;
 }
-var $case7 = i1;
-if ($case7 === 1 || $case7 === 2 || $case7 === 3){
+if (i1 === 1 || i1 === 2 || i1 === 3){
 	i = 4;
 }
-else if ($case7 === 12){
+else if (i1 === 12){
 	i = constI;
 }
-else if (($case7 >= 4 && $case7 <= 5)){
+else if ((i1 >= 4 && i1 <= 5)){
 	i = 5;
 }
-else if ($case7 === 6 || ($case7 >= 7 && $case7 <= 10)){
+else if (i1 === 6 || (i1 >= 7 && i1 <= 10)){
 	b1 = true;
 }
-var $case8 = byte;
-if ($case8 === 1){
+if (byte === 1){
 	i = 2;
 }
-else if ($case8 === 257){
+else if (byte === 257){
 	i = 3;
 }
-else if (($case8 >= 4 && $case8 <= 12)){
+else if ((byte >= 4 && byte <= 12)){
 	i = 5;
 }
-var $case9 = c;
-if ($case9 === 65){
+if (c === 65){
 	i = 1;
 }
-else if ($case9 === 97){
+else if (c === 97){
 	i = 2;
 }
-else if ($case9 === 66 || $case9 === 67){
+else if (c === 66 || c === 67){
 	i = 2;
 }
-else if (($case9 >= 68 && $case9 <= 70) || $case9 === 73 || $case9 === 74){
+else if ((c >= 68 && c <= 70) || c === 73 || c === 74){
 	i = 3;
 }
-else if (($case9 >= 75 && $case9 <= 90)){
+else if ((c >= 75 && c <= 90)){
 	b1 = true;
+}
+var $case2 = 97;
+if ($case2 === 65){
+	i = 1;
+}
+var $case3 = 65;
+if ($case3 === 97){
+	i = 1;
+}
+var $case4 = constI;
+if ($case4 === 1){
+	i = 1;
+}
+var $case5 = 123;
+if ($case5 === 1){
+	i = 1;
 }
 }();

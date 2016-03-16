@@ -1,15 +1,25 @@
 MODULE m;
 TYPE
 	T = RECORD p: POINTER TO T; i: INTEGER END;
+	PT = POINTER TO T;
+
 	T2 = POINTER TO RECORD p: POINTER TO T END;
 
     PForward = POINTER TO Forward;
     Forward = RECORD END;
 VAR
+	p: POINTER TO T;
 	r: T;
 	r2: T2;
 	pf: PForward;
 	pAnonymous: POINTER TO RECORD END;
+
+PROCEDURE passByRef(VAR p: PT);
+BEGIN
+	p.i := 0;
+	passByRef(p);
+	passByRef(p.p);
+END passByRef;
 
 BEGIN
 	NEW(r.p);
@@ -22,4 +32,6 @@ BEGIN
 	NEW(pf);
 
 	NEW(pAnonymous);
+
+	passByRef(p);
 END m.

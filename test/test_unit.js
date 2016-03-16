@@ -700,11 +700,14 @@ return {
     ),
 "CASE statement with type guard for VAR argument": testWithContext(
     context(grammar.declarationSequence,
-              "TYPE Base = RECORD END; Derived = RECORD (Base) i: INTEGER END; PDerived = POINTER TO Derived;"),
+              "TYPE Base = RECORD END; Derived = RECORD (Base) i: INTEGER END; PBase = POINTER TO Base; PDerived = POINTER TO Derived;"),
     pass("PROCEDURE p(VAR b: Base); BEGIN CASE b OF END END p;",
+         "PROCEDURE p(VAR b: Base); BEGIN CASE b OF Derived: END END p;",
+         "PROCEDURE p(VAR b: PBase); BEGIN CASE b OF PDerived: END END p;",
          "PROCEDURE p(VAR b: Base); BEGIN CASE b OF Derived: b.i := 0 END END p;"
         ),
-    fail(["PROCEDURE p(b: Base); BEGIN CASE b OF END END p;", "only records passed as VAR argument can be used to test type in CASE"])
+    fail(["PROCEDURE p(b: Base); BEGIN CASE b OF END END p;", "only records passed as VAR argument can be used to test type in CASE"],
+         ["PROCEDURE p(VAR b: PBase); BEGIN CASE b OF PDerived: b.i := 0 END END p;", "type 'Base' has no 'i' field"])
     ),
 "CASE statement with type guard scope": testWithContext(
     context(grammar.declarationSequence,

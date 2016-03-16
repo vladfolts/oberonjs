@@ -4,11 +4,87 @@ CONST
 	ch1 = "a";
 	constI = 12;
 
+TYPE
+	Base = RECORD
+	END;
+	PBase = POINTER TO Base;
+
+	Derived = RECORD(Base)
+		i: INTEGER
+	END;
+	PDerived = POINTER TO Derived;
+
+	Derived2 = RECORD(Base)
+		i2: INTEGER
+	END;
+	PDerived2 = POINTER TO Derived2;
+
+	T = RECORD
+		b: PBase
+	END;
+
 VAR i: INTEGER;
 	b1: BOOLEAN;
 	i1: INTEGER;
 	byte: BYTE;
 	c: CHAR;
+
+PROCEDURE caseIntByVar(VAR i: INTEGER);
+BEGIN
+	CASE i OF
+		| 1:
+		i := 1;
+	END;
+END caseIntByVar;
+
+PROCEDURE casePointer(p: PBase);
+BEGIN
+	CASE p OF END;
+
+	CASE p OF
+		|
+	END;
+
+	CASE p OF
+		| PDerived:
+	END;
+
+	CASE p OF
+		| PDerived:
+			p.i := 0;
+	END;
+
+	CASE p OF
+		| PDerived:
+			p.i := 0;
+		| PDerived2:
+			p.i2 := 0;
+	END;
+END casePointer;
+
+PROCEDURE caseExpression(r: T);
+BEGIN
+	CASE r.b OF
+		| PDerived:
+		| PDerived2:
+	END;
+END caseExpression;
+
+PROCEDURE casePointerDereference(p: PBase);
+BEGIN
+	CASE p^ OF
+		| Derived:
+		| Derived2:
+	END;
+END casePointerDereference;
+
+PROCEDURE casePointerByVar(VAR p: PBase);
+BEGIN
+	CASE p OF
+		| PDerived:
+		| PDerived2:
+	END;
+END casePointerByVar;
 
 BEGIN    
 	CASE i1 OF END;
@@ -52,6 +128,22 @@ BEGIN
 		| "B", "C": i := 2
 		| "D".."F", "I", "J": i:=3
 		| "K".."Z": b1:= TRUE
+	END;
+
+	CASE ch1 OF
+		  "A": i := 1
+	END;
+
+	CASE "A" OF
+		  ch1: i := 1
+	END;
+
+	CASE constI OF
+		  1: i := 1
+	END;
+
+	CASE 123 OF
+		  1: i := 1
 	END
 
 END m.
