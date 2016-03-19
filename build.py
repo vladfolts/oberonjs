@@ -124,9 +124,8 @@ def run_tests(bin, unit_test=None, code_test=None):
         run_node(args, js_search_dirs, cwd=os.path.join(root, 'test'))
     print('<-tests')
 
-def recompile(bin):
+def recompile(bin, cwd):
     print('recompile oberon sources using "%s"...' % bin)
-    compiler = os.path.join(root, 'src', 'oc_nodejs.js')
     sources = ['ContextAssignment.ob', 
                'EberonSymbols.ob', 
                'EberonContextCase.ob', 'EberonContextExpression.ob', 'EberonContextIdentdef.ob', 
@@ -141,13 +140,14 @@ def recompile(bin):
     out = os.path.join(result, 'js')
     os.mkdir(out)
 
-    run_node([compiler, 
-              '--include=src/ob;src/eberon;src/oberon', 
+    run_node(['oc_nodejs.js', 
+              '--include=' + ';'.join([os.path.join(root, subdir) for subdir in ['src/ob', 'src/eberon', 'src/oberon']]), 
               '--out-dir=%s' % out, 
               '--import-dir=js',
               '--timing=true'] 
               + sources,
-             make_js_search_dirs(bin))
+             [bin,cwd],#make_js_search_dirs(bin),
+             cwd=cwd)
     return result
 
 def compile_using_snapshot(src):
@@ -203,8 +203,8 @@ def build_html(options):
         with open(build_version_path, 'w') as f:
             f.write(version)
 
-def recompile_with_replace(bin, skip_tests = False, out_bin = None):
-    recompiled = recompile(bin)
+def recompile_with_replace(bin, cwd, skip_tests = False, out_bin = None):
+    recompiled = recompile(bin, cwd)
     if not skip_tests:
         run_tests(recompiled)
     
@@ -218,7 +218,7 @@ def recompile_with_replace(bin, skip_tests = False, out_bin = None):
 def pre_commit_check(options):
     bin = os.path.join(root, 'bin')
     run_tests(bin)
-    recompile_with_replace(bin)
+    recompile_with_replace(bin, os.path.join(root, 'src'))
     
     print('packaging compiled js to %s...' % package.root)
     package.pack()
@@ -243,7 +243,7 @@ class recompile_target(object):
         pass
 
     def __init__(self, options):
-        recompile_with_replace(snapshot_root, True, os.path.join(root, 'bin'))
+        recompile_with_replace(snapshot_root, snapshot_root, True, os.path.join(root, 'bin'))
 
 class self_recompile_target(object):
     name = 'self-recompile'
@@ -255,7 +255,7 @@ class self_recompile_target(object):
 
     def __init__(self, options):
         bin = os.path.join(root, 'bin')
-        recompile_with_replace(bin, options.skip_tests)
+        recompile_with_replace(bin, os.path.join(root, 'src'), options.skip_tests)
 
 class html_target(object):
     name = 'html'
