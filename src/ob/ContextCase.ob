@@ -33,7 +33,10 @@ TYPE
     END;
 
     Range* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE handleQIdent*(q: ContextHierarchy.QIdent);
+
         from, to: ConstValue.PInt;
+        typeGuardHandled: BOOLEAN;
     END;
 
     GuardedVariable = RECORD(Types.Variable)
@@ -237,18 +240,24 @@ BEGIN
     END;
 END;
 
-PROCEDURE Range.handleIdent(id: STRING);
+PROCEDURE Range.handleQIdent(q: ContextHierarchy.QIdent);
 BEGIN
-    info <- ContextHierarchy.getSymbol(SELF.root()^, id).info();
+    IF SELF.typeGuardHandled THEN
+        Errors.raise("cannot use diapason (..) with type guard");
+    END;
+
+    found <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
+    info <- found.symbol().info();
     typeTest <- caseContext(SELF).typeTest;
     IF typeTest # NIL THEN
         IF info IS TypeId.PType THEN
             labelContext(SELF).handleTypeGuard(typeTest, info);
+            SELF.typeGuardHandled := TRUE;
         ELSE
-            Errors.raise("'" + id + "' is not a type");
+            Errors.raise("'" + q.code + "' is not a type");
         END;
     ELSIF ~(info IS Types.PConst) THEN
-        Errors.raise("'" + id + "' is not a constant");
+        Errors.raise("'" + q.code + "' is not a constant");
     ELSE
         type <- info.type;
         IF type IS Types.PString THEN

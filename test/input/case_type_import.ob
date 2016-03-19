@@ -1,0 +1,31 @@
+MODULE m1;
+TYPE
+	Base* = RECORD
+	END;
+
+	Derived* = RECORD(Base)
+	END;
+
+END m1.
+
+MODULE m2;
+IMPORT m1;
+VAR
+	b: m1.Base;
+	d: m1.Derived;
+
+PROCEDURE isDerived(VAR b: m1.Base): BOOLEAN;
+VAR
+	result: BOOLEAN;
+BEGIN
+	CASE b OF
+		m1.Derived: 
+			result := TRUE;
+	END;
+	RETURN result
+END isDerived;
+
+BEGIN
+	ASSERT(~isDerived(b));
+	ASSERT(isDerived(d));
+END m2.

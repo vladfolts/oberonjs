@@ -124,7 +124,7 @@ var ifStatement = and("IF", context(and(expression, required("THEN", "THEN expec
                                         "END"), 
                                     contexts.If));
 
-var label = or(integer, string, ident);
+var label = or(integer, string, qualident);
 var labelRange = context(and(label, optional(and("..", label))), ContextCase.Range);
 var caseLabelList = context(and(labelRange, repeat(and(",", labelRange))), ContextCase.LabelList);
 var caseParser = optional(context(and(caseLabelList, ":", statementSequence), contexts.CaseLabel));

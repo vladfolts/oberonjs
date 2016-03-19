@@ -695,7 +695,10 @@ return {
          ["CASE pb OF 123 END", "type's name expected in label, got expression: 123"],
          ["CASE pb OF \"a\" END", "type's name expected in label, got expression: \"a\""],
          ["CASE pb OF c END", "'c' is not a type"],
-         ["CASE pb OF PT2: pb.i := 0 END", "invalid type test: 'T2' is not an extension of 'Base'"]
+         ["CASE pb OF PT2: pb.i := 0 END", "invalid type test: 'T2' is not an extension of 'Base'"],
+         ["CASE pb OF PDerived..PDerived2: END", "cannot use diapason (..) with type guard"],
+         ["CASE pb OF PDerived..1: END", "type's name expected in label, got expression: 1"],
+         ["CASE c OF 0..PDerived: END", "'PDerived' is not a constant"]
          )
     ),
 "CASE statement with type guard for VAR argument": testWithContext(
@@ -731,6 +734,12 @@ return {
     fail(["CASE pb^ OF Derived: pb.i := 0 END", "type 'Base' has no 'i' field"]
          )
     ),
+"CASE statement with type guard for imported type": testWithModule(
+    "MODULE test; TYPE Base* = RECORD END; Derived* = RECORD(Base) END; Derived2 = RECORD(Base) END; END test.",
+    pass("MODULE m; IMPORT test; PROCEDURE p(VAR b: test.Base); BEGIN CASE b OF test.Derived: END; END p; END m."),
+    fail(["MODULE m; IMPORT test; PROCEDURE p(VAR b: test.Base); BEGIN CASE b OF test.Derived2: END; END p; END m.",
+          "identifier 'Derived2' is not exported by module 'test'"]
+        )),
 "WHILE statement": testWithContext(
     context(grammar.statement,
             "VAR b1: BOOLEAN; i1: INTEGER;"),
