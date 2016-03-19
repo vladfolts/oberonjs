@@ -740,6 +740,12 @@ return {
     fail(["MODULE m; IMPORT test; PROCEDURE p(VAR b: test.Base); BEGIN CASE b OF test.Derived2: END; END p; END m.",
           "identifier 'Derived2' is not exported by module 'test'"]
         )),
+"CASE statement with imported constant": testWithModule(
+    "MODULE test; CONST i* = 0; END test.",
+    pass("MODULE m; IMPORT test; PROCEDURE p(j: INTEGER); BEGIN CASE j OF test.i: END; END p; END m."),
+    fail(["MODULE m; IMPORT test; PROCEDURE p(j: INTEGER); BEGIN CASE j OF test.unknown: END; END p; END m.",
+          "identifier 'unknown' is not exported by module 'test'"]
+        )),
 "WHILE statement": testWithContext(
     context(grammar.statement,
             "VAR b1: BOOLEAN; i1: INTEGER;"),
