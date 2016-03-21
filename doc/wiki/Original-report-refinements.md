@@ -68,3 +68,47 @@ All variables have zero as a default value (before first assignment). For pointe
     BEGIN
         ASSERT(r.field = 0);
     END m.
+
+3. CASE with type guards
+------------------------
+CASE with type guard has notorious loophole allowing to violate type system. Consider following example:
+
+    MODULE test;
+    TYPE
+        Base = RECORD END; 
+        Derived1 = POINTER TO RECORD(Base) derived1Field: INTEGER END;
+        Derived2 = POINTER TO RECORD(Base) END;
+    VAR p: POINTER TO Base; p1: Derived1; p2: Derived2;
+
+    PROCEDURE assignToDerived2();
+    BEGIN
+        NEW(p2);
+        p := p2;
+    END assignToDerived2;
+
+    PROCEDURE check();
+    BEGIN
+        CASE p OF
+            Derived1: 
+                assignToDerived2(); (* p is not Derived1 anymore *)
+                p.derived1Field := 123; (* type system violation *)
+        END;
+    END check;
+
+    BEGIN
+        NEW(p1);
+        p := p1;
+        check();
+    END test.
+
+Oberonjs does not change the type of pointer passed as VAR argument in CASE to reduce most unexpected bugs (referenced pointer can be changed indirectly):
+
+    PROCEDURE check(VAR p: PBase);
+    BEGIN
+        CASE p OF
+            Derived1: 
+                (* this code is compiled successfully but 'p' has type PBase here, not Derived1 *)
+        END;
+    END check;
+
+I would recommend to use Eberon's [[implicit type narrowing|Eberon-implicit-type-narrowing]] instead of CASE with type guards - it is as efficient as CASE but does not have described problem. 
