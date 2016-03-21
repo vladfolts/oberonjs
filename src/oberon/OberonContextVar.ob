@@ -5,12 +5,4 @@ TYPE
     Declaration* = RECORD(ContextVar.Declaration)
     END;
 
-PROCEDURE Declaration.doCheckExport(id: STRING);
-BEGIN
-    type <- SELF.type;
-    IF (type IS Types.PRecord) OR (type IS Types.PArray) THEN
-        Errors.raise("variable '" + id + "' cannot be exported: only scalar variables can be exported");
-    END;
-END;
-
 END OberonContextVar.

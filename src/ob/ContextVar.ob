@@ -5,7 +5,6 @@ IMPORT
 TYPE
     Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
         PROCEDURE doInitCode*(): STRING;
-        PROCEDURE doCheckExport*(name: STRING);
 
         idents: ARRAY * OF Context.PIdentdefInfo;
         type-: Types.PStorageType;
@@ -50,17 +49,11 @@ PROCEDURE Declaration.doInitCode(): STRING;
     RETURN SELF.type.initializer(SELF);
 END;
 
-PROCEDURE Declaration.doCheckExport(name: STRING);
-END;
-
 PROCEDURE Declaration.endParse(): BOOLEAN;
 BEGIN
     gen <- SELF.codeGenerator();
     FOR id IN SELF.idents DO
         varName <- id.id();
-        IF id.exported() THEN
-            SELF.doCheckExport(varName);
-        END;
 
         v <- NEW Variable.Declared(varName, SELF.type);
         SELF.root().currentScope().addSymbol(NEW Symbols.Symbol(varName, v), id.exported());

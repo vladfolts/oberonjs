@@ -23,15 +23,6 @@ exports.suite = {
     pass(),
     fail(["b1 := b1 + b1", "operator '+' type mismatch: numeric type or SET expected, got 'BOOLEAN'"])
     ),
-"scalar variables cannot be exported": testWithGrammar(
-    grammar.declarationSequence,
-    pass(),
-    fail(["VAR r*: RECORD END;",
-          "variable 'r' cannot be exported: only scalar variables can be exported"],
-         ["VAR a*: ARRAY 5 OF INTEGER;",
-          "variable 'a' cannot be exported: only scalar variables can be exported"]
-        )
-    ),
 "eberon key words can be identifiers": testWithGrammar(
     grammar.variableDeclaration,
     pass("SELF: INTEGER",

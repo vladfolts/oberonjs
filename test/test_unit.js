@@ -1548,6 +1548,15 @@ return {
          ["MODULE m; IMPORT J := JS; BEGIN JS.alert(\"test\") END m.", "undeclared identifier: 'JS'"]
          )
     ),
+"variables exported as read-only": testWithModule(
+    "MODULE test; TYPE T* = RECORD i*: INTEGER END; VAR r*: T; p*: POINTER TO T; i*: INTEGER; END test.",
+    pass("MODULE m; IMPORT test; BEGIN ASSERT(test.r.i = 0); END m.",
+         "MODULE m; IMPORT test; BEGIN ASSERT(test.i = 0); END m.",
+         "MODULE m; IMPORT test; BEGIN test.p.i := 0; END m."
+        ),
+    fail(["MODULE m; IMPORT test; BEGIN test.i := 0; END m.", "cannot assign to imported variable"],
+         ["MODULE m; IMPORT test; BEGIN test.r.i := 0; END m.", "cannot assign to read-only record's field"]
+        )),
 "syntax errors": testWithGrammar(
     grammar.module,
     pass(),
