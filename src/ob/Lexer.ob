@@ -159,7 +159,7 @@ VAR
     
     BEGIN
         result <- TRUE;
-        IF peekChar() & ((c = "E") OR (c = "D")) THEN
+        IF peekChar() & (c = "E") THEN
             s := s + "E";
             next();
             collectPlusOrMinus();

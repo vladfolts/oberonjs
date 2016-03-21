@@ -609,12 +609,6 @@ return {
          ["1.2345 E-12", "not parsed"],
          ["1.2345E-1 2", "not parsed"])
     ),
-"LONGREAL number": testWithGrammar(
-    grammar.expression,
-    pass("1.2345D6",
-         "1.2345D+6",
-         "1.2345D-6")
-    ),
 "REAL number in statement": testWithGrammar(
     grammar.statement,
     pass("IF 1. < 1.2345 THEN END"),
