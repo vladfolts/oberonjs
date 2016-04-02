@@ -161,7 +161,7 @@ BEGIN
 END;
 
 PROCEDURE Root.codeGenerator(): CodeGenerator.PIGenerator;
-    RETURN SELF.mLanguage.codeGenerator;
+    RETURN SELF.mLanguage.codeTraits.generator();
 END;
 
 PROCEDURE Root.root(): PRoot;

@@ -1,0 +1,13 @@
+(*options:{"checkIndexes": true}*)
+MODULE m;
+
+PROCEDURE charArray(a: ARRAY OF CHAR);
+VAR
+	c: CHAR;
+BEGIN
+	c := a[0];
+END charArray;
+
+BEGIN
+	charArray("");
+END m.

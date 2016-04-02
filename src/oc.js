@@ -4,6 +4,7 @@ var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var Errors = require("js/Errors.js");
+var LanguageContext = require("js/LanguageContext.js");
 var Lexer = require("js/Lexer.js");
 var makeRTL = require("rtl_code.js").makeRTL;
 var Scope = require("js/Scope.js");
@@ -121,7 +122,7 @@ function compileModules(names, moduleReader, grammar, contextFactory, handleErro
     names.forEach(function(name){ resolver.compile(moduleReader(name)); });
 }
 
-function compile(text, language, handleErrors){
+function compile(text, language, handleErrors, options){
     var result = "";
     var rtl = new makeRTL(language.rtl);
     var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
@@ -129,7 +130,8 @@ function compile(text, language, handleErrors){
             language.grammar,
             function(moduleResolver){
                 return new ContextHierarchy.Root(
-                    { codeGenerator: language.codeGenerator.make(),
+                    { codeTraits: new LanguageContext.CodeTraits(language.codeGenerator.make(), 
+                                                                 options && options.checkIndexes ? rtl : null),
                       moduleGenerator: moduleCode,
                       rtl: rtl,
                       types: language.types,

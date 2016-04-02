@@ -39,10 +39,15 @@ function compareResults(result, name, dirs){
         throw new Test.TestError("Failed");
 }
 
+function extractOptions(text){
+    var match = text.match(/\(\*options:({.*})\*\)/);
+    return match ? JSON.parse(match[1]) : null;
+}
+
 function compile(src, language){
     var text = fs.readFileSync(src, "utf8");
     var errors = "";
-    var result = oc.compile(text, language, function(e){errors += e;});
+    var result = oc.compile(text, language, function(e){errors += e;}, extractOptions(text));
     if (errors)
         throw new Test.TestError(errors);
     return result;

@@ -27,13 +27,23 @@ TYPE
     END;
     PModuleGenerator* = POINTER TO ModuleGenerator;
 
+    CodeTraits* = RECORD
+        PROCEDURE CodeTraits*(code: CodeGenerator.PIGenerator; rtl: OberonRtl.PType);
+
+        PROCEDURE generator*(): CodeGenerator.PIGenerator;
+        PROCEDURE stringIndex*(e, index: STRING): STRING;
+
+        code: CodeGenerator.PIGenerator;
+        rtl: OberonRtl.PType;
+    END;
+
     Imports = MAP OF STRING;
 
     Language* = RECORD
         moduleResolver-: PROCEDURE(name: STRING): T.PModule;
         PROCEDURE moduleGenerator*(name: STRING; imports: Imports): PModuleGenerator;
         rtl-: OberonRtl.PType;
-        codeGenerator-: CodeGenerator.PIGenerator;
+        codeTraits-: POINTER TO CodeTraits;
         types-: PTypes;
         stdSymbols-: Symbols.Map;
     END;
@@ -49,6 +59,27 @@ TYPE
 PROCEDURE Type.Type(language: PLanguage; cx: Context.PType)
     | language(language),
       cx(cx);
+END;
+
+PROCEDURE CodeTraits.CodeTraits(code: CodeGenerator.PIGenerator; rtl: OberonRtl.PType)
+    | code(code),
+      rtl(rtl);
+END;
+
+PROCEDURE CodeTraits.generator(): CodeGenerator.PIGenerator;
+    RETURN SELF.code;
+END;
+
+PROCEDURE CodeTraits.stringIndex(e, index: STRING): STRING;
+VAR
+    r: STRING;
+BEGIN
+    IF SELF.rtl = NIL THEN
+        r := e + ".charCodeAt(" + index + ")";
+    ELSE
+        r := SELF.rtl.charAt(e, index);
+    END; 
+    RETURN r;
 END;
 
 END LanguageContext.

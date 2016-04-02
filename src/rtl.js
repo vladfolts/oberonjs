@@ -42,10 +42,11 @@ var methods = {
         if (!(from instanceof to)){
             var fromStr;
             var toStr;
+            var scope;
             
             if (from && from.constructor && from.constructor.name){
                 var name = from.constructor.name;
-                var scope = from.$scope;
+                scope = from.$scope;
                 fromStr = scope ? scope + "." + name : name;
             }
             else
@@ -53,7 +54,7 @@ var methods = {
             
             if (to.name){
                 toStr = "" + to.name;
-                var scope = to.prototype.$scope;
+                scope = to.prototype.$scope;
                 toStr = scope ? scope + "." + toStr : toStr;
             }
             else
@@ -65,6 +66,11 @@ var methods = {
             throw new Error(msg);
         }
         return from;
+    },
+    charAt: function(s, index){
+        if (index >= 0 && index < s.length)
+            return s[index];
+        throw new Error("index out of bounds: " + index);
     },
     makeArray: function(/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);

@@ -136,7 +136,7 @@ BEGIN
 END;
 
 PROCEDURE stringIndexCode*(d: Type): STRING;
-    RETURN d.derefCode + ".charCodeAt(" + Expression.deref(d.indexExpression).code() + ")";
+    RETURN d.root().language().codeTraits.stringIndex(d.derefCode, Expression.deref(d.indexExpression).code());
 END;
 
 PROCEDURE advance*(VAR d: Type; type: Types.PType; info: Types.PId; code, lval: STRING; replace: BOOLEAN);

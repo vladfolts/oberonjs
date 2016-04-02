@@ -6,6 +6,7 @@ var ContextExpression = require("js/ContextExpression.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var ContextType = require("js/ContextType.js");
 var Errors = require("js/Errors.js");
+var LanguageContext = require("js/LanguageContext.js");
 var oc = require("oc.js");
 var makeRTL = require("rtl_code.js").makeRTL;
 var Scope = require("js/Scope.js");
@@ -33,7 +34,7 @@ var TestContextRoot = Class.extend.call(ContextHierarchy.Root, {
         var rtl = new makeRTL(language.rtl);
         ContextHierarchy.Root.call(
                 this,
-                { codeGenerator: language.codeGenerator.nil,
+                { codeTraits: new LanguageContext.CodeTraits(language.codeGenerator.nil),
                   moduleGenerator: function(){return new TestModuleGenerator();},
                   rtl: rtl,
                   types: language.types,
