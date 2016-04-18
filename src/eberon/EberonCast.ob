@@ -1,6 +1,6 @@
 MODULE EberonCast;
 IMPORT 
-    Cast, Code, Context, 
+    Cast, Code, Context, Designator, 
     EberonMap, EberonString, EberonOperator, EberonDynamicArray, Expression, 
     LanguageContext, OberonRtl, Types;
 TYPE
@@ -30,7 +30,7 @@ BEGIN
     RETURN result
 END;
 
-PROCEDURE CastOpToDynamicArray.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
+PROCEDURE CastOpToDynamicArray.assign(cx: LanguageContext.PType; left: Designator.Type; right: Expression.PType): STRING;
     RETURN copyArray(left.type()(Types.PArray), left.code(), right.code(), cx.language.rtl^)
 END;
 
@@ -38,7 +38,7 @@ PROCEDURE CastOpToMap.make(cx: LanguageContext.PType; e: Expression.PType): Expr
     RETURN e;
 END;
 
-PROCEDURE CastOpToMap.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
+PROCEDURE CastOpToMap.assign(cx: LanguageContext.PType; left: Designator.Type; right: Expression.PType): STRING;
     RETURN cx.language.rtl.copy(right.code(), left.code(), EberonOperator.generateTypeInfo(left.type()));
 END;
 

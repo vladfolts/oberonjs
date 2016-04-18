@@ -28,7 +28,6 @@ TYPE
         PROCEDURE type*(): PStorageType;
         PROCEDURE isReadOnly*(): BOOLEAN;
         PROCEDURE isReference*(): BOOLEAN;
-        PROCEDURE referenceCode*(): STRING;
     END;
     PVariable* = POINTER TO Variable;
 

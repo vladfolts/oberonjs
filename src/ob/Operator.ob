@@ -449,9 +449,8 @@ PROCEDURE strCmp(op: STRING; left, right: Expression.PType; cx: LanguageContext.
             Types.basic.bool)
 END;
 
-PROCEDURE assign*(left, right: Expression.PType; cx: LanguageContext.PType): STRING;
+PROCEDURE assign*(left: Designator.Type; right: Expression.PType; cx: LanguageContext.PType): STRING;
 VAR
-    designator: Designator.PType;
     leftCode, rightCode: STRING;
     isArray: BOOLEAN;
     castOperation: LanguageContext.PCastOp;
@@ -471,8 +470,7 @@ VAR
         RETURN cx.language.rtl.assignArrayFromString(leftCode, rightCode)
     END assignArrayFromString;
 BEGIN
-    designator := left.designator();
-    info <- designator.info();
+    info <- left.info();
     IF ~(info IS Types.PVariable) OR info.isReadOnly() THEN
         Errors.raise("cannot assign to " + info.idType());
     END; 
@@ -511,7 +509,7 @@ BEGIN
     designator := left.designator();
     info <- designator.info();
     IF (info IS Types.PVariable) & info.isReference() THEN
-        result := assign(left, altOp(left, right), cx);
+        result := assign(designator^, altOp(left, right), cx);
     ELSE
         rightExp := Expression.deref(right);
         result := left.code() + code + rightExp.code();

@@ -1,0 +1,13 @@
+(*options:{"checkIndexes": true}*)
+MODULE m;
+VAR
+	a: ARRAY 2 OF INTEGER;
+
+PROCEDURE intAt(a: ARRAY OF INTEGER; i: INTEGER): INTEGER;
+	RETURN a[i]
+END intAt;
+
+BEGIN
+	a[1] := 1;
+	ASSERT(intAt(a, 1) = 1);
+END m.

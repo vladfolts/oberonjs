@@ -13,6 +13,7 @@ var ContextModule = require("js/ContextModule.js");
 var ContextProcedure = require("js/ContextProcedure.js");
 var ContextType = require("js/ContextType.js");
 var Grammar = require("grammar.js");
+var LanguageContext = require("js/LanguageContext.js");
 var OberonContext = require("js/OberonContext.js");
 var OberonContextType = require("js/OberonContextType.js");
 var OberonContextVar = require("js/OberonContextVar.js");
@@ -155,6 +156,9 @@ exports.language = {
     codeGenerator: {
         make: function(){ return new CodeGenerator.Generator(); },
         nil: CodeGenerator.nullGenerator()
+    },
+    makeCodeTraits: function(codeGenerator, rtl, options){
+        return new LanguageContext.CodeTraits(codeGenerator, rtl, options && options.checkIndexes); 
     },
     rtl: {
         base: ObRtl.Type,

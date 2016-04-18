@@ -11,7 +11,6 @@ TYPE
             maxPrecedence: INTEGER);
 
         PROCEDURE code*(): STRING;
-        PROCEDURE lval*(): STRING;
         PROCEDURE type*(): Types.PType;
         PROCEDURE designator*(): Designator.PType;
         PROCEDURE constValue*(): ConstValue.PType;
@@ -29,18 +28,6 @@ TYPE
 
 PROCEDURE Type.code(): STRING;
     RETURN SELF.mCode
-END;
-
-PROCEDURE Type.lval(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    IF SELF.mDesignator # NIL THEN
-        result := SELF.mDesignator.lval();
-    ELSE
-        result := SELF.mCode;
-    END;
-    RETURN result
 END;
 
 PROCEDURE Type.type(): Types.PType;

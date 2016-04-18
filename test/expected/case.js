@@ -30,8 +30,34 @@ function caseIntByVar(i/*VAR INTEGER*/){
 	}
 }
 
+function caseRef(p/*VAR Base*/){
+	
+	function passRef(p/*Derived*/){
+	}
+	
+	function passRefVar(p/*VAR Derived2*/){
+	}
+	var $case1 = p;
+	if ($case1 instanceof Derived){
+		passRef(p);
+	}
+	else if ($case1 instanceof Derived2){
+		passRefVar(p);
+	}
+}
+
 function casePointer(p/*PBase*/){
+	
+	function passRef(p/*Derived*/){
+	}
+	
+	function passRefVar(p/*VAR Derived2*/){
+	}
 	if (p instanceof Derived){
+		passRef(p);
+	}
+	else if (p instanceof Derived2){
+		passRefVar(p);
 	}
 	if (p instanceof Derived){
 		p.i = 0;

@@ -10,12 +10,12 @@ TYPE
     END;
     PType = POINTER TO Type;
 
-    MapElementVariable = RECORD(Types.Variable)
-        PROCEDURE MapElementVariable(type: Types.PStorageType; readOnly: BOOLEAN; code: STRING);
+    MapElementVariable* = RECORD(Types.Variable)
+        PROCEDURE MapElementVariable(type: Types.PStorageType; readOnly: BOOLEAN; lval, rval: STRING);
 
-        elementType: Types.PStorageType; 
+        elementType-: Types.PStorageType; 
         readOnly: BOOLEAN; 
-        code: STRING;
+        lval-, rval-: STRING;
     END;
 
     ResultVariable = RECORD(Types.Variable)
@@ -134,7 +134,7 @@ BEGIN
         rtl <- SELF.root().language().rtl(EberonRtl.PType);
         rval <- rtl.getMappedValue(code, indexCode);
         lval <- code + "[" + indexCode + "]";
-        var <- NEW MapElementVariable(indexType, info(Types.PVariable).isReadOnly(), rval);
+        var <- NEW MapElementVariable(indexType, info(Types.PVariable).isReadOnly(), lval, rval);
         result := NEW ContextDesignator.Index(0, indexType, var, rval, lval, "");
     ELSE
         result := SUPER(info, code, indexCode);
@@ -236,10 +236,11 @@ BEGIN
     END;
 END;
 
-PROCEDURE MapElementVariable.MapElementVariable(type: Types.PStorageType; readOnly: BOOLEAN; code: STRING)
+PROCEDURE MapElementVariable.MapElementVariable(type: Types.PStorageType; readOnly: BOOLEAN; lval, rval: STRING)
     | elementType(type),
       readOnly(readOnly),
-      code(code);
+      lval(lval),
+      rval(rval);
 END;
 
 PROCEDURE MapElementVariable.type(): Types.PStorageType;
@@ -254,20 +255,11 @@ PROCEDURE MapElementVariable.isReadOnly(): BOOLEAN;
     RETURN SELF.readOnly;
 END;
 
-PROCEDURE MapElementVariable.referenceCode(): STRING;
-BEGIN
-    IF SELF.elementType.isScalar() THEN
-        Errors.raise("cannot reference map element of type '" 
-                     + SELF.elementType.description() + "'");
-    END;
-    RETURN SELF.code;        
-END;
-
 PROCEDURE MapElementVariable.idType(): STRING;
 VAR
     result: STRING;
 BEGIN
-    result := "MAP's element";
+    result := "MAP's element of type '" + SELF.elementType.description() + "'";
     IF SELF.readOnly THEN
         result := "read-only " + result;
     END;
@@ -284,11 +276,6 @@ END;
 
 PROCEDURE ResultVariable.isReference(): BOOLEAN;
     RETURN FALSE;
-END;
-
-PROCEDURE ResultVariable.referenceCode(): STRING;
-BEGIN
-    RETURN "";        
 END;
 
 PROCEDURE ResultVariable.isReadOnly(): BOOLEAN;
@@ -331,11 +318,6 @@ PROCEDURE TypeNarrowVariable.isReadOnly(): BOOLEAN;
     RETURN SELF.readOnly;
 END;
 
-PROCEDURE TypeNarrowVariable.referenceCode(): STRING;
-BEGIN
-    RETURN SELF.code;        
-END;
-
 PROCEDURE TypeNarrowVariable.id(): STRING;
 BEGIN
     RETURN SELF.code;        
@@ -372,11 +354,6 @@ END;
 
 PROCEDURE DereferencedTypeNarrowVariable.isReadOnly(): BOOLEAN;
     RETURN FALSE;
-END;
-
-PROCEDURE DereferencedTypeNarrowVariable.referenceCode(): STRING;
-BEGIN
-    RETURN SELF.var.code;        
 END;
 
 PROCEDURE DereferencedTypeNarrowVariable.id(): STRING;
@@ -426,8 +403,7 @@ BEGIN
     d <- SELF.attributes.designator;
     type <- d.type();
     IF SELF.right # NIL THEN
-        left <- Expression.make(d.code(), type, d, NIL);
-        code := Operator.assign(left, SELF.right, ContextHierarchy.makeLanguageContext(SELF(POINTER)));
+        code := Operator.assign(d^, SELF.right, ContextHierarchy.makeLanguageContext(SELF(POINTER)));
     ELSIF ~(d.info()^ IS ResultVariable) THEN
         procCall <- ContextProcedure.makeCall(SELF(POINTER), type, d.info());
         result <- procCall.end();

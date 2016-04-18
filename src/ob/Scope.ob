@@ -215,7 +215,7 @@ BEGIN
         symbol <- k;
         info <- symbol.info();
         IF info IS Types.PVariable THEN
-            symbol := NEW Symbols.Symbol(id, Variable.makeExportedVariable(info^));
+            symbol := NEW Symbols.Symbol(id, NEW Variable.ExportedVariable(id, info.type()));
         END;
         cm.exports[id] := symbol;
     END;

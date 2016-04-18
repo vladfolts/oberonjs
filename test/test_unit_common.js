@@ -34,7 +34,7 @@ var TestContextRoot = Class.extend.call(ContextHierarchy.Root, {
         var rtl = new makeRTL(language.rtl);
         ContextHierarchy.Root.call(
                 this,
-                { codeTraits: new LanguageContext.CodeTraits(language.codeGenerator.nil),
+                { codeTraits: language.makeCodeTraits(language.codeGenerator.nil, rtl),
                   moduleGenerator: function(){return new TestModuleGenerator();},
                   rtl: rtl,
                   types: language.types,

@@ -250,7 +250,7 @@ BEGIN
 
     readOnly <- (info IS Types.PConst) 
              OR ((info IS Types.PVariable) & info.isReadOnly());
-    v <- NEW Variable.PropertyVariable(indexType, leadCode, indexCode, readOnly, SELF.root().language().rtl);
+    v <- NEW Variable.PropertyVariable(indexType, leadCode, indexCode, readOnly);
     RETURN NEW Index(length, indexType, v, wholeCode, lval, indexCode);
 END;
 

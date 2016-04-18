@@ -69,8 +69,14 @@ var methods = {
     },
     charAt: function(s, index){
         if (index >= 0 && index < s.length)
-            return s[index];
+            return s.charCodeAt(index);
         throw new Error("index out of bounds: " + index);
+    },
+    putAt: function(where, index, what){
+        if (index >= 0 && index < where.length)
+            where[index] = what;
+        else
+            throw new Error("index out of bounds: " + index);
     },
     makeArray: function(/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);

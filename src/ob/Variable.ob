@@ -1,6 +1,6 @@
 MODULE Variable;
 IMPORT
-    OberonRtl, Types;
+    Types;
 TYPE
 
     TypedVariable* = RECORD(Types.Variable)
@@ -24,35 +24,28 @@ TYPE
     END;
 
     PropertyVariable* = RECORD(TypedVariable)
-        PROCEDURE PropertyVariable*(type: Types.PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType);
+        PROCEDURE PropertyVariable*(type: Types.PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN);
 
-        leadCode, propCode: STRING;
+        leadCode-, propCode-: STRING;
         readOnly: BOOLEAN;
-        rtl: OberonRtl.PType;
     END;
 
     DerefVariable* = RECORD(TypedVariable)
         PROCEDURE DerefVariable*(type: Types.PStorageType; code: STRING);
 
-        code: STRING;
+        code-: STRING;
     END;
 
-    ExportedVariable = RECORD(TypedVariable)
+    ExportedVariable* = RECORD(TypedVariable)
+        PROCEDURE ExportedVariable*(id: STRING; type: Types.PStorageType);
+
+        id: STRING;
     END;
 
     PExportedVariable = POINTER TO ExportedVariable;
 
 PROCEDURE TypedVariable.type(): Types.PStorageType;
     RETURN SELF.mType
-END;
-
-PROCEDURE Declared.referenceCode(): STRING;
-BEGIN
-    result <- SELF.mId;
-    IF SELF.mType.isScalar() THEN
-        result := "{set: function($v){" + result + " = $v;}, get: function(){return " + result + ";}}";
-    END;
-    RETURN result;
 END;
 
 PROCEDURE Declared.isReference(): BOOLEAN;
@@ -82,18 +75,6 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE PropertyVariable.referenceCode(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    IF SELF.type().isScalar() THEN
-        result := SELF.rtl.makeRef(SELF.leadCode, SELF.propCode);
-    ELSE
-        result := SELF.leadCode + "[" + SELF.propCode + "]";
-    END;
-    RETURN result;
-END;
-
 PROCEDURE PropertyVariable.isReference(): BOOLEAN;
     RETURN FALSE;
 END;
@@ -102,16 +83,17 @@ PROCEDURE PropertyVariable.isReadOnly(): BOOLEAN;
     RETURN SELF.readOnly;
 END;
 
-PROCEDURE DerefVariable.referenceCode(): STRING;
-    RETURN SELF.code;
-END;
-
 PROCEDURE DerefVariable.isReference(): BOOLEAN;
     RETURN TRUE;
 END;
 
 PROCEDURE DerefVariable.isReadOnly(): BOOLEAN;
     RETURN FALSE;
+END;
+
+PROCEDURE ExportedVariable.ExportedVariable(id: STRING; type: Types.PStorageType)
+    | SUPER(type),
+      id(id);
 END;
 
 PROCEDURE ExportedVariable.idType(): STRING;
@@ -126,11 +108,6 @@ PROCEDURE ExportedVariable.isReadOnly(): BOOLEAN;
     RETURN TRUE;
 END;
 
-PROCEDURE ExportedVariable.referenceCode(): STRING;
-BEGIN
-    RETURN "";
-END;
-
 PROCEDURE TypedVariable.TypedVariable(type: Types.PStorageType)
     | mType(type);
 END;
@@ -140,12 +117,11 @@ PROCEDURE Declared.Declared(id: STRING; type: Types.PStorageType)
       mId(id);
 END;
 
-PROCEDURE PropertyVariable.PropertyVariable(type: Types.PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType)
+PROCEDURE PropertyVariable.PropertyVariable(type: Types.PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN)
     | SUPER(type),
       leadCode(leadCode),
       propCode(propCode),
-      readOnly(isReadOnly),
-      rtl(rtl);
+      readOnly(isReadOnly);
 END;
 
 PROCEDURE DerefVariable.DerefVariable(type: Types.PStorageType; code: STRING)
@@ -181,22 +157,6 @@ BEGIN
         r := (t IS Types.PArray) OR (t IS Types.PRecord);
     END;
     RETURN r;
-END;
-
-PROCEDURE ArgumentVariable.referenceCode(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    IF SELF.var THEN
-        result := SELF.mId;
-    ELSE
-        result := SUPER();
-    END;
-    RETURN result;
-END;
-
-PROCEDURE makeExportedVariable*(v: Types.Variable): Types.PVariable;
-    RETURN NEW ExportedVariable(v.type());
 END;
 
 END Variable.

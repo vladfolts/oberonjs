@@ -206,8 +206,7 @@ VAR
     coercedArg: Expression.PType;
 BEGIN
     IF (expected # NIL) & expected.isVar THEN
-        referenceCode <- actual.designator().info()(Types.PVariable).referenceCode();
-        coercedArg := Expression.makeSimple(referenceCode, actual.type());
+        coercedArg := Expression.makeSimple(SELF.cx.language.codeTraits.referenceCode(actual.designator().info()^), actual.type());
     ELSE
         coercedArg := Expression.deref(actual);
     END;
@@ -337,7 +336,7 @@ PROCEDURE makeNew(): Symbols.PSymbol;
                 Errors.raise("non-exported RECORD type cannot be used in NEW");
             END;
             right <- Expression.makeSimple(baseType.codeForNew(cx.cx^), argType);
-            result := Expression.makeSimple(Operator.assign(arg, right, cx), NIL);
+            result := Expression.makeSimple(Operator.assign(arg.designator()^, right, cx), NIL);
         END;
         RETURN result;
     END;
@@ -518,14 +517,14 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr; incRefOp: Ope
         checkVariableArgumentsCount(1, 2, args);
         checkArgumentsType(args, SELF.args, NIL, cx.language.types);
         x := args[0];
-        IF Cast.passedByReference(x) THEN
+        IF Cast.passedByReference(x.designator()^) THEN
             IF LEN(args) = 1 THEN
                 y := Expression.makeSimple("1", NIL);
             ELSE
                 y := args[1];
             END;
             addExp <- SELF.incRefOp(x, y);
-            code := Cast.assignByReference(x, addExp);
+            code := Cast.assign(cx, x.designator()^, addExp);
         ELSIF LEN(args) = 1 THEN
             code := SELF.unary + x.code();
         ELSE
@@ -774,7 +773,7 @@ PROCEDURE makeUnpk(): Symbols.PSymbol;
         x := args[0];
         y := args[1];
         RETURN Expression.makeSimple(
-                Operator.assign(y, Operator.log2(x), cx) 
+                Operator.assign(y.designator()^, Operator.log2(x), cx) 
                 + "; "
                 + Operator.divInplace(x, Operator.pow2(y), cx),
             NIL)

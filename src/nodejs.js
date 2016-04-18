@@ -2,6 +2,7 @@
 
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
+var Errors = require("js/Errors.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var LanguageContext = require("js/LanguageContext.js");
 var oc = require("oc.js");
@@ -62,12 +63,18 @@ function compile(sources, language, handleErrors, includeDirs, outDir, importDir
         return new ModuleGenerator(name, imports, importDir);};
 
     var compiledFilesStack = [];
+    var failToCompile = {};
     oc.compileModules(
             sources,
             function(name){
                 var fileName = name;
                 if (!path.extname(fileName).length)
                     fileName += ".ob";
+                
+                var alreadyFail = failToCompile[fileName];
+                if (alreadyFail)
+                    throw new Errors.Error("'" + fileName + "': error " + alreadyFail);
+
                 compiledFilesStack.push(fileName);
 
                 var readPath = fileName;
@@ -83,14 +90,18 @@ function compile(sources, language, handleErrors, includeDirs, outDir, importDir
             language.grammar,
             function(moduleResolver){
                 return new ContextHierarchy.Root(
-                { codeTraits: new LanguageContext.CodeTraits(language.codeGenerator.make()),
+                { codeTraits: language.makeCodeTraits(language.codeGenerator.make(), rtl),
                   moduleGenerator: moduleCode,
                   rtl: rtl,
                   types: language.types,
                   stdSymbols: language.stdSymbols,
                   moduleResolver: moduleResolver
                 });},
-            function(e){handleErrors("File \"" + compiledFilesStack[compiledFilesStack.length - 1] + "\", " + e);},
+            function(e){
+                var fileName = compiledFilesStack[compiledFilesStack.length - 1];
+                failToCompile[fileName] = e;
+                handleErrors("File \"" + fileName + "\", " + e);
+            },
             function(name, code){
                 if (rtlCodeWatcher.used()){
                     code = "var " + rtl.name() + " = require(\"" + rtl.module() + "\");\n" + code;

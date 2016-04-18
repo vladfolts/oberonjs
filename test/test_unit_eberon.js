@@ -1452,8 +1452,8 @@ exports.suite = {
                 + "PROCEDURE recordByRef(VAR r: T); END;"
                 ),
         pass("recordByRef(mR[\"a\"])"),
-        fail(["intByRef(mInt[\"a\"])", "cannot reference map element of type 'INTEGER'"],
-             ["stringByRef(mS[\"a\"])", "cannot reference map element of type 'STRING'"]
+        fail(["intByRef(mInt[\"a\"])", "cannot reference MAP's element of type 'INTEGER'"],
+             ["stringByRef(mS[\"a\"])", "cannot reference MAP's element of type 'STRING'"]
             )
         ),
     "IN": testWithContext(
@@ -1471,7 +1471,7 @@ exports.suite = {
         context(grammar.declarationSequence,
                 "TYPE M = MAP OF INTEGER;"),
         pass(),
-        fail(["PROCEDURE p(m: M); BEGIN m[\"abc\"] := 123; END;", "cannot assign to read-only MAP's element"])
+        fail(["PROCEDURE p(m: M); BEGIN m[\"abc\"] := 123; END;", "cannot assign to read-only MAP's element of type 'INTEGER'"])
         ),
     "remove": testWithContext(
         context(grammar.statement,

@@ -222,16 +222,26 @@ return {
     ),
 "POINTER dereference": testWithContext(
     context(grammar.statement,
-            "TYPE PT = POINTER TO RECORD END;"
-            + "VAR pt: PT; p: POINTER TO RECORD field: INTEGER END; i: INTEGER; r: RECORD END;"),
+            "TYPE T = RECORD END; PT = POINTER TO T;"
+            + "VAR pt: PT; p: POINTER TO RECORD field: INTEGER END; i: INTEGER; r: RECORD END;"
+            + "PROCEDURE pVar(VAR r: T);END pVar;"),
     pass("p^.field := 1",
-         "p.field := 0"),
+         "p.field := 0",
+         "pVar(pt^)"),
     fail(["i^", "POINTER TO type expected, got 'INTEGER'"],
          ["r^", "POINTER TO type expected, got 'anonymous RECORD'"],
          ["p.unknown := 0", "type 'anonymous RECORD' has no 'unknown' field"],
-         ["pt.constructor := 0", "type 'PT' has no 'constructor' field"], // "constructor" is JS predefined property
-         ["pt.prototype := 0", "type 'PT' has no 'prototype' field"], // "prototype" is JS predefined property
-         ["pt.unknown := 0", "type 'PT' has no 'unknown' field"])
+         ["pt.constructor := 0", "type 'T' has no 'constructor' field"], // "constructor" is JS predefined property
+         ["pt.prototype := 0", "type 'T' has no 'prototype' field"], // "prototype" is JS predefined property
+         ["pt.unknown := 0", "type 'T' has no 'unknown' field"])
+    ),
+"POINTER argument dereference and passing as VAR": testWithContext(
+    context(grammar.declarationSequence,
+            "TYPE T = RECORD END; PT = POINTER TO T;"
+            + "VAR pt: PT; p: POINTER TO RECORD field: INTEGER END; i: INTEGER; r: RECORD END;"
+            + "PROCEDURE pVar(VAR r: T);END pVar;"),
+    pass("PROCEDURE proc(p: PT); BEGIN pVar(p^); END proc;"),
+    fail()
     ),
 "POINTER assignment": testWithContext(
     context(grammar.statement,
@@ -695,6 +705,17 @@ return {
          ["CASE c OF 0..PDerived: END", "'PDerived' is not a constant"]
          )
     ),
+"CASE statement with type guard - pass as VAR argument": testWithContext(
+    context(grammar.declarationSequence,
+              "TYPE Base = RECORD END;" 
+            + "Derived = RECORD (Base) END; PDerived = POINTER TO Derived;"
+            + "PROCEDURE passDerived(d: Derived); END passDerived;"
+            + "PROCEDURE passDerivedVar(VAR d: Derived); END passDerivedVar;"
+            ),
+    pass("PROCEDURE p(VAR b: Base); BEGIN CASE b OF Derived: passDerived(b) END; END p;",
+         "PROCEDURE p(VAR b: Base); BEGIN CASE b OF Derived: passDerivedVar(b) END; END p;"
+         )
+    ),
 "CASE statement with type guard for VAR argument": testWithContext(
     context(grammar.declarationSequence,
               "TYPE Base = RECORD END; Derived = RECORD (Base) i: INTEGER END; PBase = POINTER TO Base; PDerived = POINTER TO Derived;"),
@@ -1049,10 +1070,14 @@ return {
             "TYPE Base1 = RECORD END;"
                 + "T1 = RECORD (Base1) END;"
                 + "T2 = RECORD END;"
-            + "VAR b1: Base1; r1: T1; r2: T2;"
+            + "VAR b1: Base1; r1: T1; r2: T2; pb1: POINTER TO Base1;"
             ),
     pass("r1 := r1",
-         "b1 := r1"),
+         "b1 := r1",
+         "pb1^ := b1",
+         "pb1^ := r1",
+         "pb1^ := pb1^"
+         ),
     fail(["r1 := r2", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'T2' expression"],
          ["r1 := b1", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'Base1' expression"])
     ),

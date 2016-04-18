@@ -130,8 +130,7 @@ function compile(text, language, handleErrors, options){
             language.grammar,
             function(moduleResolver){
                 return new ContextHierarchy.Root(
-                    { codeTraits: new LanguageContext.CodeTraits(language.codeGenerator.make(), 
-                                                                 options && options.checkIndexes ? rtl : null),
+                    { codeTraits: language.makeCodeTraits(language.codeGenerator.make(), rtl, options),
                       moduleGenerator: moduleCode,
                       rtl: rtl,
                       types: language.types,

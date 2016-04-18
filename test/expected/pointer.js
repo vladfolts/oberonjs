@@ -22,6 +22,11 @@ function passByRef(p/*VAR PT*/){
 	passByRef(p);
 	passByRef(RTL$.makeRef(p.get(), "p"));
 }
+
+function derefAndAssign(){
+	p = new T();
+	RTL$.copy(r, p, {record: {p: null, i: null}});
+}
 r.p = new T();
 r.p.p = new T();
 r.p.i = 123;

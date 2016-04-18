@@ -1,0 +1,13 @@
+(*options:{"checkIndexes": true}*)
+MODULE m;
+VAR
+	s: ARRAY 1 OF CHAR;
+
+PROCEDURE putCharAt(VAR a: ARRAY OF CHAR; i: INTEGER);
+BEGIN
+	a[i] := "a";
+END putCharAt;
+
+BEGIN
+	putCharAt(s, 1);
+END m.

@@ -87,10 +87,6 @@ PROCEDURE AnyVariable.isReference(): BOOLEAN;
     RETURN TRUE;
 END;
 
-PROCEDURE AnyVariable.referenceCode(): STRING;
-    RETURN "";
-END;
-
 PROCEDURE AnyField.id(): STRING;
     RETURN "any field"
 END AnyField.id;

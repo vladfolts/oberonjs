@@ -1,12 +1,12 @@
 MODULE LanguageContext;
-IMPORT CodeGenerator, Context, Expression, OberonRtl, Symbols, T := Types;
+IMPORT Chars, CodeGenerator, Context, Designator, Errors, Expression, OberonRtl, Record, Symbols, T := Types, Variable;
 
 TYPE
     PType* = POINTER TO Type;
 
     CastOp* = RECORD
         PROCEDURE make*(cx: PType; e: Expression.PType): Expression.PType;
-        PROCEDURE assign*(cx: PType; left, right: Expression.PType): STRING;
+        PROCEDURE assign*(cx: PType; left: Designator.Type; right: Expression.PType): STRING;
         PROCEDURE clone*(cx: PType; e: Expression.PType): STRING;
     END;
 
@@ -28,13 +28,17 @@ TYPE
     PModuleGenerator* = POINTER TO ModuleGenerator;
 
     CodeTraits* = RECORD
-        PROCEDURE CodeTraits*(code: CodeGenerator.PIGenerator; rtl: OberonRtl.PType);
+        PROCEDURE CodeTraits*(code: CodeGenerator.PIGenerator; rtl: OberonRtl.PType; checkIndexes: BOOLEAN);
 
         PROCEDURE generator*(): CodeGenerator.PIGenerator;
         PROCEDURE stringIndex*(e, index: STRING): STRING;
+        PROCEDURE putAt*(where, index, what: STRING): STRING;
+        PROCEDURE referenceCode*(VAR info: T.Id): STRING;
+        PROCEDURE assign*(VAR info: T.Id; right: Expression.PType): STRING;
 
         code: CodeGenerator.PIGenerator;
         rtl: OberonRtl.PType;
+        checkIndexes: BOOLEAN;
     END;
 
     Imports = MAP OF STRING;
@@ -61,9 +65,10 @@ PROCEDURE Type.Type(language: PLanguage; cx: Context.PType)
       cx(cx);
 END;
 
-PROCEDURE CodeTraits.CodeTraits(code: CodeGenerator.PIGenerator; rtl: OberonRtl.PType)
+PROCEDURE CodeTraits.CodeTraits(code: CodeGenerator.PIGenerator; rtl: OberonRtl.PType; checkIndexes: BOOLEAN)
     | code(code),
-      rtl(rtl);
+      rtl(rtl),
+      checkIndexes(checkIndexes);
 END;
 
 PROCEDURE CodeTraits.generator(): CodeGenerator.PIGenerator;
@@ -74,12 +79,74 @@ PROCEDURE CodeTraits.stringIndex(e, index: STRING): STRING;
 VAR
     r: STRING;
 BEGIN
-    IF SELF.rtl = NIL THEN
+    IF ~SELF.checkIndexes THEN
         r := e + ".charCodeAt(" + index + ")";
     ELSE
         r := SELF.rtl.charAt(e, index);
     END; 
     RETURN r;
+END;
+
+PROCEDURE CodeTraits.putAt(where, index, what: STRING): STRING;
+VAR
+    r: STRING;
+BEGIN
+    IF ~SELF.checkIndexes THEN
+        r := where + "[" + index + "] = " + what;
+    ELSE
+        r := SELF.rtl.putAt(where, index, what);
+    END; 
+    RETURN r;
+END;
+
+PROCEDURE CodeTraits.referenceCode(VAR info: T.Id): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF info IS T.DeclaredVariable THEN
+        result := info.id();
+        IF info.type().isScalar() & ~((info IS Variable.ArgumentVariable) & info.var) THEN
+            result := "{set: function($v){" + result + " = $v;}, get: function(){return " + result + ";}}";
+        END
+    ELSIF info IS Variable.PropertyVariable THEN
+        IF info.type().isScalar() THEN
+            result := SELF.rtl.makeRef(info.leadCode, info.propCode);
+        ELSE
+            result := info.leadCode + "[" + info.propCode + "]";
+        END;
+    ELSIF info IS Variable.DerefVariable THEN
+        result := info.code;
+    ELSIF info IS Record.FieldVariable THEN
+        codeId <- Record.mangleField(info.field.id());
+        IF info.type().isScalar() THEN
+            result := SELF.rtl.makeRef(info.leadCode, 
+                                       Chars.doubleQuote + codeId + Chars.doubleQuote);
+        ELSE
+            result := info.leadCode + "." + codeId;
+        END;
+    ELSE
+        Errors.raise("cannot reference " + info.idType());
+    END;
+    RETURN result;
+END;
+
+PROCEDURE CodeTraits.assign(VAR info: T.Id; right: Expression.PType): STRING;
+VAR
+    result: STRING;
+BEGIN
+    rightCode <- Expression.deref(right).code();
+    IF info IS T.DeclaredVariable THEN
+        IF (info IS Variable.ArgumentVariable) & info.var THEN
+            result := info.id() + ".set(" + rightCode + ")";
+        ELSE
+            result := info.id() + " = " + rightCode;
+        END;
+    ELSIF info IS Variable.PropertyVariable THEN
+        result := SELF.putAt(info.leadCode, info.propCode, rightCode);
+    ELSIF info IS Record.FieldVariable THEN
+        result := info.leadCode + "." + Record.mangleField(info.field.id()) + " = " + rightCode;
+    END;
+    RETURN result;
 END;
 
 END LanguageContext.

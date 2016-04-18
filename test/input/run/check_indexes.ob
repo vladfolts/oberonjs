@@ -1,0 +1,10 @@
+(*options:{"checkIndexes": true}*)
+MODULE m;
+
+PROCEDURE charAt(a: ARRAY OF CHAR; i: INTEGER): CHAR;
+	RETURN a[i]
+END charAt;
+
+BEGIN
+	ASSERT(charAt("abc", 1) = "b");
+END m.

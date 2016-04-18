@@ -1,6 +1,6 @@
 MODULE Record;
 IMPORT
-    Chars, Context, Errors, OberonRtl, Object, ScopeBase, TypeId, Types;
+    Chars, Context, Errors, Object, ScopeBase, TypeId, Types;
 TYPE
     FieldsMap = MAP OF Types.PField;
 
@@ -41,12 +41,11 @@ TYPE
     PPointer* = POINTER TO Pointer;
 
     FieldVariable* = RECORD(Types.Variable)
-        PROCEDURE FieldVariable(f: PField; leadCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType);
+        PROCEDURE FieldVariable(f: PField; leadCode: STRING; isReadOnly: BOOLEAN);
 
-        field: PField;
-        leadCode: STRING;
+        field-: PField;
+        leadCode-: STRING;
         readOnly: BOOLEAN;
-        rtl: OberonRtl.PType;
     END;
 
 VAR
@@ -229,7 +228,7 @@ PROCEDURE Field.type(): Types.PStorageType;
 END;
 
 PROCEDURE Field.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
-    RETURN NEW FieldVariable(SELF(POINTER), leadCode, isReadOnly, cx.rtl());
+    RETURN NEW FieldVariable(SELF(POINTER), leadCode, isReadOnly);
 END;
 
 PROCEDURE Field.Field(identdef: Context.PIdentdefInfo; type: Types.PStorageType)
@@ -279,11 +278,10 @@ PROCEDURE Pointer.isScalar(): BOOLEAN;
     RETURN TRUE;
 END;
 
-PROCEDURE FieldVariable.FieldVariable(f: PField; leadCode: STRING; isReadOnly: BOOLEAN; rtl: OberonRtl.PType)
+PROCEDURE FieldVariable.FieldVariable(f: PField; leadCode: STRING; isReadOnly: BOOLEAN)
     | field(f),
       leadCode(leadCode),
-      readOnly(isReadOnly),
-      rtl(rtl);
+      readOnly(isReadOnly);
 END;
 
 PROCEDURE FieldVariable.idType(): STRING;
@@ -299,20 +297,6 @@ END;
 
 PROCEDURE FieldVariable.type(): Types.PStorageType;
     RETURN SELF.field.mType;
-END;
-
-PROCEDURE FieldVariable.referenceCode(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    codeId <- mangleField(SELF.field.mIdentdef.id());
-    IF SELF.type().isScalar() THEN
-        result := SELF.rtl.makeRef(SELF.leadCode, 
-                                   Chars.doubleQuote + codeId + Chars.doubleQuote);
-    ELSE
-        result := SELF.leadCode + "." + codeId;
-    END;
-    RETURN result;
 END;
 
 PROCEDURE FieldVariable.isReference(): BOOLEAN;

@@ -1,12 +1,27 @@
 (*options:{"checkIndexes": true}*)
 MODULE m;
 
-PROCEDURE charArray(a: ARRAY OF CHAR);
+PROCEDURE readCharArray(a: ARRAY OF CHAR);
 VAR
 	c: CHAR;
 BEGIN
 	c := a[1];
 	c := a[ORD(a[1])]
-END charArray;
+END readCharArray;
+
+PROCEDURE writeCharArray(VAR a: ARRAY OF CHAR);
+VAR
+	c: CHAR;
+BEGIN
+	a[1] := c;
+	a[ORD(a[1])] := c;
+END writeCharArray;
+
+PROCEDURE writeIntArray(VAR a: ARRAY OF INTEGER);
+VAR
+	i: INTEGER;
+BEGIN
+	a[1] := i;
+END writeIntArray;
 
 END m.

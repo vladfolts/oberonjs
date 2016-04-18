@@ -1,6 +1,6 @@
 MODULE EberonOperator;
 IMPORT 
-    Cast, CodePrecedence, ConstValue, 
+    Cast, CodePrecedence, ConstValue, Designator, 
     EberonMap, EberonString, Expression, LanguageContext, 
     OberonRtl, Operator, Record, Types;
 TYPE
@@ -97,7 +97,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left, right: Expression.PType): STRING;
+PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left: Designator.Type; right: Expression.PType): STRING;
 VAR
     result: STRING;
 BEGIN

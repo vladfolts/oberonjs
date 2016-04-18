@@ -39,10 +39,10 @@ TYPE
         typeGuardHandled: BOOLEAN;
     END;
 
-    GuardedVariable = RECORD(Types.Variable)
-        PROCEDURE GuardedVariable(caseVariable: Types.PVariable; guardedType: Types.PStorageType);
+    GuardedVariable = RECORD(Types.DeclaredVariable)
+        PROCEDURE GuardedVariable(caseVariable: Types.PDeclaredVariable; guardedType: Types.PStorageType);
 
-        caseVariable: Types.PVariable;
+        caseVariable: Types.PDeclaredVariable;
         guardedType: Types.PStorageType;
     END;
 
@@ -276,7 +276,7 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE GuardedVariable.GuardedVariable(caseVariable: Types.PVariable; guardedType: Types.PStorageType)
+PROCEDURE GuardedVariable.GuardedVariable(caseVariable: Types.PDeclaredVariable; guardedType: Types.PStorageType)
     | caseVariable(caseVariable),
       guardedType(guardedType);
 END;
@@ -293,8 +293,8 @@ PROCEDURE GuardedVariable.isReference(): BOOLEAN;
     RETURN SELF.caseVariable.isReference();
 END;
 
-PROCEDURE GuardedVariable.referenceCode(): STRING;
-    RETURN SELF.caseVariable.referenceCode();
+PROCEDURE GuardedVariable.id(): STRING;
+    RETURN SELF.caseVariable.id();
 END;
 
 END ContextCase.

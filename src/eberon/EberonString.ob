@@ -22,11 +22,6 @@ PROCEDURE ElementVariable.isReference(): BOOLEAN;
     RETURN FALSE
 END;
 
-PROCEDURE ElementVariable.referenceCode(): STRING;
-BEGIN
-    RETURN "";
-END;
-
 PROCEDURE makeElementVariable*(): Types.PVariable;
     RETURN NEW ElementVariable();
 END;

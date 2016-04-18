@@ -115,9 +115,8 @@ END;
 PROCEDURE Assignment.handleExpression(e: Expression.PType);
 BEGIN
     d <- SELF.attributes.designator;
-    left <- Expression.make(d.code(), d.type(), d, NIL);
     SELF.parent().codeGenerator().write(
-            Operator.assign(left, e, ContextHierarchy.makeLanguageContext(SELF(POINTER))));
+            Operator.assign(d^, e, ContextHierarchy.makeLanguageContext(SELF(POINTER))));
 END;
 
 END OberonContext.

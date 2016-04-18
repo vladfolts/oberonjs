@@ -99,10 +99,6 @@ PROCEDURE ForEachVariable.idType(): STRING;
     RETURN "FOR variable";
 END;
 
-PROCEDURE ForEachVariable.referenceCode(): STRING;
-    RETURN "";
-END;
-
 PROCEDURE ForEachVariable.isReference(): BOOLEAN;
     RETURN FALSE;
 END;

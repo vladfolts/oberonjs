@@ -15,6 +15,7 @@ var EberonContextLoop = require("js/EberonContextLoop.js");
 var EberonContextProcedure = require("js/EberonContextProcedure.js");
 var EberonContextType = require("js/EberonContextType.js");
 var EberonContextVar = require("js/EberonContextVar.js");
+var EberonLanguageContext = require("js/EberonLanguageContext.js");
 var Grammar = require("grammar.js");
 var EbRtl = require("js/EberonRtl.js");
 var EbRtlCode = require("eberon/eberon_rtl.js");
@@ -195,6 +196,9 @@ exports.language = {
         make: function(){ return new CodeGenerator.Generator(); },                                                                                                                                                                                          
         nil: CodeGenerator.nullGenerator()
     },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+    makeCodeTraits: function(codeGenerator, rtl, options){
+        return new EberonLanguageContext.CodeTraits(codeGenerator, rtl, options && options.checkIndexes); 
+    },
     rtl: {
         base: EbRtl.Type,
         methods: EbRtlCode.rtl.methods,

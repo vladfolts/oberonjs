@@ -37,7 +37,21 @@ BEGIN
 	END;
 END caseIntByVar;
 
+PROCEDURE caseRef(VAR p: Base);
+	PROCEDURE passRef(p: Derived); END passRef;
+	PROCEDURE passRefVar(VAR p: Derived2); END passRefVar;
+BEGIN
+	CASE p OF
+		| Derived:
+			passRef(p);
+		| Derived2:
+			passRefVar(p);
+	END;
+END caseRef;
+
 PROCEDURE casePointer(p: PBase);
+	PROCEDURE passRef(p: Derived); END passRef;
+	PROCEDURE passRefVar(VAR p: Derived2); END passRefVar;
 BEGIN
 	CASE p OF END;
 
@@ -47,6 +61,9 @@ BEGIN
 
 	CASE p OF
 		| PDerived:
+			passRef(p^);
+		| PDerived2:
+			passRefVar(p^);
 	END;
 
 	CASE p OF

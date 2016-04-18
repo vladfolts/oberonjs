@@ -21,6 +21,12 @@ BEGIN
 	passByRef(p.p);
 END passByRef;
 
+PROCEDURE derefAndAssign();
+BEGIN
+	NEW(p);
+	p^ := r;
+END derefAndAssign;
+
 BEGIN
 	NEW(r.p);
     NEW(r.p.p);
