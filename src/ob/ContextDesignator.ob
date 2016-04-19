@@ -135,8 +135,8 @@ BEGIN
     designator.lval := "";
 END;
 
-PROCEDURE stringIndexCode*(d: Type): STRING;
-    RETURN d.root().language().codeTraits.stringIndex(d.derefCode, Expression.deref(d.indexExpression).code());
+PROCEDURE getAt*(d: Type; type: Types.PStorageType): STRING;
+    RETURN d.root().language().codeTraits.getAt(d.derefCode, Expression.deref(d.indexExpression).code(), type);
 END;
 
 PROCEDURE advance*(VAR d: Type; type: Types.PType; info: Types.PId; code, lval: STRING; replace: BOOLEAN);
@@ -242,11 +242,7 @@ BEGIN
     END;
 
     leadCode <- code;
-    wholeCode <- code + "[" + indexCode + "]";
-    IF indexType = Types.basic.ch THEN
-        lval := wholeCode;
-        wholeCode := stringIndexCode(SELF);
-    END;
+    wholeCode <- getAt(SELF, indexType);
 
     readOnly <- (info IS Types.PConst) 
              OR ((info IS Types.PVariable) & info.isReadOnly());

@@ -126,7 +126,7 @@ BEGIN
             0, 
             Types.basic.ch, 
             EberonString.makeElementVariable(),
-            ContextDesignator.stringIndexCode(SELF),
+            ContextDesignator.getAt(SELF, Types.basic.ch),
             "",
             "");
     ELSIF currentType IS EberonMap.PType THEN

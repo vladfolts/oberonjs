@@ -13,6 +13,12 @@ function writeCharArray(a/*VAR ARRAY OF CHAR*/){
 	RTL$.putAt(a, RTL$.charAt(a, 1), c);
 }
 
+function readIntArray(a/*ARRAY OF INTEGER*/){
+	var i = 0;
+	i = RTL$.getAt(a, 1);
+	i = RTL$.getAt(a, RTL$.getAt(a, i));
+}
+
 function writeIntArray(a/*VAR ARRAY OF INTEGER*/){
 	var i = 0;
 	RTL$.putAt(a, 1, i);

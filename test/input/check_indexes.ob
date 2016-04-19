@@ -17,6 +17,14 @@ BEGIN
 	a[ORD(a[1])] := c;
 END writeCharArray;
 
+PROCEDURE readIntArray(a: ARRAY OF INTEGER);
+VAR
+	i: INTEGER;
+BEGIN
+	i := a[1];
+	i := a[a[i]]
+END readIntArray;
+
 PROCEDURE writeIntArray(VAR a: ARRAY OF INTEGER);
 VAR
 	i: INTEGER;

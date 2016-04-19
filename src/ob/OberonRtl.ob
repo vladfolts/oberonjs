@@ -15,6 +15,7 @@ TYPE
         PROCEDURE makeCharArray*(dimensions: STRING): STRING;
         PROCEDURE typeGuard*(from, to: STRING): STRING;
         PROCEDURE charAt*(s, index: STRING): STRING;
+        PROCEDURE getAt*(s, index: STRING): STRING;
         PROCEDURE putAt*(where, index, what: STRING): STRING;
     END;
     PType* = POINTER TO Type;

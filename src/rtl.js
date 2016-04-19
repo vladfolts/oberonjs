@@ -72,6 +72,11 @@ var methods = {
             return s.charCodeAt(index);
         throw new Error("index out of bounds: " + index);
     },
+    getAt: function(where, index){
+        if (index >= 0 && index < where.length)
+            return where[index];
+        throw new Error("index out of bounds: " + index);
+    },
     putAt: function(where, index, what){
         if (index >= 0 && index < where.length)
             where[index] = what;

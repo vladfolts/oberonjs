@@ -31,7 +31,7 @@ TYPE
         PROCEDURE CodeTraits*(code: CodeGenerator.PIGenerator; rtl: OberonRtl.PType; checkIndexes: BOOLEAN);
 
         PROCEDURE generator*(): CodeGenerator.PIGenerator;
-        PROCEDURE stringIndex*(e, index: STRING): STRING;
+        PROCEDURE getAt*(e, index: STRING; type: T.PStorageType): STRING;
         PROCEDURE putAt*(where, index, what: STRING): STRING;
         PROCEDURE referenceCode*(VAR info: T.Id): STRING;
         PROCEDURE assign*(VAR info: T.Id; right: Expression.PType): STRING;
@@ -75,14 +75,22 @@ PROCEDURE CodeTraits.generator(): CodeGenerator.PIGenerator;
     RETURN SELF.code;
 END;
 
-PROCEDURE CodeTraits.stringIndex(e, index: STRING): STRING;
+PROCEDURE CodeTraits.getAt(e, index: STRING; type: T.PStorageType): STRING;
 VAR
     r: STRING;
 BEGIN
     IF ~SELF.checkIndexes THEN
-        r := e + ".charCodeAt(" + index + ")";
+        IF type = T.basic.ch THEN
+            r := e + ".charCodeAt(" + index + ")";
+        ELSE
+            r := e + "[" + index + "]";
+        END;
     ELSE
-        r := SELF.rtl.charAt(e, index);
+        IF type = T.basic.ch THEN
+            r := SELF.rtl.charAt(e, index);
+        ELSE
+            r := SELF.rtl.getAt(e, index);
+        END;
     END; 
     RETURN r;
 END;
