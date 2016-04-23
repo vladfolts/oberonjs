@@ -23,4 +23,9 @@ function writeIntArray(a/*VAR ARRAY OF INTEGER*/){
 	var i = 0;
 	RTL$.putAt(a, 1, i);
 }
+
+function multiDimArray(i/*INTEGER*/, j/*INTEGER*/){
+	var a = RTL$.makeArray(5, 5, 0);
+	RTL$.putAt(RTL$.getAt(a, 1), 2, RTL$.getAt(RTL$.getAt(a, 3), 4));
+}
 }();

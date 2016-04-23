@@ -32,4 +32,11 @@ BEGIN
 	a[1] := i;
 END writeIntArray;
 
+PROCEDURE multiDimArray(i, j: INTEGER);
+VAR
+	a: ARRAY 5, 5 OF INTEGER;
+BEGIN
+	a[1][2] := a[3, 4];
+END multiDimArray;
+
 END m.
