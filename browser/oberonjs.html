@@ -28,11 +28,14 @@
 <p>
 <form action="">
 Oberon module(s):
-<input type="radio" name="compiler" value="oberon" checked>Oberon
+<input type="radio" name="compiler" value="oberon" checked>Oberon</input>
 <input type="radio" name="compiler" value="eberon" id="eberon">
     <a href="https://github.com/vladfolts/oberonjs/wiki/Eberon">
     Eberon
     </a>
+</input>
+<p/>
+<input type="checkbox" id="checkIndexesOption">checked indexes</input>
 </form>
 </p>
 
@@ -90,9 +93,13 @@ END test.
                 document.getElementById("eberon").checked
                     ? "eberon/eberon_grammar.js"
                     : "oberon/oberon_grammar.js").language;
-            result = require("oc.js").compile(src, language, function(e){
-                errors += e;
-            });
+            var options = {checkIndexes: document.getElementById("checkIndexesOption").checked};
+            result = require("oc.js").compile(
+                    src, 
+                    language, 
+                    function(e){errors += e;},
+                    options
+                    );
             }
         catch (e) {
             errors += e;
