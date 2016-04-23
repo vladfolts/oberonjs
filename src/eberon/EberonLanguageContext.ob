@@ -1,6 +1,6 @@
 MODULE EberonLanguageContext;
 IMPORT 
-	EberonContextDesignator, EberonTypePromotion, Expression, LanguageContext, Types;
+	EberonMap, EberonTypePromotion, Expression, LanguageContext, Types;
 TYPE
 	CodeTraits* = RECORD(LanguageContext.CodeTraits)
 	END;
@@ -11,7 +11,7 @@ VAR
 BEGIN
 	IF info IS EberonTypePromotion.Variable THEN
 		result := info.id();
-	ELSIF (info IS EberonContextDesignator.MapElementVariable) & ~info.elementType.isScalar() THEN
+	ELSIF (info IS EberonMap.ElementVariable) & ~info.elementType.isScalar() THEN
 		result := info.rval;
 	ELSE
 		result := SUPER(info);
@@ -23,7 +23,7 @@ PROCEDURE CodeTraits.assign(VAR info: Types.Id; right: Expression.PType): STRING
 VAR
     result: STRING;
 BEGIN
-	IF info IS EberonContextDesignator.MapElementVariable THEN
+	IF info IS EberonMap.ElementVariable THEN
     	result := info.lval + " = " + Expression.deref(right).code();
     ELSE
     	result := SUPER(info, right);

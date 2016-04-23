@@ -37,6 +37,14 @@ TYPE
     MethodCallClear = RECORD(Procedure.StdCall)
     END;
 
+    ElementVariable* = RECORD(Types.Variable)
+        PROCEDURE ElementVariable*(type: Types.PStorageType; readOnly: BOOLEAN; lval, rval: STRING);
+
+        elementType-: Types.PStorageType; 
+        readOnly: BOOLEAN; 
+        lval-, rval-: STRING;
+    END;
+
 PROCEDURE Type.initializer(cx: Context.Type): STRING;
     RETURN "{}";
 END;
@@ -123,6 +131,36 @@ END;
 
 PROCEDURE MethodClearField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
     RETURN NEW Types.FieldCode(cx.rtl()(EberonRtl.PType).clearMap(leadCode), "", "");
+END;
+
+PROCEDURE ElementVariable.ElementVariable(type: Types.PStorageType; readOnly: BOOLEAN; lval, rval: STRING)
+    | elementType(type),
+      readOnly(readOnly),
+      lval(lval),
+      rval(rval);
+END;
+
+PROCEDURE ElementVariable.type(): Types.PStorageType;
+    RETURN SELF.elementType;
+END;
+
+PROCEDURE ElementVariable.isReference(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE ElementVariable.isReadOnly(): BOOLEAN;
+    RETURN SELF.readOnly;
+END;
+
+PROCEDURE ElementVariable.idType(): STRING;
+VAR
+    result: STRING;
+BEGIN
+    result := "MAP's element of type '" + SELF.elementType.description() + "'";
+    IF SELF.readOnly THEN
+        result := "read-only " + result;
+    END;
+    RETURN result;
 END;
 
 END EberonMap.

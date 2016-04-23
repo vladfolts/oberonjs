@@ -475,7 +475,7 @@ BEGIN
         Errors.raise("cannot assign to " + info.idType());
     END; 
 
-    leftCode := left.lval();
+    leftCode := left.code();
     rightCode := right.code();
     leftType <- left.type();
     rightType <- right.type();

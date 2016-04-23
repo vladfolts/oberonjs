@@ -101,15 +101,14 @@ PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left: Designator.Type; 
 VAR
     result: STRING;
 BEGIN
-    leftCode <- left.code();
-    leftLval <- left.lval();
-    IF leftCode # leftLval THEN (* TRUE for putting to MAP *)
+    info <- left.info();
+    IF info^ IS EberonMap.ElementVariable THEN
         (* optimize the case when the temporary is used - do not clone it 
            but only if types exactly match - derived temporary still must be cloned *)
         IF (right.designator() = NIL) & (left.type() = right.type()) THEN
-            result := leftLval + " = " + right.code();
+            result := info.lval + " = " + right.code();
         ELSE
-            result := leftLval + " = " 
+            result := info.lval + " = " 
                     + cx.language.rtl.clone(right.code(), 
                                             generateTypeInfo(left.type()), 
                                             Record.constructor(cx.cx^, left.type()(Record.PType)^));

@@ -5,12 +5,12 @@ IMPORT
     Record, ScopeBase, String, TypeId, Types, Variable;
 TYPE
     Index* = RECORD
-        PROCEDURE Index*(length: INTEGER; type: Types.PType; info: Types.PId; code, lval, asProperty: STRING);
+        PROCEDURE Index*(length: INTEGER; type: Types.PType; info: Types.PId; code, asProperty: STRING);
 
         length: INTEGER;
         type: Types.PType;
         info: Types.PId;
-        code, lval, asProperty: STRING;
+        code, asProperty: STRING;
     END;
     PIndex* = POINTER TO Index;
 
@@ -31,7 +31,7 @@ TYPE
         scope: ScopeBase.PType;
         currentType-: Types.PType;
         info-: Types.PId;
-        code, derefCode, propCode, lval: STRING;
+        code, derefCode, propCode: STRING;
         indexExpression: Expression.PType;
     END;
 
@@ -53,12 +53,11 @@ VAR
     beginCallMsg: BeginCallMsg;
     endCallMsg: EndCallMsg;
 
-PROCEDURE Index.Index(length: INTEGER; type: Types.PType; info: Types.PId; code, lval, asProperty: STRING)
+PROCEDURE Index.Index(length: INTEGER; type: Types.PType; info: Types.PId; code, asProperty: STRING)
     | length(length),
       type(type),
       info(info),
       code(code),
-      lval(lval),
       asProperty(asProperty);
 END;
 
@@ -131,15 +130,13 @@ BEGIN
         Errors.raise("POINTER TO type expected, got '"
                      + designator.currentType.description() + "'");
     END;
-    
-    designator.lval := "";
 END;
 
 PROCEDURE getAt*(d: Type; type: Types.PStorageType): STRING;
     RETURN d.root().language().codeTraits.getAt(d.derefCode, Expression.deref(d.indexExpression).code(), type);
 END;
 
-PROCEDURE advance*(VAR d: Type; type: Types.PType; info: Types.PId; code, lval: STRING; replace: BOOLEAN);
+PROCEDURE advance*(VAR d: Type; type: Types.PType; info: Types.PId; code: STRING; replace: BOOLEAN);
 BEGIN
     d.currentType := type;
     d.info := info;
@@ -148,7 +145,6 @@ BEGIN
     ELSE
         d.code := d.code + code;
     END;
-    d.lval := lval;
 END;
 
 PROCEDURE Type.handleLiteral(s: STRING);
@@ -156,7 +152,7 @@ BEGIN
     IF (s = "]") OR (s = ",") THEN
         index <- handleIndexExpression(SELF);
         SELF.propCode := index.asProperty;
-        advance(SELF, index.type, index.info, SELF.code + index.code, index.lval, FALSE);
+        advance(SELF, index.type, index.info, SELF.code + index.code, FALSE);
     END;
     IF (s = "[") OR (s = ",") THEN
         SELF.derefCode := SELF.code;
@@ -188,7 +184,7 @@ BEGIN
         fieldCode <- field.designatorCode(SELF.code, SELF);
         SELF.derefCode := fieldCode.derefCode;
         SELF.propCode := fieldCode.propCode;
-        advance(SELF, currentType, field.asVar(SELF.code, isReadOnly, SELF), fieldCode.code, "", TRUE);
+        advance(SELF, currentType, field.asVar(SELF.code, isReadOnly, SELF), fieldCode.code, TRUE);
         SELF.scope := NIL;
     END;
 END;
@@ -221,7 +217,6 @@ PROCEDURE Type.doIndexSequence(info: Types.PId; code, indexCode: STRING): PIndex
 VAR
     length: INTEGER;
     indexType: Types.PStorageType;
-    lval: STRING;
 BEGIN
     type <- SELF.currentType;
     IF type IS Types.PArray THEN
@@ -247,7 +242,7 @@ BEGIN
     readOnly <- (info IS Types.PConst) 
              OR ((info IS Types.PVariable) & info.isReadOnly());
     v <- NEW Variable.PropertyVariable(indexType, leadCode, indexCode, readOnly);
-    RETURN NEW Index(length, indexType, v, wholeCode, lval, indexCode);
+    RETURN NEW Index(length, indexType, v, wholeCode, indexCode);
 END;
 
 PROCEDURE discardCode*(VAR d: Type);
@@ -261,13 +256,8 @@ END;
 
 PROCEDURE Type.endParse(): BOOLEAN;
 BEGIN
-    code <- SELF.code;
-    lval <- SELF.lval;
-    IF LEN(lval) = 0 THEN
-        lval := code;
-    END;
     SELF.parent().attributes.designator :=
-        NEW Designator.Type(code, lval, SELF.currentType, SELF.info, SELF.scope);
+        NEW Designator.Type(SELF.code, SELF.currentType, SELF.info, SELF.scope);
     RETURN TRUE;
 END;
 

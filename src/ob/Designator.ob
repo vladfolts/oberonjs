@@ -3,16 +3,14 @@ IMPORT
     ScopeBase, Types;
 TYPE
     Type* = RECORD
-        PROCEDURE Type*(code: STRING; lval: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType);
+        PROCEDURE Type*(code: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType);
 
         PROCEDURE code*(): STRING;
-        PROCEDURE lval*(): STRING;
         PROCEDURE type*(): Types.PType;
         PROCEDURE info*(): Types.PId;
         PROCEDURE scope*(): ScopeBase.PType;
 
         mCode: STRING;
-        mLval: STRING;
         mType: Types.PType;
         mInfo: Types.PId;
         mScope: ScopeBase.PType
@@ -22,10 +20,6 @@ TYPE
 
 PROCEDURE Type.code(): STRING;
     RETURN SELF.mCode
-END;
-
-PROCEDURE Type.lval(): STRING;
-    RETURN SELF.mLval
 END;
 
 PROCEDURE Type.type(): Types.PType;
@@ -40,9 +34,8 @@ PROCEDURE Type.scope(): ScopeBase.PType;
     RETURN SELF.mScope
 END;
 
-PROCEDURE Type.Type(code: STRING; lval: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType)
+PROCEDURE Type.Type(code: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType)
   | mCode(code),
-    mLval(lval),
     mType(type),
     mInfo(info),
     mScope(scope);

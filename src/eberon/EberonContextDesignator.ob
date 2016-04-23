@@ -10,14 +10,6 @@ TYPE
     END;
     PType = POINTER TO Type;
 
-    MapElementVariable* = RECORD(Types.Variable)
-        PROCEDURE MapElementVariable(type: Types.PStorageType; readOnly: BOOLEAN; lval, rval: STRING);
-
-        elementType-: Types.PStorageType; 
-        readOnly: BOOLEAN; 
-        lval-, rval-: STRING;
-    END;
-
     ResultVariable = RECORD(Types.Variable)
         PROCEDURE ResultVariable(e: Expression.PType);
 
@@ -127,15 +119,14 @@ BEGIN
             Types.basic.ch, 
             EberonString.makeElementVariable(),
             ContextDesignator.getAt(SELF, Types.basic.ch),
-            "",
             "");
     ELSIF currentType IS EberonMap.PType THEN
         indexType <- currentType.elementsType;
         rtl <- SELF.root().language().rtl(EberonRtl.PType);
         rval <- rtl.getMappedValue(code, indexCode);
         lval <- code + "[" + indexCode + "]";
-        var <- NEW MapElementVariable(indexType, info(Types.PVariable).isReadOnly(), lval, rval);
-        result := NEW ContextDesignator.Index(0, indexType, var, rval, lval, "");
+        var <- NEW EberonMap.ElementVariable(indexType, info(Types.PVariable).isReadOnly(), lval, rval);
+        result := NEW ContextDesignator.Index(0, indexType, var, rval, "");
     ELSE
         result := SUPER(info, code, indexCode);
     END;
@@ -170,7 +161,7 @@ END;
 PROCEDURE endCall(VAR d: Type);
 BEGIN
     e <- d.procCall.end();
-    ContextDesignator.advance(d, e.type(), NEW ResultVariable(e), e.code(), "", FALSE);
+    ContextDesignator.advance(d, e.type(), NEW ResultVariable(e), e.code(), FALSE);
     d.procCall := NIL;
 END;
 
@@ -202,7 +193,7 @@ BEGIN
         endCall(SELF);
     ELSIF msg IS OperatorNewMsg THEN
         e <- msg.expression;
-        ContextDesignator.advance(SELF, e.type(), NEW ResultVariable(e), e.code(), "", FALSE);
+        ContextDesignator.advance(SELF, e.type(), NEW ResultVariable(e), e.code(), FALSE);
     ELSIF ~breakTypePromotion(msg) THEN (* no type promotion after calling functions *)
         result := SUPER(msg);
     END;    
@@ -224,46 +215,16 @@ BEGIN
     IF s = "SELF" THEN
         type <- SELF.handleMessage(getMethodSelfMsg)(Types.PStorageType);
         info <- NEW Variable.Declared("this", type);
-        ContextDesignator.advance(SELF, type, info, "this", "", FALSE);
+        ContextDesignator.advance(SELF, type, info, "this", FALSE);
     ELSIF s = "POINTER" THEN
         type <- SELF.handleMessage(getSelfAsPointerMsg)(Types.PStorageType);
-        ContextDesignator.advance(SELF, makePointer(type), NEW SelfAsPointer(), "", "", FALSE);
+        ContextDesignator.advance(SELF, makePointer(type), NEW SelfAsPointer(), "", FALSE);
     ELSIF s = "SUPER" THEN
         ms <- SELF.handleMessage(getMethodSuperMsg)(PSuperMethodInfo);
-        ContextDesignator.advance(SELF, ms.info.type, ms.info, ms.code, "", FALSE);
+        ContextDesignator.advance(SELF, ms.info.type, ms.info, ms.code, FALSE);
     ELSE
         SUPER(s);
     END;
-END;
-
-PROCEDURE MapElementVariable.MapElementVariable(type: Types.PStorageType; readOnly: BOOLEAN; lval, rval: STRING)
-    | elementType(type),
-      readOnly(readOnly),
-      lval(lval),
-      rval(rval);
-END;
-
-PROCEDURE MapElementVariable.type(): Types.PStorageType;
-    RETURN SELF.elementType;
-END;
-
-PROCEDURE MapElementVariable.isReference(): BOOLEAN;
-    RETURN FALSE;
-END;
-
-PROCEDURE MapElementVariable.isReadOnly(): BOOLEAN;
-    RETURN SELF.readOnly;
-END;
-
-PROCEDURE MapElementVariable.idType(): STRING;
-VAR
-    result: STRING;
-BEGIN
-    result := "MAP's element of type '" + SELF.elementType.description() + "'";
-    IF SELF.readOnly THEN
-        result := "read-only " + result;
-    END;
-    RETURN result;
 END;
 
 PROCEDURE ResultVariable.ResultVariable(e: Expression.PType)
