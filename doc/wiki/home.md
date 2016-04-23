@@ -17,5 +17,6 @@ To build a test html page locally and see how it works run build.cmd (Python 2.x
 ### Implementation details
 * [[JS module|JS-module]]
 * [[Report refinements|Original-report-refinements]]
+* [[Compiler options|compiler-options]]
 
 ### [[Experiments|Eberon]]
