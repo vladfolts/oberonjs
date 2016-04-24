@@ -594,8 +594,8 @@ return {
 "INTEGER number in statement": testWithGrammar(
     grammar.statement,
     pass("IF 1 < 2345 THEN END"),
-    fail(["IF 1 < 2345THEN END", "'BOOLEAN' expression expected, got 'INTEGER'"],
-         ["IF 1 < 2345HTHEN END", "'BOOLEAN' expression expected, got 'INTEGER'"])
+    fail(["IF 1 < 2345THEN END", "invalid operand"],
+         ["IF 1 < 2345HTHEN END", "invalid operand"])
     ),
 "SET statement": testWithContext(
     context(grammar.statement, "VAR s: SET;"),
@@ -622,7 +622,7 @@ return {
 "REAL number in statement": testWithGrammar(
     grammar.statement,
     pass("IF 1. < 1.2345 THEN END"),
-    fail(["IF 1. < 1.2345THEN END", "'BOOLEAN' expression expected, got 'REAL'"])
+    fail(["IF 1. < 1.2345THEN END", "invalid operand"])
     ),
 "IF statement": testWithContext(
     context(grammar.statement,

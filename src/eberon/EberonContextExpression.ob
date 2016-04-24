@@ -176,15 +176,15 @@ BEGIN
     SUPER(s);
 END;
 
-PROCEDURE RelationExpression.doRelationOperation(left, right: Expression.PType; relation: STRING): ContextExpression.BinaryOperatorCx;
+PROCEDURE RelationOps.in(left, right: Types.PType; cx: ContextHierarchy.Node): ContextExpression.BinaryOperatorCx;
 VAR
     result: ContextExpression.BinaryOperatorCx;
 BEGIN
-    IF (relation = "IN") & (right.type() IS EberonMap.PType) THEN
-        EberonContextDesignator.checkMapKeyType(left.type());
+    IF right IS EberonMap.PType THEN
+        EberonContextDesignator.checkMapKeyType(left);
         result := EberonOperator.inMap;            
     ELSE
-        result := SUPER(left, right, relation);
+        result := SUPER(left, right, cx);
     END;
     RETURN result;
 END;

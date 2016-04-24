@@ -101,7 +101,7 @@ var simpleExpression = context(
           , repeat(and(addOperator, term)))
       , contexts.SimpleExpression);
 var relation = or("=", "#", "<=", "<", ">=", ">", "IN", "IS");
-var expression = makeExpression(and(simpleExpression, optional(and(relation, simpleExpression))));
+var expression = makeExpression(and(simpleExpression, optional(and(relation, required(simpleExpression, "invalid operand")))));
 var constExpression = expression;
 
 var element = context(and(expression, optional(and("..", expression))), ContextExpression.SetElement);

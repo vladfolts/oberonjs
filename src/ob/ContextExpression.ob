@@ -20,6 +20,7 @@ TYPE
         PROCEDURE lessEq*(type: Types.PType): BinaryOperatorCx;
         PROCEDURE greaterEq*(type: Types.PType): BinaryOperatorCx;
         PROCEDURE is*(cx: ContextHierarchy.Node): BinaryOperatorCx;
+        PROCEDURE in*(left, right: Types.PType; cx: ContextHierarchy.Node): BinaryOperatorCx;
 
         PROCEDURE eqExpect(): STRING;
         PROCEDURE strongRelExpect(): STRING;
@@ -29,15 +30,25 @@ TYPE
     END;
     PRelationOps = POINTER TO RelationOps;
 
+    Item = RECORD
+        expression: Expression.PType;
+        next: POINTER TO RelExpression; 
+    END;
+
+    RelExpression = RECORD (Item)
+        PROCEDURE RelExpression(op: STRING);
+
+        op: STRING;
+    END;
+
     ExpressionNode* = RECORD(ExpressionHandler)
         PROCEDURE ExpressionNode*(parent: PExpressionHandler; ops: PRelationOps);
 
-        PROCEDURE doRelationOperation*(left, right: Expression.PType; relation: STRING): BinaryOperatorCx;
-
         relOps: PRelationOps;
-        expression: Expression.PType;
-        relation: STRING;
+        list: Item;
+        last: POINTER TO RelExpression;
     END;
+    PExpressionNode = POINTER TO ExpressionNode;
 
     SimpleExpression* = RECORD(ExpressionHandler)
         PROCEDURE type(): Types.PType;
@@ -460,6 +471,17 @@ BEGIN
     RETURN r;
 END;
 
+PROCEDURE RelationOps.in(left, right: Types.PType; cx: ContextHierarchy.Node): BinaryOperatorCx;
+BEGIN
+    IF ~Types.isInt(left) THEN
+        Errors.raise(Types.intsDescription() 
+                     + " expected as an element of SET, got '" + left.description() + "'");
+    END;
+    checkImplicitCast(cx.root()^, right, Types.basic.set);
+
+    RETURN Operator.setHasBit;
+END;
+
 PROCEDURE RelationOps.eqExpect(): STRING;
     RETURN "numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE";
 END;
@@ -494,6 +516,10 @@ BEGIN
     RETURN result;
 END;
 
+PROCEDURE RelExpression.RelExpression(op: STRING)
+    | op(op);
+END;
+
 PROCEDURE ExpressionNode.ExpressionNode(parent: PExpressionHandler; ops: PRelationOps)
     | SUPER(parent),
       relOps(ops);
@@ -505,26 +531,11 @@ END;
 
 PROCEDURE ExpressionNode.handleExpression(e: Expression.PType);
 BEGIN
-    IF SELF.expression = NIL THEN
-        SELF.expression := e;
+    IF SELF.list.expression = NIL THEN
+        SELF.list.expression := e;
     ELSE
-        leftExpression <- SELF.expression;
-        rightExpression <- e;
-        leftExpression := promoteTypeInExpression(leftExpression, rightExpression.type());
-        rightExpression := promoteTypeInExpression(rightExpression, leftExpression.type());
-
-        o <- SELF.doRelationOperation(leftExpression, rightExpression, SELF.relation);
-        SELF.expression := o(leftExpression, rightExpression, ContextHierarchy.makeLanguageContext(SELF(POINTER)));
+        SELF.last.expression := e;
     END;
-END;
-
-PROCEDURE checkSetHasBit(leftType, rightType: Types.PType; cx: ContextHierarchy.Root);
-BEGIN
-    IF ~Types.isInt(leftType) THEN
-        Errors.raise(Types.intsDescription() 
-                     + " expected as an element of SET, got '" + leftType.description() + "'");
-    END;
-    checkImplicitCast(cx, rightType, Types.basic.set);
 END;
 
 PROCEDURE notTypeId(e: Expression.PType);
@@ -548,9 +559,7 @@ BEGIN
     IF literal # "IS" THEN
         notTypeId(right);
 
-        IF literal = "IN" THEN
-            checkSetHasBit(left.type(), right.type(), context.root()^);
-        ELSE
+        IF literal # "IN" THEN
             type := ops.coalesceType(left.type(), right.type());
         END;
     END;
@@ -588,7 +597,7 @@ BEGIN
     ELSIF literal = "IS" THEN
         o := ops.is(context);
     ELSIF literal = "IN" THEN
-        o := Operator.setHasBit;
+        o := ops.in(left.type(), right.type(), context);
     END;
 
     IF LEN(mismatch) # 0 THEN
@@ -597,13 +606,39 @@ BEGIN
     RETURN o;
 END;
 
-PROCEDURE ExpressionNode.doRelationOperation(left, right: Expression.PType; relation: STRING): BinaryOperatorCx;
-    RETURN relationOp(left, right, relation, SELF.relOps, SELF);
+PROCEDURE makeFromList(list: Item; cx: PExpressionNode): Expression.PType;
+BEGIN
+    result <- list.expression;
+    next <- list.next;
+    WHILE next # NIL DO
+        leftExpression <- result;
+        rightExpression <- next.expression;
+        leftExpression := promoteTypeInExpression(leftExpression, rightExpression.type());
+        rightExpression := promoteTypeInExpression(rightExpression, leftExpression.type());
+
+        o <- relationOp(leftExpression, rightExpression, next.op, cx.relOps, cx^);
+        result := o(leftExpression, rightExpression, ContextHierarchy.makeLanguageContext(cx));
+
+        next := next.next;
+    END;
+    notTypeId(result);
+
+    type <- result.type();
+    IF type = NIL THEN
+        Errors.raise("procedure returning no result cannot be used in an expression");
+    END;
+    RETURN result;
 END;
 
 PROCEDURE ExpressionNode.handleLiteral(s: STRING);
 BEGIN
-    SELF.relation := s;
+    next <- NEW RelExpression(s);
+    IF SELF.last = NIL THEN
+        SELF.list.next := next;
+    ELSE
+        SELF.last.next := next;
+    END;
+    SELF.last := next;
 END;
 
 PROCEDURE ExpressionNode.codeGenerator(): CodeGenerator.PIGenerator;
@@ -612,17 +647,11 @@ END;
 
 PROCEDURE ExpressionNode.endParse(): BOOLEAN;
 BEGIN
-    notTypeId(SELF.expression);
-
-    type <- SELF.expression.type();
-    IF type = NIL THEN
-        Errors.raise("procedure returning no result cannot be used in an expression");
-    END;
+    expression <- makeFromList(SELF.list, SELF(POINTER));
 
     parent <- SELF.parent()(PExpressionHandler);
-    parent.codeGenerator().write(SELF.expression.code());
-    parent.handleExpression(SELF.expression);
-
+    parent.codeGenerator().write(expression.code());
+    parent.handleExpression(expression);
     RETURN TRUE;
 END;
 
