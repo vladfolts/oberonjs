@@ -306,7 +306,7 @@ BEGIN
     END;
 END;
 
-PROCEDURE AddOperator.doMatchPlusOperator(type: Types.PType): ContextExpression.BinaryOperator;
+PROCEDURE RelationOps.plus(type: Types.PType): ContextExpression.BinaryOperator;
 VAR
     result: ContextExpression.BinaryOperator;
 BEGIN
@@ -318,7 +318,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE AddOperator.doExpectPlusOperator(): STRING;
+PROCEDURE RelationOps.plusExpect(): STRING;
     RETURN "numeric type or SET or STRING";
 END;
 

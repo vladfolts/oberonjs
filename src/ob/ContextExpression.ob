@@ -21,46 +21,62 @@ TYPE
         PROCEDURE greaterEq*(type: Types.PType): BinaryOperatorCx;
         PROCEDURE is*(cx: ContextHierarchy.Node): BinaryOperatorCx;
         PROCEDURE in*(left, right: Types.PType; cx: ContextHierarchy.Node): BinaryOperatorCx;
+        PROCEDURE plus*(type: Types.PType): BinaryOperator;
 
         PROCEDURE eqExpect(): STRING;
         PROCEDURE strongRelExpect(): STRING;
         PROCEDURE relExpect(): STRING;
+        PROCEDURE plusExpect*(): STRING;
 
         PROCEDURE coalesceType*(leftType, rightType: Types.PType): Types.PType;
     END;
     PRelationOps = POINTER TO RelationOps;
 
-    Item = RECORD
+    SimpleItem = RECORD
         expression: Expression.PType;
-        next: POINTER TO RelExpression; 
+        next: POINTER TO SimpleItemOp;
     END;
 
-    RelExpression = RECORD (Item)
-        PROCEDURE RelExpression(op: STRING);
+    SimpleItemOp = RECORD (SimpleItem)
+        PROCEDURE SimpleItemOp(op: STRING);
 
         op: STRING;
     END;
 
-    ExpressionNode* = RECORD(ExpressionHandler)
+    SimpleList = RECORD (SimpleItem)
+        unaryOp: STRING;
+    END;
+    PSimpleList = POINTER TO SimpleList;
+
+    Item = RECORD
+        simple: PSimpleList;
+        next: POINTER TO ItemOp; 
+    END;
+
+    ItemOp = RECORD (Item)
+        PROCEDURE ItemOp(op: STRING);
+
+        op: STRING;
+    END;
+
+    SimpleExpression* = RECORD(ExpressionHandler)
+        PROCEDURE SimpleExpression*(parent: ContextHierarchy.PNode); 
+        PROCEDURE handleOperator(op: STRING);
+
+        list: PSimpleList;
+        last: POINTER TO SimpleItemOp;
+    END;
+    PSimpleExpression = POINTER TO SimpleExpression;
+
+    ExpressionNode* = RECORD(ContextHierarchy.Node)
         PROCEDURE ExpressionNode*(parent: PExpressionHandler; ops: PRelationOps);
+        PROCEDURE handleSimple(s: PSimpleList);
 
         relOps: PRelationOps;
         list: Item;
-        last: POINTER TO RelExpression;
+        last: POINTER TO ItemOp;
     END;
     PExpressionNode = POINTER TO ExpressionNode;
-
-    SimpleExpression* = RECORD(ExpressionHandler)
-        PROCEDURE type(): Types.PType;
-        PROCEDURE setType(type: Types.PType);
-        PROCEDURE handleOperator(op: BinaryOperator);
-
-        mType: Types.PType;
-        unaryOperator: STRING;
-        binaryOperator: BinaryOperator;
-        expression: Expression.PType;
-    END;
-    PSimpleExpression = POINTER TO SimpleExpression;
 
     PFactor = POINTER TO Factor;
 
@@ -84,8 +100,6 @@ TYPE
     END;
 
     AddOperator* = RECORD(ContextHierarchy.Node)
-        PROCEDURE doMatchPlusOperator*(type: Types.PType): BinaryOperator;
-        PROCEDURE doExpectPlusOperator*(): STRING;
     END;
 
     Const = RECORD(ContextHierarchy.Node)
@@ -516,7 +530,11 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelExpression.RelExpression(op: STRING)
+PROCEDURE ItemOp.ItemOp(op: STRING)
+    | op(op);
+END;
+
+PROCEDURE SimpleItemOp.SimpleItemOp(op: STRING)
     | op(op);
 END;
 
@@ -526,15 +544,6 @@ PROCEDURE ExpressionNode.ExpressionNode(parent: PExpressionHandler; ops: PRelati
 BEGIN
     IF ops = NIL THEN
         SELF.relOps := relationOps;
-    END;
-END;
-
-PROCEDURE ExpressionNode.handleExpression(e: Expression.PType);
-BEGIN
-    IF SELF.list.expression = NIL THEN
-        SELF.list.expression := e;
-    ELSE
-        SELF.last.expression := e;
     END;
 END;
 
@@ -606,13 +615,76 @@ BEGIN
     RETURN o;
 END;
 
-PROCEDURE makeFromList(list: Item; cx: PExpressionNode): Expression.PType;
+PROCEDURE makeFirstFromSimpleList(list: SimpleList): Expression.PType;
+VAR
+    o: PROCEDURE(e: Expression.PType): Expression.PType;
 BEGIN
     result <- list.expression;
+    IF list.unaryOp = "-" THEN
+        type <- result.type();
+        IF Types.isInt(type) THEN
+            o := Operator.negateInt;
+        ELSIF type = Types.basic.set THEN
+            o := Operator.setComplement;
+        ELSIF type = Types.basic.real THEN
+            o := Operator.negateReal;
+        ELSE
+            throwOperatorTypeMismatch(list.unaryOp, numericOrSetOpTypeCheck.expect(), type);
+        END;
+    ELSIF list.unaryOp = "+" THEN
+        assertOpType(result.type(), numericOpTypeCheck, list.unaryOp);
+        o := Operator.unaryPlus;
+    END;
+    IF o # NIL THEN
+        notTypeId(result);
+        result := o(result);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE matchAddOperator(ops: RelationOps; s: STRING; type: Types.PType): BinaryOperator;
+VAR
+    result: BinaryOperator;
+BEGIN
+    IF s = "+" THEN
+        result := ops.plus(type);
+    ELSIF s = "-" THEN
+        result := assertNumericOrSetOp(type, s, Operator.subReal, Operator.subInt, Operator.setDiff);
+    ELSIF s = "OR" THEN
+        IF type # Types.basic.bool THEN
+            Errors.raise("BOOLEAN expected as operand of 'OR', got '"
+                         + type.description() + "'");
+        END;
+        result := Operator.or;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE makeFromSimpleList(list: SimpleList; ops: RelationOps; cx: ContextHierarchy.Root): Expression.PType;
+BEGIN
+    result <- makeFirstFromSimpleList(list);
+    next <- list.next;
+    WHILE next # NIL DO
+        notTypeId(result);
+        e <- next.expression;
+        notTypeId(e);
+        o <- matchAddOperator(ops, next.op, result.type());
+        checkImplicitCast(cx, e.type(), result.type());
+        result := o(result, e);
+
+        next := next.next;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE makeFromList(list: Item; cx: PExpressionNode): Expression.PType;
+BEGIN
+    root <- cx.root();
+    result <- makeFromSimpleList(list.simple^, cx.relOps^, root^);
     next <- list.next;
     WHILE next # NIL DO
         leftExpression <- result;
-        rightExpression <- next.expression;
+        rightExpression <- makeFromSimpleList(next.simple^, cx.relOps^, root^);
         leftExpression := promoteTypeInExpression(leftExpression, rightExpression.type());
         rightExpression := promoteTypeInExpression(rightExpression, leftExpression.type());
 
@@ -632,7 +704,7 @@ END;
 
 PROCEDURE ExpressionNode.handleLiteral(s: STRING);
 BEGIN
-    next <- NEW RelExpression(s);
+    next <- NEW ItemOp(s);
     IF SELF.last = NIL THEN
         SELF.list.next := next;
     ELSE
@@ -645,6 +717,15 @@ PROCEDURE ExpressionNode.codeGenerator(): CodeGenerator.PIGenerator;
     RETURN CodeGenerator.nullGenerator;
 END;
 
+PROCEDURE ExpressionNode.handleSimple(s: PSimpleList);
+BEGIN
+    IF SELF.list.simple = NIL THEN
+        SELF.list.simple := s;
+    ELSE
+        SELF.last.simple := s;
+    END;
+END;
+
 PROCEDURE ExpressionNode.endParse(): BOOLEAN;
 BEGIN
     expression <- makeFromList(SELF.list, SELF(POINTER));
@@ -655,69 +736,39 @@ BEGIN
     RETURN TRUE;
 END;
 
+PROCEDURE SimpleExpression.SimpleExpression(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      list(NEW SimpleList());
+END; 
+
 PROCEDURE SimpleExpression.handleExpression(e: Expression.PType);
-VAR
-    o: PROCEDURE(e: Expression.PType): Expression.PType;
 BEGIN
-    type <- e.type();
-    SELF.setType(type);
-    
-    IF SELF.unaryOperator = "-" THEN
-        IF Types.isInt(type) THEN
-            o := Operator.negateInt;
-        ELSIF type = Types.basic.set THEN
-            o := Operator.setComplement;
-        ELSIF type = Types.basic.real THEN
-            o := Operator.negateReal;
-        ELSE
-            throwOperatorTypeMismatch(SELF.unaryOperator, numericOrSetOpTypeCheck.expect(), type);
-        END;
-    ELSIF SELF.unaryOperator = "+" THEN
-        assertOpType(type, numericOpTypeCheck, SELF.unaryOperator);
-        o := Operator.unaryPlus;
-    END;
-
-    IF o # NIL THEN
-        notTypeId(e);
-
-        SELF.expression := o(e);
-        SELF.unaryOperator := "";
-    ELSIF SELF.expression # NIL THEN
-        notTypeId(SELF.expression);
-        notTypeId(e);
-
-        SELF.expression := SELF.binaryOperator(SELF.expression, e);
+    IF SELF.list.expression = NIL THEN
+        SELF.list.expression := e;
     ELSE
-        SELF.expression := e;
+        SELF.last.expression := e;
     END;
 END;
 
 PROCEDURE SimpleExpression.handleLiteral(s: STRING);
 BEGIN
-    SELF.unaryOperator := s;
+    SELF.list.unaryOp := s;
 END;
 
-PROCEDURE SimpleExpression.type(): Types.PType;
-    RETURN SELF.mType;
-END;
-
-PROCEDURE SimpleExpression.setType(type: Types.PType);
+PROCEDURE SimpleExpression.handleOperator(op: STRING);
 BEGIN
-    IF (type = NIL) OR (SELF.mType = NIL) THEN
-        SELF.mType := type;
+    next <- NEW SimpleItemOp(op);
+    IF SELF.last = NIL THEN
+        SELF.list.next := next;
     ELSE
-        checkImplicitCast(SELF.root()^, type, SELF.mType);
+        SELF.last.next := next;
     END;
-END;
-
-PROCEDURE SimpleExpression.handleOperator(o: BinaryOperator);
-BEGIN
-    SELF.binaryOperator := o;
+    SELF.last := next;
 END;
 
 PROCEDURE SimpleExpression.endParse(): BOOLEAN;
 BEGIN
-    SELF.parent()^(ExpressionNode).handleExpression(SELF.expression);
+    SELF.parent()^(ExpressionNode).handleSimple(SELF.list);
     RETURN TRUE;
 END;
 
@@ -835,38 +886,13 @@ BEGIN
     parent.handleOperator(o);
 END;
 
-PROCEDURE matchAddOperator(cx: AddOperator; s: STRING; type: Types.PType): BinaryOperator;
-VAR
-    result: BinaryOperator;
-BEGIN
-    IF s = "+" THEN
-        result := cx.doMatchPlusOperator(type);
-        IF result = NIL THEN
-            throwOperatorTypeMismatch(s, cx.doExpectPlusOperator(), type);
-        END;
-    ELSIF s = "-" THEN
-        result := assertNumericOrSetOp(type, s, Operator.subReal, Operator.subInt, Operator.setDiff);
-    ELSIF s = "OR" THEN
-        IF type # Types.basic.bool THEN
-            Errors.raise("BOOLEAN expected as operand of 'OR', got '"
-                         + type.description() + "'");
-        END;
-        result := Operator.or;
-    END;
-    RETURN result;
-END;
-
 PROCEDURE AddOperator.handleLiteral(s: STRING);
 BEGIN
     parent <- SELF.parent()(PSimpleExpression);
-    type <- parent.type();
-    o <- matchAddOperator(SELF, s, type);
-    IF o # NIL THEN
-        parent.handleOperator(o);
-    END;
+    parent.handleOperator(s);
 END;
 
-PROCEDURE AddOperator.doMatchPlusOperator(type: Types.PType): BinaryOperator;
+PROCEDURE RelationOps.plus(type: Types.PType): BinaryOperator;
 VAR
     result: BinaryOperator;
 BEGIN
@@ -876,11 +902,13 @@ BEGIN
         result := Operator.addInt;
     ELSIF type = Types.basic.real THEN
         result := Operator.addReal;
+    ELSE
+        throwOperatorTypeMismatch("+", SELF.plusExpect(), type);
     END;
     RETURN result;
 END;
 
-PROCEDURE AddOperator.doExpectPlusOperator(): STRING;
+PROCEDURE RelationOps.plusExpect(): STRING;
     RETURN "numeric type or SET";
 END;
 
