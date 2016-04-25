@@ -391,7 +391,7 @@ return {
     ),
 "NEW": testWithContext(
     context(grammar.statement,
-            "TYPE P = POINTER TO RECORD END;"
+            "TYPE P = POINTER TO RECORD END; T = RECORD END;"
             + "VAR p: P; i: INTEGER; r: RECORD END;"
             + "PROCEDURE proc(): P; RETURN NIL END proc;"
             ),
@@ -401,7 +401,10 @@ return {
          ["NEW(r)", "POINTER variable expected, got 'anonymous RECORD'"],
          ["NEW()", "1 argument(s) expected, got 0"],
          ["NEW(p, p)", "1 argument(s) expected, got 2"],
-         ["NEW(proc())", "expression cannot be used as VAR parameter"])
+         ["NEW(proc())", "expression cannot be used as VAR parameter"],
+         ["NEW(P)", "cannot apply type cast to procedure"],
+         ["NEW(T)", "cannot apply type cast to procedure"]
+         )
     ),
 "ABS": testWithContext(
     context(grammar.statement,

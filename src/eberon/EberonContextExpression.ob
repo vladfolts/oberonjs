@@ -21,8 +21,6 @@ TYPE
     END;
 
     SimpleExpression* = RECORD(ContextExpression.SimpleExpression)
-        PROCEDURE handleLogicalOr();
-
         typePromotion: EberonTypePromotion.PCombined;
         currentPromotion: EberonTypePromotion.PMaybe;
         orHandled: BOOLEAN;
@@ -45,7 +43,7 @@ TYPE
     MulOperator* = RECORD(ContextExpression.MulOperator)
     END;
 
-    RelationOps = RECORD(ContextExpression.RelationOps)
+    Ops = RECORD(ContextExpression.Ops)
     END;
 
     BeginTypePromotionAndMsg = RECORD(ContextHierarchy.Message)
@@ -57,7 +55,7 @@ TYPE
     END;
 
 VAR
-    relationOps: POINTER TO RelationOps;
+    globalOps: POINTER TO Ops;
 
 PROCEDURE hierarchyDepth(t: Record.Type): INTEGER;
 BEGIN
@@ -149,7 +147,7 @@ BEGIN
 END;
 
 PROCEDURE RelationExpression.RelationExpression(parent: ContextExpression.PExpressionHandler)
-    | SUPER(parent, relationOps);
+    | SUPER(parent, globalOps);
 END;
 
 PROCEDURE RelationExpression.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
@@ -176,7 +174,7 @@ BEGIN
     SUPER(s);
 END;
 
-PROCEDURE RelationOps.in(left, right: Types.PType; cx: ContextHierarchy.Node): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.in(left, right: Types.PType; cx: ContextHierarchy.Node): ContextExpression.BinaryOperatorCx;
 VAR
     result: ContextExpression.BinaryOperatorCx;
 BEGIN
@@ -198,8 +196,10 @@ BEGIN
     RETURN SUPER();
 END;
 
-PROCEDURE SimpleExpression.handleLogicalOr();
+PROCEDURE SimpleExpression.handleOperator(op: STRING);
 BEGIN
+    SUPER(op);
+
     IF SELF.typePromotion # NIL THEN
         SELF.currentPromotion := SELF.typePromotion.next();
     ELSE
@@ -306,7 +306,7 @@ BEGIN
     END;
 END;
 
-PROCEDURE RelationOps.plus(type: Types.PType): ContextExpression.BinaryOperator;
+PROCEDURE Ops.plus(type: Types.PType): ContextExpression.BinaryOperator;
 VAR
     result: ContextExpression.BinaryOperator;
 BEGIN
@@ -318,14 +318,8 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.plusExpect(): STRING;
+PROCEDURE Ops.plusExpect(): STRING;
     RETURN "numeric type or SET or STRING";
-END;
-
-PROCEDURE AddOperator.endParse(): BOOLEAN;
-BEGIN
-    SELF.parent()^(SimpleExpression).handleLogicalOr();
-    RETURN TRUE;
 END;
 
 PROCEDURE MulOperator.endParse(): BOOLEAN;
@@ -334,7 +328,7 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE RelationOps.eq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.eq(type: Types.PType): ContextExpression.BinaryOperatorCx;
 VAR
     result: ContextExpression.BinaryOperatorCx;
 BEGIN
@@ -346,7 +340,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.notEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.notEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
 VAR
     result: ContextExpression.BinaryOperatorCx;
 BEGIN
@@ -358,7 +352,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.less(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.less(type: Types.PType): ContextExpression.BinaryOperatorCx;
 VAR
     result: ContextExpression.BinaryOperatorCx;
 BEGIN
@@ -370,7 +364,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.greater(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.greater(type: Types.PType): ContextExpression.BinaryOperatorCx;
 VAR
     result: ContextExpression.BinaryOperatorCx;
 BEGIN
@@ -382,7 +376,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.lessEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.lessEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
 VAR
     result: ContextExpression.BinaryOperatorCx;
 BEGIN
@@ -394,7 +388,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.greaterEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.greaterEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
 VAR
     result: ContextExpression.BinaryOperatorCx;
 BEGIN
@@ -406,7 +400,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.is(cx: ContextHierarchy.Node): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.is(cx: ContextHierarchy.Node): ContextExpression.BinaryOperatorCx;
 VAR
     impl: ContextExpression.BinaryOperatorCx;
     r: ContextExpression.BinaryOperatorCx;
@@ -431,7 +425,7 @@ BEGIN
     RETURN r;
 END;
 
-PROCEDURE RelationOps.coalesceType(leftType, rightType: Types.PType): Types.PType;
+PROCEDURE Ops.coalesceType(leftType, rightType: Types.PType): Types.PType;
 VAR
     result: Types.PType;
 BEGIN
@@ -445,5 +439,5 @@ BEGIN
 END;
 
 BEGIN
-    NEW(relationOps);
+    NEW(globalOps);
 END EberonContextExpression.

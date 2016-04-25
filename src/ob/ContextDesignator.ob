@@ -95,7 +95,12 @@ END;
 
 PROCEDURE Type.handleTypeCast(type: Types.PType);
 BEGIN
-    ContextExpression.checkTypeCast(SELF.info(Types.PVariable), SELF.currentType, type, "type cast");
+    info <- SELF.info;
+    IF info IS Types.PVariable THEN
+        ContextExpression.checkTypeCast(info, SELF.currentType, type, "type cast");
+    ELSE
+        Errors.raise("cannot apply type cast to " + info.idType());
+    END;
 
     code <- SELF.root().language().rtl.typeGuard(SELF.code, ContextExpression.castCode(type, SELF));
     SELF.code := code;

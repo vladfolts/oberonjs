@@ -12,7 +12,7 @@ TYPE
     BinaryOperator* = PROCEDURE(l, r: Expression.PType): Expression.PType;
     BinaryOperatorCx* = PROCEDURE(l, r: Expression.PType; cx: LanguageContext.PType): Expression.PType;
 
-    RelationOps* = RECORD
+    Ops* = RECORD
         PROCEDURE eq*(type: Types.PType): BinaryOperatorCx;
         PROCEDURE notEq*(type: Types.PType): BinaryOperatorCx;
         PROCEDURE less*(type: Types.PType): BinaryOperatorCx;
@@ -30,11 +30,12 @@ TYPE
 
         PROCEDURE coalesceType*(leftType, rightType: Types.PType): Types.PType;
     END;
-    PRelationOps = POINTER TO RelationOps;
+    POps = POINTER TO Ops;
 
+    PSimpleItemOp = POINTER TO SimpleItemOp;
     SimpleItem = RECORD
         expression: Expression.PType;
-        next: POINTER TO SimpleItemOp;
+        next: PSimpleItemOp;
     END;
 
     SimpleItemOp = RECORD (SimpleItem)
@@ -44,7 +45,11 @@ TYPE
     END;
 
     SimpleList = RECORD (SimpleItem)
+        PROCEDURE addExpression(e: Expression.PType);
+        PROCEDURE addOp(op: STRING);
+
         unaryOp: STRING;
+        last: PSimpleItemOp;
     END;
     PSimpleList = POINTER TO SimpleList;
 
@@ -61,18 +66,17 @@ TYPE
 
     SimpleExpression* = RECORD(ExpressionHandler)
         PROCEDURE SimpleExpression*(parent: ContextHierarchy.PNode); 
-        PROCEDURE handleOperator(op: STRING);
+        PROCEDURE handleOperator*(op: STRING);
 
         list: PSimpleList;
-        last: POINTER TO SimpleItemOp;
     END;
     PSimpleExpression = POINTER TO SimpleExpression;
 
     ExpressionNode* = RECORD(ContextHierarchy.Node)
-        PROCEDURE ExpressionNode*(parent: PExpressionHandler; ops: PRelationOps);
+        PROCEDURE ExpressionNode*(parent: PExpressionHandler; ops: POps);
         PROCEDURE handleSimple(s: PSimpleList);
 
-        relOps: PRelationOps;
+        relOps: POps;
         list: Item;
         last: POINTER TO ItemOp;
     END;
@@ -152,7 +156,7 @@ VAR
     intOpTypeCheck: IntOpTypeCheck;
     numericOpTypeCheck: NumericOpTypeCheck;
     numericOrSetOpTypeCheck: NumericOrSetOpTypeCheck;
-    relationOps: PRelationOps;
+    globalOps: POps;
 
 PROCEDURE throwOperatorTypeMismatch(op, expect: STRING; type: Types.PType);
 BEGIN
@@ -341,7 +345,7 @@ BEGIN
     END;
 END checkTypeCast;
 
-PROCEDURE RelationOps.eq(type: Types.PType): BinaryOperatorCx;
+PROCEDURE Ops.eq(type: Types.PType): BinaryOperatorCx;
 VAR
     result: BinaryOperatorCx;
 BEGIN
@@ -357,7 +361,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.notEq(type: Types.PType): BinaryOperatorCx;
+PROCEDURE Ops.notEq(type: Types.PType): BinaryOperatorCx;
 VAR
     result: BinaryOperatorCx;
 BEGIN
@@ -373,7 +377,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.less(type: Types.PType): BinaryOperatorCx;
+PROCEDURE Ops.less(type: Types.PType): BinaryOperatorCx;
 VAR
     result: BinaryOperatorCx;
 BEGIN
@@ -387,7 +391,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.greater(type: Types.PType): BinaryOperatorCx;
+PROCEDURE Ops.greater(type: Types.PType): BinaryOperatorCx;
 VAR
     result: BinaryOperatorCx;
 BEGIN
@@ -401,7 +405,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.lessEq(type: Types.PType): BinaryOperatorCx;
+PROCEDURE Ops.lessEq(type: Types.PType): BinaryOperatorCx;
 VAR
     result: BinaryOperatorCx;
 BEGIN
@@ -417,7 +421,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.greaterEq(type: Types.PType): BinaryOperatorCx;
+PROCEDURE Ops.greaterEq(type: Types.PType): BinaryOperatorCx;
 VAR
     result: BinaryOperatorCx;
 BEGIN
@@ -463,7 +467,7 @@ BEGIN
     RETURN Operator.is(left, Expression.makeSimple(castCode(rightType, cx), NIL));
 END;
 
-PROCEDURE RelationOps.is(cx: ContextHierarchy.Node): BinaryOperatorCx;
+PROCEDURE Ops.is(cx: ContextHierarchy.Node): BinaryOperatorCx;
 VAR
     r: BinaryOperatorCx;
 
@@ -485,7 +489,7 @@ BEGIN
     RETURN r;
 END;
 
-PROCEDURE RelationOps.in(left, right: Types.PType; cx: ContextHierarchy.Node): BinaryOperatorCx;
+PROCEDURE Ops.in(left, right: Types.PType; cx: ContextHierarchy.Node): BinaryOperatorCx;
 BEGIN
     IF ~Types.isInt(left) THEN
         Errors.raise(Types.intsDescription() 
@@ -496,19 +500,19 @@ BEGIN
     RETURN Operator.setHasBit;
 END;
 
-PROCEDURE RelationOps.eqExpect(): STRING;
+PROCEDURE Ops.eqExpect(): STRING;
     RETURN "numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE";
 END;
 
-PROCEDURE RelationOps.strongRelExpect(): STRING;
+PROCEDURE Ops.strongRelExpect(): STRING;
     RETURN "numeric type or CHAR or character array";
 END;
 
-PROCEDURE RelationOps.relExpect(): STRING;
+PROCEDURE Ops.relExpect(): STRING;
     RETURN "numeric type or SET or CHAR or character array";
 END;
 
-PROCEDURE RelationOps.coalesceType(leftType, rightType: Types.PType): Types.PType;
+PROCEDURE Ops.coalesceType(leftType, rightType: Types.PType): Types.PType;
 VAR
     result: Types.PType;
 BEGIN
@@ -538,12 +542,12 @@ PROCEDURE SimpleItemOp.SimpleItemOp(op: STRING)
     | op(op);
 END;
 
-PROCEDURE ExpressionNode.ExpressionNode(parent: PExpressionHandler; ops: PRelationOps)
+PROCEDURE ExpressionNode.ExpressionNode(parent: PExpressionHandler; ops: POps)
     | SUPER(parent),
       relOps(ops);
 BEGIN
     IF ops = NIL THEN
-        SELF.relOps := relationOps;
+        SELF.relOps := globalOps;
     END;
 END;
 
@@ -558,7 +562,7 @@ BEGIN
     END;
 END;
 
-PROCEDURE relationOp(left, right: Expression.PType; literal: STRING; ops: PRelationOps; context: ContextHierarchy.Node): BinaryOperatorCx;
+PROCEDURE relationOp(left, right: Expression.PType; literal: STRING; ops: POps; context: ContextHierarchy.Node): BinaryOperatorCx;
 VAR
     type: Types.PType;
     o: BinaryOperatorCx;
@@ -642,7 +646,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE matchAddOperator(ops: RelationOps; s: STRING; type: Types.PType): BinaryOperator;
+PROCEDURE matchAddOperator(ops: Ops; s: STRING; type: Types.PType): BinaryOperator;
 VAR
     result: BinaryOperator;
 BEGIN
@@ -660,7 +664,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE makeFromSimpleList(list: SimpleList; ops: RelationOps; cx: ContextHierarchy.Root): Expression.PType;
+PROCEDURE makeFromSimpleList(list: SimpleList; ops: Ops; cx: ContextHierarchy.Root): Expression.PType;
 BEGIN
     result <- makeFirstFromSimpleList(list);
     next <- list.next;
@@ -743,11 +747,27 @@ END;
 
 PROCEDURE SimpleExpression.handleExpression(e: Expression.PType);
 BEGIN
-    IF SELF.list.expression = NIL THEN
-        SELF.list.expression := e;
+    SELF.list.addExpression(e);
+END;
+
+PROCEDURE SimpleList.addExpression(e: Expression.PType);
+BEGIN
+    IF SELF.expression = NIL THEN
+        SELF.expression := e;
     ELSE
         SELF.last.expression := e;
     END;
+END;
+
+PROCEDURE SimpleList.addOp(op: STRING);
+BEGIN
+    next <- NEW SimpleItemOp(op);
+    IF SELF.last = NIL THEN
+        SELF.next := next;
+    ELSE
+        SELF.last.next := next;
+    END;
+    SELF.last := next;
 END;
 
 PROCEDURE SimpleExpression.handleLiteral(s: STRING);
@@ -757,13 +777,7 @@ END;
 
 PROCEDURE SimpleExpression.handleOperator(op: STRING);
 BEGIN
-    next <- NEW SimpleItemOp(op);
-    IF SELF.last = NIL THEN
-        SELF.list.next := next;
-    ELSE
-        SELF.last.next := next;
-    END;
-    SELF.last := next;
+    SELF.list.addOp(op);
 END;
 
 PROCEDURE SimpleExpression.endParse(): BOOLEAN;
@@ -892,7 +906,7 @@ BEGIN
     parent.handleOperator(s);
 END;
 
-PROCEDURE RelationOps.plus(type: Types.PType): BinaryOperator;
+PROCEDURE Ops.plus(type: Types.PType): BinaryOperator;
 VAR
     result: BinaryOperator;
 BEGIN
@@ -908,7 +922,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationOps.plusExpect(): STRING;
+PROCEDURE Ops.plusExpect(): STRING;
     RETURN "numeric type or SET";
 END;
 
@@ -1084,5 +1098,5 @@ BEGIN
 END;
 
 BEGIN
-    NEW(relationOps);
+    NEW(globalOps);
 END ContextExpression.
