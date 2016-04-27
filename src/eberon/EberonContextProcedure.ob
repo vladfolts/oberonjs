@@ -5,7 +5,7 @@ IMPORT
     ContextProcedure, ContextType, 
     EberonConstructor, EberonContext, EberonContextDesignator, 
     EberonDynamicArray, EberonMap, EberonRecord, EberonTypePromotion, EberonTypes,
-    Errors, Expression, LanguageContext, Object, Procedure, Record, Types, Variable;
+    Errors, Expression, ExpressionTree, LanguageContext, Object, Procedure, Record, Types, Variable;
 TYPE
     ProcOrMethodDeclaration* = RECORD(ContextProcedure.Declaration)
         boundType: EberonRecord.PRecord;
@@ -316,7 +316,7 @@ END;
 PROCEDURE ProcOrMethodId.handleLiteral(s: STRING);
 BEGIN
     ss <- ContextHierarchy.getSymbolAndScope(SELF.root()^, SELF.maybeTypeId);
-    type <- ContextExpression.unwrapType(ss.symbol().info());
+    type <- ExpressionTree.unwrapType(ss.symbol().info());
     IF ~(type IS EberonRecord.PRecord) THEN
         Errors.raise(
               "RECORD type expected in method declaration, got '"

@@ -1,0 +1,711 @@
+MODULE ExpressionTree;
+IMPORT
+	Cast, Context, ContextHierarchy,
+	JS, 
+	Errors, Expression, LanguageContext, Operator, Record, String, Types, TypeId;
+TYPE
+    BinaryOperator* = PROCEDURE(l, r: Expression.PType): Expression.PType;
+    BinaryOperatorCx* = PROCEDURE(l, r: Expression.PType; cx: LanguageContext.PType): Expression.PType;
+
+    Ops* = RECORD
+        PROCEDURE eq*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE notEq*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE less*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE greater*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE lessEq*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE greaterEq*(type: Types.PType): BinaryOperatorCx;
+        PROCEDURE is*(cx: ContextHierarchy.Node): BinaryOperatorCx;
+        PROCEDURE in*(left, right: Types.PType; cx: ContextHierarchy.Node): BinaryOperatorCx;
+        PROCEDURE plus*(type: Types.PType): BinaryOperator;
+
+        PROCEDURE eqExpect(): STRING;
+        PROCEDURE strongRelExpect(): STRING;
+        PROCEDURE relExpect(): STRING;
+        PROCEDURE plusExpect*(): STRING;
+
+        PROCEDURE coalesceType*(leftType, rightType: Types.PType): Types.PType;
+    END;
+    POps* = POINTER TO Ops;
+
+    PSimpleItemOp = POINTER TO SimpleItemOp;
+    SimpleItem = RECORD
+        expression: Expression.PType;
+        next: PSimpleItemOp;
+    END;
+
+    SimpleItemOp = RECORD (SimpleItem)
+        PROCEDURE SimpleItemOp(op: STRING);
+
+        op: STRING;
+    END;
+
+    SimpleList* = RECORD (SimpleItem)
+        PROCEDURE addExpression*(e: Expression.PType);
+        PROCEDURE addOp*(op: STRING);
+
+        unaryOp*: STRING;
+        last: PSimpleItemOp;
+    END;
+    PSimpleList* = POINTER TO SimpleList;
+
+    Item = RECORD
+        simple: PSimpleList;
+        next: POINTER TO ItemOp; 
+    END;
+
+    Node* = RECORD (Item)
+    	PROCEDURE Node*(ops: POps);
+
+    	PROCEDURE makeSimple*(): PSimpleList;
+    	PROCEDURE addSimple*(s: PSimpleList);
+        PROCEDURE addOp*(op: STRING);
+    	PROCEDURE asExpression*(cx: ContextHierarchy.PNode): Expression.PType;
+
+    	ops: POps;
+        last: POINTER TO ItemOp;
+    END;
+    PNode* = POINTER TO Node;
+
+    ItemOp = RECORD (Item)
+        PROCEDURE ItemOp(op: STRING);
+
+        op: STRING;
+    END;
+
+    OpTypeCheck = RECORD
+        PROCEDURE expect(): STRING;
+        PROCEDURE check(t: Types.PType): BOOLEAN;
+    END;
+
+    IntOpTypeCheck* = RECORD(OpTypeCheck)
+    END;
+
+    NumericOpTypeCheck = RECORD(OpTypeCheck)
+    END;
+
+    NumericOrSetOpTypeCheck = RECORD(NumericOpTypeCheck)
+    END;
+
+VAR
+    numericOpTypeCheck: NumericOpTypeCheck;
+    numericOrSetOpTypeCheck: NumericOrSetOpTypeCheck;
+
+PROCEDURE throwTypeNameExpected*();
+BEGIN
+    Errors.raise("type name expected");
+END;
+
+PROCEDURE castCode*(type: Types.PType; cx: Context.Type): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF type IS Record.PPointer THEN
+        baseType <- Record.pointerBase(type^);
+        result := Record.constructor(cx, baseType^);
+    ELSE
+        result := Record.constructor(cx, type(Record.PType)^);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE unwrapTypeId*(id: Types.PId): TypeId.PType;
+VAR
+    result: TypeId.PType;
+BEGIN
+    IF ~(id IS TypeId.PType) THEN
+        throwTypeNameExpected();
+    ELSE
+        result := id;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE unwrapType*(id: Types.PId): Types.PStorageType;
+    RETURN unwrapTypeId(id).type();
+END;
+
+PROCEDURE checkTypeCast*(fromInfo: Types.PVariable; fromType, toType: Types.PType; msg: STRING);
+VAR
+    PROCEDURE checkCommonBase(from, to: Record.PType; prefix: STRING);
+    BEGIN
+        t <- to.base;
+        WHILE (t # NIL) & (t # from) DO
+            t := t.base;
+        END;
+        IF t = NIL THEN
+            Errors.raise(prefix + ": '" + to.description()
+                       + "' is not an extension of '" + from.description() + "'");
+        END;
+    END;
+
+BEGIN
+    prefix <- "invalid " + msg;
+
+    pointerExpected <- fromType IS Record.PPointer;
+    IF ~pointerExpected & ~(fromType IS Record.PType) THEN
+        Errors.raise(
+            prefix + ": POINTER to type or RECORD expected, got '"
+            + fromType.description() + "'");
+    END;
+
+    IF ~pointerExpected THEN
+        IF (fromInfo # NIL) & ~fromInfo.isReference() THEN
+            Errors.raise(
+                prefix + ": a value variable cannot be used");
+        ELSIF ~(toType IS Record.PType) THEN
+            Errors.raise(
+                prefix + ": RECORD type expected as an argument of RECORD " + msg + ", got '"
+              + toType.description() + "'");
+        END;
+    ELSIF ~(toType IS Record.PPointer) THEN
+        Errors.raise(
+            prefix + ": POINTER type expected as an argument of POINTER " + msg + ", got '"
+          + toType.description() + "'");
+    END;
+
+    IF pointerExpected THEN
+        checkCommonBase(Record.pointerBase(fromType(Record.PPointer)^), 
+                        Record.pointerBase(toType(Record.PPointer)^), 
+                        prefix);
+    ELSE
+        checkCommonBase(fromType(Record.PType), 
+                        toType(Record.PType), 
+                        prefix);
+    END;
+END checkTypeCast;
+
+PROCEDURE typeTest*(left: Expression.PType; right: Types.PId; cx: ContextHierarchy.Node): Expression.PType;
+VAR
+    leftVar: Types.PVariable;
+BEGIN
+    d <- left.designator();
+    IF d # NIL THEN
+        info <- d.info();
+        IF info IS Types.PVariable THEN
+            leftVar := info;
+        END;
+    END;
+
+    rightType <- unwrapType(right);
+    checkTypeCast(leftVar, left.type(), rightType, "type test");
+    RETURN Operator.is(left, Expression.makeSimple(castCode(rightType, cx), NIL));
+END;
+
+PROCEDURE throwTypeMismatch(from, to: Types.PType);
+VAR
+    fromDescription: STRING;
+BEGIN
+    IF from # NIL THEN
+        fromDescription := "'" + from.description() + "'";
+    ELSE
+        fromDescription := "no type (proper procedure call)";
+    END;
+    Errors.raise("type mismatch: expected '" + to.description() 
+               + "', got " + fromDescription);
+END;
+
+PROCEDURE throwOperatorTypeMismatch(op, expect: STRING; type: Types.PType);
+BEGIN
+    Errors.raise(
+        "operator '" + op +
+        "' type mismatch: " + expect + " expected, got '" +
+        type.description() + "'");
+END;
+
+PROCEDURE checkTypeMatch*(from, to: Types.PType);
+BEGIN
+    IF ~Cast.areTypesMatch(from, to) THEN
+        throwTypeMismatch(from, to);
+    END;
+END;
+
+PROCEDURE checkImplicitCast*(cx: ContextHierarchy.Root; from, to: Types.PType);
+VAR
+    op: LanguageContext.PCastOp;
+BEGIN
+    IF cx.language().types.implicitCast(from, to, FALSE, op) # Cast.errNo THEN
+        throwTypeMismatch(from, to);
+    END;
+END;
+
+PROCEDURE useIntOrderOp(t: Types.PType): BOOLEAN;
+    RETURN Types.isInt(t) OR (t = Types.basic.ch);
+END;
+
+PROCEDURE useIntEqOp(t: Types.PType): BOOLEAN;
+    RETURN Types.isInt(t)
+        OR (t = Types.basic.bool)
+        OR (t = Types.basic.ch)
+        OR (t IS Record.PPointer)
+        OR (t IS Types.PProcedure)
+        OR (t = Types.nil);
+END;
+
+PROCEDURE assertOpType*(type: Types.PType; check: OpTypeCheck; literal: STRING);
+BEGIN
+    IF ~check.check(type) THEN
+        throwOperatorTypeMismatch(literal, check.expect(), type);
+    END;
+END;
+
+PROCEDURE assertNumericOrSetOp*(type: Types.PType; literal: STRING; op: BinaryOperator; intOp, setOp: BinaryOperator): BinaryOperator;
+VAR
+    result: BinaryOperator;
+BEGIN
+    assertOpType(type, numericOrSetOpTypeCheck, literal);
+    IF Types.isInt(type) THEN
+        result := intOp;
+    ELSIF type = Types.basic.set THEN
+        result := setOp;
+    ELSE
+        result := op;
+    END;
+    RETURN result;
+END;
+(*
+PROCEDURE assertNumericOp*(type: Types.PType; literal: STRING; op, intOp: ExpressionTree.BinaryOperator): ExpressionTree.BinaryOperator;
+VAR
+    result: ExpressionTree.BinaryOperator;
+BEGIN
+    assertOpType(type, numericOpTypeCheck, literal);
+    IF (intOp # NIL) & Types.isInt(type) THEN
+        result := intOp;
+    ELSE
+        result := op;
+    END;
+    RETURN result;
+END;
+*)
+PROCEDURE notTypeId*(e: Expression.PType);
+BEGIN
+    d <- e.designator();
+    IF d # NIL THEN
+        info <- d.info();
+        IF info IS TypeId.PType THEN
+            Errors.raise("type name '" + info.type().description() + "' cannot be used as an expression");
+        END;
+    END;
+END;
+
+PROCEDURE promoteTypeInExpression(e: Expression.PType; type: Types.PType): Expression.PType;
+VAR
+    v: CHAR;
+    result: Expression.PType;
+BEGIN
+    fromType <- e.type();
+    IF (type = Types.basic.ch) & (fromType IS Types.PString) & Types.stringAsChar(fromType^, v) THEN
+        result := Expression.makeSimple(String.fromInt(ORD(v)), type);
+    ELSE
+        result := e;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE relationOp(left, right: Expression.PType; literal: STRING; ops: Ops; context: ContextHierarchy.Node): BinaryOperatorCx;
+VAR
+    type: Types.PType;
+    o: BinaryOperatorCx;
+    mismatch: STRING;
+BEGIN
+    notTypeId(left);
+    IF literal # "IS" THEN
+        notTypeId(right);
+
+        IF literal # "IN" THEN
+            type := ops.coalesceType(left.type(), right.type());
+        END;
+    END;
+
+    IF literal = "=" THEN
+        o := ops.eq(type);
+        IF o = NIL THEN
+            mismatch := ops.eqExpect();
+        END;
+    ELSIF literal = "#" THEN
+        o := ops.notEq(type);
+        IF o = NIL THEN
+            mismatch := ops.eqExpect();
+        END;
+    ELSIF literal =  "<" THEN
+        o := ops.less(type);
+        IF o = NIL THEN
+            mismatch := ops.strongRelExpect();
+        END;
+    ELSIF literal =  ">" THEN
+        o := ops.greater(type);
+        IF o = NIL THEN
+            mismatch := ops.strongRelExpect();
+        END;
+    ELSIF literal = "<=" THEN
+        o := ops.lessEq(type);
+        IF o = NIL THEN
+            mismatch := ops.relExpect();
+        END;
+    ELSIF literal = ">=" THEN
+        o := ops.greaterEq(type);
+        IF o = NIL THEN
+            mismatch := ops.relExpect();
+        END;
+    ELSIF literal = "IS" THEN
+        o := ops.is(context);
+    ELSIF literal = "IN" THEN
+        o := ops.in(left.type(), right.type(), context);
+    END;
+
+    IF LEN(mismatch) # 0 THEN
+        throwOperatorTypeMismatch(literal, mismatch, type);
+    END;
+    RETURN o;
+END;
+
+PROCEDURE makeFirstFromSimpleList(list: SimpleList): Expression.PType;
+VAR
+    o: PROCEDURE(e: Expression.PType): Expression.PType;
+BEGIN
+    result <- list.expression;
+    IF list.unaryOp = "-" THEN
+        type <- result.type();
+        IF Types.isInt(type) THEN
+            o := Operator.negateInt;
+        ELSIF type = Types.basic.set THEN
+            o := Operator.setComplement;
+        ELSIF type = Types.basic.real THEN
+            o := Operator.negateReal;
+        ELSE
+            throwOperatorTypeMismatch(list.unaryOp, numericOrSetOpTypeCheck.expect(), type);
+        END;
+    ELSIF list.unaryOp = "+" THEN
+        assertOpType(result.type(), numericOpTypeCheck, list.unaryOp);
+        o := Operator.unaryPlus;
+    END;
+    IF o # NIL THEN
+        notTypeId(result);
+        result := o(result);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE matchAddOperator(ops: Ops; s: STRING; type: Types.PType): BinaryOperator;
+VAR
+    result: BinaryOperator;
+BEGIN
+    IF s = "+" THEN
+        result := ops.plus(type);
+    ELSIF s = "-" THEN
+        result := assertNumericOrSetOp(type, s, Operator.subReal, Operator.subInt, Operator.setDiff);
+    ELSIF s = "OR" THEN
+        IF type # Types.basic.bool THEN
+            Errors.raise("BOOLEAN expected as operand of 'OR', got '"
+                         + type.description() + "'");
+        END;
+        result := Operator.or;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE makeFromSimpleList(list: SimpleList; ops: Ops; cx: ContextHierarchy.Root): Expression.PType;
+BEGIN
+    result <- makeFirstFromSimpleList(list);
+    next <- list.next;
+    WHILE next # NIL DO
+        notTypeId(result);
+        e <- next.expression;
+        notTypeId(e);
+        o <- matchAddOperator(ops, next.op, result.type());
+        checkImplicitCast(cx, e.type(), result.type());
+        result := o(result, e);
+
+        next := next.next;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE makeFromList(list: Item; ops: Ops; cx: ContextHierarchy.PNode): Expression.PType;
+BEGIN
+    root <- cx.root();
+    result <- makeFromSimpleList(list.simple^, ops, root^);
+    next <- list.next;
+    WHILE next # NIL DO
+        leftExpression <- result;
+        rightExpression <- makeFromSimpleList(next.simple^, ops, root^);
+        leftExpression := promoteTypeInExpression(leftExpression, rightExpression.type());
+        rightExpression := promoteTypeInExpression(rightExpression, leftExpression.type());
+
+        o <- relationOp(leftExpression, rightExpression, next.op, ops, cx^);
+        result := o(leftExpression, rightExpression, ContextHierarchy.makeLanguageContext(cx));
+
+        next := next.next;
+    END;
+    notTypeId(result);
+
+    type <- result.type();
+    IF type = NIL THEN
+        Errors.raise("procedure returning no result cannot be used in an expression");
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Ops.is(cx: ContextHierarchy.Node): BinaryOperatorCx;
+VAR
+    r: BinaryOperatorCx;
+
+    PROCEDURE is(left, right: Expression.PType; unused: LanguageContext.PType): Expression.PType;
+    VAR
+        result: Expression.PType;
+    BEGIN
+        rightDesignator <- right.designator();
+        IF rightDesignator = NIL THEN
+            throwTypeNameExpected();
+        ELSE
+            result := typeTest(left, rightDesignator.info(), cx);
+        END;
+        RETURN result;
+    END;
+
+BEGIN    
+    JS.do("r = is"); (*allow closure*)
+    RETURN r;
+END;
+
+PROCEDURE Ops.in(left, right: Types.PType; cx: ContextHierarchy.Node): BinaryOperatorCx;
+BEGIN
+    IF ~Types.isInt(left) THEN
+        Errors.raise(Types.intsDescription() 
+                     + " expected as an element of SET, got '" + left.description() + "'");
+    END;
+    checkImplicitCast(cx.root()^, right, Types.basic.set);
+
+    RETURN Operator.setHasBit;
+END;
+
+PROCEDURE Ops.eqExpect(): STRING;
+    RETURN "numeric type or SET or BOOLEAN or CHAR or character array or POINTER or PROCEDURE";
+END;
+
+PROCEDURE Ops.strongRelExpect(): STRING;
+    RETURN "numeric type or CHAR or character array";
+END;
+
+PROCEDURE Ops.relExpect(): STRING;
+    RETURN "numeric type or SET or CHAR or character array";
+END;
+
+PROCEDURE Ops.coalesceType(leftType, rightType: Types.PType): Types.PType;
+VAR
+    result: Types.PType;
+BEGIN
+    IF (leftType IS Record.PPointer) & (rightType IS Record.PPointer) THEN
+        result := Cast.findPointerBaseType(leftType, rightType^);
+        IF result = NIL THEN
+            result := Cast.findPointerBaseType(rightType, leftType^);
+        END;
+    END;
+
+    IF result = NIL THEN
+        (*special case for strings*)
+        isStrings <- Types.isString(leftType) & Types.isString(rightType);
+        IF ~isStrings THEN
+            checkTypeMatch(rightType, leftType);
+        END;
+        result := leftType;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Ops.eq(type: Types.PType): BinaryOperatorCx;
+VAR
+    result: BinaryOperatorCx;
+BEGIN
+    IF useIntEqOp(type) THEN
+        result := Operator.equalInt;
+    ELSIF Types.isString(type) THEN
+        result := Operator.equalStr;
+    ELSIF type = Types.basic.real THEN
+        result := Operator.equalReal;
+    ELSIF type = Types.basic.set THEN
+        result := Operator.equalSet;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Ops.notEq(type: Types.PType): BinaryOperatorCx;
+VAR
+    result: BinaryOperatorCx;
+BEGIN
+    IF useIntEqOp(type) THEN
+        result := Operator.notEqualInt;
+    ELSIF Types.isString(type) THEN
+        result := Operator.notEqualStr;
+    ELSIF type = Types.basic.real THEN
+        result := Operator.notEqualReal;
+    ELSIF type = Types.basic.set THEN
+        result := Operator.notEqualSet;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Ops.less(type: Types.PType): BinaryOperatorCx;
+VAR
+    result: BinaryOperatorCx;
+BEGIN
+    IF useIntOrderOp(type) THEN
+        result := Operator.lessInt;
+    ELSIF Types.isString(type) THEN
+        result := Operator.lessStr;
+    ELSIF type = Types.basic.real THEN
+        result := Operator.lessReal;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Ops.greater(type: Types.PType): BinaryOperatorCx;
+VAR
+    result: BinaryOperatorCx;
+BEGIN
+    IF useIntOrderOp(type) THEN
+        result := Operator.greaterInt;
+    ELSIF Types.isString(type) THEN
+        result := Operator.greaterStr;
+    ELSIF type = Types.basic.real THEN
+        result := Operator.greaterReal;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Ops.lessEq(type: Types.PType): BinaryOperatorCx;
+VAR
+    result: BinaryOperatorCx;
+BEGIN
+    IF useIntOrderOp(type) THEN
+        result := Operator.eqLessInt;
+    ELSIF Types.isString(type) THEN
+        result := Operator.eqLessStr;
+    ELSIF type = Types.basic.real THEN
+        result := Operator.eqLessReal;
+    ELSIF type = Types.basic.set THEN
+        result := Operator.setInclL;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Ops.greaterEq(type: Types.PType): BinaryOperatorCx;
+VAR
+    result: BinaryOperatorCx;
+BEGIN
+    IF useIntOrderOp(type) THEN
+        result := Operator.eqGreaterInt;
+    ELSIF Types.isString(type) THEN
+        result := Operator.eqGreaterStr;
+    ELSIF type = Types.basic.real THEN
+        result := Operator.eqGreaterReal;
+    ELSIF type = Types.basic.set THEN
+        result := Operator.setInclR;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Ops.plus(type: Types.PType): BinaryOperator;
+VAR
+    result: BinaryOperator;
+BEGIN
+    IF type = Types.basic.set THEN
+        result := Operator.setUnion;
+    ELSIF Types.isInt(type) THEN
+        result := Operator.addInt;
+    ELSIF type = Types.basic.real THEN
+        result := Operator.addReal;
+    ELSE
+        throwOperatorTypeMismatch("+", SELF.plusExpect(), type);
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Ops.plusExpect(): STRING;
+    RETURN "numeric type or SET";
+END;
+
+PROCEDURE ItemOp.ItemOp(op: STRING)
+    | op(op);
+END;
+
+PROCEDURE SimpleItemOp.SimpleItemOp(op: STRING)
+    | op(op);
+END;
+
+PROCEDURE SimpleList.addExpression(e: Expression.PType);
+BEGIN
+    IF SELF.expression = NIL THEN
+        SELF.expression := e;
+    ELSE
+        SELF.last.expression := e;
+    END;
+END;
+
+PROCEDURE SimpleList.addOp(op: STRING);
+BEGIN
+    next <- NEW SimpleItemOp(op);
+    IF SELF.last = NIL THEN
+        SELF.next := next;
+    ELSE
+        SELF.last.next := next;
+    END;
+    SELF.last := next;
+END;
+
+PROCEDURE Node.Node(ops: POps)
+	| ops(ops);
+END;
+
+PROCEDURE Node.makeSimple(): PSimpleList;
+	RETURN NEW SimpleList();
+END;
+
+PROCEDURE Node.addSimple(s: PSimpleList);
+BEGIN
+    IF SELF.simple = NIL THEN
+        SELF.simple := s;
+    ELSE
+        SELF.last.simple := s;
+    END;
+END;
+
+PROCEDURE Node.addOp(op: STRING);
+BEGIN
+    next <- NEW ItemOp(op);
+    IF SELF.last = NIL THEN
+        SELF.next := next;
+    ELSE
+        SELF.last.next := next;
+    END;
+    SELF.last := next;
+END;
+
+PROCEDURE Node.asExpression(cx: ContextHierarchy.PNode): Expression.PType;
+	RETURN makeFromList(SELF, SELF.ops^, cx);
+END;
+
+PROCEDURE IntOpTypeCheck.expect(): STRING;
+    RETURN Types.intsDescription();
+END;
+
+PROCEDURE IntOpTypeCheck.check(t: Types.PType): BOOLEAN;
+    RETURN Types.isInt(t);
+END;
+
+PROCEDURE NumericOpTypeCheck.expect(): STRING;
+    RETURN "numeric type";
+END;
+
+PROCEDURE NumericOpTypeCheck.check(t: Types.PType): BOOLEAN;
+    RETURN Types.numeric.indexOf(t) # -1;
+END;
+
+PROCEDURE NumericOrSetOpTypeCheck.expect(): STRING;
+    RETURN SUPER() + " or SET";
+END;
+
+PROCEDURE NumericOrSetOpTypeCheck.check(t: Types.PType): BOOLEAN;
+    RETURN SUPER(t) OR (t = Types.basic.set);
+END;
+
+END ExpressionTree.

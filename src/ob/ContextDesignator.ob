@@ -1,7 +1,7 @@
 MODULE ContextDesignator;
 IMPORT
     Code, ConstValue, ContextExpression, ContextHierarchy, 
-    Designator, Errors, Expression,
+    Designator, Errors, Expression, ExpressionTree,
     Record, ScopeBase, String, TypeId, Types, Variable;
 TYPE
     Index* = RECORD
@@ -97,12 +97,12 @@ PROCEDURE Type.handleTypeCast(type: Types.PType);
 BEGIN
     info <- SELF.info;
     IF info IS Types.PVariable THEN
-        ContextExpression.checkTypeCast(info, SELF.currentType, type, "type cast");
+        ExpressionTree.checkTypeCast(info, SELF.currentType, type, "type cast");
     ELSE
         Errors.raise("cannot apply type cast to " + info.idType());
     END;
 
-    code <- SELF.root().language().rtl.typeGuard(SELF.code, ContextExpression.castCode(type, SELF));
+    code <- SELF.root().language().rtl.typeGuard(SELF.code, ExpressionTree.castCode(type, SELF));
     SELF.code := code;
 
     SELF.currentType := type;

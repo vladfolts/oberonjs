@@ -4,7 +4,7 @@ IMPORT
     Context, ContextExpression, ContextHierarchy, 
     EberonContextDesignator, EberonContextProcedure, 
     EberonMap, EberonOperator, EberonString, EberonTypePromotion, 
-    Errors, Expression, LanguageContext,
+    Errors, Expression, ExpressionTree, LanguageContext,
     JS,
     Object, Record, Types;
 TYPE
@@ -14,16 +14,9 @@ TYPE
 
     RelationExpression* = RECORD(ContextExpression.ExpressionNode)
         PROCEDURE RelationExpression(parent: ContextExpression.PExpressionHandler);
-
-        PROCEDURE handleTypePromotion(promotion: EberonTypePromotion.PCombined);
-
-        currentTypePromotion: EberonTypePromotion.PCombined;
     END;
 
     SimpleExpression* = RECORD(ContextExpression.SimpleExpression)
-        typePromotion: EberonTypePromotion.PCombined;
-        currentPromotion: EberonTypePromotion.PMaybe;
-        orHandled: BOOLEAN;
     END;
 
     Term* = RECORD(ContextExpression.Term)
@@ -43,8 +36,22 @@ TYPE
     MulOperator* = RECORD(ContextExpression.MulOperator)
     END;
 
-    Ops = RECORD(ContextExpression.Ops)
+    Ops = RECORD(ExpressionTree.Ops)
     END;
+
+    Node = RECORD(ExpressionTree.Node)
+        PROCEDURE Node();
+
+        currentTypePromotion: EberonTypePromotion.PCombined;
+    END;
+    PNode = POINTER TO Node;
+
+    SimpleList = RECORD(ExpressionTree.SimpleList)
+        typePromotion: EberonTypePromotion.PCombined;
+        currentPromotion: EberonTypePromotion.PMaybe;
+        orHandled: BOOLEAN;
+    END;
+    PSimpleList = POINTER TO SimpleList;
 
     BeginTypePromotionAndMsg = RECORD(ContextHierarchy.Message)
         result: EberonTypePromotion.PCombined;
@@ -147,7 +154,7 @@ BEGIN
 END;
 
 PROCEDURE RelationExpression.RelationExpression(parent: ContextExpression.PExpressionHandler)
-    | SUPER(parent, globalOps);
+    | SUPER(parent, NEW Node());
 END;
 
 PROCEDURE RelationExpression.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
@@ -161,22 +168,9 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE RelationExpression.handleTypePromotion(promotion: EberonTypePromotion.PCombined);
-BEGIN
-    SELF.currentTypePromotion := promotion;
-END;
-
-PROCEDURE RelationExpression.handleLiteral(s: STRING);
-BEGIN
-    IF SELF.currentTypePromotion # NIL THEN
-        SELF.currentTypePromotion.clear();
-    END;
-    SUPER(s);
-END;
-
-PROCEDURE Ops.in(left, right: Types.PType; cx: ContextHierarchy.Node): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.in(left, right: Types.PType; cx: ContextHierarchy.Node): ExpressionTree.BinaryOperatorCx;
 VAR
-    result: ContextExpression.BinaryOperatorCx;
+    result: ExpressionTree.BinaryOperatorCx;
 BEGIN
     IF right IS EberonMap.PType THEN
         EberonContextDesignator.checkMapKeyType(left);
@@ -189,29 +183,20 @@ END;
 
 PROCEDURE RelationExpression.endParse(): BOOLEAN;
 BEGIN
-    IF SELF.currentTypePromotion # NIL THEN
+    node <- SELF.node(PNode); 
+    IF node.currentTypePromotion # NIL THEN
         void <- SELF.parent().handleMessage(
-            NEW EberonContextDesignator.TransferPromotedTypesMsg(SELF.currentTypePromotion)^);
+            NEW EberonContextDesignator.TransferPromotedTypesMsg(node.currentTypePromotion)^);
     END;
     RETURN SUPER();
 END;
 
-PROCEDURE SimpleExpression.handleOperator(op: STRING);
+PROCEDURE setSimpleExpressionTypePromotion(VAR s: SimpleExpression): EberonTypePromotion.PMaybe;
 BEGIN
-    SUPER(op);
-
-    IF SELF.typePromotion # NIL THEN
-        SELF.currentPromotion := SELF.typePromotion.next();
-    ELSE
-        SELF.orHandled := TRUE;
-    END;
-END;
-
-PROCEDURE setSimpleExpressionTypePromotion(VAR e: SimpleExpression): EberonTypePromotion.PMaybe;
-BEGIN
+    e <- s.list(PSimpleList);
     IF e.currentPromotion = NIL THEN
         msg <- EberonContextProcedure.BeginTypePromotionOrMsg();
-        void <- e.parent().handleMessage(msg);
+        void <- s.parent().handleMessage(msg);
         e.typePromotion := msg.result;
         IF e.typePromotion # NIL THEN
             IF e.orHandled THEN
@@ -236,14 +221,6 @@ BEGIN
         result := SUPER(msg);
     END;
     RETURN result;
-END;
-
-PROCEDURE SimpleExpression.endParse(): BOOLEAN;
-BEGIN
-    IF SELF.typePromotion # NIL THEN
-        SELF.parent()^(RelationExpression).handleTypePromotion(SELF.typePromotion);
-    END;
-    RETURN SUPER();
 END;
 
 PROCEDURE setTermTypePromotion(VAR term: Term): EberonTypePromotion.PMaybe;
@@ -306,9 +283,9 @@ BEGIN
     END;
 END;
 
-PROCEDURE Ops.plus(type: Types.PType): ContextExpression.BinaryOperator;
+PROCEDURE Ops.plus(type: Types.PType): ExpressionTree.BinaryOperator;
 VAR
-    result: ContextExpression.BinaryOperator;
+    result: ExpressionTree.BinaryOperator;
 BEGIN
     IF (type = EberonString.string) OR (type IS Types.PString) THEN
         result := EberonOperator.addStr;
@@ -328,9 +305,9 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE Ops.eq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.eq(type: Types.PType): ExpressionTree.BinaryOperatorCx;
 VAR
-    result: ContextExpression.BinaryOperatorCx;
+    result: ExpressionTree.BinaryOperatorCx;
 BEGIN
     IF type = EberonString.string THEN
         result := EberonOperator.equalStr;
@@ -340,9 +317,9 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Ops.notEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.notEq(type: Types.PType): ExpressionTree.BinaryOperatorCx;
 VAR
-    result: ContextExpression.BinaryOperatorCx;
+    result: ExpressionTree.BinaryOperatorCx;
 BEGIN
     IF type = EberonString.string THEN
         result := EberonOperator.notEqualStr;
@@ -352,9 +329,9 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Ops.less(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.less(type: Types.PType): ExpressionTree.BinaryOperatorCx;
 VAR
-    result: ContextExpression.BinaryOperatorCx;
+    result: ExpressionTree.BinaryOperatorCx;
 BEGIN
     IF type = EberonString.string THEN
         result := EberonOperator.lessStr;
@@ -364,9 +341,9 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Ops.greater(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.greater(type: Types.PType): ExpressionTree.BinaryOperatorCx;
 VAR
-    result: ContextExpression.BinaryOperatorCx;
+    result: ExpressionTree.BinaryOperatorCx;
 BEGIN
     IF type = EberonString.string THEN
         result := EberonOperator.greaterStr;
@@ -376,9 +353,9 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Ops.lessEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.lessEq(type: Types.PType): ExpressionTree.BinaryOperatorCx;
 VAR
-    result: ContextExpression.BinaryOperatorCx;
+    result: ExpressionTree.BinaryOperatorCx;
 BEGIN
     IF type = EberonString.string THEN
         result := EberonOperator.lessEqualStr;
@@ -388,9 +365,9 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Ops.greaterEq(type: Types.PType): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.greaterEq(type: Types.PType): ExpressionTree.BinaryOperatorCx;
 VAR
-    result: ContextExpression.BinaryOperatorCx;
+    result: ExpressionTree.BinaryOperatorCx;
 BEGIN
     IF type = EberonString.string THEN
         result := EberonOperator.greaterEqualStr;
@@ -400,10 +377,10 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Ops.is(cx: ContextHierarchy.Node): ContextExpression.BinaryOperatorCx;
+PROCEDURE Ops.is(cx: ContextHierarchy.Node): ExpressionTree.BinaryOperatorCx;
 VAR
-    impl: ContextExpression.BinaryOperatorCx;
-    r: ContextExpression.BinaryOperatorCx;
+    impl: ExpressionTree.BinaryOperatorCx;
+    r: ExpressionTree.BinaryOperatorCx;
 
     PROCEDURE is(left, right: Expression.PType; lcx: LanguageContext.PType): Expression.PType;
     BEGIN
@@ -413,7 +390,7 @@ VAR
             IF v IS EberonTypePromotion.PVariable THEN
                 msg <- EberonContextDesignator.PromoteTypeMsg(
                             v, 
-                            ContextExpression.unwrapType(right.designator().info()));
+                            ExpressionTree.unwrapType(right.designator().info()));
                 void <- cx.handleMessage(msg);
             END;
         END;
@@ -436,6 +413,44 @@ BEGIN
         result := SUPER(leftType, rightType);
     END;
     RETURN result;
+END;
+
+PROCEDURE Node.Node()
+    | SUPER(globalOps);
+END;
+
+PROCEDURE Node.makeSimple(): ExpressionTree.PSimpleList;
+    RETURN NEW SimpleList();
+END;
+
+PROCEDURE Node.addSimple(s: ExpressionTree.PSimpleList);
+BEGIN
+    typePromotion <- s(PSimpleList).typePromotion;
+    IF typePromotion # NIL THEN
+        SELF.currentTypePromotion := typePromotion;
+    END;
+
+    SUPER(s);
+END;
+
+PROCEDURE Node.addOp(op: STRING);
+BEGIN
+    IF SELF.currentTypePromotion # NIL THEN
+        SELF.currentTypePromotion.clear();
+    END;
+
+    SUPER(op);
+END;
+
+PROCEDURE SimpleList.addOp(op: STRING);
+BEGIN
+    SUPER(op);
+
+    IF SELF.typePromotion # NIL THEN
+        SELF.currentPromotion := SELF.typePromotion.next();
+    ELSE
+        SELF.orHandled := TRUE;
+    END;
 END;
 
 BEGIN

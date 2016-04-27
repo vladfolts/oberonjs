@@ -1,9 +1,9 @@
 MODULE EberonContextType;
 IMPORT
     Chars,
-    Context, ContextExpression, ContextHierarchy, ContextProcedure, ContextType, 
+    Context, ContextHierarchy, ContextProcedure, ContextType, 
     EberonContext, EberonDynamicArray, EberonMap, EberonRecord, EberonTypes,
-    Errors,
+    Errors, ExpressionTree,
     Object, Procedure, R := Record, ScopeBase, Types;
 CONST
     dynamicArrayLength = -1;
@@ -206,7 +206,7 @@ END;
 PROCEDURE Map.handleQIdent(q: ContextHierarchy.QIdent);
 BEGIN
     s <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
-    type <- ContextExpression.unwrapType(s.symbol().info());
+    type <- ExpressionTree.unwrapType(s.symbol().info());
     SELF.setType(type);
 END;
 

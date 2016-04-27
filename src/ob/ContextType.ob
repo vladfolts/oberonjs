@@ -1,7 +1,7 @@
 MODULE ContextType;
 IMPORT
     Chars, CodeGenerator, ConstValue, Context, ContextExpression, ContextHierarchy, 
-    Errors, Expression, Object, R := Record, 
+    Errors, Expression, ExpressionTree, Object, R := Record, 
     Scope, ScopeBase, String, Symbols, TypeId, Types;
 TYPE
     HandleSymbolAsType* = RECORD(ContextHierarchy.Node)
@@ -123,7 +123,7 @@ TYPE
 PROCEDURE HandleSymbolAsType.handleQIdent(q: ContextHierarchy.QIdent);
 BEGIN
     s <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
-    SELF.setType(ContextExpression.unwrapType(s.symbol().info()));
+    SELF.setType(ExpressionTree.unwrapType(s.symbol().info()));
 END;
 
 PROCEDURE FormalType.setType(type: Types.PStorageType);
@@ -424,7 +424,7 @@ END;
 PROCEDURE RecordBase.handleQIdent(q: ContextHierarchy.QIdent);
 BEGIN
     s <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
-    base <- ContextExpression.unwrapType(s.symbol().info());
+    base <- ExpressionTree.unwrapType(s.symbol().info());
     SELF.parent()^(Record).setBaseType(base);
 END;
 
@@ -500,7 +500,7 @@ BEGIN
         msg <- NEW ForwardTypeMsg(id);
         info := SELF.parent().handleMessage(msg^)(Types.PId);
     END;
-    setPointerTypeId(SELF, ContextExpression.unwrapTypeId(info));
+    setPointerTypeId(SELF, ExpressionTree.unwrapTypeId(info));
 END;
 
 PROCEDURE Pointer.setType(type: Types.PStorageType);

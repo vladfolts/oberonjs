@@ -2,7 +2,7 @@ MODULE ContextProcedure;
 IMPORT
     Cast, Chars, CodeGenerator, Context, ContextExpression, 
     ContextHierarchy, ContextType, 
-    Errors, Expression, LanguageContext,
+    Errors, Expression, ExpressionTree, LanguageContext,
     Object, Procedure, Scope, Symbols, TypeId, Types, Variable;
 TYPE
     Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
@@ -212,7 +212,7 @@ END;
 PROCEDURE FormalParameters.handleQIdent(q: ContextHierarchy.QIdent);
 BEGIN
     s <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
-    resultType <- ContextExpression.unwrapType(s.symbol().info());
+    resultType <- ExpressionTree.unwrapType(s.symbol().info());
     SELF.doCheckResultType(resultType);
     SELF.result := resultType;
 END;
