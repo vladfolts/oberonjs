@@ -9,7 +9,7 @@ TYPE
     END;
     PExpressionHandler* = POINTER TO ExpressionHandler;
 
-    SimpleExpression* = RECORD(ExpressionHandler)
+    SimpleExpression* = RECORD(ContextHierarchy.Node)
         PROCEDURE SimpleExpression*(parent: ContextHierarchy.PNode); 
         PROCEDURE handleOperator*(op: STRING);
 
@@ -19,9 +19,7 @@ TYPE
 
     ExpressionNode* = RECORD(ContextHierarchy.Node)
         PROCEDURE ExpressionNode*(parent: PExpressionHandler; node: ExpressionTree.PNode);
-        PROCEDURE handleSimple(s: ExpressionTree.PSimpleList);
 
-        relOps: ExpressionTree.POps;
         node-: ExpressionTree.PNode;
     END;
     PExpressionNode = POINTER TO ExpressionNode;
@@ -36,11 +34,9 @@ TYPE
     END;
 
     Term* = RECORD(ExpressionHandler)
-        PROCEDURE type(): Types.PType;
-        PROCEDURE handleOperator(op: ExpressionTree.BinaryOperator);
+        PROCEDURE Term*(parent: ContextHierarchy.PNode); 
 
-        expression: Expression.PType;
-        operator: ExpressionTree.BinaryOperator;
+        list: ExpressionTree.PTermList;
     END;
     PTerm = POINTER TO Term;
 
@@ -83,14 +79,7 @@ TYPE
     END;
 
 VAR
-    intOpTypeCheck: ExpressionTree.IntOpTypeCheck;
     globalOps: ExpressionTree.POps;
-
-PROCEDURE assertIntOp(type: Types.PType; literal: STRING; op: ExpressionTree.BinaryOperator): ExpressionTree.BinaryOperator;
-BEGIN
-    ExpressionTree.assertOpType(type, intOpTypeCheck, literal);
-    RETURN op;
-END;
 
 PROCEDURE promoteExpressionType(cx: ContextHierarchy.Root; left, right: Expression.PType);
 BEGIN
@@ -135,11 +124,6 @@ PROCEDURE SimpleExpression.SimpleExpression(parent: ContextHierarchy.PNode)
     | SUPER(parent),
       list(parent(PExpressionNode).node.makeSimple());
 END; 
-
-PROCEDURE SimpleExpression.handleExpression(e: Expression.PType);
-BEGIN
-    SELF.list.addExpression(e);
-END;
 
 PROCEDURE SimpleExpression.handleLiteral(s: STRING);
 BEGIN
@@ -195,80 +179,35 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE Term.type(): Types.PType;
-VAR
-    result: Types.PType;
-BEGIN
-    IF SELF.expression # NIL THEN
-        result := SELF.expression.type();
-    ELSE
-        result := SELF.attributes.designator.type();
-    END;
-    RETURN result;
-END;
-
-PROCEDURE Term.handleOperator(op: ExpressionTree.BinaryOperator);
-BEGIN
-    ExpressionTree.notTypeId(SELF.expression);
-    SELF.operator := op;
-END;
+PROCEDURE Term.Term(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      list(NEW ExpressionTree.TermList());
+END; 
 
 PROCEDURE Term.handleExpression(e: Expression.PType);
 BEGIN
-    promoteExpressionType(SELF.root()^, SELF.expression, e);
-    IF SELF.operator = NIL THEN
-        SELF.expression := e;
-    ELSIF SELF.expression # NIL THEN
-        ExpressionTree.notTypeId(e);
-        SELF.expression := SELF.operator(SELF.expression, e);
-    END;
+    SELF.list.addExpression(e);
 END;
 
 PROCEDURE Term.endParse(): BOOLEAN;
 VAR
     const: ConstValue.PType;
 BEGIN
-    e <- SELF.expression;
-    IF e = NIL THEN
+    IF SELF.list.expression = NIL THEN
         d <- SELF.attributes.designator;
         info <- d.info();
         IF info IS Types.PConst THEN
             const := info.value;
         END;
-        e := Expression.make(d.code(), d.type(), d, const);
+        SELF.list.addExpression(Expression.make(d.code(), d.type(), d, const));
     END;
-    SELF.parent()(PSimpleExpression).handleExpression(e);
+    SELF.parent()(PSimpleExpression).list.addTerm(SELF.list);
     RETURN TRUE;
 END;
 
 PROCEDURE MulOperator.handleLiteral(s: STRING);
-VAR
-    o: ExpressionTree.BinaryOperator;
 BEGIN
-    parent <- SELF.parent()(PTerm);
-    type <- parent.type();
-    IF s = "*" THEN
-        o := ExpressionTree.assertNumericOrSetOp(type, s, Operator.mulReal, Operator.mulInt, Operator.setIntersection);
-    ELSIF s = "/" THEN
-        IF Types.isInt(type) THEN
-            Errors.raise("operator DIV expected for integer division");
-        END;
-        o := ExpressionTree.assertNumericOrSetOp(type, s, Operator.divReal, NIL, Operator.setSymmetricDiff);
-    ELSIF s = "DIV" THEN
-        o := assertIntOp(type, s, Operator.divInt);
-    ELSIF s = "MOD" THEN
-        o := assertIntOp(type, s, Operator.mod);
-    ELSIF s = "&" THEN
-        IF type # Types.basic.bool THEN
-            Errors.raise("BOOLEAN expected as operand of '&', got '"
-                                 + type.description() + "'");
-        END;
-        o := Operator.and;
-    ELSE
-        ASSERT(FALSE);
-    END;
-
-    parent.handleOperator(o);
+    SELF.parent()^(Term).list.addOp(s);
 END;
 
 PROCEDURE AddOperator.handleLiteral(s: STRING);

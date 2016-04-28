@@ -27,9 +27,29 @@ TYPE
     END;
     POps* = POINTER TO Ops;
 
+    PTermItemOp = POINTER TO TermItemOp;
+    TermItem* = RECORD
+        expression-: Expression.PType;
+        next: PTermItemOp;
+    END;
+
+    TermItemOp = RECORD (TermItem)
+        PROCEDURE TermItemOp(op: STRING);
+
+        op: STRING;
+    END;
+
+    TermList* = RECORD (TermItem)
+        PROCEDURE addExpression*(e: Expression.PType);
+        PROCEDURE addOp*(op: STRING);
+
+        last: PTermItemOp;
+    END;
+    PTermList* = POINTER TO TermList;
+
     PSimpleItemOp = POINTER TO SimpleItemOp;
     SimpleItem = RECORD
-        expression: Expression.PType;
+        term: PTermList;
         next: PSimpleItemOp;
     END;
 
@@ -40,7 +60,7 @@ TYPE
     END;
 
     SimpleList* = RECORD (SimpleItem)
-        PROCEDURE addExpression*(e: Expression.PType);
+        PROCEDURE addTerm*(t: PTermList);
         PROCEDURE addOp*(op: STRING);
 
         unaryOp*: STRING;
@@ -87,6 +107,7 @@ TYPE
     END;
 
 VAR
+    intOpTypeCheck: IntOpTypeCheck;
     numericOpTypeCheck: NumericOpTypeCheck;
     numericOrSetOpTypeCheck: NumericOrSetOpTypeCheck;
 
@@ -241,14 +262,20 @@ PROCEDURE useIntEqOp(t: Types.PType): BOOLEAN;
         OR (t = Types.nil);
 END;
 
-PROCEDURE assertOpType*(type: Types.PType; check: OpTypeCheck; literal: STRING);
+PROCEDURE assertOpType(type: Types.PType; check: OpTypeCheck; literal: STRING);
 BEGIN
     IF ~check.check(type) THEN
         throwOperatorTypeMismatch(literal, check.expect(), type);
     END;
 END;
 
-PROCEDURE assertNumericOrSetOp*(type: Types.PType; literal: STRING; op: BinaryOperator; intOp, setOp: BinaryOperator): BinaryOperator;
+PROCEDURE assertIntOp(type: Types.PType; literal: STRING; op: BinaryOperator): BinaryOperator;
+BEGIN
+    assertOpType(type, intOpTypeCheck, literal);
+    RETURN op;
+END;
+
+PROCEDURE assertNumericOrSetOp(type: Types.PType; literal: STRING; op: BinaryOperator; intOp, setOp: BinaryOperator): BinaryOperator;
 VAR
     result: BinaryOperator;
 BEGIN
@@ -262,20 +289,7 @@ BEGIN
     END;
     RETURN result;
 END;
-(*
-PROCEDURE assertNumericOp*(type: Types.PType; literal: STRING; op, intOp: ExpressionTree.BinaryOperator): ExpressionTree.BinaryOperator;
-VAR
-    result: ExpressionTree.BinaryOperator;
-BEGIN
-    assertOpType(type, numericOpTypeCheck, literal);
-    IF (intOp # NIL) & Types.isInt(type) THEN
-        result := intOp;
-    ELSE
-        result := op;
-    END;
-    RETURN result;
-END;
-*)
+
 PROCEDURE notTypeId*(e: Expression.PType);
 BEGIN
     d <- e.designator();
@@ -358,11 +372,56 @@ BEGIN
     RETURN o;
 END;
 
-PROCEDURE makeFirstFromSimpleList(list: SimpleList): Expression.PType;
+PROCEDURE mulOp(s: STRING; type: Types.PType): BinaryOperator;
+VAR
+    o: BinaryOperator;
+BEGIN
+    IF s = "*" THEN
+        o := assertNumericOrSetOp(type, s, Operator.mulReal, Operator.mulInt, Operator.setIntersection);
+    ELSIF s = "/" THEN
+        IF Types.isInt(type) THEN
+            Errors.raise("operator DIV expected for integer division");
+        END;
+        o := assertNumericOrSetOp(type, s, Operator.divReal, NIL, Operator.setSymmetricDiff);
+    ELSIF s = "DIV" THEN
+        o := assertIntOp(type, s, Operator.divInt);
+    ELSIF s = "MOD" THEN
+        o := assertIntOp(type, s, Operator.mod);
+    ELSIF s = "&" THEN
+        IF type # Types.basic.bool THEN
+            Errors.raise("BOOLEAN expected as operand of '&', got '"
+                                 + type.description() + "'");
+        END;
+        o := Operator.and;
+    ELSE
+        ASSERT(FALSE);
+    END;
+    RETURN o;
+END;
+
+PROCEDURE makeFromTermList(list: TermList; root: ContextHierarchy.Root): Expression.PType;
+BEGIN
+	result <- list.expression;
+	next <- list.next;
+	WHILE next # NIL DO
+        notTypeId(result);
+		e <- next.expression;
+        notTypeId(e);
+        type <- result.type();
+        o <- mulOp(next.op, type);
+		checkImplicitCast(root, e.type(), type);
+		result := o(result, e); 
+
+        next := next.next;
+	END;
+	RETURN result;
+END;
+
+PROCEDURE makeFirstFromSimpleList(list: SimpleList; root: ContextHierarchy.Root): Expression.PType;
 VAR
     o: PROCEDURE(e: Expression.PType): Expression.PType;
 BEGIN
-    result <- list.expression;
+    result <- makeFromTermList(list.term^, root);
     IF list.unaryOp = "-" THEN
         type <- result.type();
         IF Types.isInt(type) THEN
@@ -405,11 +464,11 @@ END;
 
 PROCEDURE makeFromSimpleList(list: SimpleList; ops: Ops; cx: ContextHierarchy.Root): Expression.PType;
 BEGIN
-    result <- makeFirstFromSimpleList(list);
+    result <- makeFirstFromSimpleList(list, cx);
     next <- list.next;
     WHILE next # NIL DO
         notTypeId(result);
-        e <- next.expression;
+        e <- makeFromTermList(next.term^, cx);
         notTypeId(e);
         o <- matchAddOperator(ops, next.op, result.type());
         checkImplicitCast(cx, e.type(), result.type());
@@ -624,7 +683,7 @@ PROCEDURE Ops.plusExpect(): STRING;
     RETURN "numeric type or SET";
 END;
 
-PROCEDURE ItemOp.ItemOp(op: STRING)
+PROCEDURE TermItemOp.TermItemOp(op: STRING)
     | op(op);
 END;
 
@@ -632,12 +691,36 @@ PROCEDURE SimpleItemOp.SimpleItemOp(op: STRING)
     | op(op);
 END;
 
-PROCEDURE SimpleList.addExpression(e: Expression.PType);
+PROCEDURE ItemOp.ItemOp(op: STRING)
+    | op(op);
+END;
+
+PROCEDURE TermList.addExpression(e: Expression.PType);
 BEGIN
     IF SELF.expression = NIL THEN
         SELF.expression := e;
     ELSE
         SELF.last.expression := e;
+    END;
+END;
+
+PROCEDURE TermList.addOp(op: STRING);
+BEGIN
+    next <- NEW TermItemOp(op);
+    IF SELF.last = NIL THEN
+        SELF.next := next;
+    ELSE
+        SELF.last.next := next;
+    END;
+    SELF.last := next;
+END;
+
+PROCEDURE SimpleList.addTerm(t: PTermList);
+BEGIN
+    IF SELF.term = NIL THEN
+        SELF.term := t;
+    ELSE
+        SELF.last.term := t;
     END;
 END;
 
