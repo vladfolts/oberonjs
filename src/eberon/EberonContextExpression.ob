@@ -20,21 +20,10 @@ TYPE
     END;
 
     Term* = RECORD(ContextExpression.Term)
-        PROCEDURE handleLogicalAnd();
-
-        typePromotion: EberonTypePromotion.PCombined;
-        currentPromotion: EberonTypePromotion.PMaybe;
-        andHandled: BOOLEAN;
     END;
     PTerm = POINTER TO Term;
 
     Factor* = RECORD(ContextExpression.Factor)
-    END;
-
-    AddOperator* = RECORD(ContextExpression.AddOperator)
-    END;
-
-    MulOperator* = RECORD(ContextExpression.MulOperator)
     END;
 
     Ops = RECORD(ExpressionTree.Ops)
@@ -55,7 +44,11 @@ TYPE
     PSimpleList = POINTER TO SimpleList;
 
     TermList = RECORD(ExpressionTree.TermList)
+        typePromotion: EberonTypePromotion.PCombined;
+        currentPromotion: EberonTypePromotion.PMaybe;
+        andHandled: BOOLEAN;
     END;
+    PTermList = POINTER TO TermList;
 
     ETFactor = RECORD(ExpressionTree.Factor)
         PROCEDURE ETFactor(cx: PTerm);
@@ -210,10 +203,11 @@ BEGIN
     RETURN e.currentPromotion;
 END;
 
-PROCEDURE setTermTypePromotion(VAR term: Term): EberonTypePromotion.PMaybe;
+PROCEDURE setTermTypePromotion(VAR cx: Term): EberonTypePromotion.PMaybe;
 BEGIN
+    term <- cx.list(PTermList);
     IF term.currentPromotion = NIL THEN
-        p <- setSimpleExpressionTypePromotion(term.parent()^(SimpleExpression));
+        p <- setSimpleExpressionTypePromotion(cx.parent()^(SimpleExpression));
         IF p # NIL THEN
             term.typePromotion := p.makeAnd();
         END;
@@ -249,8 +243,10 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Term.handleLogicalAnd();
+PROCEDURE TermList.addOp(op: STRING);
 BEGIN
+    SUPER(op);
+
     IF SELF.typePromotion # NIL THEN
         SELF.currentPromotion := SELF.typePromotion.next();
     ELSE
@@ -272,12 +268,6 @@ END;
 
 PROCEDURE Ops.plusExpect(): STRING;
     RETURN "numeric type or SET or STRING";
-END;
-
-PROCEDURE MulOperator.endParse(): BOOLEAN;
-BEGIN
-    SELF.parent()^(Term).handleLogicalAnd();
-    RETURN TRUE;
 END;
 
 PROCEDURE Ops.eq(type: Types.PType): ExpressionTree.BinaryOperatorCx;

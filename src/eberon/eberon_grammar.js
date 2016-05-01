@@ -170,8 +170,6 @@ exports.language = {
             FormalParameters:   EberonContextProcedure.FormalParameters,
             FormalType:         EberonContextType.FormalType,
             Term:               EberonContextExpression.Term,
-            AddOperator:        EberonContextExpression.AddOperator,
-            MulOperator:        EberonContextExpression.MulOperator,
             SimpleExpression:   EberonContextExpression.SimpleExpression, 
             For:                EberonContextLoop.For,
             While:              EberonContextLoop.While,

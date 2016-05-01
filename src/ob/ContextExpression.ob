@@ -35,7 +35,7 @@ TYPE
     Term* = RECORD(ContextHierarchy.Node)
         PROCEDURE Term*(parent: ContextHierarchy.PNode); 
 
-        list: ExpressionTree.PTermList;
+        list-: ExpressionTree.PTermList;
     END;
     PTerm = POINTER TO Term;
 

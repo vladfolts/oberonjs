@@ -131,8 +131,6 @@ exports.language = {
             FormalParameters:   ContextProcedure.FormalParameters,
             FormalType:         ContextType.FormalType,
             Term:               ContextExpression.Term,
-            AddOperator:        ContextExpression.AddOperator,
-            MulOperator:        ContextExpression.MulOperator,
             SimpleExpression:   ContextExpression.SimpleExpression, 
             For:                ContextLoop.For,
             While:              ContextLoop.While,
