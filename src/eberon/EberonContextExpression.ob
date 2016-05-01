@@ -26,6 +26,7 @@ TYPE
         currentPromotion: EberonTypePromotion.PMaybe;
         andHandled: BOOLEAN;
     END;
+    PTerm = POINTER TO Term;
 
     Factor* = RECORD(ContextExpression.Factor)
     END;
@@ -57,17 +58,9 @@ TYPE
     END;
 
     ETFactor = RECORD(ExpressionTree.Factor)
-        PROCEDURE ETFactor(cx: ContextHierarchy.PNode);
+        PROCEDURE ETFactor(cx: PTerm);
 
-        cx: ContextHierarchy.PNode;
-    END;
-
-    BeginTypePromotionAndMsg = RECORD(ContextHierarchy.Message)
-        result: EberonTypePromotion.PCombined;
-    END;
-
-    InvertTypePromotionMsg = RECORD(ContextHierarchy.Message)
-        result: EberonTypePromotion.PMaybe;
+        cx: PTerm;
     END;
 
 VAR
@@ -217,27 +210,14 @@ BEGIN
     RETURN e.currentPromotion;
 END;
 
-PROCEDURE SimpleExpression.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
-VAR
-    result: Object.PType;
-BEGIN
-    IF msg IS BeginTypePromotionAndMsg THEN
-        p <- setSimpleExpressionTypePromotion(SELF);
-        IF p # NIL THEN
-            msg.result := p.makeAnd();
-        END;
-    ELSE
-        result := SUPER(msg);
-    END;
-    RETURN result;
-END;
-
 PROCEDURE setTermTypePromotion(VAR term: Term): EberonTypePromotion.PMaybe;
 BEGIN
     IF term.currentPromotion = NIL THEN
-        msg <- BeginTypePromotionAndMsg();
-        void <- term.parent().handleMessage(msg);
-        term.typePromotion := msg.result;
+        p <- setSimpleExpressionTypePromotion(term.parent()^(SimpleExpression));
+        IF p # NIL THEN
+            term.typePromotion := p.makeAnd();
+        END;
+
         IF term.typePromotion # NIL THEN
             IF term.andHandled THEN
                 unused <- term.typePromotion.next();
@@ -262,11 +242,6 @@ BEGIN
         p <- setTermTypePromotion(SELF);
         IF p # NIL THEN
             msg.result := p.makeOr();
-        END;
-    ELSIF msg IS InvertTypePromotionMsg THEN
-        p <- setTermTypePromotion(SELF);
-        IF p # NIL THEN
-            p.invert()
         END;
     ELSE
         result := SUPER(msg);
@@ -458,10 +433,10 @@ BEGIN
 END;
 
 PROCEDURE TermList.makeFactor(cx: ContextHierarchy.PNode): ExpressionTree.PFactor;
-    RETURN NEW ETFactor(cx);
+    RETURN NEW ETFactor(cx(PTerm));
 END;
 
-PROCEDURE ETFactor.ETFactor(cx: ContextHierarchy.PNode)
+PROCEDURE ETFactor.ETFactor(cx: PTerm)
     | cx(cx);
 END;
 
@@ -469,8 +444,10 @@ PROCEDURE ETFactor.logicalNot();
 BEGIN
     SUPER();
 
-    msg <- InvertTypePromotionMsg();
-    void <- SELF.cx.handleMessage(msg);
+    p <- setTermTypePromotion(SELF.cx^);
+    IF p # NIL THEN
+        p.invert()
+    END;
 END;
 
 BEGIN

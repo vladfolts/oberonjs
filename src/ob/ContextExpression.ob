@@ -139,7 +139,7 @@ BEGIN
     IF parent^ IS Factor THEN
         SELF.factor := parent.factor;
     ELSE
-        SELF.factor := parent^(Term).list.makeFactor(SELF(POINTER));
+        SELF.factor := parent^(Term).list.makeFactor(parent);
     END;
 END; 
 
