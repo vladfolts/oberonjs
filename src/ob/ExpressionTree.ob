@@ -27,9 +27,17 @@ TYPE
     END;
     POps* = POINTER TO Ops;
 
+    Factor* = RECORD
+    	PROCEDURE logicalNot*();
+
+    	not: BOOLEAN;
+        expression*: Expression.PType;
+    END;
+    PFactor* = POINTER TO Factor;
+
     PTermItemOp = POINTER TO TermItemOp;
     TermItem* = RECORD
-        expression-: Expression.PType;
+        factor: PFactor;
         next: PTermItemOp;
     END;
 
@@ -40,7 +48,8 @@ TYPE
     END;
 
     TermList* = RECORD (TermItem)
-        PROCEDURE addExpression*(e: Expression.PType);
+        PROCEDURE makeFactor*(cx: ContextHierarchy.PNode): PFactor;
+        PROCEDURE addFactor*(f: PFactor);
         PROCEDURE addOp*(op: STRING);
 
         last: PTermItemOp;
@@ -60,6 +69,7 @@ TYPE
     END;
 
     SimpleList* = RECORD (SimpleItem)
+        PROCEDURE makeTerm*(): PTermList;
         PROCEDURE addTerm*(t: PTermList);
         PROCEDURE addOp*(op: STRING);
 
@@ -233,7 +243,7 @@ BEGIN
         type.description() + "'");
 END;
 
-PROCEDURE checkTypeMatch*(from, to: Types.PType);
+PROCEDURE checkTypeMatch(from, to: Types.PType);
 BEGIN
     IF ~Cast.areTypesMatch(from, to) THEN
         throwTypeMismatch(from, to);
@@ -290,7 +300,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE notTypeId*(e: Expression.PType);
+PROCEDURE notTypeId(e: Expression.PType);
 BEGIN
     d <- e.designator();
     IF d # NIL THEN
@@ -399,13 +409,24 @@ BEGIN
     RETURN o;
 END;
 
+PROCEDURE makeFromFactor*(f: Factor): Expression.PType;
+BEGIN
+    result <- f.expression;
+    IF f.not THEN
+        notTypeId(result);
+        checkTypeMatch(result.type(), Types.basic.bool);
+        result := Operator.not(result);
+    END;
+    RETURN result;
+END;
+
 PROCEDURE makeFromTermList(list: TermList; root: ContextHierarchy.Root): Expression.PType;
 BEGIN
-	result <- list.expression;
+	result <- makeFromFactor(list.factor^);
 	next <- list.next;
 	WHILE next # NIL DO
         notTypeId(result);
-		e <- next.expression;
+		e <- makeFromFactor(next.factor^);
         notTypeId(e);
         type <- result.type();
         o <- mulOp(next.op, type);
@@ -683,6 +704,11 @@ PROCEDURE Ops.plusExpect(): STRING;
     RETURN "numeric type or SET";
 END;
 
+PROCEDURE Factor.logicalNot();
+BEGIN
+    SELF.not := ~SELF.not;
+END;
+
 PROCEDURE TermItemOp.TermItemOp(op: STRING)
     | op(op);
 END;
@@ -695,12 +721,16 @@ PROCEDURE ItemOp.ItemOp(op: STRING)
     | op(op);
 END;
 
-PROCEDURE TermList.addExpression(e: Expression.PType);
+PROCEDURE TermList.makeFactor(cx: ContextHierarchy.PNode): PFactor;
+    RETURN NEW Factor();
+END;
+
+PROCEDURE TermList.addFactor(f: PFactor);
 BEGIN
-    IF SELF.expression = NIL THEN
-        SELF.expression := e;
+    IF SELF.factor = NIL THEN
+        SELF.factor := f;
     ELSE
-        SELF.last.expression := e;
+        SELF.last.factor := f;
     END;
 END;
 
@@ -713,6 +743,10 @@ BEGIN
         SELF.last.next := next;
     END;
     SELF.last := next;
+END;
+
+PROCEDURE SimpleList.makeTerm(): PTermList;
+    RETURN NEW TermList();
 END;
 
 PROCEDURE SimpleList.addTerm(t: PTermList);

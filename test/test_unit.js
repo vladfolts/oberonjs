@@ -66,7 +66,10 @@ return {
          "+1",
          "p1()",
          "p1() + p1()",
-         "p2()"),
+         "p2()",
+         "~FALSE",
+         "~TRUE"
+         ),
     fail(["", "not parsed"],
          ["12a", "not parsed"],
          ["noResult()", "procedure returning no result cannot be used in an expression"],
@@ -77,7 +80,8 @@ return {
          ["-INTEGER", "type name 'INTEGER' cannot be used as an expression"],
          ["+INTEGER", "type name 'INTEGER' cannot be used as an expression"],
          ["~BOOLEAN", "type name 'BOOLEAN' cannot be used as an expression"],
-         ["INTEGER", "type name 'INTEGER' cannot be used as an expression"]
+         ["INTEGER", "type name 'INTEGER' cannot be used as an expression"],
+         ["~~INTEGER", "type name 'INTEGER' cannot be used as an expression"]
          )
     ),
 "string expression": testWithContext(

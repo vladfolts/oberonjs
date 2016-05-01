@@ -53,11 +53,20 @@ TYPE
     END;
     PSimpleList = POINTER TO SimpleList;
 
+    TermList = RECORD(ExpressionTree.TermList)
+    END;
+
+    ETFactor = RECORD(ExpressionTree.Factor)
+        PROCEDURE ETFactor(cx: ContextHierarchy.PNode);
+
+        cx: ContextHierarchy.PNode;
+    END;
+
     BeginTypePromotionAndMsg = RECORD(ContextHierarchy.Message)
         result: EberonTypePromotion.PCombined;
     END;
 
-    CurrentTypePromotionMsg = RECORD(ContextHierarchy.Message)
+    InvertTypePromotionMsg = RECORD(ContextHierarchy.Message)
         result: EberonTypePromotion.PMaybe;
     END;
 
@@ -254,8 +263,11 @@ BEGIN
         IF p # NIL THEN
             msg.result := p.makeOr();
         END;
-    ELSIF msg IS CurrentTypePromotionMsg THEN
-        msg.result := setTermTypePromotion(SELF);
+    ELSIF msg IS InvertTypePromotionMsg THEN
+        p <- setTermTypePromotion(SELF);
+        IF p # NIL THEN
+            p.invert()
+        END;
     ELSE
         result := SUPER(msg);
     END;
@@ -268,18 +280,6 @@ BEGIN
         SELF.currentPromotion := SELF.typePromotion.next();
     ELSE
         SELF.andHandled := TRUE;
-    END;
-END;
-
-PROCEDURE Factor.handleLogicalNot();
-BEGIN
-    SUPER();
-
-    msg <- CurrentTypePromotionMsg();
-    void <- SELF.handleMessage(msg);
-    p <- msg.result;
-    IF p # NIL THEN
-        p.invert();
     END;
 END;
 
@@ -442,6 +442,10 @@ BEGIN
     SUPER(op);
 END;
 
+PROCEDURE SimpleList.makeTerm(): ExpressionTree.PTermList;
+    RETURN NEW TermList();
+END;
+
 PROCEDURE SimpleList.addOp(op: STRING);
 BEGIN
     SUPER(op);
@@ -451,6 +455,22 @@ BEGIN
     ELSE
         SELF.orHandled := TRUE;
     END;
+END;
+
+PROCEDURE TermList.makeFactor(cx: ContextHierarchy.PNode): ExpressionTree.PFactor;
+    RETURN NEW ETFactor(cx);
+END;
+
+PROCEDURE ETFactor.ETFactor(cx: ContextHierarchy.PNode)
+    | cx(cx);
+END;
+
+PROCEDURE ETFactor.logicalNot();
+BEGIN
+    SUPER();
+
+    msg <- InvertTypePromotionMsg();
+    void <- SELF.cx.handleMessage(msg);
 END;
 
 BEGIN

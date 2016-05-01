@@ -1,7 +1,7 @@
 MODULE ContextExpression;
 IMPORT 
     Chars, CodeGenerator, ConstValue, ContextHierarchy, 
-    Designator, Errors, Expression, ExpressionTree, Operator, 
+    Designator, Errors, Expression, ExpressionTree, 
     Procedure, Scope, String, Types;
 TYPE
     ExpressionHandler* = RECORD(ContextHierarchy.Node)
@@ -27,13 +27,12 @@ TYPE
     PFactor = POINTER TO Factor;
 
     Factor* = RECORD(ExpressionHandler)
-        PROCEDURE handleLogicalNot*();
+        PROCEDURE Factor*(parent: ContextHierarchy.PNode);
 
-        expression: Expression.PType;
-        logicalNot: BOOLEAN;
+        factor: ExpressionTree.PFactor;
     END;
 
-    Term* = RECORD(ExpressionHandler)
+    Term* = RECORD(ContextHierarchy.Node)
         PROCEDURE Term*(parent: ContextHierarchy.PNode); 
 
         list: ExpressionTree.PTermList;
@@ -80,17 +79,6 @@ TYPE
 
 VAR
     globalOps: ExpressionTree.POps;
-
-PROCEDURE promoteExpressionType(cx: ContextHierarchy.Root; left, right: Expression.PType);
-BEGIN
-    IF left # NIL THEN
-        rightType <- right.type();
-        leftType <- left.type();
-        IF (leftType # NIL) & (rightType # NIL) THEN
-            ExpressionTree.checkImplicitCast(cx, rightType, leftType);
-        END;
-    END;
-END;
 
 PROCEDURE ExpressionNode.ExpressionNode(parent: PExpressionHandler; node: ExpressionTree.PNode)
     | SUPER(parent),
@@ -145,6 +133,16 @@ PROCEDURE expressionFromConst(type: Types.PType; value: ConstValue.PType; code: 
     RETURN Expression.make(code, type, NIL, value);
 END;
 
+PROCEDURE Factor.Factor(parent: ContextHierarchy.PNode)
+    | SUPER(parent);
+BEGIN
+    IF parent^ IS Factor THEN
+        SELF.factor := parent.factor;
+    ELSE
+        SELF.factor := parent^(Term).list.makeFactor(SELF(POINTER));
+    END;
+END; 
+
 PROCEDURE Factor.handleLiteral(s: STRING);
 BEGIN
     IF s = "NIL" THEN
@@ -154,53 +152,42 @@ BEGIN
     ELSIF s = "FALSE" THEN
         SELF.handleExpression(expressionFromConst(Types.basic.bool, NEW ConstValue.Int(0), "false"));
     ELSIF s = "~" THEN
-        SELF.handleLogicalNot();
+        SELF.factor.logicalNot();
     END;
-END;
-
-PROCEDURE Factor.handleLogicalNot();
-BEGIN
-    SELF.logicalNot := TRUE;
 END;
 
 PROCEDURE Factor.handleExpression(e: Expression.PType);
 BEGIN
-    SELF.expression := e;
+    SELF.factor.expression := e;
 END;
 
 PROCEDURE Factor.endParse(): BOOLEAN;
-BEGIN
-    IF SELF.logicalNot THEN
-        ExpressionTree.notTypeId(SELF.expression);
-        ExpressionTree.checkTypeMatch(SELF.expression.type(), Types.basic.bool);
-        SELF.expression := Operator.not(SELF.expression);
-    END;
-    SELF.parent()^(ExpressionHandler).handleExpression(SELF.expression);
-    RETURN TRUE;
-END;
-
-PROCEDURE Term.Term(parent: ContextHierarchy.PNode)
-    | SUPER(parent),
-      list(NEW ExpressionTree.TermList());
-END; 
-
-PROCEDURE Term.handleExpression(e: Expression.PType);
-BEGIN
-    SELF.list.addExpression(e);
-END;
-
-PROCEDURE Term.endParse(): BOOLEAN;
 VAR
     const: ConstValue.PType;
 BEGIN
-    IF SELF.list.expression = NIL THEN
+    IF SELF.factor.expression = NIL THEN
         d <- SELF.attributes.designator;
         info <- d.info();
         IF info IS Types.PConst THEN
             const := info.value;
         END;
-        SELF.list.addExpression(Expression.make(d.code(), d.type(), d, const));
+        SELF.factor.expression := Expression.make(d.code(), d.type(), d, const);
     END;
+
+    parent <- SELF.parent();
+    IF parent^ IS Term THEN
+        parent.list.addFactor(SELF.factor);
+    END;
+    RETURN TRUE;
+END;
+
+PROCEDURE Term.Term(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      list(parent(PSimpleExpression).list.makeTerm());
+END; 
+
+PROCEDURE Term.endParse(): BOOLEAN;
+BEGIN
     SELF.parent()(PSimpleExpression).list.addTerm(SELF.list);
     RETURN TRUE;
 END;
