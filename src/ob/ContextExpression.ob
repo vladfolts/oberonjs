@@ -29,7 +29,7 @@ TYPE
     Factor* = RECORD(ExpressionHandler)
         PROCEDURE Factor*(parent: ContextHierarchy.PNode);
 
-        factor: ExpressionTree.PFactor;
+        factor-: ExpressionTree.PFactor;
     END;
 
     Term* = RECORD(ContextHierarchy.Node)
@@ -139,7 +139,7 @@ BEGIN
     IF parent^ IS Factor THEN
         SELF.factor := parent.factor;
     ELSE
-        SELF.factor := parent^(Term).list.makeFactor(parent);
+        SELF.factor := parent^(Term).list.makeFactor();
     END;
 END; 
 

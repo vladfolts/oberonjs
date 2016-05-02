@@ -48,7 +48,7 @@ TYPE
     END;
 
     TermList* = RECORD (TermItem)
-        PROCEDURE makeFactor*(cx: ContextHierarchy.PNode): PFactor;
+        PROCEDURE makeFactor*(): PFactor;
         PROCEDURE addFactor*(f: PFactor);
         PROCEDURE addOp*(op: STRING);
 
@@ -721,7 +721,7 @@ PROCEDURE ItemOp.ItemOp(op: STRING)
     | op(op);
 END;
 
-PROCEDURE TermList.makeFactor(cx: ContextHierarchy.PNode): PFactor;
+PROCEDURE TermList.makeFactor(): PFactor;
     RETURN NEW Factor();
 END;
 

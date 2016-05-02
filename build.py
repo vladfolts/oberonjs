@@ -129,7 +129,7 @@ def recompile(bin, cwd):
     sources = ['ContextAssignment.ob', 
                'EberonSymbols.ob', 
                'EberonContextCase.ob', 'EberonContextExpression.ob', 'EberonContextIdentdef.ob', 
-               'EberonContextIf.ob', 'EberonContextInPlace.ob', 'EberonContextType.ob', 
+               'EberonContextIf.ob', 'EberonContextInPlace.ob', 'EberonContextProcedure', 'EberonContextType.ob', 
                'EberonContextVar.ob', 'EberonLanguageContext.ob',
                'OberonContext.ob', 'OberonContextType.ob', 'OberonContextVar.ob',
                'OberonSymbols.ob', 'Lexer.ob', 'Module.ob']

@@ -3,8 +3,8 @@ IMPORT
     Chars, CodeGenerator,
     Context, ContextDesignator, ContextExpression, ContextHierarchy, ContextModule, 
     ContextProcedure, ContextType, 
-    EberonConstructor, EberonContext, EberonContextDesignator, 
-    EberonDynamicArray, EberonMap, EberonRecord, EberonTypePromotion, EberonTypes,
+    EberonConstructor, EberonContext, EberonContextDesignator, EberonContextExpression, 
+    EberonDynamicArray, EberonMap, EberonRecord, EberonTypes,
     Errors, Expression, ExpressionTree, LanguageContext, Object, Procedure, Record, Types, Variable;
 TYPE
     ProcOrMethodDeclaration* = RECORD(ContextProcedure.Declaration)
@@ -62,10 +62,6 @@ TYPE
         type: EberonRecord.PRecord;
     END;
 
-    BeginTypePromotionOrMsg* = RECORD(ContextHierarchy.Message)
-        result*: EberonTypePromotion.PCombined;
-    END;
-
 PROCEDURE superMethodCallGenerator(cx: LanguageContext.PType; type: Procedure.Type): Procedure.PCallGenerator;
 BEGIN
     args <- Procedure.makeArgumentsCode(cx);
@@ -119,8 +115,7 @@ BEGIN
     result <- FALSE;
     IF EberonContextDesignator.breakTypePromotion(msg) THEN
         result := TRUE;
-    ELSIF msg IS BeginTypePromotionOrMsg THEN
-        msg.result := NEW EberonTypePromotion.Or(FALSE);
+    ELSIF msg IS EberonContextExpression.ExpressionTypePromotion THEN
         result := TRUE;
     END
     RETURN result;

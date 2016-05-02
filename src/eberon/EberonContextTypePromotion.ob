@@ -1,7 +1,7 @@
 MODULE EberonContextTypePromotion;
 IMPORT
     ContextHierarchy, 
-    EberonContextDesignator, EberonContextProcedure,
+    EberonContextDesignator, EberonContextExpression,
     EberonTypePromotion;
 TYPE
     Type* = RECORD
@@ -27,11 +27,9 @@ BEGIN
         SELF.typePromotion := NEW EberonTypePromotion.ForVariable(msg.info, msg.type, FALSE);
         SELF.typePromotions.add(SELF.typePromotion);
         result := TRUE;
-    ELSIF msg IS EberonContextProcedure.BeginTypePromotionOrMsg THEN
-        tp <- NEW EberonTypePromotion.Or(FALSE);
-        SELF.typePromotion := tp;
-        SELF.typePromotions.add(tp);
-        msg.result := tp;
+    ELSIF msg IS EberonContextExpression.ExpressionTypePromotion THEN
+        SELF.typePromotion := msg.typePromotion;
+        SELF.typePromotions.add(SELF.typePromotion);
         result := TRUE;
     END;
     RETURN result;

@@ -2,7 +2,7 @@ MODULE EberonContextExpression;
 IMPORT
     Cast,
     Context, ContextExpression, ContextHierarchy, 
-    EberonContextDesignator, EberonContextProcedure, 
+    EberonContextDesignator, 
     EberonMap, EberonOperator, EberonString, EberonTypePromotion, 
     Errors, Expression, ExpressionTree, LanguageContext,
     JS,
@@ -29,34 +29,51 @@ TYPE
     Ops = RECORD(ExpressionTree.Ops)
     END;
 
-    Node = RECORD(ExpressionTree.Node)
-        PROCEDURE Node();
-
-        currentTypePromotion: EberonTypePromotion.PCombined;
-    END;
-    PNode = POINTER TO Node;
-
-    SimpleList = RECORD(ExpressionTree.SimpleList)
-        typePromotion: EberonTypePromotion.PCombined;
-        currentPromotion: EberonTypePromotion.PMaybe;
-        orHandled: BOOLEAN;
-    END;
     PSimpleList = POINTER TO SimpleList;
 
     TermList = RECORD(ExpressionTree.TermList)
+        PROCEDURE TermList(parentSimple: PSimpleList);
+
+        parentSimple: PSimpleList;
+
         typePromotion: EberonTypePromotion.PCombined;
         currentPromotion: EberonTypePromotion.PMaybe;
         andHandled: BOOLEAN;
     END;
     PTermList = POINTER TO TermList;
 
-    ETFactor = RECORD(ExpressionTree.Factor)
-        PROCEDURE ETFactor(cx: PTerm);
+    SimpleList = RECORD(ExpressionTree.SimpleList)
+        PROCEDURE SimpleList(parentTerm: PTermList);
 
-        cx: PTerm;
+        parentTerm: PTermList;
+
+        typePromotion: EberonTypePromotion.PCombined;
+        currentPromotion: EberonTypePromotion.PMaybe;
+        orHandled: BOOLEAN;
     END;
 
+    Node = RECORD(ExpressionTree.Node)
+        PROCEDURE Node(parentTerm: PTermList);
+
+        parentTerm: PTermList;
+        currentTypePromotion: EberonTypePromotion.PCombined;
+    END;
+    PNode = POINTER TO Node;
+
+    ETFactor = RECORD(ExpressionTree.Factor)
+        PROCEDURE ETFactor(termList: PTermList);
+
+        termList: PTermList;
+    END;
+
+    ExpressionTypePromotion* = RECORD(ContextHierarchy.Message)
+        PROCEDURE ExpressionTypePromotion(typePromotion: EberonTypePromotion.PType);
+
+        typePromotion-: EberonTypePromotion.PType;
+    END;         
+
 VAR
+    setTermTypePromotion: PROCEDURE(VAR term: TermList): EberonTypePromotion.PMaybe;
     globalOps: POINTER TO Ops;
 
 PROCEDURE hierarchyDepth(t: Record.Type): INTEGER;
@@ -148,8 +165,19 @@ BEGIN
     RETURN TRUE;
 END;
 
+PROCEDURE parentTerm(VAR cx: ContextHierarchy.Node): PTermList;
+VAR
+    result: PTermList;
+BEGIN
+    maybeFactor <- cx.parent();
+    IF maybeFactor^ IS ContextExpression.Factor THEN
+        result := maybeFactor.factor^(ETFactor).termList;
+    END;
+    RETURN result;
+END;
+
 PROCEDURE RelationExpression.RelationExpression(parent: ContextExpression.PExpressionHandler)
-    | SUPER(parent, NEW Node());
+    | SUPER(parent, NEW Node(parentTerm(parent^)));
 END;
 
 PROCEDURE RelationExpression.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
@@ -186,13 +214,28 @@ BEGIN
     RETURN SUPER();
 END;
 
-PROCEDURE setSimpleExpressionTypePromotion(VAR s: SimpleExpression): EberonTypePromotion.PMaybe;
+PROCEDURE SimpleExpression.endParse(): BOOLEAN;
 BEGIN
-    e <- s.list(PSimpleList);
+    s <- SELF.list(PSimpleList);
+    IF (s.parentTerm = NIL) & (s.typePromotion # NIL) THEN 
+        msg <- ExpressionTypePromotion(s.typePromotion);
+        void <- SELF.parent().handleMessage(msg);
+    END;
+    RETURN SUPER();
+END;
+
+PROCEDURE setSimpleExpressionTypePromotion(VAR e: SimpleList): EberonTypePromotion.PMaybe;
+BEGIN
     IF e.currentPromotion = NIL THEN
-        msg <- EberonContextProcedure.BeginTypePromotionOrMsg();
-        void <- s.parent().handleMessage(msg);
-        e.typePromotion := msg.result;
+        IF e.parentTerm # NIL THEN
+            p <- setTermTypePromotion(e.parentTerm^);
+            IF p # NIL THEN
+                e.typePromotion := p.makeOr();
+            END;
+        ELSE
+            e.typePromotion := NEW EberonTypePromotion.Or(FALSE);
+        END;
+
         IF e.typePromotion # NIL THEN
             IF e.orHandled THEN
                 unused <- e.typePromotion.next();
@@ -203,11 +246,10 @@ BEGIN
     RETURN e.currentPromotion;
 END;
 
-PROCEDURE setTermTypePromotion(VAR cx: Term): EberonTypePromotion.PMaybe;
+PROCEDURE setTermTypePromotionProc(VAR term: TermList): EberonTypePromotion.PMaybe;
 BEGIN
-    term <- cx.list(PTermList);
     IF term.currentPromotion = NIL THEN
-        p <- setSimpleExpressionTypePromotion(cx.parent()^(SimpleExpression));
+        p <- setSimpleExpressionTypePromotion(term.parentSimple^);
         IF p # NIL THEN
             term.typePromotion := p.makeAnd();
         END;
@@ -228,14 +270,9 @@ VAR
 BEGIN
     IF msg IS EberonContextDesignator.PromoteTypeMsg THEN
         promoted <- msg.info;
-        p <- setTermTypePromotion(SELF);
+        p <- setTermTypePromotion(SELF.list^(TermList));
         IF p # NIL THEN
             p.promote(promoted, msg.type);
-        END;
-    ELSIF msg IS EberonContextProcedure.BeginTypePromotionOrMsg THEN
-        p <- setTermTypePromotion(SELF);
-        IF p # NIL THEN
-            msg.result := p.makeOr();
         END;
     ELSE
         result := SUPER(msg);
@@ -380,12 +417,13 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Node.Node()
-    | SUPER(globalOps);
+PROCEDURE Node.Node(parentTerm: PTermList)
+    | SUPER(globalOps),
+      parentTerm(parentTerm);
 END;
 
 PROCEDURE Node.makeSimple(): ExpressionTree.PSimpleList;
-    RETURN NEW SimpleList();
+    RETURN NEW SimpleList(SELF.parentTerm);
 END;
 
 PROCEDURE Node.addSimple(s: ExpressionTree.PSimpleList);
@@ -407,8 +445,12 @@ BEGIN
     SUPER(op);
 END;
 
+PROCEDURE SimpleList.SimpleList(parentTerm: PTermList)
+    | parentTerm(parentTerm);
+END;
+
 PROCEDURE SimpleList.makeTerm(): ExpressionTree.PTermList;
-    RETURN NEW TermList();
+    RETURN NEW TermList(SELF(POINTER));
 END;
 
 PROCEDURE SimpleList.addOp(op: STRING);
@@ -422,24 +464,35 @@ BEGIN
     END;
 END;
 
-PROCEDURE TermList.makeFactor(cx: ContextHierarchy.PNode): ExpressionTree.PFactor;
-    RETURN NEW ETFactor(cx(PTerm));
+PROCEDURE TermList.TermList(parentSimple: PSimpleList)
+    | parentSimple(parentSimple);
 END;
 
-PROCEDURE ETFactor.ETFactor(cx: PTerm)
-    | cx(cx);
+PROCEDURE TermList.makeFactor(): ExpressionTree.PFactor;
+    RETURN NEW ETFactor(SELF(POINTER));
+END;
+
+PROCEDURE ETFactor.ETFactor(termList: PTermList)
+    | termList(termList);
 END;
 
 PROCEDURE ETFactor.logicalNot();
 BEGIN
     SUPER();
 
-    p <- setTermTypePromotion(SELF.cx^);
+    p <- setTermTypePromotion(SELF.termList^);
     IF p # NIL THEN
         p.invert()
     END;
 END;
 
+PROCEDURE ExpressionTypePromotion.ExpressionTypePromotion(typePromotion: EberonTypePromotion.PType)
+    | typePromotion(typePromotion);
+END;
+
 BEGIN
+    (*resolve recursive calls*)
+    setTermTypePromotion := setTermTypePromotionProc;
+    
     NEW(globalOps);
 END EberonContextExpression.
