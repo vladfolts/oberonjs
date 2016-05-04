@@ -14,7 +14,7 @@ TYPE
         PROCEDURE greater*(type: Types.PType): BinaryOperatorCx;
         PROCEDURE lessEq*(type: Types.PType): BinaryOperatorCx;
         PROCEDURE greaterEq*(type: Types.PType): BinaryOperatorCx;
-        PROCEDURE is*(cx: ContextHierarchy.Node): BinaryOperatorCx;
+        PROCEDURE is*(VAR cx: ContextHierarchy.Node): BinaryOperatorCx;
         PROCEDURE in*(left, right: Types.PType; cx: ContextHierarchy.Node): BinaryOperatorCx;
         PROCEDURE plus*(type: Types.PType): BinaryOperator;
 
@@ -37,7 +37,7 @@ TYPE
 
     PTermItemOp = POINTER TO TermItemOp;
     TermItem* = RECORD
-        factor: PFactor;
+        factor-: PFactor;
         next: PTermItemOp;
     END;
 
@@ -57,8 +57,8 @@ TYPE
     PTermList* = POINTER TO TermList;
 
     PSimpleItemOp = POINTER TO SimpleItemOp;
-    SimpleItem = RECORD
-        term: PTermList;
+    SimpleItem* = RECORD
+        term-: PTermList;
         next: PSimpleItemOp;
     END;
 
@@ -78,12 +78,7 @@ TYPE
     END;
     PSimpleList* = POINTER TO SimpleList;
 
-    Item = RECORD
-        simple: PSimpleList;
-        next: POINTER TO ItemOp; 
-    END;
-
-    Node* = RECORD (Item)
+    Node* = RECORD
     	PROCEDURE Node*(ops: POps);
 
     	PROCEDURE makeSimple*(): PSimpleList;
@@ -92,14 +87,16 @@ TYPE
     	PROCEDURE asExpression*(cx: ContextHierarchy.PNode): Expression.PType;
 
     	ops: POps;
-        last: POINTER TO ItemOp;
+        left-: PSimpleList;
+        right-: POINTER TO RightNode;
     END;
     PNode* = POINTER TO Node;
 
-    ItemOp = RECORD (Item)
-        PROCEDURE ItemOp(op: STRING);
+    RightNode* = RECORD
+        PROCEDURE RightNode(op: STRING);
 
-        op: STRING;
+        op-: STRING;
+        simple: PSimpleList;
     END;
 
     OpTypeCheck = RECORD
@@ -325,7 +322,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE relationOp(left, right: Expression.PType; literal: STRING; ops: Ops; context: ContextHierarchy.Node): BinaryOperatorCx;
+PROCEDURE relationOp(left, right: Expression.PType; literal: STRING; ops: Ops; VAR context: ContextHierarchy.Node): BinaryOperatorCx;
 VAR
     type: Types.PType;
     o: BinaryOperatorCx;
@@ -500,21 +497,19 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE makeFromList(list: Item; ops: Ops; cx: ContextHierarchy.PNode): Expression.PType;
+PROCEDURE makeFromNode(node: Node; ops: Ops; cx: ContextHierarchy.PNode): Expression.PType;
 BEGIN
     root <- cx.root();
-    result <- makeFromSimpleList(list.simple^, ops, root^);
-    next <- list.next;
-    WHILE next # NIL DO
+    result <- makeFromSimpleList(node.left^, ops, root^);
+    right <- node.right;
+    IF right # NIL THEN
         leftExpression <- result;
-        rightExpression <- makeFromSimpleList(next.simple^, ops, root^);
+        rightExpression <- makeFromSimpleList(right.simple^, ops, root^);
         leftExpression := promoteTypeInExpression(leftExpression, rightExpression.type());
         rightExpression := promoteTypeInExpression(rightExpression, leftExpression.type());
 
-        o <- relationOp(leftExpression, rightExpression, next.op, ops, cx^);
+        o <- relationOp(leftExpression, rightExpression, right.op, ops, cx^);
         result := o(leftExpression, rightExpression, ContextHierarchy.makeLanguageContext(cx));
-
-        next := next.next;
     END;
     notTypeId(result);
 
@@ -525,7 +520,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Ops.is(cx: ContextHierarchy.Node): BinaryOperatorCx;
+PROCEDURE Ops.is(VAR cx: ContextHierarchy.Node): BinaryOperatorCx;
 VAR
     r: BinaryOperatorCx;
 
@@ -717,7 +712,7 @@ PROCEDURE SimpleItemOp.SimpleItemOp(op: STRING)
     | op(op);
 END;
 
-PROCEDURE ItemOp.ItemOp(op: STRING)
+PROCEDURE RightNode.RightNode(op: STRING)
     | op(op);
 END;
 
@@ -779,26 +774,20 @@ END;
 
 PROCEDURE Node.addSimple(s: PSimpleList);
 BEGIN
-    IF SELF.simple = NIL THEN
-        SELF.simple := s;
+    IF SELF.left = NIL THEN
+        SELF.left := s;
     ELSE
-        SELF.last.simple := s;
+        SELF.right.simple := s;
     END;
 END;
 
 PROCEDURE Node.addOp(op: STRING);
 BEGIN
-    next <- NEW ItemOp(op);
-    IF SELF.last = NIL THEN
-        SELF.next := next;
-    ELSE
-        SELF.last.next := next;
-    END;
-    SELF.last := next;
+    SELF.right := NEW RightNode(op);
 END;
 
 PROCEDURE Node.asExpression(cx: ContextHierarchy.PNode): Expression.PType;
-	RETURN makeFromList(SELF, SELF.ops^, cx);
+	RETURN makeFromNode(SELF, SELF.ops^, cx);
 END;
 
 PROCEDURE IntOpTypeCheck.expect(): STRING;

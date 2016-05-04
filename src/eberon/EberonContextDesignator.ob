@@ -56,13 +56,6 @@ TYPE
         expression: Expression.PType;
     END;
 
-    PromoteTypeMsg* = RECORD(ContextHierarchy.Message)
-        PROCEDURE PromoteTypeMsg*(info: EberonTypePromotion.PVariable; type: Types.PStorageType);
-
-        info-: EberonTypePromotion.PVariable;
-        type-: Types.PStorageType;
-    END;
-
     TransferPromotedTypesMsg* = RECORD(ContextHierarchy.Message)
         PROCEDURE TransferPromotedTypesMsg*(p: EberonTypePromotion.PCombined); 
 
@@ -170,8 +163,6 @@ BEGIN
     result <- FALSE;
     IF msg IS TransferPromotedTypesMsg THEN
         msg.promotion.clear();
-        result := TRUE;
-    ELSIF msg IS PromoteTypeMsg THEN
         result := TRUE;
     END;
     RETURN result;
@@ -425,11 +416,6 @@ END;
 
 PROCEDURE OperatorNewMsg.OperatorNewMsg(e: Expression.PType)
     | expression(e);
-END;
-
-PROCEDURE PromoteTypeMsg.PromoteTypeMsg(info: EberonTypePromotion.PVariable; type: Types.PStorageType)
-    | info(info),
-      type(type);
 END;
 
 PROCEDURE TransferPromotedTypesMsg.TransferPromotedTypesMsg(p: EberonTypePromotion.PCombined)

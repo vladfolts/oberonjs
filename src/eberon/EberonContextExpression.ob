@@ -56,7 +56,8 @@ TYPE
         PROCEDURE Node(parentTerm: PTermList);
 
         parentTerm: PTermList;
-        currentTypePromotion: EberonTypePromotion.PCombined;
+        combinedTypePromotion: EberonTypePromotion.PCombined;
+        varTypePromotion: EberonTypePromotion.PType;
     END;
     PNode = POINTER TO Node;
 
@@ -207,9 +208,13 @@ END;
 PROCEDURE RelationExpression.endParse(): BOOLEAN;
 BEGIN
     node <- SELF.node(PNode); 
-    IF node.currentTypePromotion # NIL THEN
-        void <- SELF.parent().handleMessage(
-            NEW EberonContextDesignator.TransferPromotedTypesMsg(node.currentTypePromotion)^);
+    IF node.combinedTypePromotion # NIL THEN
+        msg <- EberonContextDesignator.TransferPromotedTypesMsg(node.combinedTypePromotion);
+        void <- SELF.parent().handleMessage(msg);
+    END;
+    IF node.varTypePromotion # NIL THEN
+        msg <- ExpressionTypePromotion(node.varTypePromotion);
+        void <- SELF.parent().handleMessage(msg);
     END;
     RETURN SUPER();
 END;
@@ -262,22 +267,6 @@ BEGIN
         END;
     END;
     RETURN term.currentPromotion;
-END;
-
-PROCEDURE Term.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
-VAR
-    result: Object.PType;
-BEGIN
-    IF msg IS EberonContextDesignator.PromoteTypeMsg THEN
-        promoted <- msg.info;
-        p <- setTermTypePromotion(SELF.list^(TermList));
-        IF p # NIL THEN
-            p.promote(promoted, msg.type);
-        END;
-    ELSE
-        result := SUPER(msg);
-    END;
-    RETURN result;
 END;
 
 PROCEDURE TermList.addOp(op: STRING);
@@ -379,31 +368,6 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE Ops.is(cx: ContextHierarchy.Node): ExpressionTree.BinaryOperatorCx;
-VAR
-    impl: ExpressionTree.BinaryOperatorCx;
-    r: ExpressionTree.BinaryOperatorCx;
-
-    PROCEDURE is(left, right: Expression.PType; lcx: LanguageContext.PType): Expression.PType;
-    BEGIN
-        d <- left.designator();
-        IF d # NIL THEN
-            v <- d.info();
-            IF v IS EberonTypePromotion.PVariable THEN
-                msg <- EberonContextDesignator.PromoteTypeMsg(
-                            v, 
-                            ExpressionTree.unwrapType(right.designator().info()));
-                void <- cx.handleMessage(msg);
-            END;
-        END;
-        RETURN impl(left, right, lcx);
-    END;
-BEGIN
-    impl := SUPER(cx);
-    JS.do("r = is"); (*allow closure*)
-    RETURN r;
-END;
-
 PROCEDURE Ops.coalesceType(leftType, rightType: Types.PType): Types.PType;
 VAR
     result: Types.PType;
@@ -428,9 +392,22 @@ END;
 
 PROCEDURE Node.addSimple(s: ExpressionTree.PSimpleList);
 BEGIN
-    typePromotion <- s(PSimpleList).typePromotion;
-    IF typePromotion # NIL THEN
-        SELF.currentTypePromotion := typePromotion;
+    SELF.combinedTypePromotion := s(PSimpleList).typePromotion;
+
+    IF (SELF.left # NIL) & (SELF.right.op = "IS") THEN
+        d <- SELF.left.term.factor.expression.designator();
+        IF d # NIL THEN
+            v <- d.info();
+            IF v IS EberonTypePromotion.PVariable THEN
+                type <- ExpressionTree.unwrapType(s.term.factor.expression.designator().info());
+                IF SELF.parentTerm = NIL THEN
+                    SELF.varTypePromotion := NEW EberonTypePromotion.ForVariable(v, type, FALSE);
+                ELSE
+                    p <- setTermTypePromotion(SELF.parentTerm^);
+                    p.promote(v, type);
+                END;
+            END;
+        END;
     END;
 
     SUPER(s);
@@ -438,8 +415,8 @@ END;
 
 PROCEDURE Node.addOp(op: STRING);
 BEGIN
-    IF SELF.currentTypePromotion # NIL THEN
-        SELF.currentTypePromotion.clear();
+    IF SELF.combinedTypePromotion # NIL THEN
+        SELF.combinedTypePromotion.clear();
     END;
 
     SUPER(op);

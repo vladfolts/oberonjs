@@ -23,10 +23,6 @@ BEGIN
     IF SELF.ignorePromotions THEN
     ELSIF msg IS EberonContextDesignator.TransferPromotedTypesMsg THEN
         result := TRUE;
-    ELSIF msg IS EberonContextDesignator.PromoteTypeMsg THEN
-        SELF.typePromotion := NEW EberonTypePromotion.ForVariable(msg.info, msg.type, FALSE);
-        SELF.typePromotions.add(SELF.typePromotion);
-        result := TRUE;
     ELSIF msg IS EberonContextExpression.ExpressionTypePromotion THEN
         SELF.typePromotion := msg.typePromotion;
         SELF.typePromotions.add(SELF.typePromotion);
