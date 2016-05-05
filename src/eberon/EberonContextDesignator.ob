@@ -57,9 +57,9 @@ TYPE
     END;
 
     TransferPromotedTypesMsg* = RECORD(ContextHierarchy.Message)
-        PROCEDURE TransferPromotedTypesMsg*(p: EberonTypePromotion.PCombined); 
+        PROCEDURE TransferPromotedTypesMsg*(p: EberonTypePromotion.PType); 
 
-        promotion: EberonTypePromotion.PCombined;
+        promotion-: EberonTypePromotion.PType;
     END;
 
     GetMethodSelfMsg* = RECORD(ContextHierarchy.Message)
@@ -162,7 +162,7 @@ PROCEDURE breakTypePromotion*(VAR msg: ContextHierarchy.Message): BOOLEAN;
 BEGIN
     result <- FALSE;
     IF msg IS TransferPromotedTypesMsg THEN
-        msg.promotion.clear();
+        msg.promotion.reset();
         result := TRUE;
     END;
     RETURN result;
@@ -418,7 +418,7 @@ PROCEDURE OperatorNewMsg.OperatorNewMsg(e: Expression.PType)
     | expression(e);
 END;
 
-PROCEDURE TransferPromotedTypesMsg.TransferPromotedTypesMsg(p: EberonTypePromotion.PCombined)
+PROCEDURE TransferPromotedTypesMsg.TransferPromotedTypesMsg(p: EberonTypePromotion.PType)
     | promotion(p); 
 END;
 

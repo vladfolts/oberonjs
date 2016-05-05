@@ -3,7 +3,7 @@ IMPORT
     Chars, CodeGenerator,
     Context, ContextDesignator, ContextExpression, ContextHierarchy, ContextModule, 
     ContextProcedure, ContextType, 
-    EberonConstructor, EberonContext, EberonContextDesignator, EberonContextExpression, 
+    EberonConstructor, EberonContext, EberonContextDesignator, 
     EberonDynamicArray, EberonMap, EberonRecord, EberonTypes,
     Errors, Expression, ExpressionTree, LanguageContext, Object, Procedure, Record, Types, Variable;
 TYPE
@@ -111,14 +111,7 @@ BEGIN
 END;
 
 PROCEDURE handleTypePromotionMadeInSeparateStatement(VAR msg: ContextHierarchy.Message): BOOLEAN;
-BEGIN
-    result <- FALSE;
-    IF EberonContextDesignator.breakTypePromotion(msg) THEN
-        result := TRUE;
-    ELSIF msg IS EberonContextExpression.ExpressionTypePromotion THEN
-        result := TRUE;
-    END
-    RETURN result;
+    RETURN EberonContextDesignator.breakTypePromotion(msg);
 END;
 
 PROCEDURE ProcOrMethodDeclaration.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;

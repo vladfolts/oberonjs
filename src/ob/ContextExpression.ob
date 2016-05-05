@@ -13,7 +13,7 @@ TYPE
         PROCEDURE SimpleExpression*(parent: ContextHierarchy.PNode); 
         PROCEDURE handleOperator*(op: STRING);
 
-        list-: ExpressionTree.PSimpleList;
+        list: ExpressionTree.PSimpleList;
     END;
     PSimpleExpression = POINTER TO SimpleExpression;
 

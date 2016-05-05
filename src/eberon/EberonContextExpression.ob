@@ -67,12 +67,6 @@ TYPE
         termList: PTermList;
     END;
 
-    ExpressionTypePromotion* = RECORD(ContextHierarchy.Message)
-        PROCEDURE ExpressionTypePromotion(typePromotion: EberonTypePromotion.PType);
-
-        typePromotion-: EberonTypePromotion.PType;
-    END;         
-
 VAR
     setTermTypePromotion: PROCEDURE(VAR term: TermList): EberonTypePromotion.PMaybe;
     globalOps: POINTER TO Ops;
@@ -181,17 +175,6 @@ PROCEDURE RelationExpression.RelationExpression(parent: ContextExpression.PExpre
     | SUPER(parent, NEW Node(parentTerm(parent^)));
 END;
 
-PROCEDURE RelationExpression.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
-VAR
-    result: Object.PType;
-BEGIN
-    IF msg IS EberonContextDesignator.TransferPromotedTypesMsg THEN
-    ELSE
-        result := SUPER(msg);
-    END;
-    RETURN result;
-END;
-
 PROCEDURE Ops.in(left, right: Types.PType; cx: ContextHierarchy.Node): ExpressionTree.BinaryOperatorCx;
 VAR
     result: ExpressionTree.BinaryOperatorCx;
@@ -206,25 +189,20 @@ BEGIN
 END;
 
 PROCEDURE RelationExpression.endParse(): BOOLEAN;
+VAR
+    typePromotion: EberonTypePromotion.PType;
 BEGIN
     node <- SELF.node(PNode); 
-    IF node.combinedTypePromotion # NIL THEN
-        msg <- EberonContextDesignator.TransferPromotedTypesMsg(node.combinedTypePromotion);
-        void <- SELF.parent().handleMessage(msg);
-    END;
-    IF node.varTypePromotion # NIL THEN
-        msg <- ExpressionTypePromotion(node.varTypePromotion);
-        void <- SELF.parent().handleMessage(msg);
-    END;
-    RETURN SUPER();
-END;
+    IF node.parentTerm = NIL THEN 
+        typePromotion := node.combinedTypePromotion;
+        IF typePromotion = NIL THEN
+            typePromotion := node.varTypePromotion;
+        END;
 
-PROCEDURE SimpleExpression.endParse(): BOOLEAN;
-BEGIN
-    s <- SELF.list(PSimpleList);
-    IF (s.parentTerm = NIL) & (s.typePromotion # NIL) THEN 
-        msg <- ExpressionTypePromotion(s.typePromotion);
-        void <- SELF.parent().handleMessage(msg);
+        IF typePromotion # NIL THEN
+            msg <- EberonContextDesignator.TransferPromotedTypesMsg(typePromotion);
+            void <- SELF.parent().handleMessage(msg);
+        END;
     END;
     RETURN SUPER();
 END;
@@ -461,10 +439,6 @@ BEGIN
     IF p # NIL THEN
         p.invert()
     END;
-END;
-
-PROCEDURE ExpressionTypePromotion.ExpressionTypePromotion(typePromotion: EberonTypePromotion.PType)
-    | typePromotion(typePromotion);
 END;
 
 BEGIN

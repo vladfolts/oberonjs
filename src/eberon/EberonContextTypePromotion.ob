@@ -1,7 +1,7 @@
 MODULE EberonContextTypePromotion;
 IMPORT
     ContextHierarchy, 
-    EberonContextDesignator, EberonContextExpression,
+    EberonContextDesignator,
     EberonTypePromotion;
 TYPE
     Type* = RECORD
@@ -22,9 +22,7 @@ BEGIN
 
     IF SELF.ignorePromotions THEN
     ELSIF msg IS EberonContextDesignator.TransferPromotedTypesMsg THEN
-        result := TRUE;
-    ELSIF msg IS EberonContextExpression.ExpressionTypePromotion THEN
-        SELF.typePromotion := msg.typePromotion;
+        SELF.typePromotion := msg.promotion;
         SELF.typePromotions.add(SELF.typePromotion);
         result := TRUE;
     END;
