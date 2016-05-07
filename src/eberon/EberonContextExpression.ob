@@ -194,6 +194,10 @@ BEGIN
             resultType := findCommonBase(firstType, secondType);
         ELSIF (firstType IS Record.PPointer) & (secondType IS Record.PPointer) THEN
             resultType := EberonContextDesignator.makePointer(findCommonBase(Record.pointerBase(firstType^), Record.pointerBase(secondType^)));
+        ELSIF (firstType = Types.nil) & (secondType IS Record.PPointer) THEN
+            resultType := secondType;
+        ELSIF (secondType = Types.nil) & (firstType IS Record.PPointer) THEN
+            resultType := firstType;
         END;
 
         IF resultType = NIL THEN 

@@ -1516,7 +1516,8 @@ exports.suite = {
     },
 "ternary operator": testWithContext(
         context(grammar.expression,
-                "TYPE Base = RECORD END; PBase = POINTER TO Base; Derived = RECORD(Base) END;"
+                "TYPE Base = RECORD END; PBase = POINTER TO Base;"
+                    + "Derived = RECORD(Base) END; PDerived = POINTER TO Derived;"
                     + "Derived2 = RECORD(Base) END; Derived3 = RECORD(Base) END;" 
                 + "VAR b: BOOLEAN; i1, i2: INTEGER; s: STRING; byte: BYTE;"
                 + "rb: Base; rd: Derived; rd2: Derived2; rd3: Derived3;"
@@ -1524,6 +1525,7 @@ exports.suite = {
                 + "PROCEDURE passBase(b: Base): BOOLEAN; RETURN TRUE END;"
                 + "PROCEDURE passDerived(d: Derived): BOOLEAN; RETURN TRUE END;"
                 + "PROCEDURE passPBase(p: PBase): BOOLEAN; RETURN TRUE END;"
+                + "PROCEDURE passPDerived(p: PDerived): BOOLEAN; RETURN TRUE END;"
                 ),
         pass("b ? i1 : i2",
              "(b ? i1 : i2) # 0",
@@ -1532,6 +1534,8 @@ exports.suite = {
              "b ? byte : i1",
              "b ? pb : pd",
              "b ? pd : pb",
+             "b ? pb : NIL",
+             "b ? NIL : pb",
              "passBase(b ? pb^ : pd^)",
              "passBase(b ? pd^ : pb^)",
              "passBase(b ? pd2^ : pd3^)",
@@ -1540,7 +1544,9 @@ exports.suite = {
              "passBase(b ? rd2 : rd3)",
              "b ? i1 : b ? i1 : i2",
              "passPBase(b ? pb : pd)",
-             "passPBase(b ? pd : pb)"
+             "passPBase(b ? pd : pb)",
+             "passPBase(b ? pb : NIL)",
+             "passPBase(b ? NIL : pb)"
              ),
         fail(["b ?", "not parsed"],
              ["b ? i1", "expected \":\" after \"?\" in ternary operator"],
@@ -1549,7 +1555,10 @@ exports.suite = {
              ["passBase(b ? pb^ : pd)", "incompatible types in ternary operator: 'Base' and 'POINTER TO Derived'"],
              ["passDerived(b ? pb : pd)", "type mismatch for argument 1: 'POINTER TO Base' cannot be converted to 'Derived'"],
              ["passDerived(b ? pd : pb)", "type mismatch for argument 1: 'POINTER TO Base' cannot be converted to 'Derived'"],
-             ["b ? b ? i1 : i2 : i1", "expected \":\" after \"?\" in ternary operator"]
+             ["b ? b ? i1 : i2 : i1", "expected \":\" after \"?\" in ternary operator"],
+             ["b ? rb : NIL", "incompatible types in ternary operator: 'Base' and 'NIL'"],
+             ["passPDerived(b ? NIL : pb)", "type mismatch for argument 1: 'PBase' cannot be converted to 'PDerived'"],
+             ["passPDerived(b ? pb : NIL)", "type mismatch for argument 1: 'PBase' cannot be converted to 'PDerived'"]
              )
     )
 };
