@@ -137,14 +137,10 @@ PROCEDURE ExpressionNode.ExpressionNode(parent: ContextHierarchy.PNode)
 END;
 
 PROCEDURE processTypePromotion(node: Node): EberonTypePromotion.PType;
-VAR
-    typePromotion: EberonTypePromotion.PType;
 BEGIN
-    typePromotion := node.combinedTypePromotion;
-    IF typePromotion = NIL THEN
-        typePromotion := node.varTypePromotion;
-    END;
-    RETURN typePromotion;
+    typePromotion <- node.combinedTypePromotion;
+    RETURN typePromotion # NIL ? typePromotion 
+                               : node.varTypePromotion;
 END;
 
 PROCEDURE ExpressionNode.handleExpression(e: Expression.PType);
