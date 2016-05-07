@@ -741,7 +741,14 @@ exports.suite = {
     "type promotion in ternary operator": testWithContext(
         temporaryValues.context,
         temporaryValues.passExpressions(
-            //"b IS PDerived ? b.flag : FALSE"
+            "b IS PDerived ? b.flag : FALSE",
+            "~(b IS PDerived) ? FALSE : b.flag",
+            "(b IS PDerived) & bVar ? b.flag : FALSE",
+            "~~(b IS PDerived) ? b.flag : FALSE"
+            ),
+        temporaryValues.failExpressions(
+            "b IS PDerived ? FALSE : b.flag",
+            "(b IS PDerived ? FALSE : TRUE) & b.flag"
             )
         ),
     "type promotion in IF": testWithContext(
@@ -776,7 +783,8 @@ exports.suite = {
             "IF bVar OR (b IS PDerived) THEN ELSE b.flag := FALSE; END;",
             "IF bVar OR ~(b IS PDerived) THEN b.flag := FALSE; END;",
             "IF b IS PDerived THEN ELSIF TRUE THEN b.flag := FALSE; END",
-            "IF bVar THEN bVar := (b IS PDerived) & bVar; ASSERT(b.flag); END"
+            "IF bVar THEN bVar := (b IS PDerived) & bVar; ASSERT(b.flag); END",
+            "IF b IS PDerived ? FALSE : TRUE THEN ASSERT(b.flag); END"
              )
         ),
     "invert type promotion in IF": testWithContext(

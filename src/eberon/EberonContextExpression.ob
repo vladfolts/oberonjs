@@ -8,12 +8,19 @@ IMPORT
     JS,
     Object, Record, Types;
 TYPE
+    PNode = POINTER TO Node;
+
     ExpressionNode* = RECORD(ContextExpression.ExpressionHandler)
+        PROCEDURE ExpressionNode(parent: ContextHierarchy.PNode);
+
+        currentNode: PNode;
+        typePromotion: EberonTypePromotion.PType;
         condition, first, second: Expression.PType;
     END;
+    PExpressionNode = POINTER TO ExpressionNode;
 
     RelationExpression* = RECORD(ContextExpression.ExpressionNode)
-        PROCEDURE RelationExpression(parent: ContextExpression.PExpressionHandler);
+        PROCEDURE RelationExpression(parent: PExpressionNode);
     END;
 
     SimpleExpression* = RECORD(ContextExpression.SimpleExpression)
@@ -59,7 +66,6 @@ TYPE
         combinedTypePromotion: EberonTypePromotion.PCombined;
         varTypePromotion: EberonTypePromotion.PType;
     END;
-    PNode = POINTER TO Node;
 
     ETFactor = RECORD(ExpressionTree.Factor)
         PROCEDURE ETFactor(termList: PTermList);
@@ -115,14 +121,60 @@ BEGIN
     RETURN commonBase1;
 END;
 
+PROCEDURE parentTerm(VAR maybeFactor: ContextHierarchy.Node): PTermList;
+VAR
+    result: PTermList;
+BEGIN
+    IF maybeFactor IS ContextExpression.Factor THEN
+        result := maybeFactor.factor^(ETFactor).termList;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE ExpressionNode.ExpressionNode(parent: ContextHierarchy.PNode)
+    | SUPER(parent),
+      currentNode(NEW Node(parentTerm(parent^)));
+END;
+
+PROCEDURE processTypePromotion(node: Node): EberonTypePromotion.PType;
+VAR
+    typePromotion: EberonTypePromotion.PType;
+BEGIN
+    typePromotion := node.combinedTypePromotion;
+    IF typePromotion = NIL THEN
+        typePromotion := node.varTypePromotion;
+    END;
+    RETURN typePromotion;
+END;
+
 PROCEDURE ExpressionNode.handleExpression(e: Expression.PType);
 BEGIN
     IF SELF.condition = NIL THEN
         SELF.condition := e;
+        SELF.typePromotion := processTypePromotion(SELF.currentNode^);
     ELSIF SELF.first = NIL THEN
         SELF.first := e;
     ELSE
         SELF.second := e;
+    END;
+
+    SELF.currentNode := NEW Node(SELF.currentNode.parentTerm);
+END;
+
+PROCEDURE ExpressionNode.handleLiteral(s: STRING);
+BEGIN
+    parentTerm <- SELF.currentNode.parentTerm;
+    IF parentTerm # NIL THEN
+        parentTerm.typePromotion := NIL;
+    END;
+
+    IF SELF.typePromotion # NIL THEN
+        IF s = "?" THEN
+            SELF.typePromotion.and();
+        ELSE
+            SELF.typePromotion.reset();
+            SELF.typePromotion.or();
+        END;
     END;
 END;
 
@@ -134,6 +186,11 @@ BEGIN
     result <- SELF.first;
     IF result = NIL THEN
         result := SELF.condition;
+
+        IF SELF.typePromotion # NIL THEN
+            msg <- EberonContextDesignator.TransferPromotedTypesMsg(SELF.typePromotion);
+            void <- SELF.parent().handleMessage(msg);
+        END;
     ELSE
         firstType <- SELF.first.type();
         secondType <- SELF.second.type();
@@ -160,19 +217,8 @@ BEGIN
     RETURN TRUE;
 END;
 
-PROCEDURE parentTerm(VAR cx: ContextHierarchy.Node): PTermList;
-VAR
-    result: PTermList;
-BEGIN
-    maybeFactor <- cx.parent();
-    IF maybeFactor^ IS ContextExpression.Factor THEN
-        result := maybeFactor.factor^(ETFactor).termList;
-    END;
-    RETURN result;
-END;
-
-PROCEDURE RelationExpression.RelationExpression(parent: ContextExpression.PExpressionHandler)
-    | SUPER(parent, NEW Node(parentTerm(parent^)));
+PROCEDURE RelationExpression.RelationExpression(parent: PExpressionNode)
+    | SUPER(parent, parent.currentNode);
 END;
 
 PROCEDURE Ops.in(left, right: Types.PType; cx: ContextHierarchy.Node): ExpressionTree.BinaryOperatorCx;
@@ -186,25 +232,6 @@ BEGIN
         result := SUPER(left, right, cx);
     END;
     RETURN result;
-END;
-
-PROCEDURE RelationExpression.endParse(): BOOLEAN;
-VAR
-    typePromotion: EberonTypePromotion.PType;
-BEGIN
-    node <- SELF.node(PNode); 
-    IF node.parentTerm = NIL THEN 
-        typePromotion := node.combinedTypePromotion;
-        IF typePromotion = NIL THEN
-            typePromotion := node.varTypePromotion;
-        END;
-
-        IF typePromotion # NIL THEN
-            msg <- EberonContextDesignator.TransferPromotedTypesMsg(typePromotion);
-            void <- SELF.parent().handleMessage(msg);
-        END;
-    END;
-    RETURN SUPER();
 END;
 
 PROCEDURE setSimpleExpressionTypePromotion(VAR e: SimpleList): EberonTypePromotion.PMaybe;
