@@ -122,13 +122,9 @@ BEGIN
 END;
 
 PROCEDURE parentTerm(VAR maybeFactor: ContextHierarchy.Node): PTermList;
-VAR
-    result: PTermList;
-BEGIN
-    IF maybeFactor IS ContextExpression.Factor THEN
-        result := maybeFactor.factor^(ETFactor).termList;
-    END;
-    RETURN result;
+    RETURN maybeFactor IS ContextExpression.Factor 
+        ? maybeFactor.factor^(ETFactor).termList
+        : NIL;
 END;
 
 PROCEDURE ExpressionNode.ExpressionNode(parent: ContextHierarchy.PNode)
@@ -286,15 +282,9 @@ BEGIN
 END;
 
 PROCEDURE Ops.plus(type: Types.PType): ExpressionTree.BinaryOperator;
-VAR
-    result: ExpressionTree.BinaryOperator;
-BEGIN
-    IF (type = EberonString.string) OR (type IS Types.PString) THEN
-        result := EberonOperator.addStr;
-    ELSE
-        result := SUPER(type);
-    END;
-    RETURN result;
+    RETURN (type = EberonString.string) OR (type IS Types.PString) 
+        ? EberonOperator.addStr
+        : SUPER(type);
 END;
 
 PROCEDURE Ops.plusExpect(): STRING;
@@ -302,88 +292,46 @@ PROCEDURE Ops.plusExpect(): STRING;
 END;
 
 PROCEDURE Ops.eq(type: Types.PType): ExpressionTree.BinaryOperatorCx;
-VAR
-    result: ExpressionTree.BinaryOperatorCx;
-BEGIN
-    IF type = EberonString.string THEN
-        result := EberonOperator.equalStr;
-    ELSE
-        result := SUPER(type);
-    END;
-    RETURN result;
+    RETURN type = EberonString.string
+        ? EberonOperator.equalStr
+        : SUPER(type);
 END;
 
 PROCEDURE Ops.notEq(type: Types.PType): ExpressionTree.BinaryOperatorCx;
-VAR
-    result: ExpressionTree.BinaryOperatorCx;
-BEGIN
-    IF type = EberonString.string THEN
-        result := EberonOperator.notEqualStr;
-    ELSE
-        result := SUPER(type);
-    END;
-    RETURN result;
+    RETURN type = EberonString.string
+        ? EberonOperator.notEqualStr
+        : SUPER(type);
 END;
 
 PROCEDURE Ops.less(type: Types.PType): ExpressionTree.BinaryOperatorCx;
-VAR
-    result: ExpressionTree.BinaryOperatorCx;
-BEGIN
-    IF type = EberonString.string THEN
-        result := EberonOperator.lessStr;
-    ELSE
-        result := SUPER(type);
-    END;
-    RETURN result;
+    RETURN type = EberonString.string
+        ? EberonOperator.lessStr
+        : SUPER(type);
 END;
 
 PROCEDURE Ops.greater(type: Types.PType): ExpressionTree.BinaryOperatorCx;
-VAR
-    result: ExpressionTree.BinaryOperatorCx;
-BEGIN
-    IF type = EberonString.string THEN
-        result := EberonOperator.greaterStr;
-    ELSE
-        result := SUPER(type);
-    END;
-    RETURN result;
+    RETURN type = EberonString.string
+        ? EberonOperator.greaterStr
+        : SUPER(type);
 END;
 
 PROCEDURE Ops.lessEq(type: Types.PType): ExpressionTree.BinaryOperatorCx;
-VAR
-    result: ExpressionTree.BinaryOperatorCx;
-BEGIN
-    IF type = EberonString.string THEN
-        result := EberonOperator.lessEqualStr;
-    ELSE
-        result := SUPER(type);
-    END;
-    RETURN result;
+    RETURN type = EberonString.string
+        ? EberonOperator.lessEqualStr
+        : SUPER(type);
 END;
 
 PROCEDURE Ops.greaterEq(type: Types.PType): ExpressionTree.BinaryOperatorCx;
-VAR
-    result: ExpressionTree.BinaryOperatorCx;
-BEGIN
-    IF type = EberonString.string THEN
-        result := EberonOperator.greaterEqualStr;
-    ELSE
-        result := SUPER(type);
-    END;
-    RETURN result;
+    RETURN type = EberonString.string
+        ? EberonOperator.greaterEqualStr
+        : SUPER(type);
 END;
 
 PROCEDURE Ops.coalesceType(leftType, rightType: Types.PType): Types.PType;
-VAR
-    result: Types.PType;
-BEGIN
-    IF     (((leftType = EberonString.string) & (rightType IS Types.PString))
-        OR ((rightType = EberonString.string) & (leftType IS Types.PString))) THEN
-        result := EberonString.string;
-    ELSE
-        result := SUPER(leftType, rightType);
-    END;
-    RETURN result;
+    RETURN    (((leftType = EberonString.string) & (rightType IS Types.PString))
+           OR ((rightType = EberonString.string) & (leftType IS Types.PString)))
+        ? EberonString.string
+        : SUPER(leftType, rightType);
 END;
 
 PROCEDURE Node.Node(parentTerm: PTermList)
