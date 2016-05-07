@@ -187,7 +187,7 @@ BEGIN
     IF result = NIL THEN
         result := SELF.condition;
 
-        IF SELF.typePromotion # NIL THEN
+        IF (SELF.typePromotion # NIL) & (SELF.currentNode.parentTerm = NIL) THEN
             msg <- EberonContextDesignator.TransferPromotedTypesMsg(SELF.typePromotion);
             void <- SELF.parent().handleMessage(msg);
         END;
@@ -197,7 +197,7 @@ BEGIN
         IF (firstType IS Record.PType) & (secondType IS Record.PType) THEN
             resultType := findCommonBase(firstType, secondType);
         ELSIF (firstType IS Record.PPointer) & (secondType IS Record.PPointer) THEN
-            resultType := findCommonBase(Record.pointerBase(firstType^), Record.pointerBase(secondType^));
+            resultType := EberonContextDesignator.makePointer(findCommonBase(Record.pointerBase(firstType^), Record.pointerBase(secondType^)));
         END;
 
         IF resultType = NIL THEN 

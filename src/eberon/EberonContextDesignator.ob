@@ -168,7 +168,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE makePointer(type: Types.PStorageType): Record.PPointer;
+PROCEDURE makePointer*(type: Types.PStorageType): Record.PPointer;
 BEGIN
     typeId <- NEW TypeId.Type(type);
     RETURN NEW Record.Pointer("", typeId);
