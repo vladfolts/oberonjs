@@ -205,8 +205,8 @@ BEGIN
         END;
 
         result := Expression.makeSimple(SELF.condition.code() + " ? " 
-                                        + SELF.first.code() + " : "
-                                        + SELF.second.code(),
+                                        + Expression.deref(SELF.first).code() + " : "
+                                        + Expression.deref(SELF.second).code(),
                                         resultType);
     END;
     SELF.parent()(ContextExpression.PExpressionHandler).handleExpression(result);

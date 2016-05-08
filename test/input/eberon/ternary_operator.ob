@@ -8,4 +8,16 @@ PROCEDURE integer2(b1, b2: BOOLEAN; i1, i2, i3: INTEGER): INTEGER;
     RETURN b1 ? i1 : b2 ? i2 : i3;
 END;
 
+PROCEDURE byRef(b: BOOLEAN; VAR i1, i2: INTEGER): INTEGER;
+    RETURN b ? i1 : i2;
+END;
+
+PROCEDURE byRef1(b: BOOLEAN; VAR i1: INTEGER; i2: INTEGER): INTEGER;
+    RETURN b ? i1 : i2;
+END;
+
+PROCEDURE byRef2(b: BOOLEAN; i1: INTEGER; VAR i2: INTEGER): INTEGER;
+    RETURN b ? i1 : i2;
+END;
+
 END test.

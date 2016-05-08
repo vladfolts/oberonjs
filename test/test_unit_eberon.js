@@ -1526,6 +1526,7 @@ exports.suite = {
                 + "PROCEDURE passDerived(d: Derived): BOOLEAN; RETURN TRUE END;"
                 + "PROCEDURE passPBase(p: PBase): BOOLEAN; RETURN TRUE END;"
                 + "PROCEDURE passPDerived(p: PDerived): BOOLEAN; RETURN TRUE END;"
+                + "PROCEDURE passRef(VAR i: INTEGER): BOOLEAN; RETURN TRUE END;"
                 ),
         pass("b ? i1 : i2",
              "(b ? i1 : i2) # 0",
@@ -1558,7 +1559,8 @@ exports.suite = {
              ["b ? b ? i1 : i2 : i1", "expected \":\" after \"?\" in ternary operator"],
              ["b ? rb : NIL", "incompatible types in ternary operator: 'Base' and 'NIL'"],
              ["passPDerived(b ? NIL : pb)", "type mismatch for argument 1: 'PBase' cannot be converted to 'PDerived'"],
-             ["passPDerived(b ? pb : NIL)", "type mismatch for argument 1: 'PBase' cannot be converted to 'PDerived'"]
+             ["passPDerived(b ? pb : NIL)", "type mismatch for argument 1: 'PBase' cannot be converted to 'PDerived'"],
+             ["passRef(b ? i1 : i2)", "expression cannot be used as VAR parameter"]
              )
     )
 };
