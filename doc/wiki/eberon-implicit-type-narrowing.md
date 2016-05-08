@@ -13,7 +13,7 @@ The idea of *implicit type narrowing* is to make the compiler smart enough to co
         ASSERT(~(pb IS PDerived) OR (pb.derivedField = 123));
     END.
 
-Type narrowing is also applies for WHILE statement and its ELSIF branches.
+Type narrowing is also applies to [[Ternary operator|eberon-ternary-operator]], WHILE statement and its ELSIF branches.
 
 ### Generic Message Bus
 *Implicit type narrowing* is also used for VAR arguments to support generic message bus pattern.

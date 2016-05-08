@@ -15,9 +15,8 @@ Eberon basically extends original Oberon (excluding additional [restrictions](#r
 * [[Record fields read-only export|eberon-record-fields-read-only-export]]
 * [[Procedure call result can be denoted|eberon-procedure-call-result]]
 * [[Operator NEW|eberon-operator-NEW]]
-* [[Ternary operator||eberon-ternary-operator]]
+* [[Ternary operator|eberon-ternary-operator]]
 * [[Syntax relaxations|eberon-syntax-relaxations]]
-* Non-scalar variables (arrays and records) can be exported (forbidden in oberon for some unknown reason).
 
 ### Restrictions
 * [[Non-VAR arguments are read-only|eberon-non-VAR-arguments-are-read-only]]
