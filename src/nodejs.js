@@ -64,7 +64,7 @@ function compile(sources, language, handleErrors, includeDirs, outDir, importDir
 
     var compiledFilesStack = [];
     var failToCompile = {};
-    oc.compileModules(
+    return oc.compileModules(
             sources,
             function(name){
                 var fileName = name;

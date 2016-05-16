@@ -1,12 +1,12 @@
 MODULE EberonContextExpression;
 IMPORT
-    Cast,
+    Cast, CodePrecedence,
     Context, ContextExpression, ContextHierarchy, 
     EberonContextDesignator, 
     EberonMap, EberonOperator, EberonString, EberonTypePromotion, 
     Errors, Expression, ExpressionTree, LanguageContext,
     JS,
-    Object, Record, Types;
+    Object, Record, Types, Variable;
 TYPE
     PNode = POINTER TO Node;
 
@@ -73,6 +73,8 @@ TYPE
         termList: PTermList;
     END;
 
+    TernaryOperatorResult = RECORD(Variable.TypedVariable)
+    END;
 VAR
     setTermTypePromotion: PROCEDURE(VAR term: TermList): EberonTypePromotion.PMaybe;
     globalOps: POINTER TO Ops;
@@ -204,10 +206,18 @@ BEGIN
             resultType := firstType;
         END;
 
-        result := Expression.makeSimple(SELF.condition.code() + " ? " 
-                                        + Expression.deref(SELF.first).code() + " : "
-                                        + Expression.deref(SELF.second).code(),
-                                        resultType);
+        checkResultType <- resultType;
+        IF ~(checkResultType IS Types.PStorageType) THEN
+            Errors.raise("cannot use '" + checkResultType.description() + "' as a result of ternary operator");
+        ELSE
+            result := NEW Expression.Type(
+                SELF.condition.code() + " ? " + Expression.deref(SELF.first).code() 
+                                      + " : " + Expression.deref(SELF.second).code(),
+                resultType,
+                NEW TernaryOperatorResult(resultType(Types.PStorageType)),
+                NIL,
+                CodePrecedence.conditional);
+        END;
     END;
     SELF.parent()(ContextExpression.PExpressionHandler).handleExpression(result);
     RETURN TRUE;
@@ -348,17 +358,14 @@ BEGIN
     SELF.combinedTypePromotion := s(PSimpleList).typePromotion;
 
     IF (SELF.left # NIL) & (SELF.right.op = "IS") THEN
-        d <- SELF.left.term.factor.expression.designator();
-        IF d # NIL THEN
-            v <- d.info();
-            IF v IS EberonTypePromotion.PVariable THEN
-                type <- ExpressionTree.unwrapType(s.term.factor.expression.designator().info());
-                IF SELF.parentTerm = NIL THEN
-                    SELF.varTypePromotion := NEW EberonTypePromotion.ForVariable(v, type, FALSE);
-                ELSE
-                    p <- setTermTypePromotion(SELF.parentTerm^);
-                    p.promote(v, type);
-                END;
+        v <- SELF.left.term.factor.expression.info();
+        IF v IS EberonTypePromotion.PVariable THEN
+            type <- ExpressionTree.unwrapType(s.term.factor.expression.info());
+            IF SELF.parentTerm = NIL THEN
+                SELF.varTypePromotion := NEW EberonTypePromotion.ForVariable(v, type, FALSE);
+            ELSE
+                p <- setTermTypePromotion(SELF.parentTerm^);
+                p.promote(v, type);
             END;
         END;
     END;
@@ -414,6 +421,18 @@ BEGIN
     IF p # NIL THEN
         p.invert()
     END;
+END;
+
+PROCEDURE TernaryOperatorResult.isReference(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE TernaryOperatorResult.isReadOnly(): BOOLEAN;
+    RETURN TRUE;
+END;
+
+PROCEDURE TernaryOperatorResult.idType(): STRING;
+    RETURN "ternary operator result";
 END;
 
 BEGIN

@@ -149,7 +149,7 @@ BEGIN
 END AddCallGenerator.end;
 
 PROCEDURE Method.description(): STRING;
-    RETURN "dynamic array method '" + SELF.name + "'"
+    RETURN "dynamic array's method '" + SELF.name + "'"
 END Method.description;
 
 PROCEDURE MethodAddField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;

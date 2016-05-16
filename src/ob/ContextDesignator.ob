@@ -2,7 +2,7 @@ MODULE ContextDesignator;
 IMPORT
     Code, ConstValue, ContextExpression, ContextHierarchy, 
     Designator, Errors, Expression, ExpressionTree,
-    Record, ScopeBase, String, TypeId, Types, Variable;
+    Record, String, TypeId, Types, Variable;
 TYPE
     Index* = RECORD
         PROCEDURE Index*(length: INTEGER; type: Types.PType; info: Types.PId; code, asProperty: STRING);
@@ -28,7 +28,6 @@ TYPE
         PROCEDURE doIndexSequence*(info: Types.PId; code, indexCode: STRING): PIndex;
         PROCEDURE doMakeDerefVar*(info: Types.PId): Types.PVariable;
 
-        scope: ScopeBase.PType;
         currentType-: Types.PType;
         info-: Types.PId;
         code, derefCode, propCode: STRING;
@@ -64,7 +63,6 @@ END;
 PROCEDURE Type.handleQIdent(q: ContextHierarchy.QIdent);
 BEGIN
     found <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
-    SELF.scope := found.scope();
     s <- found.symbol();
     info <- s.info();
     code <- q.code;
@@ -190,7 +188,6 @@ BEGIN
         SELF.derefCode := fieldCode.derefCode;
         SELF.propCode := fieldCode.propCode;
         advance(SELF, currentType, field.asVar(SELF.code, isReadOnly, SELF), fieldCode.code, TRUE);
-        SELF.scope := NIL;
     END;
 END;
 
@@ -262,7 +259,7 @@ END;
 PROCEDURE Type.endParse(): BOOLEAN;
 BEGIN
     SELF.parent().attributes.designator :=
-        NEW Designator.Type(SELF.code, SELF.currentType, SELF.info, SELF.scope);
+        NEW Designator.Type(SELF.code, SELF.currentType, SELF.info, NIL);
     RETURN TRUE;
 END;
 

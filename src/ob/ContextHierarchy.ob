@@ -34,7 +34,7 @@ TYPE
         PROCEDURE endParse*(): BOOLEAN;
 
         mParent: PNode;
-        attributes*: POINTER TO Attributes;
+    attributes*: POINTER TO Attributes;
     END;
 
     Root* = RECORD(Node)

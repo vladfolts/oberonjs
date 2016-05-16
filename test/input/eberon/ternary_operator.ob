@@ -20,4 +20,28 @@ PROCEDURE byRef2(b: BOOLEAN; i1: INTEGER; VAR i2: INTEGER): INTEGER;
     RETURN b ? i1 : i2;
 END;
 
+PROCEDURE passRecord(b: BOOLEAN);
+TYPE
+	T = RECORD END;
+VAR
+	r1, r2: T;
+
+	PROCEDURE p(r: T); END;
+BEGIN
+	p(b ? r1 : r2);
+END;
+
+PROCEDURE initRecord(b: BOOLEAN);
+TYPE
+	T = RECORD END;
+VAR
+	r1, r2: T;
+BEGIN
+	r <- b ? r1 : r2;
+END;
+
+PROCEDURE operatorsPriority(b: BOOLEAN): INTEGER;
+	RETURN (b ? 1 : 2) + 3;
+END;
+
 END test.

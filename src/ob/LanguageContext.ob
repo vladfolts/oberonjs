@@ -6,7 +6,7 @@ TYPE
 
     CastOp* = RECORD
         PROCEDURE make*(cx: PType; e: Expression.PType): Expression.PType;
-        PROCEDURE assign*(cx: PType; left: Designator.Type; right: Expression.PType): STRING;
+        PROCEDURE assign*(cx: PType; info: T.PVariable; right: Expression.PType): STRING;
         PROCEDURE clone*(cx: PType; e: Expression.PType): STRING;
     END;
 
@@ -120,7 +120,7 @@ BEGIN
         IF info.type().isScalar() THEN
             result := SELF.rtl.makeRef(info.leadCode, info.propCode);
         ELSE
-            result := info.leadCode + "[" + info.propCode + "]";
+            result := SELF.getAt(info.leadCode, info.propCode, info.type());
         END;
     ELSIF info IS Variable.DerefVariable THEN
         result := info.code;

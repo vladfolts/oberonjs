@@ -1,3 +1,4 @@
+<rtl code>
 var test = function (){
 
 function integer(b/*BOOLEAN*/, i1/*INTEGER*/, i2/*INTEGER*/){
@@ -18,5 +19,28 @@ function byRef1(b/*BOOLEAN*/, i1/*VAR INTEGER*/, i2/*INTEGER*/){
 
 function byRef2(b/*BOOLEAN*/, i1/*INTEGER*/, i2/*VAR INTEGER*/){
 	return b ? i1 : i2.get();
+}
+
+function passRecord(b/*BOOLEAN*/){
+	var $scope1 = $scope + ".passRecord";
+	function T(){
+	}
+	var r1 = new T();var r2 = new T();
+	
+	function p(r/*T*/){
+	}
+	p(b ? r1 : r2);
+}
+
+function initRecord(b/*BOOLEAN*/){
+	var $scope1 = $scope + ".initRecord";
+	function T(){
+	}
+	var r1 = new T();var r2 = new T();
+	var r = RTL$.clone(b ? r1 : r2, {record: {}}, undefined);
+}
+
+function operatorsPriority(b/*BOOLEAN*/){
+	return (b ? 1 : 2) + 3 | 0;
 }
 }();

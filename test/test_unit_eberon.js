@@ -251,7 +251,7 @@ exports.suite = {
             ),
     pass(),
     fail(["o.p := o.p", "method 'p' cannot be referenced"],
-         ["o.p := NIL", "cannot assign to method"])
+         ["o.p := NIL", "cannot assign to method 'p'"])
     ),
 "method cannot be referenced": testWithContext(
     context(grammar.statement,
@@ -435,8 +435,8 @@ exports.suite = {
          "s1 := \"abc\"",
          "s1 := 22X"
          ),
-    fail(["a := s1", "type mismatch: 'a' is 'ARRAY 10 OF CHAR' and cannot be assigned to 'STRING' expression"],
-         ["s1 := a", "type mismatch: 's1' is 'STRING' and cannot be assigned to 'ARRAY 10 OF CHAR' expression"]
+    fail(["a := s1", "type mismatch: 'ARRAY 10 OF CHAR' cannot be assigned to 'STRING' expression"],
+         ["s1 := a", "type mismatch: 'STRING' cannot be assigned to 'ARRAY 10 OF CHAR' expression"]
         )
     ),
 "STRING and ARRAY OF CHAR": testWithContext(
@@ -824,7 +824,7 @@ exports.suite = {
         temporaryValues.context,
         pass(),
         fail(["PROCEDURE p(); BEGIN b <- pBase; IF b IS PDerived THEN b := pBase; b.flag := FALSE; END; END p;",
-              "type mismatch: 'b' is 'PDerived' and cannot be assigned to 'POINTER TO Base' expression"]
+              "type mismatch: 'PDerived' cannot be assigned to 'POINTER TO Base' expression"]
             )
         ),
     "type promotion cannot be reset by passing as VAR argument": testWithContext(
@@ -947,7 +947,7 @@ exports.suite = {
                 fail(["intArray.indexOf(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"],
                      ["recordArray.indexOf(r)", "'indexOf' is not defined for array of 'T'"],
                      ["arrayOfArray.indexOf(intArray)", "'indexOf' is not defined for array of 'ARRAY 4 OF INTEGER'"],
-                     ["intArray.indexOf", "array method 'indexOf' cannot be referenced"]                
+                     ["intArray.indexOf", "array's method 'indexOf' cannot be referenced"]                
                     )
             ),
             "open array indexOf": testWithGrammar(
@@ -1029,8 +1029,8 @@ exports.suite = {
                 context(grammar.statement, 
                         "VAR stat: ARRAY 3 OF INTEGER; dynamic: ARRAY * OF INTEGER;"),
                 pass("dynamic := stat"),
-                fail(["stat := dynamic", "type mismatch: 'stat' is 'ARRAY 3 OF INTEGER' and cannot be assigned to 'ARRAY * OF INTEGER' expression"],
-                     ["dynamic := NIL", "type mismatch: 'dynamic' is 'ARRAY * OF INTEGER' and cannot be assigned to 'NIL' expression"])
+                fail(["stat := dynamic", "type mismatch: 'ARRAY 3 OF INTEGER' cannot be assigned to 'ARRAY * OF INTEGER' expression"],
+                     ["dynamic := NIL", "type mismatch: 'ARRAY * OF INTEGER' cannot be assigned to 'NIL' expression"])
             ),
             "indexing": testWithContext(
                 context(grammar.expression, 
@@ -1057,8 +1057,8 @@ exports.suite = {
                      "a2.add(a)",
                      "a2.add(aStatic)"
                      ),
-                fail(["a.add := NIL", "cannot assign to method"],
-                     ["v <- a.add", "dynamic array method 'add' cannot be referenced"],                
+                fail(["a.add := NIL", "cannot assign to dynamic array's method 'add'"],
+                     ["v <- a.add", "dynamic array's method 'add' cannot be referenced"],                
                      ["a.add()", "method 'add' expects one argument, got nothing"],
                      ["a.add(1, 2)", "method 'add' expects one argument, got many"],                
                      ["a.add(TRUE)", "type mismatch for argument 1: 'BOOLEAN' cannot be converted to 'INTEGER'"]                
@@ -1343,7 +1343,7 @@ exports.suite = {
          "NEW T()^"
          ),
     fail(["NEW INTEGER()", "record type is expected in operator NEW, got 'INTEGER'"],
-         ["NEW proc()", "record type is expected in operator NEW, got 'procedure'"],
+         ["NEW proc()", "record type is expected in operator NEW, got 'procedure 'proc''"],
          ["NEW Proc()", "record type is expected in operator NEW, got 'Proc'"],
          ["NEW T().unknownField", "type 'T' has no 'unknownField' field"],
          ["NEW T(123)", "0 argument(s) expected, got 1"],
@@ -1427,7 +1427,7 @@ exports.suite = {
                 + "VAR mapOfInteger1: MapOfInteger; mapOfInteger2: MAP OF INTEGER;"
                 + "mapOfString: MAP OF STRING;"),
         pass("mapOfInteger1 := mapOfInteger2"),
-        fail(["mapOfInteger1 := mapOfString", "type mismatch: 'mapOfInteger1' is 'MAP OF INTEGER' and cannot be assigned to 'MAP OF STRING' expression"])
+        fail(["mapOfInteger1 := mapOfString", "type mismatch: 'MAP OF INTEGER' cannot be assigned to 'MAP OF STRING' expression"])
     ),
     "put": testWithContext(
         context(grammar.statement,
@@ -1558,9 +1558,10 @@ exports.suite = {
              ["passDerived(b ? pd : pb)", "type mismatch for argument 1: 'POINTER TO Base' cannot be converted to 'Derived'"],
              ["b ? b ? i1 : i2 : i1", "expected \":\" after \"?\" in ternary operator"],
              ["b ? rb : NIL", "incompatible types in ternary operator: 'Base' and 'NIL'"],
+             ["b ? NIL : NIL", "cannot use 'NIL' as a result of ternary operator"],
              ["passPDerived(b ? NIL : pb)", "type mismatch for argument 1: 'PBase' cannot be converted to 'PDerived'"],
              ["passPDerived(b ? pb : NIL)", "type mismatch for argument 1: 'PBase' cannot be converted to 'PDerived'"],
-             ["passRef(b ? i1 : i2)", "expression cannot be used as VAR parameter"]
+             ["passRef(b ? i1 : i2)", "ternary operator result cannot be passed as VAR actual parameter"]
              )
     )
 };

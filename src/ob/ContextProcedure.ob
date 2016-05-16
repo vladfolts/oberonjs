@@ -106,8 +106,9 @@ END;
 PROCEDURE Declaration.setType(type: Types.PStorageType);
 BEGIN
     t <- type(Procedure.PType);
+    id <- SELF.id.id();
     procSymbol <- NEW Symbols.Symbol(
-        SELF.id.id(), NEW Types.ProcedureId(t));
+        id, NEW Procedure.Id(t, id, SELF.outerScope^ IS Scope.Procedure));
     SELF.outerScope.addSymbol(procSymbol, SELF.id.exported());
     SELF.type := t;
 END;

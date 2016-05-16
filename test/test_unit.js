@@ -81,7 +81,9 @@ return {
          ["+INTEGER", "type name 'INTEGER' cannot be used as an expression"],
          ["~BOOLEAN", "type name 'BOOLEAN' cannot be used as an expression"],
          ["INTEGER", "type name 'INTEGER' cannot be used as an expression"],
-         ["~~INTEGER", "type name 'INTEGER' cannot be used as an expression"]
+         ["~~INTEGER", "type name 'INTEGER' cannot be used as an expression"],
+         ["1 + + 1", "invalid operand"],
+         ["1 * + 1", "invalid operand"]
          )
     ),
 "string expression": testWithContext(
@@ -264,9 +266,9 @@ return {
          "pBase := pDerivedAnonymous2"
          ),
     fail(["p1 := pBase",
-          "type mismatch: 'p1' is 'POINTER TO anonymous RECORD' and cannot be assigned to 'POINTER TO Base' expression"],
+          "type mismatch: 'POINTER TO anonymous RECORD' cannot be assigned to 'POINTER TO Base' expression"],
           ["pDerived := pBase",
-           "type mismatch: 'pDerived' is 'POINTER TO Derived' and cannot be assigned to 'POINTER TO Base' expression"],
+           "type mismatch: 'POINTER TO Derived' cannot be assigned to 'POINTER TO Base' expression"],
           ["NIL := p1", "not parsed"])
     ),
 "typeguard": testWithContext(
@@ -406,8 +408,8 @@ return {
          ["NEW()", "1 argument(s) expected, got 0"],
          ["NEW(p, p)", "1 argument(s) expected, got 2"],
          ["NEW(proc())", "expression cannot be used as VAR parameter"],
-         ["NEW(P)", "cannot apply type cast to procedure"],
-         ["NEW(T)", "cannot apply type cast to procedure"]
+         ["NEW(P)", "cannot apply type cast to standard procedure NEW"],
+         ["NEW(T)", "cannot apply type cast to standard procedure NEW"]
          )
     ),
 "ABS": testWithContext(
@@ -415,7 +417,7 @@ return {
             "VAR i: INTEGER; r: REAL; c: CHAR;"),
     pass("i := ABS(i)",
          "r := ABS(r)"),
-    fail(["i := ABS(r)", "type mismatch: 'i' is 'INTEGER' and cannot be assigned to 'REAL' expression"],
+    fail(["i := ABS(r)", "type mismatch: 'INTEGER' cannot be assigned to 'REAL' expression"],
          ["i := ABS(c)", "type mismatch: expected numeric type, got 'CHAR'"],
          ["i := ABS(i, i)", "1 argument(s) expected, got 2"]
          )
@@ -440,7 +442,7 @@ return {
     pass("i := LSL(i, i)"),
     fail(["i := LSL(i, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
          ["i := LSL(r, i)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'"],
-         ["r := LSL(i, i)", "type mismatch: 'r' is 'REAL' and cannot be assigned to 'INTEGER' expression"],
+         ["r := LSL(i, i)", "type mismatch: 'REAL' cannot be assigned to 'INTEGER' expression"],
          ["i := LSL(i)", "2 argument(s) expected, got 1"]
          )
     ),
@@ -450,7 +452,7 @@ return {
     pass("i := ASR(i, i)"),
     fail(["i := ASR(i, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
          ["i := ASR(r, i)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'"],
-         ["r := ASR(i, i)", "type mismatch: 'r' is 'REAL' and cannot be assigned to 'INTEGER' expression"],
+         ["r := ASR(i, i)", "type mismatch: 'REAL' cannot be assigned to 'INTEGER' expression"],
          ["i := ASR(i)", "2 argument(s) expected, got 1"]
          )
     ),
@@ -460,7 +462,7 @@ return {
     pass("i := ROR(i, i)"),
     fail(["i := ROR(i, r)", "type mismatch for argument 2: 'REAL' cannot be converted to 'INTEGER'"],
          ["i := ROR(r, i)", "type mismatch for argument 1: 'REAL' cannot be converted to 'INTEGER'"],
-         ["r := ROR(i, i)", "type mismatch: 'r' is 'REAL' and cannot be assigned to 'INTEGER' expression"],
+         ["r := ROR(i, i)", "type mismatch: 'REAL' cannot be assigned to 'INTEGER' expression"],
          ["i := ROR(i)", "2 argument(s) expected, got 1"]
          )
     ),
@@ -571,15 +573,15 @@ return {
          "proc2 := NIL",
          "a[1] := 2"),
     fail(["i = 0", "did you mean ':=' (statement expected, got expression)?"],
-         ["i := b", "type mismatch: 'i' is 'INTEGER' and cannot be assigned to 'BOOLEAN' expression"],
+         ["i := b", "type mismatch: 'INTEGER' cannot be assigned to 'BOOLEAN' expression"],
          ["c := i", "cannot assign to constant"],
          ["ch := \"AB\"",
-          "type mismatch: 'ch' is 'CHAR' and cannot be assigned to 'multi-character string' expression"],
+          "type mismatch: 'CHAR' cannot be assigned to 'multi-character string' expression"],
          ["ch := CHAR",
           "type name 'CHAR' cannot be used as an expression"],
          ["i := .1", "expression expected"],
          ["proc1 := proc2",
-          "type mismatch: 'proc1' is 'PROCEDURE' and cannot be assigned to 'PROCEDURE(): INTEGER' expression"],
+          "type mismatch: 'PROCEDURE' cannot be assigned to 'PROCEDURE(): INTEGER' expression"],
          ["i := noResult()", "procedure returning no result cannot be used in an expression"])
     ),
 "INTEGER number": testWithGrammar(
@@ -1003,21 +1005,21 @@ return {
          "v8 := v9",
          "v1 := p1",
          "vProcCharArray := procCharArray"),
-    fail(["p1 := v1", "cannot assign to procedure"],
+    fail(["p1 := v1", "cannot assign to procedure 'p1'"],
          ["v3 := v1",
-          "type mismatch: 'v3' is 'PROCEDURE(INTEGER): ProcType1' and cannot be assigned to 'ProcType1' expression"],
+          "type mismatch: 'PROCEDURE(INTEGER): ProcType1' cannot be assigned to 'ProcType1' expression"],
          ["v3 := v4",
-          "type mismatch: 'v3' is 'PROCEDURE(INTEGER): ProcType1' and cannot be assigned to 'PROCEDURE(BOOLEAN): ProcType1' expression"],
+          "type mismatch: 'PROCEDURE(INTEGER): ProcType1' cannot be assigned to 'PROCEDURE(BOOLEAN): ProcType1' expression"],
          ["v10 := NEW",
           "standard procedure NEW cannot be referenced"],
-         ["v10 := v11", "type mismatch: 'v10' is 'ProcType6' and cannot be assigned to 'ProcType7' expression" ],
-         ["v8 := v8VAR", "type mismatch: 'v8' is 'ProcType4' and cannot be assigned to 'ProcType4VAR' expression" ],
+         ["v10 := v11", "type mismatch: 'ProcType6' cannot be assigned to 'ProcType7' expression" ],
+         ["v8 := v8VAR", "type mismatch: 'ProcType4' cannot be assigned to 'ProcType4VAR' expression" ],
          ["vProcCharArray := procIntArray",
-          "type mismatch: 'vProcCharArray' is 'PROCEDURE(ARRAY OF CHAR)' and cannot be assigned to 'PROCEDURE(ARRAY OF INTEGER)' expression"],
+          "type mismatch: 'PROCEDURE(ARRAY OF CHAR)' cannot be assigned to 'PROCEDURE(ARRAY OF INTEGER)' expression"],
          ["vProcInt := procByte",
-          "type mismatch: 'vProcInt' is 'PROCEDURE(INTEGER)' and cannot be assigned to 'PROCEDURE(BYTE)' expression"],
+          "type mismatch: 'PROCEDURE(INTEGER)' cannot be assigned to 'PROCEDURE(BYTE)' expression"],
          ["vProcReturnInt := procReturnByte",
-          "type mismatch: 'vProcReturnInt' is 'PROCEDURE(): INTEGER' and cannot be assigned to 'PROCEDURE(): BYTE' expression"]
+          "type mismatch: 'PROCEDURE(): INTEGER' cannot be assigned to 'PROCEDURE(): BYTE' expression"]
          )
     ),
 "string assignment": testWithContext(
@@ -1034,7 +1036,7 @@ return {
          "ch1 := 22X"),
     fail(["a1 := \"abcd\"", "3-character ARRAY is too small for 4-character string"],
          ["intArray := \"abcd\"",
-          "type mismatch: 'intArray' is 'ARRAY 10 OF INTEGER' and cannot be assigned to 'multi-character string' expression"])
+          "type mismatch: 'ARRAY 10 OF INTEGER' cannot be assigned to 'multi-character string' expression"])
     ),
 "string relations": testWithContext(
     context(grammar.expression,
@@ -1063,13 +1065,13 @@ return {
          "intArray43m[0] := intArray23m1[0]"
          ),
     fail(["intArray := charArray",
-         "type mismatch: 'intArray' is 'ARRAY 10 OF INTEGER' and cannot be assigned to 'ARRAY 3 OF CHAR' expression"],
+         "type mismatch: 'ARRAY 10 OF INTEGER' cannot be assigned to 'ARRAY 3 OF CHAR' expression"],
          ["intArray2 := intArray3",
-          "type mismatch: 'intArray2' is 'ARRAY 10 OF INTEGER' and cannot be assigned to 'ARRAY 5 OF INTEGER' expression"],
+          "type mismatch: 'ARRAY 10 OF INTEGER' cannot be assigned to 'ARRAY 5 OF INTEGER' expression"],
          ["intArray3 := charArray",
-          "type mismatch: 'intArray3' is 'ARRAY 5 OF INTEGER' and cannot be assigned to 'ARRAY 3 OF CHAR' expression"],
+          "type mismatch: 'ARRAY 5 OF INTEGER' cannot be assigned to 'ARRAY 3 OF CHAR' expression"],
          ["intArray24m := intArray23m1",
-          "type mismatch: 'intArray24m' is 'ARRAY 2, 4 OF INTEGER' and cannot be assigned to 'ARRAY 2, 3 OF INTEGER' expression"]
+          "type mismatch: 'ARRAY 2, 4 OF INTEGER' cannot be assigned to 'ARRAY 2, 3 OF INTEGER' expression"]
           )
     ),
 "record assignment": testWithContext(
@@ -1085,8 +1087,8 @@ return {
          "pb1^ := r1",
          "pb1^ := pb1^"
          ),
-    fail(["r1 := r2", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'T2' expression"],
-         ["r1 := b1", "type mismatch: 'r1' is 'T1' and cannot be assigned to 'Base1' expression"])
+    fail(["r1 := r2", "type mismatch: 'T1' cannot be assigned to 'T2' expression"],
+         ["r1 := b1", "type mismatch: 'T1' cannot be assigned to 'Base1' expression"])
     ),
 "string argument": testWithContext(
     context(grammar.statement,
@@ -1142,7 +1144,7 @@ return {
             + "VAR pb: POINTER TO test.Base; pd: test.TPDerived;"
             + "BEGIN pb := pd; END m."),
     fail(["MODULE m; IMPORT test; VAR p1: test.TPAnonymous1; p2: test.TPAnonymous2; BEGIN p1 := p2; END m.",
-          "type mismatch: 'p1' is 'TPAnonymous1' and cannot be assigned to 'TPAnonymous2' expression"]
+          "type mismatch: 'TPAnonymous1' cannot be assigned to 'TPAnonymous2' expression"]
          )
     ),
 "import array type": testWithModule(
@@ -1275,7 +1277,7 @@ return {
          "CONST cs = \"a\"; BEGIN ASSERT(cs[0] = \"a\"); END"
          ),
     fail(["VAR a: ARRAY 10 OF INTEGER; BEGIN a[0] := TRUE END",
-          "type mismatch: 'a[0]' is 'INTEGER' and cannot be assigned to 'BOOLEAN' expression"],
+          "type mismatch: 'INTEGER' cannot be assigned to 'BOOLEAN' expression"],
          ["VAR a: ARRAY 10 OF INTEGER; BEGIN a[TRUE] := 1 END",
           "'INTEGER' or 'BYTE' expression expected, got 'BOOLEAN'"],
          ["VAR a: ARRAY 10 OF INTEGER; p: POINTER TO RECORD END; BEGIN a[p] := 1 END",
@@ -1289,7 +1291,7 @@ return {
          ["VAR a: ARRAY 10 OF BOOLEAN; BEGIN a[0,0] := TRUE END",
           "ARRAY or string expected, got 'BOOLEAN'"],
          ["VAR a: ARRAY 10, 20 OF BOOLEAN; BEGIN a[0] := TRUE END",
-          "type mismatch: 'a[0]' is 'ARRAY 20 OF BOOLEAN' and cannot be assigned to 'BOOLEAN' expression"],
+          "type mismatch: 'ARRAY 20 OF BOOLEAN' cannot be assigned to 'BOOLEAN' expression"],
          ["VAR a: ARRAY 10 OF INTEGER; BEGIN a[10] := 0 END",
           "index out of bounds: maximum possible index is 9, got 10"],
          ["CONST c1 = 5; VAR a: ARRAY 10 OF INTEGER; BEGIN a[10 + c1] := 0 END",
@@ -1339,7 +1341,7 @@ return {
          ["VAR i: INTEGER; BEGIN j := 1 END", "undeclared identifier: 'j'"],
          ["VAR i: INTEGER; BEGIN i := j END", "undeclared identifier: 'j'"],
          ["TYPE T = RECORD field: INTEGER END; VAR v: T; BEGIN v := 1 END",
-          "type mismatch: 'v' is 'T' and cannot be assigned to 'INTEGER' expression"],
+          "type mismatch: 'T' cannot be assigned to 'INTEGER' expression"],
          ["TYPE T = RECORD field: INTEGER END; VAR v: T; BEGIN v.unknown := 1 END",
           "type 'T' has no 'unknown' field"],
          ["TYPE T1 = RECORD field1: INTEGER END; T2 = RECORD (T1) field1: INTEGER END; END",
@@ -1451,9 +1453,9 @@ return {
     grammar.procedureDeclaration,
     pass(),
     fail(["PROCEDURE p(VAR s1, s2: ARRAY OF CHAR); BEGIN s1 := s2 END p",
-          "'s1' is open 'ARRAY OF CHAR' and cannot be assigned"],
+          "open 'ARRAY OF CHAR' cannot be assigned"],
          ["PROCEDURE p(s1: ARRAY OF CHAR); VAR s2: ARRAY 10 OF CHAR; BEGIN s2 := s1 END p",
-          "type mismatch: 's2' is 'ARRAY 10 OF CHAR' and cannot be assigned to 'ARRAY OF CHAR' expression"])
+          "type mismatch: 'ARRAY 10 OF CHAR' cannot be assigned to 'ARRAY OF CHAR' expression"])
     ),
 "open array type as procedure parameter": testWithContext(
     context(grammar.procedureDeclaration,
@@ -1550,7 +1552,7 @@ return {
          "MODULE m; IMPORT JS; VAR v: JS.var; BEGIN v := JS.f1(); JS.f2(v); END m."
          ),
     fail(["MODULE m; IMPORT JS; VAR v: JS.var; i: INTEGER; BEGIN i := v; END m.",
-          "type mismatch: 'i' is 'INTEGER' and cannot be assigned to 'JS.var' expression"])
+          "type mismatch: 'INTEGER' cannot be assigned to 'JS.var' expression"])
     ),
 "import unknown module": testWithGrammar(
     grammar.module,

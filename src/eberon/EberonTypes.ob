@@ -49,8 +49,12 @@ BEGIN
 END;
 
 PROCEDURE MethodVariable.idType(): STRING;
-    RETURN "method"
-END MethodVariable.idType;
+    RETURN SELF.type.description();
+END;
+
+PROCEDURE MethodVariable.canBeReferenced(): BOOLEAN;
+    RETURN FALSE;
+END;
 
 PROCEDURE MethodField.MethodField(method: PMethod)
     | method(method);

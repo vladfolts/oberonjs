@@ -54,7 +54,7 @@ TYPE
         PROCEDURE define*(args: ARRAY OF Types.PProcedureArgument; result: Types.PType);
 
         mArgs: Types.ProcedureArguments;
-        mResult: Types.PType
+        mResult: Types.PType;
     END;
     PDefined* = POINTER TO Defined;
 
@@ -62,6 +62,20 @@ TYPE
         PROCEDURE Std*(name: STRING; call: PCall);
 
         call: PCall
+    END;
+    PStd = POINTER TO Std;
+
+    Id* = RECORD(Types.ProcedureId)
+        PROCEDURE Id*(type: Types.PProcedure; name: STRING; local: BOOLEAN);
+
+        name: STRING;
+        local: BOOLEAN;
+    END;
+
+    StdId = RECORD(Types.ProcedureId)
+        PROCEDURE StdId(type: PStd; name: STRING);
+
+        name: STRING;
     END;
 
     ArgumentsCode* = RECORD
@@ -90,14 +104,12 @@ PROCEDURE checkArgument*(
     types: LanguageContext.PTypes
     );
 VAR
-    actualType, expectType: Types.PType;
-    designator: Designator.PType;
     result: LanguageContext.PCastOp;
     castErr: INTEGER;
 BEGIN
-    expectType := expected.type; (* can be NIL for predefined functions (like NEW), dont check it in this case *)
+    expectType <- expected.type; (* can be NIL for predefined functions (like NEW), dont check it in this case *)
     IF expectType # NIL THEN
-        actualType := actual.type();
+        actualType <- actual.type();
         castErr := types.implicitCast(actualType, expectType, expected.isVar, result);
         IF castErr = Cast.errVarParameter THEN
             Errors.raise("type mismatch for argument " + String.fromInt(pos + 1)
@@ -110,11 +122,10 @@ BEGIN
         END;
     END;
     IF expected.isVar THEN
-        designator := actual.designator();
-        IF designator = NIL THEN
+        info <- actual.info();
+        IF info = NIL THEN
             Errors.raise("expression cannot be used as VAR parameter");
         END;
-        info <- designator.info();
         IF ~(info IS Types.PVariable) OR info.isReadOnly() THEN
             Errors.raise(info.idType() + " cannot be passed as VAR actual parameter");
         END;
@@ -182,6 +193,41 @@ PROCEDURE Std.result(): Types.PType;
     RETURN NIL;
 END;
 
+PROCEDURE Id.Id(type: Types.PProcedure; name: STRING; local: BOOLEAN)
+    | SUPER(type),
+      name(name),
+      local(local);
+END;
+
+PROCEDURE Id.canBeReferenced(): BOOLEAN;
+    RETURN ~SELF.local;
+END;
+
+PROCEDURE Id.idType(): STRING;
+VAR
+    prefix: STRING;
+BEGIN
+    IF SELF.local THEN
+        prefix := "local procedure";
+    ELSE
+        prefix := SUPER();
+    END;
+    RETURN prefix + " '" + SELF.name + "'";
+END;
+
+PROCEDURE StdId.StdId(type: PStd; name: STRING)
+    | SUPER(type),
+      name(name);
+END;
+
+PROCEDURE StdId.idType(): STRING;
+    RETURN "standard procedure " + SELF.name;
+END;
+
+PROCEDURE StdId.canBeReferenced(): BOOLEAN;
+    RETURN FALSE;
+END;
+
 PROCEDURE CallGeneratorImpl.handleArgument(e: Expression.PType);
 BEGIN
     SELF.args.add(e);
@@ -206,7 +252,7 @@ VAR
     coercedArg: Expression.PType;
 BEGIN
     IF (expected # NIL) & expected.isVar THEN
-        coercedArg := Expression.makeSimple(SELF.cx.language.codeTraits.referenceCode(actual.designator().info()^), actual.type());
+        coercedArg := Expression.makeSimple(SELF.cx.language.codeTraits.referenceCode(actual.info()^), actual.type());
     ELSE
         coercedArg := Expression.deref(actual);
     END;
@@ -279,8 +325,8 @@ PROCEDURE Std.designatorCode(id: STRING): STRING;
     RETURN ""
 END Std.designatorCode;
 
-PROCEDURE makeSymbol*(p: Types.PProcedure): Symbols.PSymbol;
-    RETURN NEW Symbols.Symbol(p.name, NEW Types.ProcedureId(p))
+PROCEDURE makeStdSymbol*(p: PStd): Symbols.PSymbol;
+    RETURN NEW Symbols.Symbol(p.name, NEW StdId(p, p.name))
 END;
 
 PROCEDURE hasArgument(call: PStdCall; type: Types.PStorageType);
@@ -336,14 +382,14 @@ PROCEDURE makeNew(): Symbols.PSymbol;
                 Errors.raise("non-exported RECORD type cannot be used in NEW");
             END;
             right <- Expression.makeSimple(baseType.codeForNew(cx.cx^), argType);
-            result := Expression.makeSimple(Operator.assign(arg.designator()^, right, cx), NIL);
+            result := Expression.makeSimple(Operator.assign(arg.info(), right, cx), NIL);
         END;
         RETURN result;
     END;
 BEGIN
     call <- NEW CallImpl();
     hasVarArgumnetWithCustomType(call);
-    RETURN makeSymbol(NEW Std("NEW", call))
+    RETURN makeStdSymbol(NEW Std("NEW", call))
 END makeNew;
 
 PROCEDURE lenArgumentCheck*(argType: Types.PType): BOOLEAN;
@@ -371,7 +417,7 @@ BEGIN
     call <- NEW CallLen();
     call.check := check;
     hasArgumentWithCustomType(call);
-    RETURN makeSymbol(NEW Std("LEN", call))
+    RETURN makeStdSymbol(NEW Std("LEN", call))
 END makeLen;
 
 PROCEDURE makeOdd(): Symbols.PSymbol;
@@ -404,7 +450,7 @@ PROCEDURE makeOdd(): Symbols.PSymbol;
 BEGIN
     call <- NEW CallImpl();
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(NEW Std("ODD", call))
+    RETURN makeStdSymbol(NEW Std("ODD", call))
 END makeOdd;
 
 PROCEDURE makeAssert(): Symbols.PSymbol;
@@ -424,7 +470,7 @@ PROCEDURE makeAssert(): Symbols.PSymbol;
 BEGIN
     call <- NEW CallImpl();
     hasArgument(call, Types.basic.bool);
-    RETURN makeSymbol(NEW Std("ASSERT", call))
+    RETURN makeStdSymbol(NEW Std("ASSERT", call))
 END makeAssert;
 
 PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
@@ -483,7 +529,7 @@ BEGIN
     call.bitOp := bitOp;
     hasVarArgument(call, Types.basic.set);
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(NEW Std(call.name, call))
+    RETURN makeStdSymbol(NEW Std(call.name, call))
 END setBitImpl;
 
 PROCEDURE checkVariableArgumentsCount(min, max: INTEGER; actual: ARRAY OF Expression.PType);
@@ -517,14 +563,14 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr; incRefOp: Ope
         checkVariableArgumentsCount(1, 2, args);
         checkArgumentsType(args, SELF.args, NIL, cx.language.types);
         x := args[0];
-        IF Cast.passedByReference(x.designator()^) THEN
+        IF Cast.passedByReference(x.info()^) THEN
             IF LEN(args) = 1 THEN
                 y := Expression.makeSimple("1", NIL);
             ELSE
                 y := args[1];
             END;
             addExp <- SELF.incRefOp(x, y);
-            code := Cast.assign(cx, x.designator()^, addExp);
+            code := Cast.assign(cx, x.info()(Types.PVariable), addExp);
         ELSIF LEN(args) = 1 THEN
             code := SELF.unary + x.code();
         ELSE
@@ -550,7 +596,7 @@ BEGIN
     call.incRefOp := incRefOp;
     hasVarArgument(call, Types.basic.integer);
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(NEW Std(call.name, call))
+    RETURN makeStdSymbol(NEW Std(call.name, call))
 END incImpl;
 
 PROCEDURE inclOp(x, y: STRING): STRING;
@@ -590,7 +636,7 @@ PROCEDURE makeAbs(): Symbols.PSymbol;
 BEGIN
     call <- NEW CallImpl();
     hasArgumentWithCustomType(call);
-    RETURN makeSymbol(NEW Std("ABS", call))
+    RETURN makeStdSymbol(NEW Std("ABS", call))
 END makeAbs;
 
 PROCEDURE makeFloor(): Symbols.PSymbol;
@@ -615,7 +661,7 @@ PROCEDURE makeFloor(): Symbols.PSymbol;
 BEGIN
     call <- NEW CallImpl();
     hasArgument(call, Types.basic.real);
-    RETURN makeSymbol(NEW Std("FLOOR", call))
+    RETURN makeStdSymbol(NEW Std("FLOOR", call))
 END makeFloor;
 
 PROCEDURE makeFlt(): Symbols.PSymbol;
@@ -643,7 +689,7 @@ PROCEDURE makeFlt(): Symbols.PSymbol;
 BEGIN
     call <- NEW CallImpl();
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(NEW Std("FLT", call))
+    RETURN makeStdSymbol(NEW Std("FLT", call))
 END makeFlt;
 
 PROCEDURE bitShiftImpl(name: STRING; op: Operator.BinaryProc): Symbols.PSymbol;
@@ -665,7 +711,7 @@ BEGIN
     call.op := op;
     hasArgument(call, Types.basic.integer);
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(NEW Std(call.name, call))
+    RETURN makeStdSymbol(NEW Std(call.name, call))
 END bitShiftImpl;
 
 PROCEDURE makeOrd(): Symbols.PSymbol;
@@ -716,7 +762,7 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
 BEGIN
     call <- NEW CallImpl();
     hasArgumentWithCustomType(call);
-    RETURN makeSymbol(NEW Std("ORD", call))
+    RETURN makeStdSymbol(NEW Std("ORD", call))
 END makeOrd;
 
 PROCEDURE makeChr(): Symbols.PSymbol;
@@ -734,7 +780,7 @@ PROCEDURE makeChr(): Symbols.PSymbol;
 BEGIN
     call <- NEW CallImpl();
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(NEW Std("CHR", call))
+    RETURN makeStdSymbol(NEW Std("CHR", call))
 END makeChr;
 
 PROCEDURE makePack(): Symbols.PSymbol;
@@ -757,7 +803,7 @@ BEGIN
     call <- NEW CallImpl();
     hasVarArgument(call, Types.basic.real);
     hasArgument(call, Types.basic.integer);
-    RETURN makeSymbol(NEW Std("PACK", call))
+    RETURN makeStdSymbol(NEW Std("PACK", call))
 END makePack;
 
 PROCEDURE makeUnpk(): Symbols.PSymbol;
@@ -773,7 +819,7 @@ PROCEDURE makeUnpk(): Symbols.PSymbol;
         x := args[0];
         y := args[1];
         RETURN Expression.makeSimple(
-                Operator.assign(y.designator()^, Operator.log2(x), cx) 
+                Operator.assign(y.info(), Operator.log2(x), cx) 
                 + "; "
                 + Operator.divInplace(x, Operator.pow2(y), cx),
             NIL)
@@ -782,7 +828,7 @@ BEGIN
     call <- NEW CallImpl();
     hasVarArgument(call, Types.basic.real);
     hasVarArgument(call, Types.basic.integer);
-    RETURN makeSymbol(NEW Std("UNPK", call))
+    RETURN makeStdSymbol(NEW Std("UNPK", call))
 END makeUnpk;
 
 PROCEDURE dumpProcArgs(proc: Defined): STRING;

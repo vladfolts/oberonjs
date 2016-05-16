@@ -205,7 +205,7 @@ PROCEDURE Type.handleLiteral(s: STRING);
 BEGIN
     IF s = "SELF" THEN
         type <- SELF.handleMessage(getMethodSelfMsg)(Types.PStorageType);
-        info <- NEW Variable.Declared("this", type);
+        info <- NEW Variable.Declared("this", type, NIL);
         ContextDesignator.advance(SELF, type, info, "this", FALSE);
     ELSIF s = "POINTER" THEN
         type <- SELF.handleMessage(getSelfAsPointerMsg)(Types.PStorageType);
@@ -355,7 +355,7 @@ BEGIN
     d <- SELF.attributes.designator;
     type <- d.type();
     IF SELF.right # NIL THEN
-        code := Operator.assign(d^, SELF.right, ContextHierarchy.makeLanguageContext(SELF(POINTER)));
+        code := Operator.assign(d.info(), SELF.right, ContextHierarchy.makeLanguageContext(SELF(POINTER)));
     ELSIF ~(d.info()^ IS ResultVariable) THEN
         procCall <- ContextProcedure.makeCall(SELF(POINTER), type, d.info());
         result <- procCall.end();

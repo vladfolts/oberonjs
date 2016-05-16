@@ -1,6 +1,6 @@
 MODULE Variable;
 IMPORT
-    Types;
+    ScopeBase, Types;
 TYPE
 
     TypedVariable* = RECORD(Types.Variable)
@@ -10,10 +10,11 @@ TYPE
     END;
 
     Declared* = RECORD(Types.DeclaredVariable)
-        PROCEDURE Declared*(id: STRING; type: Types.PStorageType);
+        PROCEDURE Declared*(id: STRING; type: Types.PStorageType; scope: ScopeBase.PType);
 
         mType: Types.PStorageType;
         mId: STRING;
+        scope-: ScopeBase.PType;
     END;
     PDeclared* = POINTER TO Declared;
 
@@ -46,6 +47,12 @@ TYPE
 
 PROCEDURE TypedVariable.type(): Types.PStorageType;
     RETURN SELF.mType
+END;
+
+PROCEDURE Declared.Declared(id: STRING; type: Types.PStorageType; scope: ScopeBase.PType)
+    | mType(type),
+      mId(id),
+      scope(scope);
 END;
 
 PROCEDURE Declared.isReference(): BOOLEAN;
@@ -112,11 +119,6 @@ PROCEDURE TypedVariable.TypedVariable(type: Types.PStorageType)
     | mType(type);
 END;
 
-PROCEDURE Declared.Declared(id: STRING; type: Types.PStorageType)
-    | mType(type),
-      mId(id);
-END;
-
 PROCEDURE PropertyVariable.PropertyVariable(type: Types.PStorageType; leadCode, propCode: STRING; isReadOnly: BOOLEAN)
     | SUPER(type),
       leadCode(leadCode),
@@ -130,7 +132,7 @@ PROCEDURE DerefVariable.DerefVariable(type: Types.PStorageType; code: STRING)
       END;
 
 PROCEDURE ArgumentVariable.ArgumentVariable(id: STRING; type: Types.PStorageType; var: BOOLEAN)
-    | SUPER(id, type),
+    | SUPER(id, type, NIL),
       var(var);
 END;
 

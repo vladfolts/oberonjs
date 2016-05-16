@@ -23,7 +23,7 @@ TYPE
     END;
 
 PROCEDURE Method.description(): STRING;
-    RETURN "array method '" + SELF.name + "'"
+    RETURN "array's method '" + SELF.name + "'"
 END Method.description;
 
 PROCEDURE MethodIndexOf.MethodIndexOf(elementsType: Types.PStorageType)

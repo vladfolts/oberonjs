@@ -21,9 +21,6 @@ TYPE
         mId: STRING;
     END;
 
-    AnyTypeProc = RECORD(Procedure.Std)
-    END;
-
     AnyProcCall = RECORD(Procedure.Call)
     END;
 
@@ -33,7 +30,6 @@ VAR
     doProcId, varTypeId: STRING;
     any: POINTER TO AnyType;
     anyVar: POINTER TO AnyVariable;
-    anyProc: AnyTypeProc;
     doProcSymbol, varTypeSymbol: Symbols.PSymbol;
 
 PROCEDURE AnyType.description(): STRING;
@@ -106,11 +102,11 @@ END;
 PROCEDURE AnyField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
     RETURN NEW Types.FieldCode(leadCode + "." + SELF.mId, "", "");
 END;
-
+(*)
 PROCEDURE AnyTypeProc.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
     RETURN makeCallGenerator(cx)
 END AnyTypeProc.callGenerator;
-
+*)
 PROCEDURE AnyProcCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- Procedure.makeArgumentsCode(cx);
@@ -129,7 +125,7 @@ BEGIN
     ELSIF id = varTypeId THEN
         result := varTypeSymbol;
     ELSE
-        result := NEW Symbols.Symbol(id, NEW Types.ProcedureId(any));
+        result := NEW Symbols.Symbol(id, NEW Procedure.Id(any, id, FALSE));
     END;
     RETURN NEW Symbols.FoundSymbol(result, NIL)
 END JS.findSymbol;
@@ -169,7 +165,7 @@ BEGIN
     call <- NEW Call();
     Procedure.hasArgumentWithCustomType(call);
 
-    RETURN Procedure.makeSymbol(NEW Procedure.Std("", call))
+    RETURN Procedure.makeStdSymbol(NEW Procedure.Std("", call))
 END makeDoProcSymbol;
 
 PROCEDURE makeJS*(): PType;

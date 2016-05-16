@@ -60,24 +60,13 @@ VAR
     c: CHAR;
     declVar: Types.PDeclaredVariable;
 
-    PROCEDURE infoFromExpression(): Types.PId;
-    VAR
-        result: Types.PId;
-    BEGIN
-        d <- e.designator();
-        IF d # NIL THEN
-            result := d.info();
-        END;
-        RETURN result;
-    END;
-
 BEGIN
     normExp <- e;
     type <- e.type();
     IF (type IS Types.PString) & Types.stringAsChar(type^, c) THEN
         normExp := Expression.makeSimple(String.fromInt(ORD(c)), Types.basic.ch);
     ELSE
-        info <- infoFromExpression();
+        info <- e.info();
         IF info IS Types.PDeclaredVariable THEN
             declVar := info;
             IF ~info.isReference() THEN

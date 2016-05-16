@@ -94,11 +94,11 @@ var factor = context(
 
 var addOperator = context(or("+", "-", "OR"), ContextExpression.AddOperator);
 var mulOperator = context(or("*", "/", "DIV", "MOD", "&"), ContextExpression.MulOperator);
-var term = context(and(factor, repeat(and(mulOperator, factor))), contexts.Term);
+var term = context(and(factor, repeat(and(mulOperator, required(factor, "invalid operand")))), contexts.Term);
 var simpleExpression = context(
         and(optional(or("+", "-"))
           , term
-          , repeat(and(addOperator, term)))
+          , repeat(and(addOperator, required(term, "invalid operand"))))
       , contexts.SimpleExpression);
 var relation = or("=", "#", "<=", "<", ">=", ">", "IN", "IS");
 var expression = makeExpression(and(simpleExpression, optional(and(relation, required(simpleExpression, "invalid operand")))));

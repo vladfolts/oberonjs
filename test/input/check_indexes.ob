@@ -39,4 +39,11 @@ BEGIN
 	a[1][2] := a[3, 4];
 END multiDimArray;
 
+PROCEDURE arrayOfRecords(i: INTEGER);
+VAR
+	a: ARRAY 3 OF RECORD END;
+BEGIN
+	a[i] := a[i + 1];
+END arrayOfRecords;
+
 END m.

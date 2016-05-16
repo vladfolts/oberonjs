@@ -2,7 +2,7 @@ MODULE ContextExpression;
 IMPORT 
     Chars, CodeGenerator, ConstValue, ContextHierarchy, 
     Designator, Errors, Expression, ExpressionTree, 
-    Procedure, Scope, String, Types;
+    Scope, String, Types;
 TYPE
     ExpressionHandler* = RECORD(ContextHierarchy.Node)
         PROCEDURE handleExpression*(e: Expression.PType);
@@ -171,7 +171,7 @@ BEGIN
         IF info IS Types.PConst THEN
             const := info.value;
         END;
-        SELF.factor.expression := Expression.make(d.code(), d.type(), d, const);
+        SELF.factor.expression := Expression.make(d.code(), d.type(), d.info(), const);
     END;
 
     parent <- SELF.parent();
@@ -334,20 +334,13 @@ BEGIN
     info <- d.info();
 
     IF info IS Types.PProcedureId THEN
-        proc <- info.type;
-        IF proc^ IS Procedure.Std THEN
-            Errors.raise(proc.description() + " cannot be referenced");
+        IF ~info.canBeReferenced() THEN
+            Errors.raise(info.idType() + " cannot be referenced");
         END;
-        scope <- d.scope();
-        IF scope^ IS Scope.Procedure THEN
-            Errors.raise("local procedure '" + d.code() + "' cannot be referenced");
-        END;
-    END;
-
-    IF info IS Types.PConst THEN
+    ELSIF info IS Types.PConst THEN
         value := info.value;
     END;
-    RETURN Expression.make(d.code(), d.type(), d, value);
+    RETURN Expression.make(d.code(), d.type(), d.info(), value);
 END;
 
 BEGIN

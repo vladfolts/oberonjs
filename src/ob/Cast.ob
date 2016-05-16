@@ -113,18 +113,17 @@ PROCEDURE CastOpDoNothing.make(cx: LanguageContext.PType; e: Expression.PType): 
     RETURN e
 END;
 
-PROCEDURE passedByReference*(d: Designator.Type): BOOLEAN;
+PROCEDURE passedByReference*(VAR info: Types.Id): BOOLEAN;
 BEGIN
-    info <- d.info();
-    RETURN (info IS Types.PVariable) & info.isReference();
+    RETURN (info IS Types.Variable) & info.isReference();
 END;
 
-PROCEDURE assign*(cx: LanguageContext.PType; left: Designator.Type; right: Expression.PType): STRING;
-    RETURN cx.language.codeTraits.assign(left.info()^, right);
+PROCEDURE assign*(cx: LanguageContext.PType; info: Types.PVariable; right: Expression.PType): STRING;
+    RETURN cx.language.codeTraits.assign(info^, right);
 END;
 
-PROCEDURE CastOpDoNothing.assign(cx: LanguageContext.PType; left: Designator.Type; right: Expression.PType): STRING;
-    RETURN assign(cx, left, SELF.make(cx, right));
+PROCEDURE CastOpDoNothing.assign(cx: LanguageContext.PType; info: Types.PVariable; right: Expression.PType): STRING;
+    RETURN assign(cx, info, SELF.make(cx, right));
 END;
 
 PROCEDURE CastOpDoNothing.clone(cx: LanguageContext.PType; e: Expression.PType): STRING;
@@ -144,16 +143,16 @@ BEGIN
     RETURN result
 END;
 
-PROCEDURE CastOpArray.assign(cx: LanguageContext.PType; left: Designator.Type; right: Expression.PType): STRING;
-    RETURN left.code() + " = " + cloneArray(right.type()(Types.PArray), right.code(), cx)
+PROCEDURE CastOpArray.assign(cx: LanguageContext.PType; info: Types.PVariable; right: Expression.PType): STRING;
+    RETURN assign(cx, info, Expression.makeSimple(cloneArray(right.type()(Types.PArray), right.code(), cx), right.type()));
 END;
 
 PROCEDURE CastOpArray.clone(cx: LanguageContext.PType; e: Expression.PType): STRING;
     RETURN cloneArray(e.type()(Types.PArray), e.code(), cx);
 END;
 
-PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left: Designator.Type; right: Expression.PType): STRING;
-    RETURN cx.language.rtl.copy(right.code(), left.code(), Record.generateTypeInfo(left.type()));
+PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; info: Types.PVariable; right: Expression.PType): STRING;
+    RETURN cx.language.rtl.copy(right.code(), cx.language.codeTraits.referenceCode(info^), Record.generateTypeInfo(info.type()));
 END;
 
 PROCEDURE CastOpStrToChar.make(cx: LanguageContext.PType; e: Expression.PType): Expression.PType;

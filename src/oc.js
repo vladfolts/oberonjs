@@ -57,11 +57,12 @@ function compileModulesFromText(
         var context = contextFactory(resolveModule);
         var module = compileModule(grammar, stream, context, handleErrors);
         if (!module)
-            return;
+            return false;
         handleCompiledModule(module);
         Lexer.skipSpaces(stream, context);
     }
     while (!Stream.eof(stream));
+    return true;
 }
 
 var ModuleResolver = Class.extend({
@@ -74,7 +75,7 @@ var ModuleResolver = Class.extend({
         this.__detectRecursion = [];
     },
     compile: function(text){
-        this.__compile(text, this.__resolveModule.bind(this), this.__handleModule.bind(this));
+        return this.__compile(text, this.__resolveModule.bind(this), this.__handleModule.bind(this));
     },
     __resolveModule: function(name){
         if (this.__moduleReader && !this.__modules[name]){
@@ -104,12 +105,13 @@ var ModuleResolver = Class.extend({
 function makeResolver(grammar, contextFactory, handleCompiledModule, handleErrors, moduleReader){
     return new ModuleResolver(
         function(text, resolveModule, handleModule){
-            compileModulesFromText(text,
-                                   grammar,
-                                   contextFactory,
-                                   resolveModule,
-                                   handleModule,
-                                   handleErrors);
+            return compileModulesFromText(
+                text,
+                grammar,
+                contextFactory,
+                resolveModule,
+                handleModule,
+                handleErrors);
         },
         handleCompiledModule,
         moduleReader,
@@ -119,7 +121,13 @@ function makeResolver(grammar, contextFactory, handleCompiledModule, handleError
 
 function compileModules(names, moduleReader, grammar, contextFactory, handleErrors, handleCompiledModule){
     var resolver = makeResolver(grammar, contextFactory, handleCompiledModule, handleErrors, moduleReader);
-    names.forEach(function(name){ resolver.compile(moduleReader(name)); });
+    var i = 0;
+    var success = true;
+    while (i < names.length && success){
+        success = resolver.compile(moduleReader(names[i]));
+        ++i;
+    }
+    return success;
 }
 
 function compile(text, language, handleErrors, options){

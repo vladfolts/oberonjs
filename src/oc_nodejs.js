@@ -41,11 +41,18 @@ function main(){
 
     var errors = "";
     var start = args.timing == "true" ? (new Date()).getTime() : undefined;
-    nodejs.compile(sources, language, function(e){errors += e + "\n";}, includeDirs, outDir, args.importDir);
-    if (errors.length){
-        console.error(errors);
+    var success = nodejs.compile(sources, 
+                   language, 
+                   function(e){ 
+                        console.error(e);
+                        errors += e + "\n";
+                   }, 
+                   includeDirs, 
+                   outDir, 
+                   args.importDir
+                   );
+    if (!success)
         return -2;
-    }
 
     if (start){
         var stop = (new Date()).getTime();

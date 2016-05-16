@@ -28,4 +28,12 @@ function multiDimArray(i/*INTEGER*/, j/*INTEGER*/){
 	var a = RTL$.makeArray(5, 5, 0);
 	RTL$.putAt(RTL$.getAt(a, 1), 2, RTL$.getAt(RTL$.getAt(a, 3), 4));
 }
+
+function arrayOfRecords(i/*INTEGER*/){
+	var $scope1 = $scope + ".arrayOfRecords";
+	function anonymous$1(){
+	}
+	var a = RTL$.makeArray(3, function(){return new anonymous$1();});
+	RTL$.copy(RTL$.getAt(a, i + 1 | 0), RTL$.getAt(a, i), {record: {}});
+}
 }();

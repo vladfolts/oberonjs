@@ -206,12 +206,9 @@ PROCEDURE typeTest*(left: Expression.PType; right: Types.PId; cx: ContextHierarc
 VAR
     leftVar: Types.PVariable;
 BEGIN
-    d <- left.designator();
-    IF d # NIL THEN
-        info <- d.info();
-        IF info IS Types.PVariable THEN
-            leftVar := info;
-        END;
+    info <- left.info();
+    IF info IS Types.PVariable THEN
+        leftVar := info;
     END;
 
     rightType <- unwrapType(right);
@@ -299,12 +296,9 @@ END;
 
 PROCEDURE notTypeId(e: Expression.PType);
 BEGIN
-    d <- e.designator();
-    IF d # NIL THEN
-        info <- d.info();
-        IF info IS TypeId.PType THEN
-            Errors.raise("type name '" + info.type().description() + "' cannot be used as an expression");
-        END;
+    info <- e.info();
+    IF info IS TypeId.PType THEN
+        Errors.raise("type name '" + info.type().description() + "' cannot be used as an expression");
     END;
 END;
 
@@ -528,11 +522,11 @@ VAR
     VAR
         result: Expression.PType;
     BEGIN
-        rightDesignator <- right.designator();
-        IF rightDesignator = NIL THEN
+        info <- right.info();
+        IF info = NIL THEN
             throwTypeNameExpected();
         ELSE
-            result := typeTest(left, rightDesignator.info(), cx);
+            result := typeTest(left, info, cx);
         END;
         RETURN result;
     END;

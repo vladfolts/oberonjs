@@ -87,7 +87,7 @@ BEGIN
     id <- d.methodId.id();
     IF ~d.isConstructor THEN
         EberonRecord.requireMethodDefinition(baseType, id, "cannot use abstract method(s) in SUPER calls");
-        procId := NEW Types.ProcedureId(NEW EberonTypes.MethodType(id, d.methodType.procType(), superMethodCallGenerator));
+        procId := NEW Procedure.Id(NEW EberonTypes.MethodType(id, d.methodType.procType(), superMethodCallGenerator), id, FALSE);
     END;
     
     RETURN NEW EberonContextDesignator.SuperMethodInfo(
@@ -216,9 +216,8 @@ BEGIN
         IF Expression.isTemporary(e^) THEN
             optimize := TRUE;
         ELSE
-            d <- e.designator();
-            optimize := (d.scope() = SELF.root().currentScope())
-                & ~(d.info()^ IS Variable.ArgumentVariable);
+            info <- e.info();
+            optimize := (info^ IS Variable.Declared) & (info.scope = SELF.root().currentScope());
         END;
     END;
     

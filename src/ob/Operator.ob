@@ -173,7 +173,7 @@ BEGIN
         result := NEW Expression.Type(
                 e.code(),
                 Types.basic.integer,
-                e.designator(),
+                e.info(),
                 e.constValue(),
                 e.maxPrecedence());
     END;
@@ -449,9 +449,9 @@ PROCEDURE strCmp(op: STRING; left, right: Expression.PType; cx: LanguageContext.
             Types.basic.bool)
 END;
 
-PROCEDURE assign*(left: Designator.Type; right: Expression.PType; cx: LanguageContext.PType): STRING;
+PROCEDURE assign*(info: Types.PId; right: Expression.PType; cx: LanguageContext.PType): STRING;
 VAR
-    leftCode, rightCode: STRING;
+    rightCode: STRING;
     isArray: BOOLEAN;
     castOperation: LanguageContext.PCastOp;
     ignored: BOOLEAN;
@@ -467,55 +467,46 @@ VAR
                          + String.fromInt(Types.stringLen(s))
                          + "-character string");
         END;
-        RETURN cx.language.rtl.assignArrayFromString(leftCode, rightCode)
+
+        l <- cx.language;
+        RETURN l.rtl.assignArrayFromString(l.codeTraits.referenceCode(info^), rightCode)
     END assignArrayFromString;
 BEGIN
-    info <- left.info();
     IF ~(info IS Types.PVariable) OR info.isReadOnly() THEN
         Errors.raise("cannot assign to " + info.idType());
-    END; 
+    ELSE 
+        rightCode := right.code();
+        leftType <- info.type();
+        rightType <- right.type();
 
-    leftCode := left.code();
-    rightCode := right.code();
-    leftType <- left.type();
-    rightType <- right.type();
-
-    isArray := leftType IS Types.PArray;
-    IF isArray
-        & (leftType(Types.PArray).elementsType = Types.basic.ch)
-        & (rightType IS Types.PString) THEN
-        result := assignArrayFromString(leftType(Types.PArray)^, rightType^);
-    ELSE
-        IF cx.language.types.implicitCast(rightType, leftType, FALSE, castOperation)
-            # Cast.errNo THEN
-            Errors.raise("type mismatch: '" + left.code() + "' is '" + leftType.description()
-                         + "' and cannot be assigned to '" + rightType.description() + "' expression");
+        isArray := leftType IS Types.PArray;
+        IF isArray
+            & (leftType(Types.PArray).elementsType = Types.basic.ch)
+            & (rightType IS Types.PString) THEN
+            result := assignArrayFromString(leftType(Types.PArray)^, rightType^);
+        ELSE
+            IF cx.language.types.implicitCast(rightType, leftType, FALSE, castOperation)
+                # Cast.errNo THEN
+                Errors.raise("type mismatch: '" + leftType.description()
+                             + "' cannot be assigned to '" + rightType.description() + "' expression");
+            END;
+            IF (leftType IS Types.POpenArray) & (rightType IS Types.PArray) THEN
+                Errors.raise("open '" + leftType.description() + "' cannot be assigned");
+            END;
+                
+            result := castOperation.assign(cx, info, right);
         END;
-        IF (leftType IS Types.POpenArray) & (rightType IS Types.PArray) THEN
-            Errors.raise("'" + leftCode + "' is open '" + leftType.description() + "' and cannot be assigned");
-        END;
-            
-        result := castOperation.assign(cx, left, right);
     END;
     RETURN result
 END assign;
     
 PROCEDURE inplace(left, right: Expression.PType; cx: LanguageContext.PType; code: STRING; altOp: BinaryProc): STRING;
-VAR
-    designator: Designator.PType;
-    rightExp: Expression.PType;
-    result: STRING;
 BEGIN
-    designator := left.designator();
-    info <- designator.info();
-    IF (info IS Types.PVariable) & info.isReference() THEN
-        result := assign(designator^, altOp(left, right), cx);
-    ELSE
-        rightExp := Expression.deref(right);
-        result := left.code() + code + rightExp.code();
-    END;
-    RETURN result
-END inplace;
+    info <- left.info();
+    RETURN (info IS Types.PVariable) & info.isReference() 
+        ? assign(info, altOp(left, right), cx)
+        : left.code() + code + Expression.deref(right).code();
+END;
 
 PROCEDURE addReal*(left, right: Expression.PType): Expression.PType;
     RETURN binaryWithCode(left, right, opAddReal, " + ", Precedence.addSub)
@@ -694,7 +685,7 @@ BEGIN
         result := NEW Expression.Type(String.fromInt(value), Types.basic.integer, NIL, NEW ConstValue.Int(value), Precedence.unary);
     ELSE
         result := promoteToWideIfNeeded(unary(x, opNegateInt, "-"));
-        result := NEW Expression.Type(result.code() + " | 0", result.type(), result.designator(), result.constValue(), Precedence.bitOr);
+        result := NEW Expression.Type(result.code() + " | 0", result.type(), result.info(), result.constValue(), Precedence.bitOr);
     END;
     RETURN result;
 END;

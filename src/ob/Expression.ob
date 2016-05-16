@@ -1,25 +1,25 @@
 MODULE Expression;
 IMPORT
-    ConstValue, Designator, Precedence := CodePrecedence, Types;
+    ConstValue, Precedence := CodePrecedence, Types;
 TYPE
     Type* = RECORD
         PROCEDURE Type*(
             code: STRING; 
             type: Types.PType; 
-            designator: Designator.PType; 
+            info: Types.PId; 
             constValue: ConstValue.PType; 
             maxPrecedence: INTEGER);
 
         PROCEDURE code*(): STRING;
         PROCEDURE type*(): Types.PType;
-        PROCEDURE designator*(): Designator.PType;
+        PROCEDURE info*(): Types.PId;
         PROCEDURE constValue*(): ConstValue.PType;
         PROCEDURE maxPrecedence*(): INTEGER;
         PROCEDURE isTerm*(): BOOLEAN;
 
         mCode: STRING;
         mType: Types.PType;
-        mDesignator: Designator.PType;
+        mInfo: Types.PId;
         mConstValue: ConstValue.PType;
         mMaxPrecedence: INTEGER
     END;
@@ -34,8 +34,8 @@ PROCEDURE Type.type(): Types.PType;
     RETURN SELF.mType
 END;
 
-PROCEDURE Type.designator(): Designator.PType;
-    RETURN SELF.mDesignator
+PROCEDURE Type.info(): Types.PId;
+    RETURN SELF.mInfo;
 END;
 
 PROCEDURE Type.constValue(): ConstValue.PType;
@@ -47,18 +47,18 @@ PROCEDURE Type.maxPrecedence(): INTEGER;
 END;
 
 PROCEDURE Type.isTerm(): BOOLEAN;
-    RETURN (SELF.mDesignator = NIL) & (SELF.mMaxPrecedence = Precedence.none)
+    RETURN (SELF.mInfo = NIL) & (SELF.mMaxPrecedence = Precedence.none)
 END;
 
 PROCEDURE Type.Type(
     code: STRING; 
     type: Types.PType; 
-    designator: Designator.PType; 
+    info: Types.PId; 
     constValue: ConstValue.PType; 
     maxPrecedence: INTEGER)
   | mCode(code),
     mType(type),
-    mDesignator(designator),
+    mInfo(info),
     mConstValue(constValue),
     mMaxPrecedence(maxPrecedence);
 END;
@@ -66,10 +66,10 @@ END;
 PROCEDURE make*(
     code: STRING; 
     type: Types.PType; 
-    designator: Designator.PType; 
+    info: Types.PId; 
     constValue: ConstValue.PType)
     : PType;
-    RETURN NEW Type(code, type, designator, constValue, Precedence.none)
+    RETURN NEW Type(code, type, info, constValue, Precedence.none)
 END;
 
 PROCEDURE makeSimple*(code: STRING; type: Types.PType): PType;
@@ -83,12 +83,11 @@ END;
 PROCEDURE deref*(e: PType): PType;
 BEGIN
     result <- e;
-    designator <- e.mDesignator;
+    info <- e.mInfo;
     type <- e.mType;
-    IF    (designator # NIL)
+    IF    (info # NIL)
       & ~((type IS Types.PArray) OR (type IS Types.PRecord)) THEN
         
-        info <- designator.info();
         IF ((info IS Types.PVariable) & info.isReference()) THEN
             result := makeSimple(derefCode(e.code()), type);
         END;
@@ -97,7 +96,7 @@ BEGIN
 END;
 
 PROCEDURE isTemporary*(e: Type): BOOLEAN;
-    RETURN e.designator() = NIL;
+    RETURN e.mInfo = NIL;
 END;
 
 END Expression.

@@ -51,7 +51,7 @@ BEGIN
     r <- right.type();
     IF (l # r) & ((l = EberonString.string) OR (r = EberonString.string)) THEN
         (* change expression type to STRING *)
-        result := NEW Expression.Type(result.code(), EberonString.string, result.designator(), result.constValue(), result.maxPrecedence());
+        result := NEW Expression.Type(result.code(), EberonString.string, result.info(), result.constValue(), result.maxPrecedence());
     END;
     RETURN result;
 END;
@@ -97,24 +97,22 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; left: Designator.Type; right: Expression.PType): STRING;
+PROCEDURE CastOpRecord.assign(cx: LanguageContext.PType; info: Types.PVariable; right: Expression.PType): STRING;
 VAR
     result: STRING;
 BEGIN
-    info <- left.info();
     IF info^ IS EberonMap.ElementVariable THEN
         (* optimize the case when the temporary is used - do not clone it 
            but only if types exactly match - derived temporary still must be cloned *)
-        IF (right.designator() = NIL) & (left.type() = right.type()) THEN
+        IF (right.info() = NIL) & (info.type() = right.type()) THEN
             result := info.lval + " = " + right.code();
         ELSE
+            leftType <- info.type()(Record.PType);
             result := info.lval + " = " 
-                    + cx.language.rtl.clone(right.code(), 
-                                            generateTypeInfo(left.type()), 
-                                            Record.constructor(cx.cx^, left.type()(Record.PType)^));
+                    + cx.language.rtl.clone(right.code(), generateTypeInfo(leftType), Record.constructor(cx.cx^, leftType^));
         END;
     ELSE
-        result := SUPER(cx, left, right);
+        result := SUPER(cx, info, right);
     END;
     RETURN result;
 END;
