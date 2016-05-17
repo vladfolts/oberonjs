@@ -101,7 +101,7 @@ BEGIN
     RETURN result;
 END;
 
-PROCEDURE findCommonBase(t1, t2: Record.PType): Record.PType;
+PROCEDURE findCommonBaseRecord(t1, t2: Record.PType): Record.PType;
 VAR
     result: Record.PType;
 BEGIN
@@ -121,6 +121,12 @@ BEGIN
     END;
 
     RETURN commonBase1;
+END;
+
+PROCEDURE findCommonBase(t1, t2: Types.PType): Types.PType;
+    RETURN (t1 IS Types.PString) OR (t2 IS Types.PString) 
+           ? EberonString.string 
+           : t1;
 END;
 
 PROCEDURE parentTerm(VAR maybeFactor: ContextHierarchy.Node): PTermList;
@@ -189,9 +195,9 @@ BEGIN
         firstType <- SELF.first.type();
         secondType <- SELF.second.type();
         IF (firstType IS Record.PType) & (secondType IS Record.PType) THEN
-            resultType := findCommonBase(firstType, secondType);
+            resultType := findCommonBaseRecord(firstType, secondType);
         ELSIF (firstType IS Record.PPointer) & (secondType IS Record.PPointer) THEN
-            resultType := EberonContextDesignator.makePointer(findCommonBase(Record.pointerBase(firstType^), Record.pointerBase(secondType^)));
+            resultType := EberonContextDesignator.makePointer(findCommonBaseRecord(Record.pointerBase(firstType^), Record.pointerBase(secondType^)));
         ELSIF (firstType = Types.nil) & (secondType IS Record.PPointer) THEN
             resultType := secondType;
         ELSIF (secondType = Types.nil) & (firstType IS Record.PPointer) THEN
@@ -203,7 +209,7 @@ BEGIN
                 Errors.raise("incompatible types in ternary operator: '" 
                              + firstType.description() + "' and '" + secondType.description() + "'");
             END;
-            resultType := firstType;
+            resultType := findCommonBase(firstType, secondType);
         END;
 
         checkResultType <- resultType;
