@@ -2,7 +2,7 @@ MODULE EberonContextInPlace;
 IMPORT
     CodeGenerator, 
     ContextExpression, ContextHierarchy, 
-    EberonContextDesignator, EberonContextLoop,
+    EberonContextDesignator, EberonContextExpression, EberonContextLoop,
     EberonRecord, Errors, Expression, LanguageContext, Symbols, Types;
 TYPE
     VariableInit* = RECORD(ContextExpression.ExpressionHandler)
@@ -48,8 +48,13 @@ BEGIN
             IF Expression.isTemporary(e^) THEN
                 SELF.code := SELF.code + e.code();
             ELSE
+                info <- e.info();
                 l <- SELF.root().language();
-                SELF.code := SELF.code + l.rtl.clone(e.code(), l.types.typeInfo(type), "undefined");
+                code <- EberonContextExpression.optimizeRecordRValue(info^, l^);
+                IF LEN(code) = 0 THEN
+                    code := l.rtl.clone(e.code(), l.types.typeInfo(type), "undefined");
+                END;
+                SELF.code := SELF.code + code;
             END;
         ELSE
             IF Expression.isTemporary(e^) & (type IS Types.PArray) THEN

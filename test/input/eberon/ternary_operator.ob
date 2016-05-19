@@ -40,6 +40,27 @@ BEGIN
 	r <- b ? r1 : r2;
 END;
 
+PROCEDURE initRecordFromConstructor(b: BOOLEAN);
+TYPE
+	T = RECORD 
+		PROCEDURE T(i: INTEGER); 
+	END;
+	PROCEDURE T.T(i: INTEGER); 
+	END;
+BEGIN
+	r <- b ? T(1) : T(2);
+END;
+
+PROCEDURE initRecordFromConstructorOrVariable(b: BOOLEAN);
+TYPE
+	T = RECORD END;
+VAR
+	r: T;
+BEGIN
+	r1 <- b ? r : T();
+	r2 <- b ? T() : r;
+END;
+
 PROCEDURE operatorsPriority(b: BOOLEAN): INTEGER;
 	RETURN (b ? 1 : 2) + 3;
 END;

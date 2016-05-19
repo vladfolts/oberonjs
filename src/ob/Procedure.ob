@@ -204,15 +204,7 @@ PROCEDURE Id.canBeReferenced(): BOOLEAN;
 END;
 
 PROCEDURE Id.idType(): STRING;
-VAR
-    prefix: STRING;
-BEGIN
-    IF SELF.local THEN
-        prefix := "local procedure";
-    ELSE
-        prefix := SUPER();
-    END;
-    RETURN prefix + " '" + SELF.name + "'";
+    RETURN (SELF.local ? "local procedure" : SUPER()) + " '" + SELF.name + "'";
 END;
 
 PROCEDURE StdId.StdId(type: PStd; name: STRING)

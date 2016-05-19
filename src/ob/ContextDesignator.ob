@@ -259,7 +259,7 @@ END;
 PROCEDURE Type.endParse(): BOOLEAN;
 BEGIN
     SELF.parent().attributes.designator :=
-        NEW Designator.Type(SELF.code, SELF.currentType, SELF.info, NIL);
+        NEW Designator.Type(SELF.code, SELF.currentType, SELF.info);
     RETURN TRUE;
 END;
 

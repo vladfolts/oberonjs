@@ -40,6 +40,22 @@ function initRecord(b/*BOOLEAN*/){
 	var r = RTL$.clone(b ? r1 : r2, {record: {}}, undefined);
 }
 
+function initRecordFromConstructor(b/*BOOLEAN*/){
+	var $scope1 = $scope + ".initRecordFromConstructor";
+	function T(i/*INTEGER*/){
+	}
+	var r = b ? new T(1) : new T(2);
+}
+
+function initRecordFromConstructorOrVariable(b/*BOOLEAN*/){
+	var $scope1 = $scope + ".initRecordFromConstructorOrVariable";
+	function T(){
+	}
+	var r = new T();
+	var r1 = b ? RTL$.clone(r, {record: {}}, undefined) : new T();
+	var r2 = b ? new T() : RTL$.clone(r, {record: {}}, undefined);
+}
+
 function operatorsPriority(b/*BOOLEAN*/){
 	return (b ? 1 : 2) + 3 | 0;
 }

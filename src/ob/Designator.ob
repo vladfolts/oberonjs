@@ -1,19 +1,17 @@
 MODULE Designator;
 IMPORT
-    ScopeBase, Types;
+    Types;
 TYPE
     Type* = RECORD
-        PROCEDURE Type*(code: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType);
+        PROCEDURE Type*(code: STRING; type: Types.PType; info: Types.PId);
 
         PROCEDURE code*(): STRING;
         PROCEDURE type*(): Types.PType;
         PROCEDURE info*(): Types.PId;
-        PROCEDURE scope*(): ScopeBase.PType;
 
         mCode: STRING;
         mType: Types.PType;
         mInfo: Types.PId;
-        mScope: ScopeBase.PType
     END;
 
     PType* = POINTER TO Type;
@@ -30,15 +28,10 @@ PROCEDURE Type.info(): Types.PId;
     RETURN SELF.mInfo
 END;
 
-PROCEDURE Type.scope(): ScopeBase.PType;
-    RETURN SELF.mScope
-END;
-
-PROCEDURE Type.Type(code: STRING; type: Types.PType; info: Types.PId; scope: ScopeBase.PType)
+PROCEDURE Type.Type(code: STRING; type: Types.PType; info: Types.PId)
   | mCode(code),
     mType(type),
-    mInfo(info),
-    mScope(scope);
+    mInfo(info);
 END;
 
 END Designator.

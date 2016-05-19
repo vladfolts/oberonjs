@@ -74,6 +74,9 @@ TYPE
     END;
 
     TernaryOperatorResult = RECORD(Variable.TypedVariable)
+        PROCEDURE TernaryOperatorResult(type: Types.PStorageType; condition, l, r: Expression.PType);
+
+        condition, left, right: Expression.PType;
     END;
 VAR
     setTermTypePromotion: PROCEDURE(VAR term: TermList): EberonTypePromotion.PMaybe;
@@ -102,8 +105,6 @@ BEGIN
 END;
 
 PROCEDURE findCommonBaseRecord(t1, t2: Record.PType): Record.PType;
-VAR
-    result: Record.PType;
 BEGIN
     depth1 <- hierarchyDepth(t1^);
     depth2 <- hierarchyDepth(t2^);
@@ -127,6 +128,14 @@ PROCEDURE findCommonBase(t1, t2: Types.PType): Types.PType;
     RETURN (t1 IS Types.PString) OR (t2 IS Types.PString) 
            ? EberonString.string 
            : t1;
+END;
+
+PROCEDURE ternaryCodeImpl(condition: Expression.PType; left, right: STRING): STRING;
+    RETURN condition.code() + " ? " + left + " : " + right;
+END;
+
+PROCEDURE ternaryCode(t: TernaryOperatorResult): STRING;
+    RETURN ternaryCodeImpl(t.condition, Expression.deref(t.left).code(), Expression.deref(t.right).code());
 END;
 
 PROCEDURE parentTerm(VAR maybeFactor: ContextHierarchy.Node): PTermList;
@@ -216,13 +225,8 @@ BEGIN
         IF ~(checkResultType IS Types.PStorageType) THEN
             Errors.raise("cannot use '" + checkResultType.description() + "' as a result of ternary operator");
         ELSE
-            result := NEW Expression.Type(
-                SELF.condition.code() + " ? " + Expression.deref(SELF.first).code() 
-                                      + " : " + Expression.deref(SELF.second).code(),
-                resultType,
-                NEW TernaryOperatorResult(resultType(Types.PStorageType)),
-                NIL,
-                CodePrecedence.conditional);
+            v <- NEW TernaryOperatorResult(checkResultType, SELF.condition, SELF.first, SELF.second);
+            result := NEW Expression.Type(ternaryCode(v^), resultType, v, NIL, CodePrecedence.conditional);
         END;
     END;
     SELF.parent()(ContextExpression.PExpressionHandler).handleExpression(result);
@@ -429,6 +433,13 @@ BEGIN
     END;
 END;
 
+PROCEDURE TernaryOperatorResult.TernaryOperatorResult(type: Types.PStorageType; condition, l, r: Expression.PType)
+    | SUPER(type),
+      condition(condition),
+      left(l),
+      right(r);
+END;
+
 PROCEDURE TernaryOperatorResult.isReference(): BOOLEAN;
     RETURN FALSE;
 END;
@@ -439,6 +450,28 @@ END;
 
 PROCEDURE TernaryOperatorResult.idType(): STRING;
     RETURN "ternary operator result";
+END;
+
+PROCEDURE optimizeRecordRValue*(VAR info: Types.Id; l: LanguageContext.Language): STRING;
+VAR
+    result: STRING;
+BEGIN
+    IF info IS TernaryOperatorResult THEN
+        lTemp <- Expression.isTemporary(info.left^);
+        rTemp <- Expression.isTemporary(info.right^);
+        IF lTemp & rTemp THEN
+            result := ternaryCode(info);
+        ELSIF lTemp THEN
+            result := ternaryCodeImpl(info.condition, 
+                                      info.left.code(), 
+                                      l.rtl.clone(info.right.code(), l.types.typeInfo(info.type()), "undefined"));
+        ELSIF rTemp THEN
+            result := ternaryCodeImpl(info.condition, 
+                                      l.rtl.clone(info.left.code(), l.types.typeInfo(info.type()), "undefined"),
+                                      info.right.code()); 
+        END;
+    END;
+    RETURN result;
 END;
 
 BEGIN
