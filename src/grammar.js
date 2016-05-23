@@ -40,6 +40,7 @@ function make(makeIdentdef,
               makeFormalArray,
               makeFormalResult,
               makeReturn,
+              makeSet,
               contexts,
               reservedWords
               ){
@@ -90,23 +91,21 @@ var factor = context(
        and("~", function(stream, context){
                     return factor(stream, context);}) // break recursive declaration of factor
      )
-    , contexts.Factor);
+    , ContextExpression.Factor);
 
 var addOperator = context(or("+", "-", "OR"), ContextExpression.AddOperator);
 var mulOperator = context(or("*", "/", "DIV", "MOD", "&"), ContextExpression.MulOperator);
-var term = context(and(factor, repeat(and(mulOperator, required(factor, "invalid operand")))), contexts.Term);
+var term = context(and(factor, repeat(and(mulOperator, required(factor, "invalid operand")))), ContextExpression.Term);
 var simpleExpression = context(
         and(optional(or("+", "-"))
           , term
           , repeat(and(addOperator, required(term, "invalid operand"))))
-      , contexts.SimpleExpression);
+      , ContextExpression.SimpleExpression);
 var relation = or("=", "#", "<=", "<", ">=", ">", "IN", "IS");
 var expression = makeExpression(and(simpleExpression, optional(and(relation, required(simpleExpression, "invalid operand")))));
 var constExpression = expression;
 
-var element = context(and(expression, optional(and("..", expression))), ContextExpression.SetElement);
-var set = and("{", context(optional(and(element, repeat(and(",", element)))), ContextExpression.Set)
-            , "}");
+var set = makeSet(expression);
 
 var expList = and(expression, repeat(and(",", expression)));
 var actualParameters = and("(", context(optional(expList), ContextDesignator.ActualParameters), ")");
@@ -232,5 +231,11 @@ result.module
 return result;
 }
 
+function makeSet(expression){
+    var element = context(and(expression, optional(and("..", expression))), ContextExpression.SetElement);
+    return and("{", context(optional(and(element, repeat(and(",", element)))), ContextExpression.Set), "}");
+}
+
 exports.make = make;
 exports.reservedWords = reservedWords;
+exports.makeSet = makeSet;

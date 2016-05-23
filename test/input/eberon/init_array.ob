@@ -1,0 +1,22 @@
+MODULE m;
+
+CONST 
+	a1 = [1];
+	a2 = [1, 2];
+	a3 = [TRUE, FALSE];
+	a4 = [1 + 2, 3];
+
+PROCEDURE passArray(a: ARRAY OF INTEGER);
+END;
+
+BEGIN
+	passArray(a1);
+
+	FOR i <- 0 TO LEN(a1) DO
+		ASSERT(a1[i] # 0);
+	END;
+
+	FOR e IN a1 DO
+		ASSERT(e # 0);
+	END;
+END m.

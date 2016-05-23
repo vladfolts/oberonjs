@@ -1,8 +1,8 @@
 MODULE EberonContextExpression;
 IMPORT
-    Cast, CodePrecedence,
+    Cast, CodePrecedence, ConstValue,
     Context, ContextExpression, ContextHierarchy, 
-    EberonContextDesignator, 
+    EberonArray, EberonContextDesignator, 
     EberonMap, EberonOperator, EberonString, EberonTypePromotion, 
     Errors, Expression, ExpressionTree, LanguageContext,
     JS,
@@ -23,14 +23,13 @@ TYPE
         PROCEDURE RelationExpression(parent: PExpressionNode);
     END;
 
-    SimpleExpression* = RECORD(ContextExpression.SimpleExpression)
+    Array* = RECORD(ContextExpression.ExpressionHandler)
+        size: INTEGER;
+        type: Types.PStorageType;
+        code: STRING;
     END;
 
-    Term* = RECORD(ContextExpression.Term)
-    END;
-    PTerm = POINTER TO Term;
-
-    Factor* = RECORD(ContextExpression.Factor)
+    ArrayConst = RECORD(ConstValue.Type)
     END;
 
     Ops = RECORD(ExpressionTree.Ops)
@@ -235,6 +234,32 @@ END;
 
 PROCEDURE RelationExpression.RelationExpression(parent: PExpressionNode)
     | SUPER(parent, parent.currentNode);
+END;
+
+PROCEDURE Array.handleExpression(e: Expression.PType);
+BEGIN
+    type <- e.type();
+    IF SELF.type = NIL THEN
+        IF type IS Types.PStorageType THEN
+            SELF.type := type;
+        ELSE
+            Errors.raise("array's element cannot be '" + type.description() + "'");
+        END;
+        SELF.code := "[" + e.code();
+    ELSIF SELF.type = type THEN
+        SELF.code := SELF.code + ", " + e.code();
+    ELSE
+        Errors.raise("array's elements should have the same type: expected '" + SELF.type.description() + "', got '" + type.description() + "'");
+    END;
+    INC(SELF.size);
+END;
+
+PROCEDURE Array.endParse(): BOOLEAN;
+BEGIN
+    SELF.code := SELF.code + "]";
+    SELF.parent()(ContextExpression.PExpressionHandler).handleExpression(
+        Expression.make(SELF.code, NEW EberonArray.StaticArray("", SELF.type, SELF.size), NIL, NEW ArrayConst()));
+    RETURN TRUE;
 END;
 
 PROCEDURE Ops.in(left, right: Types.PType; cx: ContextHierarchy.Node): ExpressionTree.BinaryOperatorCx;

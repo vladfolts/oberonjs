@@ -144,6 +144,12 @@ function makeReturn(base){
     return and(base, optional(";"));
 }
 
+function makeSet(expression){
+    var array = context(and("[", expression, repeat(and(",", expression)), "]"),
+                        EberonContextExpression.Array);
+    return or(Grammar.makeSet(expression), array);
+}
+
 exports.language = {
     grammar: Grammar.make(
         makeIdentdef,
@@ -160,17 +166,15 @@ exports.language = {
         makeFormalArray,
         makeFormalResult,
         makeReturn,
+        makeSet,
         { 
             constDeclaration:   EberonContext.ConstDeclaration, 
             typeDeclaration:    EberonContextType.Declaration,
             recordDecl:         EberonContextType.Record,
             variableDeclaration: EberonContextVar.Declaration,
             ArrayDecl:          EberonContextType.Array,
-            Factor:             EberonContextExpression.Factor,
             FormalParameters:   EberonContextProcedure.FormalParameters,
             FormalType:         EberonContextType.FormalType,
-            Term:               EberonContextExpression.Term,
-            SimpleExpression:   EberonContextExpression.SimpleExpression, 
             For:                EberonContextLoop.For,
             While:              EberonContextLoop.While,
             If:                 EberonContextIf.Type,

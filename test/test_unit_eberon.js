@@ -1566,5 +1566,36 @@ exports.suite = {
              ["passPDerived(b ? pb : NIL)", "type mismatch for argument 1: 'PBase' cannot be converted to 'PDerived'"],
              ["passRef(b ? i1 : i2)", "ternary operator result cannot be passed as VAR actual parameter"]
              )
+    ),
+"array expression": testWithGrammar(
+    grammar.expression,
+    pass("[1]",
+         "[1, 2]",
+         "[FALSE, TRUE]"
+         ),
+    fail(["[]", "not parsed"],
+         ["[1, TRUE]", "array's elements should have the same type: expected 'INTEGER', got 'BOOLEAN'"],
+         ["[NIL]", "array's element cannot be 'NIL'"],
+         ["[1, NIL]", "array's elements should have the same type: expected 'INTEGER', got 'NIL'"]
+        )
+    ),
+"CONST array": testWithGrammar(
+    grammar.declarationSequence,
+    pass("CONST a = [1];",
+         "CONST a = [1, 2];",
+         "CONST a = [FALSE, TRUE];"
+         )
+    ),
+"CONST array pass to procedure": testWithContext(
+    context(grammar.expression,
+            "CONST a = [1, 2, 3];"
+            + "PROCEDURE intArray(a: ARRAY OF INTEGER): BOOLEAN; RETURN FALSE; END;"
+            + "PROCEDURE intVarArray(VAR a: ARRAY OF INTEGER): BOOLEAN; RETURN FALSE; END;"
+            + "PROCEDURE charArray(a: ARRAY OF CHAR): BOOLEAN; RETURN FALSE; END;"
+            ),
+    pass("intArray(a)"
+         ),
+    fail(["intVarArray(a)", "constant cannot be passed as VAR actual parameter"],
+         ["charArray(a)", "type mismatch for argument 1: 'ARRAY 3 OF INTEGER' cannot be converted to 'ARRAY OF CHAR'"])
     )
 };
