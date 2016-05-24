@@ -6,15 +6,15 @@ CONST
     commentBegin = "(*";
     commentEnd = "*)";
 
-    jsReservedWords 
-        = "break case catch const continue debugger default delete do else finally "
-        + "for function if in instanceof new return switch this throw try typeof "
-        + "var void while with false true null class enum export extends "
-        + "import super implements interface let package private protected "
-        + "public static yield "
-        + "Object Math Number" (* Object, Math and Number are used in generated code for some functions so it is 
-                    reserved word from code generator standpoint *)
-        ;
+    jsReservedWords = [
+        "break", "case", "catch", "const", "continue", "debugger", "default", "delete", "do", "else", "finally",
+        "for", "function", "if", "in", "instanceof", "new", "return", "switch", "this", "throw", "try", "typeof",
+        "var", "void", "while", "with", "false", "true", "null", "class", "enum", "export", "extends",
+        "import", "super", "implements", "interface", "let", "package", "private", "protected",
+        "public", "static", "yield",
+        "Object", "Math", "Number" (* Object, Math and Number are used in generated code for some functions so it is 
+                                      reserved word from code generator standpoint *)
+        ];
 
 TYPE
     Literal* = RECORD
@@ -252,25 +252,7 @@ BEGIN
     RETURN result
 END string;
 
-PROCEDURE isReservedWord(s: STRING; words: STRING): BOOLEAN;
-VAR
-    i, w: INTEGER;
-BEGIN
-    WHILE (w < LEN(words))
-        & (i < LEN(s))
-        & (words[w] = s[i])
-        & ((i # 0) OR (w = 0) OR (words[w - 1] = " ")) DO
-        INC(w);
-        INC(i);
-    ELSIF (w < LEN(words)) 
-        & ((i < LEN(s)) OR (words[w] # " ")) DO
-        INC(w);
-        i := 0;
-    END;
-    RETURN i = LEN(s)
-END isReservedWord;
-
-PROCEDURE ident*(VAR stream: Stream.Type; context: ContextHierarchy.Node; reservedWords: STRING): BOOLEAN;
+PROCEDURE ident*(VAR stream: Stream.Type; context: ContextHierarchy.Node; reservedWords: ARRAY OF STRING): BOOLEAN;
 VAR
     result: BOOLEAN;
     c: CHAR;
@@ -289,8 +271,8 @@ BEGIN
                 Stream.next(stream, -1);
             END;
 
-            IF ~isReservedWord(s, reservedWords) THEN
-                IF isReservedWord(s, jsReservedWords) THEN
+            IF reservedWords.indexOf(s) = -1 THEN
+                IF jsReservedWords.indexOf(s) # -1 THEN
                     s := s + "$";
                 END;
                 context.handleIdent(s);

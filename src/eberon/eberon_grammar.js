@@ -182,7 +182,7 @@ exports.language = {
             Repeat:             EberonContextLoop.Repeat,
             ModuleDeclaration:  EberonContextProcedure.ModuleDeclaration
         },
-        Grammar.reservedWords + " SELF SUPER MAP"
+        Grammar.reservedWords.concat(["SELF", "SUPER", "MAP"])
         ),
     stdSymbols: Symbols.makeStd(),
     types: {

@@ -24,7 +24,9 @@ var context = Parser.context;
 var emit = Parser.emit;
 var required = Parser.required;
 
-var reservedWords = "ARRAY IMPORT THEN BEGIN IN TO BY IS TRUE CASE MOD TYPE CONST MODULE UNTIL DIV NIL VAR DO OF WHILE ELSE OR ELSIF POINTER END PROCEDURE FALSE RECORD FOR REPEAT IF RETURN";
+var reservedWords = ["ARRAY", "IMPORT", "THEN", "BEGIN", "IN", "TO", "BY", "IS", "TRUE", "CASE", "MOD", "TYPE", "CONST", 
+                     "MODULE", "UNTIL", "DIV", "NIL", "VAR", "DO", "OF", "WHILE", "ELSE", "OR", "ELSIF", "POINTER", "END", 
+                     "PROCEDURE", "FALSE", "RECORD", "FOR", "REPEAT", "IF", "RETURN"];
 
 function make(makeIdentdef,
               makeDesignator,
