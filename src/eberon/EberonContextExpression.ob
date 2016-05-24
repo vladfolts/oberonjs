@@ -238,7 +238,8 @@ END;
 
 PROCEDURE Array.handleExpression(e: Expression.PType);
 BEGIN
-    type <- e.type();
+    type <- e.type() IS Types.PString ? EberonString.string
+                                      : e.type();
     IF SELF.type = NIL THEN
         IF type IS Types.PStorageType THEN
             SELF.type := type;

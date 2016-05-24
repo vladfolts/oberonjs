@@ -1597,5 +1597,12 @@ exports.suite = {
          ),
     fail(["intVarArray(a)", "constant cannot be passed as VAR actual parameter"],
          ["charArray(a)", "type mismatch for argument 1: 'ARRAY 3 OF INTEGER' cannot be converted to 'ARRAY OF CHAR'"])
+    ),
+"CONST array with string literals": testWithContext(
+    context(grammar.expression,
+            "CONST a = [\"a\", \"bc\", \"d\"];"
+            + "PROCEDURE stringArray(a: ARRAY OF STRING): BOOLEAN; RETURN FALSE; END;"
+            ),
+    pass("stringArray(a)")
     )
 };

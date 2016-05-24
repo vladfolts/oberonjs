@@ -5,6 +5,7 @@ CONST
 	a2 = [1, 2];
 	a3 = [TRUE, FALSE];
 	a4 = [1 + 2, 3];
+	a5 = ["a", "bc", "def"];
 
 PROCEDURE passArray(a: ARRAY OF INTEGER);
 END;
@@ -19,4 +20,6 @@ BEGIN
 	FOR e IN a1 DO
 		ASSERT(e # 0);
 	END;
+
+	ASSERT(a5.indexOf("a") = 0);
 END m.
