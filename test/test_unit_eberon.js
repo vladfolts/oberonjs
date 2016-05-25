@@ -633,14 +633,14 @@ exports.suite = {
              "v <- i + i",
              "v <- \"abc\" + s",
              "v <- s + \"abc\"",
+             "v <- \"abc\"",
+             "v <- \"abc\" + \"def\"",
              "v <- p()",
              "v <- void" // procedure type
             ),
         fail(["v <-", "initialization expression expected"],
              ["v <- void()", "procedure returning no result cannot be used in an expression"],
-             ["v <- NIL", "cannot use NIL to initialize variable"],
-             ["v <- \"abc\"", "cannot use multi-character string to initialize variable"],
-             ["v <- \"abc\" + \"def\"", "cannot use multi-character string to initialize variable"]
+             ["v <- NIL", "cannot use NIL to initialize variable 'v'"]
              )
         ),
     "scope": testWithContext(
@@ -1575,8 +1575,8 @@ exports.suite = {
          ),
     fail(["[]", "not parsed"],
          ["[1, TRUE]", "array's elements should have the same type: expected 'INTEGER', got 'BOOLEAN'"],
-         ["[NIL]", "array's element cannot be 'NIL'"],
-         ["[1, NIL]", "array's elements should have the same type: expected 'INTEGER', got 'NIL'"]
+         ["[NIL]", "cannot use NIL to initialize array's element"],
+         ["[1, NIL]", "cannot use NIL to initialize array's element"]
         )
     ),
 "CONST array": testWithGrammar(

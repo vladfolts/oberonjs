@@ -3,7 +3,7 @@ IMPORT
     Cast, CodePrecedence, ConstValue,
     Context, ContextExpression, ContextHierarchy, 
     EberonArray, EberonContextDesignator, 
-    EberonMap, EberonOperator, EberonString, EberonTypePromotion, 
+    EberonMap, EberonOperator, EberonRecord, EberonString, EberonTypePromotion, 
     Errors, Expression, ExpressionTree, LanguageContext,
     JS,
     Object, Record, Types, Variable;
@@ -236,21 +236,79 @@ PROCEDURE RelationExpression.RelationExpression(parent: PExpressionNode)
     | SUPER(parent, parent.currentNode);
 END;
 
-PROCEDURE Array.handleExpression(e: Expression.PType);
+PROCEDURE optimizeRecordRValue(VAR info: Types.Id; l: LanguageContext.Language): STRING;
+VAR
+    result: STRING;
 BEGIN
-    type <- e.type() IS Types.PString ? EberonString.string
-                                      : e.type();
-    IF SELF.type = NIL THEN
-        IF type IS Types.PStorageType THEN
-            SELF.type := type;
-        ELSE
-            Errors.raise("array's element cannot be '" + type.description() + "'");
+    IF info IS TernaryOperatorResult THEN
+        lTemp <- Expression.isTemporary(info.left^);
+        rTemp <- Expression.isTemporary(info.right^);
+        IF lTemp & rTemp THEN
+            result := ternaryCode(info);
+        ELSIF lTemp THEN
+            result := ternaryCodeImpl(info.condition, 
+                                      info.left.code(), 
+                                      l.rtl.clone(info.right.code(), l.types.typeInfo(info.type()), "undefined"));
+        ELSIF rTemp THEN
+            result := ternaryCodeImpl(info.condition, 
+                                      l.rtl.clone(info.left.code(), l.types.typeInfo(info.type()), "undefined"),
+                                      info.right.code()); 
         END;
-        SELF.code := "[" + e.code();
-    ELSIF SELF.type = type THEN
-        SELF.code := SELF.code + ", " + e.code();
+    END;
+    RETURN result;
+END;
+
+PROCEDURE initFromRValue*(cx: ContextHierarchy.PNode; e: Expression.PType; lval: STRING; VAR resultType: Types.PStorageType): STRING;
+VAR
+    result: STRING;
+    cloneOp: LanguageContext.PCastOp;
+BEGIN
+    type <- e.type();
+    IF type IS Types.PString THEN
+        resultType := EberonString.string;
+    ELSIF type IS Types.PStorageType THEN
+        resultType := type;
     ELSE
-        Errors.raise("array's elements should have the same type: expected '" + SELF.type.description() + "', got '" + type.description() + "'");
+        Errors.raise("cannot use " + type.description() + " to initialize " + lval);
+    END;
+
+    IF type IS Types.POpenArray THEN
+        Errors.raise("cannot initialize " + lval + " with open array");
+    ELSIF type IS EberonRecord.PRecord THEN
+        EberonRecord.ensureCanBeInstantiated(cx^, type, EberonRecord.instantiateForCopy);
+        IF Expression.isTemporary(e^) THEN
+            result := e.code();
+        ELSE
+            info <- e.info();
+            l <- cx.root().language();
+            code <- optimizeRecordRValue(info^, l^);
+            result := LEN(code) = 0 
+                    ? l.rtl.clone(e.code(), l.types.typeInfo(type), "undefined")
+                    : code;
+        END;
+    ELSE
+        IF Expression.isTemporary(e^) & (type IS Types.PArray) THEN
+            result := e.code();
+        ELSE
+            l <- cx.root().language();
+            void <- l.types.implicitCast(type, type, FALSE, cloneOp);
+            result := cloneOp.clone(ContextHierarchy.makeLanguageContext(cx), e);
+        END;
+    END;
+    RETURN result;
+END;
+
+PROCEDURE Array.handleExpression(e: Expression.PType);
+VAR
+    checkType: Types.PStorageType;
+BEGIN
+    IF SELF.type = NIL THEN
+        SELF.code := "[" + initFromRValue(SELF(POINTER), e, "array's element", SELF.type);
+    ELSE
+        SELF.code := SELF.code + ", " + initFromRValue(SELF(POINTER), e, "array's element", checkType);
+        IF SELF.type # checkType THEN
+            Errors.raise("array's elements should have the same type: expected '" + SELF.type.description() + "', got '" + checkType.description() + "'");
+        END;
     END;
     INC(SELF.size);
 END;
@@ -476,28 +534,6 @@ END;
 
 PROCEDURE TernaryOperatorResult.idType(): STRING;
     RETURN "ternary operator result";
-END;
-
-PROCEDURE optimizeRecordRValue*(VAR info: Types.Id; l: LanguageContext.Language): STRING;
-VAR
-    result: STRING;
-BEGIN
-    IF info IS TernaryOperatorResult THEN
-        lTemp <- Expression.isTemporary(info.left^);
-        rTemp <- Expression.isTemporary(info.right^);
-        IF lTemp & rTemp THEN
-            result := ternaryCode(info);
-        ELSIF lTemp THEN
-            result := ternaryCodeImpl(info.condition, 
-                                      info.left.code(), 
-                                      l.rtl.clone(info.right.code(), l.types.typeInfo(info.type()), "undefined"));
-        ELSIF rTemp THEN
-            result := ternaryCodeImpl(info.condition, 
-                                      l.rtl.clone(info.left.code(), l.types.typeInfo(info.type()), "undefined"),
-                                      info.right.code()); 
-        END;
-    END;
-    RETURN result;
 END;
 
 BEGIN

@@ -6,12 +6,49 @@ CONST
 	a3 = [TRUE, FALSE];
 	a4 = [1 + 2, 3];
 	a5 = ["a", "bc", "def"];
+TYPE
+	IntDynArray = ARRAY * OF INTEGER;
+
+	T = RECORD END;
 
 PROCEDURE passArray(a: ARRAY OF INTEGER);
 END;
 
+PROCEDURE inPlace();
+BEGIN
+	a <- [1, 2, 3];
+	a[1] := 5;
+END;
+
+PROCEDURE copy();
+VAR
+	a: ARRAY 3 OF INTEGER;
+	aDyn: ARRAY * OF INTEGER;
+BEGIN
+	a := [1, 2, 3];
+	aDyn := [1, 2, 3, 4, 5];
+END;
+
+PROCEDURE return(): IntDynArray;
+	RETURN [1, 2, 3];
+END;
+
+PROCEDURE recordConstructors();
+BEGIN
+	a <- [T()];
+	a2 <- [T(), T()];
+END;
+
+PROCEDURE recordVariables(a: T; VAR v: T);
+VAR
+	r: T;
+BEGIN
+	result <- [a, v, r];
+END;
+
 BEGIN
 	passArray(a1);
+	passArray([1, 2, 3]);
 
 	FOR i <- 0 TO LEN(a1) DO
 		ASSERT(a1[i] # 0);

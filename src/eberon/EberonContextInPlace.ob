@@ -32,40 +32,11 @@ END;
 
 PROCEDURE VariableInit.handleExpression(e: Expression.PType);
 VAR
-    cloneOp: LanguageContext.PCastOp;
+    resultType: Types.PStorageType;
 BEGIN
-    type <- e.type();
-    IF ~(type IS Types.PStorageType) THEN
-        Errors.raise("cannot use " + type.description() + " to initialize variable");
-    ELSIF type IS Types.POpenArray THEN
-        Errors.raise("cannot initialize variable '" + SELF.id + "' with open array");
-    ELSE
-        v <- NEW EberonContextDesignator.TypeNarrowVariable(type, FALSE, FALSE, SELF.id);
-        SELF.symbol := NEW Symbols.Symbol(SELF.id, v);
-
-        IF type IS EberonRecord.PRecord THEN
-            EberonRecord.ensureCanBeInstantiated(SELF, type, EberonRecord.instantiateForCopy);
-            IF Expression.isTemporary(e^) THEN
-                SELF.code := SELF.code + e.code();
-            ELSE
-                info <- e.info();
-                l <- SELF.root().language();
-                code <- EberonContextExpression.optimizeRecordRValue(info^, l^);
-                IF LEN(code) = 0 THEN
-                    code := l.rtl.clone(e.code(), l.types.typeInfo(type), "undefined");
-                END;
-                SELF.code := SELF.code + code;
-            END;
-        ELSE
-            IF Expression.isTemporary(e^) & (type IS Types.PArray) THEN
-                SELF.code := SELF.code + e.code();
-            ELSE
-                l <- SELF.root().language();
-                void <- l.types.implicitCast(type, type, FALSE, cloneOp);
-                SELF.code := SELF.code + cloneOp.clone(ContextHierarchy.makeLanguageContext(SELF(POINTER)), e);
-            END;
-        END;
-    END;
+    SELF.code := SELF.code + EberonContextExpression.initFromRValue(SELF(POINTER), e, "variable '" + SELF.id + "'", resultType);
+    v <- NEW EberonContextDesignator.TypeNarrowVariable(resultType, FALSE, FALSE, SELF.id);
+    SELF.symbol := NEW Symbols.Symbol(SELF.id, v);
 END;
 
 PROCEDURE VariableInit.onParsed();
