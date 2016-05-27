@@ -9,8 +9,7 @@ Example:
 
     i <- 123;
 
-*In place* variable is declared and assigned in the same time. The type of variable is not specified but deduced from the expression on the right. In the example above 
-variable will have type INTEGER. In the following example the variable will have the same type as a result of PROCEDURE f:
+*In place* variable is declared and assigned in the same time. The type of variable is not specified but deduced from the expression on the right. In the example above variable will have type INTEGER. If expression is a string literal then deduced type is [[STRING|eberon-strings]]. In the following example the variable will have the same type as a result of PROCEDURE f:
 
     x <- f();
 

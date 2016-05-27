@@ -1576,7 +1576,8 @@ exports.suite = {
     fail(["[]", "not parsed"],
          ["[1, TRUE]", "array's elements should have the same type: expected 'INTEGER', got 'BOOLEAN'"],
          ["[NIL]", "cannot use NIL to initialize array's element"],
-         ["[1, NIL]", "cannot use NIL to initialize array's element"]
+         ["[1, NIL]", "cannot use NIL to initialize array's element"],
+         ["[[1, 2], [3, 4]]", "array's elements should have the same type: expected 'ARRAY 2 OF INTEGER', got 'ARRAY 2 OF INTEGER'"] // not supported
         )
     ),
 "CONST array": testWithGrammar(
