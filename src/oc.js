@@ -130,7 +130,7 @@ function compileModules(names, moduleReader, grammar, contextFactory, handleErro
     return success;
 }
 
-function compile(text, language, handleErrors, options){
+function compile(text, language, handleErrors, options, moduleReader){
     var result = "";
     var rtl = new makeRTL(language.rtl);
     var moduleCode = function(name, imports){return new Code.ModuleGenerator(name, imports);};
@@ -147,7 +147,8 @@ function compile(text, language, handleErrors, options){
                     });
             },
             function(name, code){result += code;},
-            handleErrors
+            handleErrors,
+            moduleReader
             );
     resolver.compile(text);
 
