@@ -262,9 +262,6 @@ BEGIN
             END;
 
             IF reservedWords.indexOf(s) = -1 THEN
-                (*IF jsReservedWords.indexOf(s) # -1 THEN
-                    s := s + "$";
-                END;*)
                 context.handleIdent(s);
                 result := TRUE;
             END
