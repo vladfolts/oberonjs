@@ -364,7 +364,7 @@ END;
 PROCEDURE Record.doGenerateConstructor(): STRING;
 BEGIN
     gen <- NEW CodeGenerator.Generator();
-    gen.write("function " + SELF.cons + "()");
+    gen.write("function " + CodeGenerator.mangleId(SELF.cons) + "()");
     gen.openScope();
     gen.write(SELF.doGenerateBaseConstructorCallCode() 
             + generateFieldsInitializationCode(SELF));
@@ -385,7 +385,11 @@ BEGIN
         result := SELF.cons + ".prototype.$scope = " + scope + ";" + Chars.ln;
     ELSE
         qualifiedBase <- SELF.qualifyScope(base.scope) + base.name; 
-        result := SELF.root().language().rtl.extend(SELF.cons, qualifiedBase, scope) + ";" + Chars.ln;
+        result := SELF.root().language().rtl.extend(
+                    CodeGenerator.mangleId(SELF.cons), 
+                    CodeGenerator.mangleId(qualifiedBase), 
+                    scope) 
+                + ";" + Chars.ln;
     END;
     RETURN result;
 END;

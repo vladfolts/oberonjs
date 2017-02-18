@@ -169,7 +169,7 @@ BEGIN
 END makeDoProcSymbol;
 
 PROCEDURE makeJS*(): PType;
-    RETURN NEW JS("this");
+    RETURN NEW JS("JS");
 END;
 
 PROCEDURE AnyType.AnyType()
@@ -188,8 +188,8 @@ BEGIN
 END;
 
 BEGIN
-    doProcId := "do$";
-    varTypeId := "var$";
+    doProcId := "do";
+    varTypeId := "var";
     
     NEW(any);
     NEW(anyVar);

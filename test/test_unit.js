@@ -1109,6 +1109,17 @@ return {
          ["ASSERT(TRUE, 123)", "1 argument(s) expected, got 2"],
          ["ASSERT(123)", "type mismatch for argument 1: 'INTEGER' cannot be converted to 'BOOLEAN'"])
     ),
+"import module with reserved name": testWithContext(
+    { grammar: grammar.module,
+      source: "",
+      moduleReader: function(name){
+        TestUnitCommon.expectEq(name, "Math"); 
+        return "MODULE " + name + "; END " + name + "."; 
+        }
+    },
+    pass("MODULE m; IMPORT Math; END m."),
+    fail()
+    ),
 "imported module without exports": testWithModule(
     "MODULE test; END test.",
     pass("MODULE m; IMPORT test; END m."),

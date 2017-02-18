@@ -92,7 +92,7 @@ BEGIN
     
     RETURN NEW EberonContextDesignator.SuperMethodInfo(
         procId,
-        d.qualifyScope(baseType.scope) + baseType.description() + ".prototype." + id + ".call");
+        CodeGenerator.mangleId(d.qualifyScope(baseType.scope) + baseType.description()) + ".prototype." + id + ".call");
 END;
 
 PROCEDURE handleFieldInit(d: PProcOrMethodDeclaration; id: STRING): Procedure.PCallGenerator;
@@ -162,10 +162,11 @@ VAR
     result: STRING;
 BEGIN
     IF SELF.boundType # NIL THEN
+        boundTypeCode <- CodeGenerator.mangleId(SELF.boundType.name);
         IF SELF.isConstructor THEN
-            result := "function " + SELF.boundType.name + "(";
+            result := "function " + boundTypeCode + "(";
         ELSE
-            result := SELF.boundType.name + ".prototype." + SELF.methodId.id() + " = function(";
+            result :=  boundTypeCode + ".prototype." + SELF.methodId.id() + " = function(";
         END;
     ELSE
         result := SUPER();

@@ -32,6 +32,10 @@ TYPE
         var: PTypeNarrowVariable;
     END;
 
+    SelfVariable* = RECORD(Variable.Declared)
+        PROCEDURE SelfVariable(type: Types.PStorageType);
+    END;
+
     SelfAsPointer = RECORD(Types.Id)
     END;
 
@@ -205,7 +209,7 @@ PROCEDURE Type.handleLiteral(s: STRING);
 BEGIN
     IF s = "SELF" THEN
         type <- SELF.handleMessage(getMethodSelfMsg)(Types.PStorageType);
-        info <- NEW Variable.Declared("this", type, NIL);
+        info <- NEW SelfVariable(type);
         ContextDesignator.advance(SELF, type, info, "this", FALSE);
     ELSIF s = "POINTER" THEN
         type <- SELF.handleMessage(getSelfAsPointerMsg)(Types.PStorageType);
@@ -315,6 +319,10 @@ END;
 
 PROCEDURE SelfAsPointer.idType(): STRING;
     RETURN "SELF(POINTER)";
+END;
+
+PROCEDURE SelfVariable.SelfVariable(type: Types.PStorageType)
+    | SUPER("SELF", type, NIL);
 END;
 
 PROCEDURE ExpressionProcedureCall.ExpressionProcedureCall(parent: ContextHierarchy.PNode)

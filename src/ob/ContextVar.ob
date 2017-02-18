@@ -1,6 +1,6 @@
 MODULE ContextVar;
 IMPORT
-    Chars, Context, ContextHierarchy, ContextType, Errors, 
+    Chars, CodeGenerator, Context, ContextHierarchy, ContextType, Errors, 
     Object, Symbols, Types, Variable;
 TYPE
     Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
@@ -58,7 +58,7 @@ BEGIN
         scope <- SELF.root().currentScope();
         v <- NEW Variable.Declared(varName, SELF.type, scope);
         scope.addSymbol(NEW Symbols.Symbol(varName, v), id.exported());
-        gen.write("var " + varName + " = " + SELF.doInitCode() + ";");
+        gen.write("var " + CodeGenerator.mangleId(varName) + " = " + SELF.doInitCode() + ";");
     END;
 
     gen.write(Chars.ln);

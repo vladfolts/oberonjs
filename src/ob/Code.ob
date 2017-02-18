@@ -66,17 +66,11 @@ BEGIN
 END;
 
 PROCEDURE genExport*(s: Symbols.Symbol): STRING;
-VAR
-    result: STRING;
 BEGIN
-    IF s.isVariable() THEN
-        result := "function(){return " + s.id() + ";}";
-    ELSIF ~s.isType() THEN
-        result := s.id();
-    ELSE
-        result := typeShouldBeExported(s.info()(TypeId.PType), s.id())
-    END;
-    RETURN result
+    codeId <- CodeGenerator.mangleId(s.id());
+    RETURN s.isVariable() ? "function(){return " + codeId + ";}"
+        : ~s.isType()     ? codeId
+                          : typeShouldBeExported(s.info()(TypeId.PType), codeId);
 END;
 
 PROCEDURE genCommaList(m: StringsMap; import: BOOLEAN): STRING;
@@ -87,17 +81,15 @@ BEGIN
         IF LEN(result) # 0 THEN
             result := result + ", ";
         END;
-        IF import THEN
-            result := result + alias;
-        ELSE
-            result := result + name;
-        END;
+        result := result + ((~import & (name = "JS")) 
+                                ? "this"
+                                : CodeGenerator.mangleId(import ? alias : name));
     END;
     RETURN result;
 END;
 
 PROCEDURE ModuleGenerator.prolog(): STRING;
-    RETURN "var " + SELF.name + " = function (" + genCommaList(SELF.imports, TRUE) + "){" + Stream.kCR
+    RETURN "var " + CodeGenerator.mangleId(SELF.name) + " = function (" + genCommaList(SELF.imports, TRUE) + "){" + Stream.kCR
 END;
 
 PROCEDURE exportId*(s: Symbols.Symbol): STRING;

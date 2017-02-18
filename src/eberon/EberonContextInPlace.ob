@@ -27,7 +27,7 @@ END;
 
 PROCEDURE VariableInit.handleLiteral(s: STRING);
 BEGIN
-    SELF.code := "var " + SELF.id + " = ";
+    SELF.code := "var " + CodeGenerator.mangleId(SELF.id) + " = ";
 END;
 
 PROCEDURE VariableInit.handleExpression(e: Expression.PType);

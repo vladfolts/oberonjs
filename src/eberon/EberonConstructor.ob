@@ -1,6 +1,6 @@
 MODULE EberonConstructor;
 IMPORT 
-    Cast, EberonCast, EberonRecord, Errors, Expression, 
+    Cast, CodeGenerator, EberonCast, EberonRecord, Errors, Expression, 
     LanguageContext, Procedure, Record, Stream, TypeId, Types;
 TYPE
     ConstructorCall = RECORD(Procedure.StdCall)
@@ -39,7 +39,7 @@ END;
 PROCEDURE BaseConstructorCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
 BEGIN
     argCode <- checkArgs(SELF, args, cx);
-    code <- Record.constructor(cx.cx^, SELF.recordType^) + ".call(this, " + argCode + ");" + Stream.kCR;
+    code <- CodeGenerator.mangleId(Record.constructor(cx.cx^, SELF.recordType^)) + ".call(this, " + argCode + ");" + Stream.kCR;
     RETURN Expression.makeSimple(code, NIL);
 END;
 

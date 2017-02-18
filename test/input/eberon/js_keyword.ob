@@ -1,0 +1,57 @@
+MODULE import;
+TYPE
+	Math* = RECORD
+		PROCEDURE do*();
+		PROCEDURE catch*();
+	END;
+
+PROCEDURE Math.do();
+END;
+
+PROCEDURE Math.catch();
+END;
+
+END import.
+
+MODULE m;
+IMPORT import;
+
+TYPE 
+	Object = RECORD(import.Math)
+		PROCEDURE Object(var: INTEGER);
+		PROCEDURE throw();
+
+		var: INTEGER;
+	END;
+
+	Number = RECORD(Object)
+		PROCEDURE Number();
+	END;
+
+PROCEDURE Object.Object(var: INTEGER)
+	| var(var);
+END;
+
+PROCEDURE Object.catch();
+BEGIN
+	SUPER();
+END;
+
+PROCEDURE Object.throw();
+END;
+
+PROCEDURE Number.Number()
+	| SUPER(123);
+END;
+
+PROCEDURE Number.throw();
+BEGIN
+	SUPER();
+END;
+
+PROCEDURE Number.do();
+BEGIN
+	SUPER();
+END;
+
+END m.

@@ -1,6 +1,6 @@
 MODULE ContextIdentdef;
 IMPORT
-    Context, ContextDesignator, ContextHierarchy, ContextType, 
+    Context, CodeGenerator, ContextDesignator, ContextHierarchy, ContextType, 
     Module, Record, TypeId;
 TYPE
     Type* = RECORD(ContextHierarchy.Node)
@@ -64,7 +64,7 @@ END;
 PROCEDURE Qualified.handleModule(id: STRING; module: Module.PType);
 BEGIN
     SELF.module := module;
-    SELF.code := id + ".";
+    SELF.code := CodeGenerator.mangleId(id) + ".";
 END;
 
 PROCEDURE Qualified.endParse(): BOOLEAN;
@@ -72,7 +72,7 @@ VAR
     code: STRING;
 BEGIN
     IF LEN(SELF.code) = 0 THEN
-        code := SELF.id;
+        code := CodeGenerator.mangleId(SELF.id);
     ELSE
         code := SELF.code + Record.mangleJSProperty(SELF.id);
     END;

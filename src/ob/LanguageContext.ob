@@ -112,7 +112,7 @@ VAR
     result: STRING;
 BEGIN
     IF info IS T.DeclaredVariable THEN
-        result := info.id();
+        result := CodeGenerator.mangleId(info.id());
         IF info.type().isScalar() & ~((info IS Variable.ArgumentVariable) & info.var) THEN
             result := "{set: function($v){" + result + " = $v;}, get: function(){return " + result + ";}}";
         END
@@ -144,10 +144,11 @@ VAR
 BEGIN
     rightCode <- Expression.deref(right).code();
     IF info IS T.DeclaredVariable THEN
+        idCode <- CodeGenerator.mangleId(info.id());
         IF (info IS Variable.ArgumentVariable) & info.var THEN
-            result := info.id() + ".set(" + rightCode + ")";
+            result := idCode + ".set(" + rightCode + ")";
         ELSE
-            result := info.id() + " = " + rightCode;
+            result := idCode + " = " + rightCode;
         END;
     ELSIF info IS Variable.PropertyVariable THEN
         result := SELF.putAt(info.leadCode, info.propCode, rightCode);

@@ -1,6 +1,6 @@
 MODULE ContextModule;
 IMPORT
-    ContextHierarchy, ContextType, Errors, LanguageContext, 
+    CodeGenerator, ContextHierarchy, ContextType, Errors, LanguageContext, 
     Object, Scope, ScopeBase, String, Symbols, Types;
 TYPE
     Declaration* = RECORD(ContextHierarchy.Node)
@@ -77,11 +77,8 @@ BEGIN
            should not be used in code generation, 
            just return non-empty value to indicate this is not current module
         *)
-        IF ~(id IN SELF.imports) THEN
-            result := "module '" + id + "' is not imported";
-        ELSE
-            result := SELF.imports[id].id() + ".";
-        END;
+        result := ~(id IN SELF.imports) ? "module '" + id + "' is not imported"
+                                        : CodeGenerator.mangleId(SELF.imports[id].id()) + ".";
     END;
     RETURN result;
 END;

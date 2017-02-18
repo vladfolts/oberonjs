@@ -3,6 +3,16 @@ IMPORT
     Stream, String;
 CONST
     kTab* = 09X;
+
+    jsReservedWords = [
+        "break", "case", "catch", "const", "continue", "debugger", "default", "delete", "do", "else", "finally",
+        "for", "function", "if", "in", "instanceof", "new", "return", "switch", "this", "throw", "try", "typeof",
+        "var", "void", "while", "with", "false", "true", "null", "class", "enum", "export", "extends",
+        "import", "super", "implements", "interface", "let", "package", "private", "protected",
+        "public", "static", "yield",
+        "Object", "Math", "Number" (* Object, Math and Number are used in generated code for some functions so it is 
+                                      reserved word from code generator standpoint *)
+        ];
 TYPE
     Insertion* = RECORD
         PROCEDURE Insertion(index: INTEGER);
@@ -176,6 +186,10 @@ END;
 PROCEDURE Generator.Generator();
 BEGIN
     SELF.indents.add(Indent(0));
+END;
+
+PROCEDURE mangleId*(id: STRING): STRING;
+    RETURN jsReservedWords.indexOf(id) # -1 ? id + "$" : id;
 END;
 
 BEGIN

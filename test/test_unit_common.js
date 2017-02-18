@@ -30,7 +30,7 @@ var TestModuleGenerator = Class.extend({
 });
 
 var TestContextRoot = Class.extend.call(ContextHierarchy.Root, {
-    init: function TestContextRoot(language){
+    init: function TestContextRoot(language, moduleResolver){
         var rtl = new makeRTL(language.rtl);
         ContextHierarchy.Root.call(
                 this,
@@ -38,7 +38,8 @@ var TestContextRoot = Class.extend.call(ContextHierarchy.Root, {
                   moduleGenerator: function(){return new TestModuleGenerator();},
                   rtl: rtl,
                   types: language.types,
-                  stdSymbols: language.stdSymbols
+                  stdSymbols: language.stdSymbols,
+                  moduleResolver: moduleResolver
                 });
         this.pushScope(new Scope.Module("test", language.stdSymbols));
     },
@@ -51,13 +52,13 @@ var TestContextRoot = Class.extend.call(ContextHierarchy.Root, {
 });
 
 var TestContext = Class.extend.call(ContextExpression.ExpressionHandler, {
-    init: function TestContext(language){
-        ContextExpression.ExpressionHandler.call(this, new TestContextRoot(language));
+    init: function TestContext(language, moduleResolver){
+        ContextExpression.ExpressionHandler.call(this, new TestContextRoot(language, moduleResolver));
     },
     handleExpression: function(){}
 });
 
-function makeContext(language){return new TestContext(language);}
+function makeContext(language, moduleResolver){return new TestContext(language, moduleResolver);}
 
 function testWithSetup(setup, pass, fail){
     return function(){
@@ -135,9 +136,20 @@ function setupParser(parser, language, contextFactory){
     return setup(parseImpl);
 }
 
-function setupWithContext(grammar, contextGrammar, language, source){
+function compileModule(src, language){
+    var imported = oc.compileModule(language.grammar, new Stream.Type(src), makeContext(language));
+    return imported.symbol().info();
+}
+
+function makeModuleResolver(moduleReader, language){
+    return moduleReader ? function(name){ return compileModule(moduleReader(name), language); }
+                        : undefined;
+}
+
+function setupWithContext(fixture, contextGrammar, language){
     function innerMakeContext(){
-        var context = makeContext(language);
+        var context = makeContext(language, makeModuleResolver(fixture.moduleReader, language));
+        var source = fixture.source;
         try {
             parseInContext(contextGrammar, source, context);
         }
@@ -149,12 +161,12 @@ function setupWithContext(grammar, contextGrammar, language, source){
         return context;
     }
 
-    return setupParser(grammar, language, innerMakeContext);
+    return setupParser(fixture.grammar, language, innerMakeContext);
 }
 
-function testWithContext(context, contextGrammar, language, pass, fail){
+function testWithContext(fixture, contextGrammar, language, pass, fail){
     return testWithSetup(
-        function(){return setupWithContext(context.grammar, contextGrammar, language, context.source);},
+        setupWithContext.bind(undefined, fixture, contextGrammar, language),
         pass,
         fail);
 }
@@ -166,23 +178,15 @@ function testWithGrammar(parser, language, pass, fail){
         fail);
 }
 
-var TestContextWithModule = TestContext.extend({
-    init: function(module, language){
-        TestContext.prototype.init.call(this, language);
-        this.root().findModule = function(){return module;};
-    }
-});
-
 function testWithModule(src, language, pass, fail){
     var grammar = language.grammar;
     return testWithSetup(
         function(){
-            var imported = oc.compileModule(grammar, new Stream.Type(src), makeContext(language));
-            var module = imported.symbol().info();
+            var module = compileModule(src, language);
             return setup(function(s){
                 oc.compileModule(grammar,
                                  new Stream.Type(s),
-                                 new TestContextWithModule(module, language));
+                                 new TestContext(language, function(){return module;}));
             });},
         pass,
         fail);
@@ -204,7 +208,16 @@ function assert(cond){
     }
 }
 
+function expectEq(x1, x2){
+    if (x1 == x2)
+        return;
+
+    throw new TestError("'" + x1 + "' != '" + x2 + "'");
+    }
+
 exports.assert = assert;
+exports.expectEq = expectEq;
+
 exports.context = context;
 exports.pass = pass;
 exports.fail = fail;

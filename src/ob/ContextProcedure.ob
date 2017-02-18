@@ -85,7 +85,7 @@ BEGIN
 END;
 
 PROCEDURE Declaration.doProlog(): STRING;
-    RETURN Chars.ln + "function " + SELF.id.id() + "(";
+    RETURN Chars.ln + "function " + CodeGenerator.mangleId(SELF.id.id()) + "(";
 END;
 
 PROCEDURE Declaration.doEpilog(): STRING;
@@ -128,7 +128,7 @@ BEGIN
     ELSE
         declaration.multipleArguments := TRUE;
     END;
-    code.write(name + "/*" + arg.description() + "*/");
+    code.write(CodeGenerator.mangleId(name) + "/*" + arg.description() + "*/");
 END;
 
 PROCEDURE Declaration.doMakeArgumentVariable(arg: Types.ProcedureArgument; name: STRING): Types.PVariable;

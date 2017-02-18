@@ -1,20 +1,43 @@
+MODULE Math;
+
+TYPE
+    Object* = RECORD END;
+
+VAR var*: INTEGER;
+
+PROCEDURE throw*();
+END throw;
+
+END Math.
+
 MODULE do;
-TYPE throw = PROCEDURE;
+IMPORT Math;
+TYPE
+    throw = PROCEDURE(VAR catch: INTEGER);
+    D = RECORD(Math.Object) END;
 VAR
     break, case, catch, continue, debugger, default, delete, else,
     class, const, enum, export, extends, import, super,
     true, false, null,
     implements, interface, let, package, private, protected, public, static, yield,
     finally, for, if, in, instanceof, new, return, switch, this, 
-    try, typeof, var, void, while, with, Object, Math, Number
+    try, typeof, var, void, while, with, Number, Object
     : INTEGER;
-PROCEDURE function();
-VAR i: throw;
+
+    r: Math.Object;
+
+PROCEDURE function(VAR else: INTEGER);
+VAR 
+    i: throw;
+    Math: INTEGER;
 BEGIN
 	i := function;
 	case := 123;
+    else := 456;
 END function;
 
 BEGIN
-	function();
+	function(var);
+    Math.throw();
+    var := Math.var;
 END do.

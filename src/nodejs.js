@@ -2,6 +2,7 @@
 
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
+var CodeGenerator = require("js/CodeGenerator.js");
 var Errors = require("js/Errors.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
 var LanguageContext = require("js/LanguageContext.js");
@@ -24,7 +25,7 @@ var ModuleGenerator = Class.extend({
             var alias = modules[name];
             var importName = this.__importDir ? this.__importDir + "/" + name
                                               : name;
-            result += "var " + alias + " = " + (name == "this" 
+            result += "var " + CodeGenerator.mangleId(alias) + " = " + (name == "JS" 
                 ? "GLOBAL"
                 : "require(\"" + importName + ".js\")") + ";\n";
         }
