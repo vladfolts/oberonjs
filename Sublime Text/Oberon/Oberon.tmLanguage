@@ -6,6 +6,7 @@
 	<array>
 		<string>ob</string>
 		<string>ob07</string>
+		<string>Mod</string>
 	</array>
 	<key>keyEquivalent</key>
 	<string>^~@o</string>
