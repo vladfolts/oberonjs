@@ -1,5 +1,10 @@
 import sublime, sublime_plugin
 
+class OberonCommand(sublime_plugin.TextCommand):
+	def run(self, edit, start, end, word):
+		self.view.replace(edit, self.view.word(sublime.Region(start, end)), word.upper())
+
+
 class OberonAssistant(sublime_plugin.EventListener):
 	rs = {}
 	inProcess = False
@@ -23,10 +28,8 @@ class OberonAssistant(sublime_plugin.EventListener):
 						sublime.status_message(word)
 						shift = 2					
 					if word.upper() in self.keywords:
-						edit = view.begin_edit()
-						view.replace(edit, view.word(sublime.Region(curr.a-shift,curr.a-shift)), word.upper())
 						self.inProcess = True
-						view.end_edit(edit)
+						view.run_command('oberon', {'start': curr.a-shift, 'end': curr.a-shift, 'word': word})
 						self.inProcess = False
 			else:
 				self.rs = view.sel()
