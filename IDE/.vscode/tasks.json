@@ -1,0 +1,31 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compile O7",
+            "type": "shell",
+            "command": [
+                "${config:python.pythonPath}",
+                "${workspaceFolder}/build.py",
+                "--file",
+                "${file}",
+                "compile"
+            ],
+            "problemMatcher": {
+                "fileLocation": ["absolute"],
+                "pattern": {
+                  "regexp": "^File\\s+\"(.*)\",\\s+line\\s+(\\d+):\\s+(.*)$",
+                  "file": 1,
+                  "line": 2,
+                  "message": 3
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
