@@ -1,1 +1,1 @@
-line 5: END expected (MODULE)
+input/errors/syntax.ob, line 5: END expected (MODULE)

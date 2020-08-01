@@ -1,1 +1,1 @@
-line 4: 'i' already declared in module scope
+input/eberon/errors/in_place_variable_has_the_same_scope_as_module_variable.ob, line 4: 'i' already declared in module scope

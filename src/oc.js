@@ -57,13 +57,19 @@ function compileModulesFromText(
         var context = contextFactory(resolveModule);
         var module = compileModule(grammar, stream, context, handleErrors);
         if (!module)
-            return false;
+            return;
         handleCompiledModule(module);
         Lexer.skipSpaces(stream, context);
     }
     while (!Stream.eof(stream));
-    return true;
 }
+
+var ReadModule = Class.extend({
+    init: function Oc$Module(content, location){
+        this.content = content
+        this.location = location
+    }
+});
 
 var ModuleResolver = Class.extend({
     init: function Oc$ModuleResolver(compile, handleCompiledModule, moduleReader, handleErrors){
@@ -74,23 +80,33 @@ var ModuleResolver = Class.extend({
         this.__handleErrors = handleErrors;
         this.__detectRecursion = [];
     },
-    compile: function(text){
-        return this.__compile(text, this.__resolveModule.bind(this), this.__handleModule.bind(this));
+    compile: function(module){
+        var handleErrors = module.location 
+            ? function(e){
+                this.__handleErrors(module.location + ", " + e)
+              }.bind(this)
+            : this.__handleErrors;
+        this.__compile(module.content,
+                       this.__resolveModule.bind(this),
+                       this.__handleModule.bind(this),
+                       handleErrors);
     },
     __resolveModule: function(name){
-        if (this.__moduleReader && !this.__modules[name]){
+        if (this.__moduleReader && !(name in this.__modules)){
             if (this.__detectRecursion.indexOf(name) != -1){
                 this.__handleErrors("recursive import: " + this.__detectRecursion.join(" -> "));
                 return undefined;
             }
             this.__detectRecursion.push(name);
-
             try {
                 this.compile(this.__moduleReader(name));
             }
             finally {
                 this.__detectRecursion.pop();
             }
+            if (!(name in this.__modules))
+                // failed to compile, do not compile it again
+                this.__modules[name] = undefined;
         }
         return this.__modules[name];
     },
@@ -104,8 +120,8 @@ var ModuleResolver = Class.extend({
 
 function makeResolver(grammar, contextFactory, handleCompiledModule, handleErrors, moduleReader){
     return new ModuleResolver(
-        function(text, resolveModule, handleModule){
-            return compileModulesFromText(
+        function(text, resolveModule, handleModule, handleErrors){
+            compileModulesFromText(
                 text,
                 grammar,
                 contextFactory,
@@ -121,13 +137,8 @@ function makeResolver(grammar, contextFactory, handleCompiledModule, handleError
 
 function compileModules(names, moduleReader, grammar, contextFactory, handleErrors, handleCompiledModule){
     var resolver = makeResolver(grammar, contextFactory, handleCompiledModule, handleErrors, moduleReader);
-    var i = 0;
-    var success = true;
-    while (i < names.length && success){
-        success = resolver.compile(moduleReader(names[i]));
-        ++i;
-    }
-    return success;
+    for(var i in names)
+        resolver.compile(moduleReader(names[i]));
 }
 
 function compile(text, language, handleErrors, options, moduleReader){
@@ -158,6 +169,7 @@ function compile(text, language, handleErrors, options, moduleReader){
     return result;
 }
 
+exports.ReadModule = ReadModule;
 exports.compileModule = compileModule;
 exports.compile = compile;
 exports.compileModules = compileModules;

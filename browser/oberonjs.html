@@ -94,8 +94,9 @@ END test.
                     ? "eberon/eberon_grammar.js"
                     : "oberon/oberon_grammar.js").language;
             var options = {checkIndexes: document.getElementById("checkIndexesOption").checked};
-            result = require("oc.js").compile(
-                    src, 
+            oc = require("oc.js")
+            result = oc.compile(
+                    new oc.ReadModule(src), 
                     language, 
                     function(e){errors += e;},
                     options

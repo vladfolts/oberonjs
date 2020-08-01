@@ -44,10 +44,17 @@ function extractOptions(text){
     return match ? JSON.parse(match[1]) : null;
 }
 
+function readModule(src){
+    var same_path_on_linux_and_win = src.replace(/\\/g, "/");
+    return new oc.ReadModule(fs.readFileSync(src, "utf8"),
+                             same_path_on_linux_and_win);
+}
+
 function compile(src, language){
-    var text = fs.readFileSync(src, "utf8");
+    var module = readModule(src);
     var errors = "";
-    var result = oc.compile(text, language, function(e){errors += e;}, extractOptions(text));
+    var result = oc.compile(module, language, function(e){errors += e;},
+                            extractOptions(module.content));
     if (errors)
         throw new Test.TestError(errors);
     return result;
@@ -77,10 +84,9 @@ function expectOk(src, dirs, grammar){
 }
 
 function expectError(src, dirs, language){
-    var text = fs.readFileSync(src, "utf8");
     var errors = "";
     try {
-        oc.compile(text, language, function(e){errors += e + "\n";});
+        oc.compile(readModule(src), language, function(e){errors += e + "\n";});
     }
     catch (e){
         errors += e;
