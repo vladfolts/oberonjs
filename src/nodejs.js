@@ -63,8 +63,6 @@ function compile(sources, language, handleErrors, includeDirs, outDir, importDir
     var moduleCode = function(name, imports){
         return new ModuleGenerator(name, imports, importDir);};
 
-    var compiledFilesStack = [];
-    var failToCompile = {};
     return oc.compileModules(
             sources,
             function(name){
@@ -72,12 +70,6 @@ function compile(sources, language, handleErrors, includeDirs, outDir, importDir
                 if (!path.extname(fileName).length)
                     fileName += ".ob";
                 
-                var alreadyFail = failToCompile[fileName];
-                if (alreadyFail)
-                    throw new Errors.Error("'" + fileName + "': error " + alreadyFail);
-
-                compiledFilesStack.push(fileName);
-
                 var readPath = fileName;
                 var i = 0;
                 while (!fs.existsSync(readPath) && i < includeDirs.length){
@@ -86,7 +78,9 @@ function compile(sources, language, handleErrors, includeDirs, outDir, importDir
                 }
                 if (!fs.existsSync(readPath))
                     throw new Error("cannot find file: '" + fileName + "' in " + includeDirs);
-                return fs.readFileSync(readPath, "utf8");
+                return new oc.ReadModule(
+                    fs.readFileSync(readPath, "utf8"),
+                    "File \"" + readPath + "\"");
             },
             language.grammar,
             function(moduleResolver){
@@ -98,18 +92,13 @@ function compile(sources, language, handleErrors, includeDirs, outDir, importDir
                   stdSymbols: language.stdSymbols,
                   moduleResolver: moduleResolver
                 });},
-            function(e){
-                var fileName = compiledFilesStack[compiledFilesStack.length - 1];
-                failToCompile[fileName] = e;
-                handleErrors("File \"" + fileName + "\", " + e);
-            },
+            handleErrors,
             function(name, code){
                 if (rtlCodeWatcher.used()){
                     code = "var " + rtl.name() + " = require(\"" + rtl.module() + "\");\n" + code;
                     rtlCodeWatcher.reset();
                 }
                 writeCompiledModule(name, code, outDir);
-                compiledFilesStack.pop();
             });
 }
 
