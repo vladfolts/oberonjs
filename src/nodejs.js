@@ -26,7 +26,7 @@ var ModuleGenerator = Class.extend({
             var importName = this.__importDir ? this.__importDir + "/" + name
                                               : name;
             result += "var " + CodeGenerator.mangleId(alias) + " = " + (name == "JS" 
-                ? "GLOBAL"
+                ? "global"
                 : "require(\"" + importName + ".js\")") + ";\n";
         }
         return result;

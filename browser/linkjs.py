@@ -58,7 +58,7 @@ def link(input_paths, output_path, dirs, version = None):
 		prolog = ""
 		if not version is None:
 			prolog += 'var buildVersion = %s;\n' % encode_to_js_string(version)
-		prolog += "var GLOBAL = this;\n"
+		prolog += "var global = this;\n"
 		prolog += "var imports = {};\n"
 		prolog += 'function require(module){return imports[module];}\n'
 		out.write(prolog)
