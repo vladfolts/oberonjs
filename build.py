@@ -265,7 +265,7 @@ class html_target(object):
     def setup_options(parser):
         parser.add_option('--out', help='output directory, default: "_out"', default='_out')
         parser.add_option('--set-version', action="store_true", help='include version in built html')
-        parser.add_option('--do-not-unpack-compiled', action="store_true", help='do unpack already compiled "binaries", use current')
+        parser.add_option('--do-not-unpack-compiled', action="store_true", help='do not unpack already compiled "binaries", use current')
 
     def __init__(self, options):
         build_html(options)
