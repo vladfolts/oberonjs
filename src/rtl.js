@@ -1,7 +1,7 @@
 "use strict";
 
 if (typeof Uint16Array == "undefined"){
-    GLOBAL.Uint16Array = function(length){
+    global.Uint16Array = function(length){
         Array.call(this, length);
         for(var i = 0; i < length; ++i)
             this[i] = 0;
