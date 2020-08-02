@@ -1,0 +1,4 @@
+language: python
+script:
+    - python build.py html
+    - python build.py pre-commit
