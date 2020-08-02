@@ -91,6 +91,9 @@ VAR
     result: Object.PType;
 BEGIN
     IF msg IS MethodDeclMsg THEN 
+        IF SELF.declaration.id = NIL THEN
+            Errors.raise("cannot declare methods for anonymous records (POINTER TO RECORD)");
+        END;
         methodType <- msg.type;
         boundType <- SELF.type(EberonRecord.PRecord);
         id <- msg.id.id();

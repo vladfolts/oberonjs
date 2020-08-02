@@ -93,6 +93,12 @@ exports.suite = {
          ["STRING: INTEGER", "'STRING' already declared"]
          )
     ),
+"method declaration for pointer type": testWithGrammar(
+    grammar.typeDeclaration,
+    pass(),
+    fail(["PT = POINTER TO RECORD PROCEDURE p() END",
+          "cannot declare methods for anonymous records (POINTER TO RECORD)"])
+),
 "abstract method declaration": testWithContext(
     context(grammar.declarationSequence, 
             "TYPE T = RECORD PROCEDURE p() END;"
