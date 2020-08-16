@@ -124,7 +124,20 @@ def run_tests(bin, unit_test=None, code_test=None):
         run_node(args, js_search_dirs, cwd=os.path.join(root, 'test'))
     print('<-tests')
 
-def recompile(bin, cwd):
+def _run_compiler(compiler_dir, sources, js_search_dirs, locale, out_dir, cwd, timing=False):
+    include = ['src/ob', 'src/eberon', 'src/oberon']
+    include += [os.path.join(i, locale) for i in include]
+    args = [os.path.join(compiler_dir, 'oc_nodejs.js'), 
+            '--include=' + ';'.join([os.path.join(root, i) for i in include]), 
+            '--out-dir=%s' % out_dir, 
+            '--import-dir=js'
+           ]
+    if timing:
+        args.append('--timing=true') 
+    args += sources
+    run_node(args, js_search_dirs, cwd=cwd)
+
+def recompile(bin, cwd, locale):
     print('recompile oberon sources using "%s"...' % bin)
     sources = ['ContextAssignment.ob', 
                'EberonSymbols.ob', 
@@ -140,27 +153,14 @@ def recompile(bin, cwd):
     out = os.path.join(result, 'js')
     os.mkdir(out)
 
-    run_node(['oc_nodejs.js', 
-              '--include=' + ';'.join([os.path.join(root, subdir) for subdir in ['src/ob', 'src/eberon', 'src/oberon']]), 
-              '--out-dir=%s' % out, 
-              '--import-dir=js',
-              '--timing=true'] 
-              + sources,
-             [bin,cwd],#make_js_search_dirs(bin),
-             cwd=cwd)
+    subdirs = ['src/ob', 'src/eberon', 'src/oberon']
+    subdirs += [os.path.join(d, locale) for d in subdirs]
+    _run_compiler(cwd, sources, [bin, cwd], locale, out_dir=out, cwd=cwd, timing=True)
     return result
 
-def compile_using_snapshot(src):
+def compile_using_snapshot(src, locale):
     out = os.path.join(root, 'bin', 'js')
-    compiler = os.path.join(snapshot_root, 'oc_nodejs.js')
-    js_search_dirs = [snapshot_root]
-    run_node([  compiler, 
-                '--include=src/ob;src/eberon;src/oberon', 
-                '--out-dir=%s' % out, 
-                '--import-dir=js', 
-                src],
-             js_search_dirs,
-             cwd=root)
+    _run_compiler(snapshot_root, [src], [snapshot_root], locale, out, cwd=root)
 
 def build_html(options):
     version = None
@@ -203,8 +203,8 @@ def build_html(options):
         with open(build_version_path, 'w') as f:
             f.write(version)
 
-def recompile_with_replace(bin, cwd, skip_tests = False, out_bin = None):
-    recompiled = recompile(bin, cwd)
+def recompile_with_replace(bin, cwd, locale, skip_tests=False, out_bin=None):
+    recompiled = recompile(bin, cwd, locale)
     if not skip_tests:
         run_tests(recompiled)
     
@@ -218,7 +218,7 @@ def recompile_with_replace(bin, cwd, skip_tests = False, out_bin = None):
 def pre_commit_check(options):
     bin = os.path.join(root, 'bin')
     run_tests(bin)
-    recompile_with_replace(bin, os.path.join(root, 'src'))
+    recompile_with_replace(bin, os.path.join(root, 'src'), options.locale)
     
     print('packaging compiled js to %s...' % package.root)
     package.pack()
@@ -232,7 +232,7 @@ class compile_target(object):
         parser.add_option('--file', help='file to compile')
 
     def __init__(self, options):
-        compile_using_snapshot(options.file)
+        compile_using_snapshot(options.file, options.locale)
 
 class recompile_target(object):
     name = 'recompile'
@@ -243,7 +243,12 @@ class recompile_target(object):
         pass
 
     def __init__(self, options):
-        recompile_with_replace(snapshot_root, snapshot_root, True, os.path.join(root, 'bin'))
+        recompile_with_replace(
+            snapshot_root,
+            snapshot_root,
+            options.locale,
+            skip_tests=True,
+            out_bin=os.path.join(root, 'bin'))
 
 class self_recompile_target(object):
     name = 'self-recompile'
@@ -252,10 +257,11 @@ class self_recompile_target(object):
     @staticmethod
     def setup_options(parser):
         parser.add_option('--skip-tests', help='do not run test after recompile')
+        pass
 
     def __init__(self, options):
         bin = os.path.join(root, 'bin')
-        recompile_with_replace(bin, os.path.join(root, 'src'), options.skip_tests)
+        recompile_with_replace(bin, os.path.join(root, 'src'), options.locale, options.skip_tests)
 
 class html_target(object):
     name = 'html'
@@ -263,7 +269,7 @@ class html_target(object):
 
     @staticmethod
     def setup_options(parser):
-        parser.add_option('--out', help='output directory, default: "_out"', default='_out')
+        parser.add_option('--out', help='output directory, default: "%default"', default='_out')
         parser.add_option('--set-version', action="store_true", help='include version in built html')
         parser.add_option('--do-not-unpack-compiled', action="store_true", help='do not unpack already compiled "binaries", use current')
 
@@ -324,6 +330,7 @@ if __name__ == '__main__':
         description=description,
         usage='%prog [options] <target>'
         )
+    parser.add_option('--locale', help='use specified localization subfolder, default is "%default"', default='en')
     for t in targets:
         group = optparse.OptionGroup(parser, 'target "%s"' % t.name, t.description)
         t.setup_options(group)

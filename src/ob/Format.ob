@@ -1,0 +1,32 @@
+MODULE Format;
+IMPORT JS;
+
+PROCEDURE format(f: STRING; args: ARRAY OF JS.var): STRING;
+VAR result: STRING;
+BEGIN
+    JS.do("result = f.replace(/{(\d+)}/g, function(match, number){return args[number];});");
+    RETURN result;
+END;
+
+PROCEDURE format1*(f: STRING; a1: JS.var): STRING;
+VAR result: STRING;
+BEGIN
+    JS.do("result = format(f, [a1]);");
+    RETURN result;
+END;
+
+PROCEDURE format2*(f: STRING; a1, a2: JS.var): STRING;
+VAR result: STRING;
+BEGIN
+    JS.do("result = format(f, [a1, a2]);");
+    RETURN result;
+END;
+
+PROCEDURE format3*(f: STRING; a1, a2, a3: JS.var): STRING;
+VAR result: STRING;
+BEGIN
+    JS.do("result = format(f, [a1, a2, a3]);");
+    RETURN result;
+END;
+
+END Format.

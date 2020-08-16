@@ -1,0 +1,6 @@
+MODULE Message;
+CONST
+    methodAnonRec* = "объявление методов для анонимных записей невозможно (POINTER TO RECORD)";
+    methodExport* = "{0} '{1}' не может быть экспротитрован, потому что сама запись не экспортирована";
+
+END Message.
