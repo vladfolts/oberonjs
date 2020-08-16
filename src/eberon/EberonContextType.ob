@@ -82,7 +82,7 @@ END;
 PROCEDURE checkMethodExport(record: Record; method: Context.PIdentdefInfo; hint: STRING);
 BEGIN
     IF ~record.declaration.id.exported() & method.exported() THEN
-        Errors.raise(hint + " '" + method.id() + "' cannot be exported because record itslef is not exported");
+        Errors.raise(hint + " '" + method.id() + "' cannot be exported because record itself is not exported");
     END;
 END;
 
