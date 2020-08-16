@@ -16,8 +16,15 @@ You can call any JavaScript function (from global scope) using notation "JS.anyN
 
 ### JS.var
 
-*JS.var* is a type to explicit declaration of variables specific for JavaScript code.
+*JS.var* is a type intended for explicit declaration of variables specific for JavaScript code.
 
     VAR v: JS.var;
     ...
     v := JS.someFunction();
+
+*JS.var* is considered compatibale with any other type (there no any type checking as for JavaScript variables). But the opposite is not true: you cannot you cannot assign *JS.var* to Oberon types:
+
+    VAR v: JS.var; i: INTEGER;
+    ...
+    v := i; (* OK *)
+    i := v; (* compile error *)

@@ -57,6 +57,9 @@ TYPE
     EndParametersMsg* = RECORD(ContextHierarchy.Message)
     END;
 
+    AnyProcCall = RECORD(Procedure.Call)
+    END;
+
 PROCEDURE Declaration.Declaration(parent: ContextHierarchy.PNode)
     | SUPER(parent),
       outerScope(SELF.root().currentScope());
@@ -285,6 +288,15 @@ PROCEDURE AddArgumentMsg.AddArgumentMsg(name: STRING; arg: Types.PProcedureArgum
       arg(arg);
 END;
 
+PROCEDURE AnyProcCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
+BEGIN
+    argCode <- Procedure.makeArgumentsCode(cx);
+    FOR a IN args DO
+        argCode.write(a, NIL, NIL);
+    END;
+    RETURN Expression.makeSimple("(" + argCode.result() + ")", Types.any)
+END;
+
 PROCEDURE assertProcType(type: Types.PType; info: Types.PId): Procedure.PType;
 VAR
     unexpected: STRING;
@@ -307,8 +319,9 @@ END;
 
 PROCEDURE makeCall*(cx: ContextHierarchy.PNode; type: Types.PType; info: Types.PId): Procedure.PCallGenerator;
 BEGIN
-    RETURN assertProcType(type, info)
-          .callGenerator(ContextHierarchy.makeLanguageContext(cx));
+    l <- ContextHierarchy.makeLanguageContext(cx)
+    RETURN type = Types.any ? Procedure.makeCallGenerator(NEW AnyProcCall(), l)
+                            : assertProcType(type, info).callGenerator(l);
 END;
 
 END ContextProcedure.

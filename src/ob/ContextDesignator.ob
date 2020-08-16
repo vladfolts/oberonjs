@@ -73,7 +73,7 @@ BEGIN
         SELF.currentType := info.type;
     ELSIF info IS Types.PVariable THEN
         SELF.currentType := info.type();
-        IF q.module # NIL THEN
+        IF (q.module # NIL) & (SELF.currentType # Types.any) THEN
             code := code + "()";
         END;
     ELSIF info IS Types.PProcedureId THEN
