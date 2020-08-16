@@ -1,0 +1,6 @@
+MODULE Message;
+CONST
+    methodAnonRec* = "cannot declare methods for anonymous records (POINTER TO RECORD)";
+    methodExport* = "{0} '{1}' cannot be exported because record itself is not exported";
+
+END Message.

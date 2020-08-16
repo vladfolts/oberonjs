@@ -4,6 +4,7 @@ IMPORT
     Context, ContextHierarchy, ContextProcedure, ContextType, 
     EberonContext, EberonDynamicArray, EberonMap, EberonRecord, EberonTypes,
     Errors, ExpressionTree,
+    Format, Message,
     Object, Procedure, R := Record, ScopeBase, Types;
 CONST
     dynamicArrayLength = -1;
@@ -82,7 +83,7 @@ END;
 PROCEDURE checkMethodExport(record: Record; method: Context.PIdentdefInfo; hint: STRING);
 BEGIN
     IF ~record.declaration.id.exported() & method.exported() THEN
-        Errors.raise(hint + " '" + method.id() + "' cannot be exported because record itself is not exported");
+        Errors.raise(Format.format2(Message.methodExport, hint, method.id()));
     END;
 END;
 
@@ -92,7 +93,7 @@ VAR
 BEGIN
     IF msg IS MethodDeclMsg THEN 
         IF SELF.declaration.id = NIL THEN
-            Errors.raise("cannot declare methods for anonymous records (POINTER TO RECORD)");
+            Errors.raise(Message.methodAnonRec);
         END;
         methodType <- msg.type;
         boundType <- SELF.type(EberonRecord.PRecord);
