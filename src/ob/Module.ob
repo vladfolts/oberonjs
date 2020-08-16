@@ -1,120 +1,19 @@
 MODULE Module;
 IMPORT 
     Context, Errors, Expression, LanguageContext, Procedure, Symbols, TypeId, Types, Variable;
+CONST
+    doProcId = "do";
+    varTypeId = "var";
 TYPE
     Type* = RECORD(Types.Module)
         PROCEDURE findSymbol*(id: STRING): Symbols.PFoundSymbol
     END;
     PType* = POINTER TO Type;
 
-    AnyType = RECORD(Procedure.Type)
-        PROCEDURE AnyType();
-    END;
-
-    AnyVariable = RECORD(Variable.TypedVariable)
-        PROCEDURE AnyVariable();
-    END;
-
-    AnyField = RECORD(Types.Field)
-        PROCEDURE AnyField(id: STRING);
-
-        mId: STRING;
-    END;
-
-    AnyProcCall = RECORD(Procedure.Call)
-    END;
-
     JS = RECORD(Type)
     END;
 VAR
-    doProcId, varTypeId: STRING;
-    any: POINTER TO AnyType;
-    anyVar: POINTER TO AnyVariable;
     doProcSymbol, varTypeSymbol: Symbols.PSymbol;
-
-PROCEDURE AnyType.description(): STRING;
-    RETURN "JS.var"
-END AnyType.description;
-
-PROCEDURE AnyType.initializer(cx: Context.Type): STRING;
-    RETURN "undefined"
-END;
-
-PROCEDURE makeCallGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
-    RETURN Procedure.makeCallGenerator(NEW AnyProcCall(), cx)
-END makeCallGenerator;
-
-PROCEDURE AnyType.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
-    RETURN makeCallGenerator(cx)
-END AnyType.callGenerator;
-
-PROCEDURE AnyType.denote(id: STRING; isReadObly: BOOLEAN): Types.PField;
-    RETURN NEW AnyField(id);
-END;
-
-PROCEDURE AnyType.designatorCode(id: STRING): STRING;
-    RETURN id;
-END;
-
-PROCEDURE AnyType.isScalar(): BOOLEAN;
-    RETURN FALSE;
-END;
-
-PROCEDURE AnyType.args(): Types.ProcedureArguments;
-VAR
-    result: Types.ProcedureArguments;
-BEGIN
-    RETURN result;
-END;
-
-PROCEDURE AnyType.result(): Types.PType;
-    RETURN NIL;
-END;
-
-PROCEDURE AnyVariable.AnyVariable()
-    | SUPER(any);
-END;
-
-PROCEDURE AnyVariable.isReadOnly(): BOOLEAN;
-    RETURN FALSE;
-END;
-
-PROCEDURE AnyVariable.isReference(): BOOLEAN;
-    RETURN TRUE;
-END;
-
-PROCEDURE AnyField.id(): STRING;
-    RETURN "any field"
-END AnyField.id;
-
-PROCEDURE AnyField.exported(): BOOLEAN;
-    RETURN FALSE
-END AnyField.exported;
-
-PROCEDURE AnyField.type(): Types.PStorageType;
-    RETURN any
-END AnyField.type;
-
-PROCEDURE AnyField.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): Types.PId;
-    RETURN anyVar;
-END;
-
-PROCEDURE AnyField.designatorCode(leadCode: STRING; cx: Context.Type): Types.PFieldCode;
-    RETURN NEW Types.FieldCode(leadCode + "." + SELF.mId, "", "");
-END;
-(*)
-PROCEDURE AnyTypeProc.callGenerator(cx: LanguageContext.PType): Procedure.PCallGenerator;
-    RETURN makeCallGenerator(cx)
-END AnyTypeProc.callGenerator;
-*)
-PROCEDURE AnyProcCall.make(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType;
-BEGIN
-    argCode <- Procedure.makeArgumentsCode(cx);
-    FOR a IN args DO
-        argCode.write(a, NIL, NIL);
-    END;
-    RETURN Expression.makeSimple("(" + argCode.result() + ")", any)
-END AnyProcCall.make;
 
 PROCEDURE JS.findSymbol(id: STRING): Symbols.PFoundSymbol;
 VAR
@@ -125,14 +24,10 @@ BEGIN
     ELSIF id = varTypeId THEN
         result := varTypeSymbol;
     ELSE
-        result := NEW Symbols.Symbol(id, NEW Procedure.Id(any, id, FALSE));
+        result := NEW Symbols.Symbol(id, Types.anyVar);
     END;
     RETURN NEW Symbols.FoundSymbol(result, NIL)
 END JS.findSymbol;
-
-PROCEDURE makeVarTypeSymbol(): Symbols.PSymbol;
-    RETURN NEW Symbols.Symbol(varTypeId, NEW TypeId.Type(any))
-END makeVarTypeSymbol;
 
 PROCEDURE makeDoProcSymbol(): Symbols.PSymbol;
 TYPE
@@ -172,28 +67,14 @@ PROCEDURE makeJS*(): PType;
     RETURN NEW JS("JS");
 END;
 
-PROCEDURE AnyType.AnyType()
-    | SUPER("any type");
-END;
-
-PROCEDURE AnyField.AnyField(id: STRING)
-    | mId(id);
-END;
-
 PROCEDURE assertProcStatementResult*(type: Types.PType);
 BEGIN
-    IF (type # NIL) & ~(type^ IS AnyType) THEN
+    IF (type # NIL) & ~(type^ IS Types.Any) THEN
         Errors.raise("procedure returning a result cannot be used as a statement");
     END;
 END;
 
 BEGIN
-    doProcId := "do";
-    varTypeId := "var";
-    
-    NEW(any);
-    NEW(anyVar);
-
     doProcSymbol := makeDoProcSymbol();
-    varTypeSymbol := makeVarTypeSymbol();
+    varTypeSymbol := NEW Symbols.Symbol(varTypeId, NEW TypeId.Type(Types.any));
 END Module.

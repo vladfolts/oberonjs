@@ -36,6 +36,9 @@ TYPE
     END;
     PDeclaredVariable* = POINTER TO DeclaredVariable;
 
+    AnyVariable = RECORD(Variable)
+    END;
+
     PProcedure* = POINTER TO Procedure;
 
     ProcedureId* = RECORD(Id)
@@ -71,11 +74,21 @@ TYPE
     END;
     PField* = POINTER TO Field;
 
+    AnyField = RECORD(Field)
+        PROCEDURE AnyField(id: STRING);
+
+        mId: STRING;
+    END;
+
     StorageType* = RECORD(Type)    
         PROCEDURE initializer*(cx: Context.Type): STRING;
         PROCEDURE denote*(id: STRING; isReadObly: BOOLEAN): PField;
         PROCEDURE isScalar*(): BOOLEAN;
     END;
+
+    Any* = RECORD(StorageType)
+    END;
+    PAny = POINTER TO Any;
 
     NamedType* = RECORD(StorageType)
         PROCEDURE NamedType*(name: STRING);
@@ -148,6 +161,8 @@ TYPE
     ArrayDimensionDescriptionCallback = PROCEDURE(VAR a: Array): STRING;
 
 VAR
+    any*: PAny;
+    anyVar*: POINTER TO AnyVariable;
     basic*: RECORD
         bool*, ch*, integer*, uint8*, real*, set*: PBasicType
     END;
@@ -155,9 +170,23 @@ VAR
     numeric*: ARRAY * OF PType;
     nil*: POINTER TO Nil;
 
+    type: PType;
+
 PROCEDURE typeName*(type: NamedType): STRING;
     RETURN type.name
 END typeName;
+
+PROCEDURE Any.initializer(cx: Context.Type): STRING;
+    RETURN "undefined"
+END;
+
+PROCEDURE Any.description(): STRING;
+    RETURN "JS.var"
+END;
+
+PROCEDURE Any.isScalar(): BOOLEAN;
+    RETURN TRUE;
+END;
 
 PROCEDURE ProcedureId.idType(): STRING;
     RETURN "procedure"
@@ -201,6 +230,18 @@ END Const.idType;
 PROCEDURE Variable.idType(): STRING;
     RETURN "variable"
 END Variable.idType;
+
+PROCEDURE AnyVariable.type(): PStorageType;
+    RETURN any;
+END;
+
+PROCEDURE AnyVariable.isReadOnly(): BOOLEAN;
+    RETURN FALSE;
+END;
+
+PROCEDURE AnyVariable.isReference(): BOOLEAN;
+    RETURN TRUE;
+END;
 
 PROCEDURE BasicType.description(): STRING;
     RETURN SELF.name
@@ -283,6 +324,30 @@ PROCEDURE Array.isScalar(): BOOLEAN;
     RETURN FALSE;
 END;
 
+PROCEDURE AnyField.AnyField(id: STRING)
+    | mId(id);
+END;
+
+PROCEDURE AnyField.id(): STRING;
+    RETURN "any field"
+END;
+
+PROCEDURE AnyField.exported(): BOOLEAN;
+    RETURN FALSE
+END;
+
+PROCEDURE AnyField.type(): PStorageType;
+    RETURN any
+END;
+
+PROCEDURE AnyField.asVar(leadCode: STRING; isReadOnly: BOOLEAN; cx: Context.Type): PId;
+    RETURN anyVar;
+END;
+
+PROCEDURE AnyField.designatorCode(leadCode: STRING; cx: Context.Type): PFieldCode;
+    RETURN NEW FieldCode(leadCode + "." + SELF.mId, "", "");
+END;
+
 PROCEDURE raiseUnexpectedSelector*(id: STRING; obj: STRING);
 BEGIN
     Errors.raise("selector '." + id + "' cannot be applied to '" + obj + "'");
@@ -292,6 +357,11 @@ PROCEDURE StorageType.denote(id: STRING; isReadOnly: BOOLEAN): PField;
 BEGIN
     raiseUnexpectedSelector(id, SELF.description());
     RETURN NIL
+END;
+
+PROCEDURE Any.denote(id: STRING; isReadOnly: BOOLEAN): PField;
+BEGIN
+    RETURN NEW AnyField(id);
 END;
 
 PROCEDURE OpenArray.initializer(cx: Context.Type): STRING;
@@ -378,6 +448,9 @@ PROCEDURE FieldCode.FieldCode(code, derefCode, propCode: STRING)
 END;
 
 BEGIN
+    any := NEW Any();
+    anyVar := NEW AnyVariable();
+
     basic.bool := NEW BasicType("BOOLEAN", "false");
     basic.ch := NEW BasicType("CHAR", "0");
     basic.integer := NEW BasicType("INTEGER", "0");

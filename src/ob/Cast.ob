@@ -228,6 +228,8 @@ BEGIN
         IF areProceduresMatch(from, to) THEN
             result := errNo;
         END
+    ELSIF to = Types.any THEN
+        result := errNo;
     END;
 
     IF (result = errNo) & (op = NIL) THEN

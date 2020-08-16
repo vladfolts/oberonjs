@@ -1560,7 +1560,8 @@ return {
     grammar.module,
     pass("MODULE m; IMPORT JS; VAR v: JS.var; END m.",
          "MODULE m; IMPORT JS; VAR v: JS.var; BEGIN v := JS.f(); END m.",
-         "MODULE m; IMPORT JS; VAR v: JS.var; BEGIN v := JS.f1(); JS.f2(v); END m."
+         "MODULE m; IMPORT JS; VAR v: JS.var; BEGIN v := JS.f1(); JS.f2(v); END m.",
+         "MODULE m; IMPORT JS; VAR v: JS.var; i: INTEGER; BEGIN v := i; END m."
          ),
     fail(["MODULE m; IMPORT JS; VAR v: JS.var; i: INTEGER; BEGIN i := v; END m.",
           "type mismatch: 'INTEGER' cannot be assigned to 'JS.var' expression"])
