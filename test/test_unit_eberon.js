@@ -298,7 +298,7 @@ exports.suite = {
     fail(["PROCEDURE T.p*(); END T.p;",
           "method implementation cannot be exported: p"],
          ["TYPE R = RECORD PROCEDURE m*(); END;",
-          "method 'm' cannot be exported because record itslef is not exported"] )
+          "method 'm' cannot be exported because record itself is not exported"] )
     ),
 "import method": testWithModule(
       "MODULE test;"
@@ -1321,7 +1321,7 @@ exports.suite = {
              "MODULE m; IMPORT test; PROCEDURE p(r: test.NotExported); BEGIN copy <- r; END; END m."
             ),
         fail(["MODULE m; TYPE T = RECORD PROCEDURE T*(); END; END m.",
-              "constructor 'T' cannot be exported because record itslef is not exported"],
+              "constructor 'T' cannot be exported because record itself is not exported"],
              ["MODULE m; IMPORT test; TYPE T = RECORD(test.NotExported) END; END m.",
               "cannot extend 'NotExported' - its constructor was not exported"],
              ["MODULE m; IMPORT test; VAR r: test.NotExported; END m.",
