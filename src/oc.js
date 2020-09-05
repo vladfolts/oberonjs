@@ -101,6 +101,9 @@ var ModuleResolver = Class.extend({
             try {
                 this.compile(this.__moduleReader(name));
             }
+            catch (x) {
+                this.__handleErrors(x + "");
+            }
             finally {
                 this.__detectRecursion.pop();
             }
