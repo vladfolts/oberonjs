@@ -123,6 +123,7 @@ CodeMirror.defineMode("oberon07", function () {
 
         _alphaREX = /[a-zA-Z_]/,
         _alphaDigitREX = /[0-9a-zA-Z_]/,
+        _cyrREX = /[а-яА-Я]/
 
         _isAlpha = function (ch) {
             return _alphaREX.test(ch);
@@ -130,6 +131,10 @@ CodeMirror.defineMode("oberon07", function () {
 
         _isAlphaOrDigit = function (ch) {
             return _alphaDigitREX.test(ch);
+        },
+        
+        _isCyr = function (ch) {
+            return _cyrREX.test(ch);
         },
 
         _startState = function () {
@@ -170,8 +175,7 @@ CodeMirror.defineMode("oberon07", function () {
 
                     if (_word) {
                         switch (_word.name) {
-                            case 'MODULE':
-                            case 'PROCEDURE':
+                            case 'BEGIN':
                             case 'IF':
                             case 'FOR':
                             case 'WHILE':
@@ -186,8 +190,13 @@ CodeMirror.defineMode("oberon07", function () {
                         _token = _word.css;
                     }
 
-                    if (!stream.eol()) {
+                    if (!stream.eol() || _ch === ")") {
                         stream.backUp(1);
+                    }
+                    
+                    if (_ch === "'" || _isCyr(_ch)) {
+                        state.error = 'string.not.close';
+                        return ED_ERROR;
                     }
 
                     return _token;
@@ -252,10 +261,15 @@ CodeMirror.defineMode("oberon07", function () {
             if (_isAlpha(_ch)) {
                 return _ident(_ch);
             }
+            
+            if (_isCyr(_ch)) {
+                state.error = 'string.not.close';
+                return ED_ERROR;
+            }
 
             switch (_ch) {
                 case '"':
-                case "'":
+                //case "'":  for Oberon-07 not allowed
                     return _string(_ch);
 
                 case '[':
