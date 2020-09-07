@@ -1,6 +1,6 @@
 MODULE ContextAssignment;
 IMPORT
-    Chars, ContextHierarchy, Errors;
+    Chars, ContextHierarchy, Errors, Message;
 TYPE
     Check* = RECORD(ContextHierarchy.Node)
     END;
@@ -8,7 +8,7 @@ TYPE
 PROCEDURE Check.handleLiteral(s: STRING);
 BEGIN
     IF s = "=" THEN
-        Errors.raise("did you mean ':=' (statement expected, got expression)?");
+        Errors.raise(Message.didYouMeanAssign);
     END;
 END;
 

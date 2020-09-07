@@ -16,7 +16,9 @@ IMPORT
     String,
     Symbols, 
     TypeId,
-    Types;
+    Types,
+    Format,
+    Message;
 TYPE
     Call* = RECORD
         PROCEDURE make*(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType
@@ -112,22 +114,18 @@ BEGIN
         actualType <- actual.type();
         castErr := types.implicitCast(actualType, expectType, expected.isVar, result);
         IF castErr = Cast.errVarParameter THEN
-            Errors.raise("type mismatch for argument " + String.fromInt(pos + 1)
-                         + ": cannot pass '" + actualType.description()
-                         + "' as VAR parameter of type '" + expectType.description() + "'");
+            Errors.raise(Format.format3(Message.typeMismatchForArgPass, String.fromInt(pos + 1), actualType.description(), expectType.description()));
         ELSIF castErr # Cast.errNo THEN
-            Errors.raise("type mismatch for argument " + String.fromInt(pos + 1)
-                         + ": '" + actualType.description() + "' cannot be converted to '"
-                         + expectType.description() + "'");
+            Errors.raise(Format.format3(Message.typeMismatchForArgConv, String.fromInt(pos + 1), actualType.description(), expectType.description()));
         END;
     END;
     IF expected.isVar THEN
         info <- actual.info();
         IF info = NIL THEN
-            Errors.raise("expression cannot be used as VAR parameter");
+            Errors.raise(Message.expCannotUsedAsVar);
         END;
         IF ~(info IS Types.PVariable) OR info.isReadOnly() THEN
-            Errors.raise(info.idType() + " cannot be passed as VAR actual parameter");
+            Errors.raise(Format.format1(Message.cannotBePassedAsVar, info.idType()));
         END;
     END;
     IF code # NIL THEN
@@ -150,9 +148,7 @@ END;
 PROCEDURE checkArgumentsCount*(actual, expected: INTEGER);
 BEGIN
     IF actual # expected THEN
-        Errors.raise(
-            String.fromInt(expected) + " argument(s) expected, got " 
-            + String.fromInt(actual));
+        Errors.raise(Format.format2(Message.argsExpected, String.fromInt(expected), String.fromInt(actual)));
     END;
 END;
 
@@ -366,12 +362,11 @@ PROCEDURE makeNew(): Symbols.PSymbol;
         arg <- checkSingleArgument(args, SELF, cx.language.types, NIL);
         argType <- arg.type();
         IF ~(argType IS Record.PPointer) THEN
-            Errors.raise("POINTER variable expected, got '" 
-                         + argType.description() + "'");
+            Errors.raise(Format.format1(Message.procVarExpected, argType.description()));
         ELSE
             baseType <- Record.pointerBase(argType^);
             IF baseType.finalizedAsNonExported THEN
-                Errors.raise("non-exported RECORD type cannot be used in NEW");
+                Errors.raise(Message.nonExpRecCantUsedInNew);
             END;
             right <- Expression.makeSimple(baseType.codeForNew(cx.cx^), argType);
             result := Expression.makeSimple(Operator.assign(arg.info(), right, cx), NIL);
@@ -396,8 +391,7 @@ BEGIN
     arg := checkSingleArgument(args, SELF, cx.language.types, NIL);
     argType := arg.type();
     IF ~SELF.check(argType) THEN
-        Errors.raise("ARRAY or string is expected as an argument of LEN, got '"
-                     + argType.description() + "'");
+        Errors.raise(Format.format1(Message.arrExpectedForLen, argType.description()));
     END;
     RETURN Expression.makeSimple(
         arg.code() + ".length",
@@ -498,8 +492,7 @@ PROCEDURE setBitImpl(name: STRING; bitOp: BinaryOpStr): Symbols.PSymbol;
         ELSE
             yValue := value^(ConstValue.Int).value;
             IF (yValue < 0) OR (yValue > 31) THEN
-                Errors.raise("value (0..31) expected as a second argument of " 
-                             + SELF.name + ", got " + String.fromInt(yValue));
+                Errors.raise(Format.format2(Message.val31expected, SELF.name, String.fromInt(yValue)));
             END;
             comment := "bit: ";
             IF y.isTerm() THEN
@@ -528,11 +521,9 @@ PROCEDURE checkVariableArgumentsCount(min, max: INTEGER; actual: ARRAY OF Expres
 BEGIN
     len <- LEN(actual);
     IF len < min THEN
-        Errors.raise("at least " + String.fromInt(min) + " argument expected, got " 
-                     + String.fromInt(len));
+        Errors.raise(Format.format2(Message.atLeastArgExpected, String.fromInt(min), String.fromInt(len)));
     ELSIF len > max THEN
-        Errors.raise("at most " + String.fromInt(max) + " arguments expected, got "
-                     + String.fromInt(len));
+        Errors.raise(Format.format2(Message.atMostArgExpected, String.fromInt(max), String.fromInt(len)));
     END;
 END checkVariableArgumentsCount;
 
@@ -620,8 +611,7 @@ PROCEDURE makeAbs(): Symbols.PSymbol;
         arg := checkSingleArgument(args, SELF, cx.language.types, NIL);
         argType := arg.type();
         IF Types.numeric.indexOf(argType) = -1 THEN
-            Errors.raise("type mismatch: expected numeric type, got '"
-                         + argType.description() + "'");
+            Errors.raise(Format.format1(Message.typeMismatchNumExpected, argType.description()));
         END;
         RETURN Expression.makeSimple("Math.abs(" + arg.code() + ")", argType)
     END CallImpl.make;
@@ -745,9 +735,7 @@ PROCEDURE makeOrd(): Symbols.PSymbol;
                 NIL,
                 NEW ConstValue.Int(ORD(ch)));
         ELSE
-            Errors.raise(
-                "ORD function expects CHAR or BOOLEAN or SET as an argument, got '"
-                + argType.description() + "'");
+            Errors.raise(Format.format1(Message.ordExpectCharBoolSet, argType.description()));
         END;
         RETURN result
     END CallImpl.make;

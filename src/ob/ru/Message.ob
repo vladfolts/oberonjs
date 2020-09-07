@@ -1,6 +1,147 @@
 MODULE Message;
 CONST
     methodAnonRec* = "объявление методов для анонимных записей невозможно (POINTER TO RECORD)";
-    methodExport* = "{0} '{1}' не может быть экспротитрован, потому что сама запись не экспортирована";
+    methodExport* = "{0} '{1}' не может быть экспортирован, потому что сама запись не экспортирована";
+    
+    (* Code.ob *)
+    negativeIndex* = "отрицательный индекс: {0}";
+    
+    (* ContextAssignment.ob *)
+    didYouMeanAssign* = "имели в виду ':=' (ожидается оператор, но указано выражение)?";
+    
+    (* ContextCase.ob *)
+    onlyRecordsForCase* = "только записи переданные в виде VAR аргумента могут быть использованы в качестве тестирующего выражения CASE";
+    caseExpectations* = "в выражении CASE ожидается 'RECORD' или 'POINTER' или {0} или 'CHAR'";
+    caseHandleLabelType* = "вариант должен быть '{0}' (такого же типа, что и выражение в CASE), но имеем '{1}'";
+    typeNameExpectedInLabel* = "имя типа ожидается в варианте, но указано выражение: {0}";
+    singleCharStringExpected* = "ожидается строка из одного символа";
+    canNotUseDiapason* = "не могу использовать диапазон (..) с охраной типа";
+    isNotAType* = "'{0}' не является типом";
+    isNotAConstant* = "'{0}' не является константой";
+    
+    (* ContextConst.ob *)
+    constExpressionExpected* = "ожидается выражение из констант";
+    
+    (* ContextDesignator.ob *)
+    canNotApplyTypecast* = "не могу выполнить приведение типа для {0}";
+    pointerCantBeDereferenced* = "тип указателя на неэкспортированную запись (POINTER TO RECORD) не может быть разыменован";
+    pointerTypeExpected* = "POINTER TO тип ожидается, но имеем '{0}'";
+    expressionExpected* = "{0} выражение ожидается, но имеем '{1}'";
+    indexOutOfBonds* = "индекс за границей: максимальный возможный индекс {0}, но имеем {1}";
+    arrayOrStringExpected* = "ARRAY или строка ожидается, но имеем '{0}'";
+    cantIndexEmptString* = "не могу индексировать пустую строку";
+    
+	(* ContextExpression.ob *)
+    cantBeReferenced* = "нельзя получить ссылку на {0}";
+    
+    (* ContextHierarchy.ob *)
+    undeclaredId* = "неизвестный идентификатор: '{0}'";
+    idIsNotExported* = "идентификатор '{0}' не экспортирован модулем '{1}'";
+    
+    (* ContextIf.ob *)
+    boolExpressionExpected* = "'BOOLEAN' выражение ожидается, но имеем '{0}'";
+    
+    (* ContextLoop.ob *)
+    isNotAVar* = "'{0}' не переменная";
+    varMustBeInteger* = "переменной '{0}' имеет тип '{1}', но управляющая переменная в 'FOR' должна иметь тип 'INTEGER'";
+    intExpect* = "ожидается выражение с результатом 'INTEGER' для присваивания к '{0}', но имеем '{1}'";
+    intExpectedAsTo* = "'INTEGER' выражение ожидается в качестве 'TO' параметра, но имеем '{0}'";
+    intExpectedAsBy* = "'INTEGER' выражение ожидается в качестве 'BY' параметра, но имеем '{0}'";
+    constExpectedAsBy* = "константное выражение ожидается в качестве 'BY' параметра";
+    
+    (* ContextModule.ob *)
+    moduleName* = "ожидается заявленное в начале название модуля '{0}', но имеем '{1}'";
+    moduleCantImportItself* = "модуль '{0}' не может импортировать сам себя";
+    duplicateAlias* = "такая замена имени модуля уже занята: '{0}'";
+    moduleAlreadyImported* = "модуль уже импортирован: '{0}'";
+    moduleNotFound1* = "модуль не найден: {0}";
+    moduleNotFound2* = "модули не найдены: {0}";
+    
+    (* ContextProcedure.ob *)
+    mismatchedProcName* = "имя процедуры в начале '{0}' не совпадает с именем в конце '{1}'";
+    argSameAsName* = "аргумент '{0}' имеет такое же имя как и имя процедуры";
+    unexpectedReturn* = "неожиданный RETURN в процедуре без объявленного результирующего типа";
+    returnTypeMismatch* = "RETURN типа '{0}' ожидается, но имеем '{1}'";
+    returnExpectedAtEnd* = "RETURN ожидается в конце процедуры объявленной с результирующем типом '{0}'";
+    procedureCantReturn* = "процедура не может возвращать результат типа {0}";
+    procedureExpected* = "PROCEDURE ожидается, но имеем '{0}'";
+    
+    (* ContextType.ob *)
+    intContExprExpected* = "ожидается выражение с результатом 'INTEGER', но имеем '{0}'";
+    constExprExpected* = "константное выражение ожидается для указания размера массива";
+    arraySizeMustBeGrater* = "размер ARRAY должен быть больше нуля, но имеем {0}";
+    fieldExpOnlyIfExported* = "поле '{0}' может быть экспортировано только если {1} '{2}' также экспортируется";
+    recursiveFieldDef* = "рекурсивное определение поля: '{0}'";
+    recTypeExpected* = "ожидается тип RECORD в качестве базового типа, но имеем '{0}'";
+    recursiveInheritance* = "рекурсивное наследование: '{0}'";
+    recExpectedAsPtrBaseType* = "ожидается RECORD в качестве базового типа для POINTER {0}";
+    cantExportAnonRecField* = "невозможно экспортировать анонимное поле RECORD: '{0}'";
+    
+    (* ContextVar.ob *)
+    typeWasntDeclared* = "тип '{0}' не был объявлен";
+    
+    (* ExpressionTree.ob *)
+    typeNameExpected* = "ожидается имя типа";
+    isNotAnExtencion* = "{0}: '{1}' не является расширением '{2}'";
+    ptrToTypeExpected* = "{0}: ожидается указатель на тип или запись, но имеем '{1}'";
+    valueVarCantBeUsed* = "{0}: параметр-значение не может быть использован";
+    recTypeExpectedAsArg* = "{0}: тип RECORD ожидается в качестве аргумента RECORD {1}, но имеем '{2}'";
+    ptrTypeExpectedAsArg* = "{0}: тип POINTER ожидается в качестве аргумента POINTER {1}, но имеем '{2}'";
+    typeMismatch* = "несовпадение типов: ожидается '{0}', но имеем {1}";
+    opTypeMismatch* = "в операции '{0}' несовпадение типов: {1} ожидается, но имеем '{2}'";
+    typeNameCantBeExpr* = "имя типа '{0}' не может быть использовано как выражение";
+    opDivExpected* = "операция DIV ожидается для целочисленного деления";
+    boolExpectedAsOperand* = "BOOLEAN ожидается в качестве операнда для '&', но имеем '{0}'";
+    boolExpectedAsOperandOfOr* = "BOOLEAN ожидается в качестве операнда для 'OR', но имеем '{0}'";
+    procReturningNoResult* = "процедура, не возвращающая результат, не может быть использована в выражении";
+    expectedAsElemOfSet* = "{0} ожидается как элемент SET, но имеем '{1}'";
+    
+    (* LanguageContext.ob *)
+    cannotReference* = "нельзя получить ссылку на {0}";
+    
+    (* Lexer.ob *)
+    intLooksLikeHex* = "целая константа похоже в шестнадцатеричном формате, но суффикс 'H' отсутствует";
+    unexpectedEndOfString* = "неожиданный конец строки";
+    commentWasNotClosed* = "комментарий не закрыт";
+    
+    (* Module.ob *)
+    strExpected* = "строка ожидается в качестве аргумента {0}, но имеем {1}";
+    procRetResCantBeStatement* = "процедура, возвращающая результат, не может быть использована как оператор";
+    
+    (* Operator.ob *)
+    strCantBeAssign* = "строка не может быть присвоена к открытому {0}";
+    arrIsTooSmall* = "{0}-символьный ARRAY слишком мал для {1}-символьной строки";
+    cantAssignTo* = "не могу присвоить к {0}";
+    typeMismatchExpr* = "несовпадение типа: '{0}' не может быть присвоен к '{1}' выражению";
+    openCantBeAssigned* = "открытый '{0}' не может быть присвоен";
+    
+    (* Procedure.ob *)
+    typeMismatchForArgPass* = "несовпадение типа для аргумента {0}: не могу передать '{1}' как VAR параметр типа '{2}'";
+    typeMismatchForArgConv* = "несовпадение типа для аргумента {0}: '{1}' не может быть преобразован к '{2}'";
+    expCannotUsedAsVar* = "выражение не может быть использовано в качестве VAR параметра";
+    cannotBePassedAsVar* = "{0} не может быть передано в качестве VAR формального параметра";
+    argsExpected* = "ожидаем аргументов — {0}, но имеем {1}";
+    procVarExpected* = "ожидается переменная типа POINTER, но имеем '{0}'";
+    nonExpRecCantUsedInNew* = "неэкспортируемая запись не может быть использована в NEW";
+    arrExpectedForLen* = "ARRAY или строка ожидается в качестве аргумента LEN, но имеем '{0}'";
+    val31expected* = "ожидается значение (0..31) в качестве второго аргумента {0}, но имеем {1}";
+    atLeastArgExpected* = "минимальное число аргументов — {0}, но имеем {1}";
+    atMostArgExpected* = "максимальное число аргументов — {0}, но имеем {1}";
+    typeMismatchNumExpected* = "несовпадение типа, ожидается целое, но имеем '{0}'";
+    ordExpectCharBoolSet* = "функция ORD ожидает аргументы типа CHAR, BOOLEAN или SET, но имеем '{0}'";
+    
+    (* Record.ob *)
+    dupField* = "дублирование поля: '{0}'";
+    baseRecHasField* = "базовая запись уже имеет поле: '{0}'";
+    typeHasNoField* = "тип '{0}' не имеет поля '{1}'";
+    
+    (* Scope.ob *)
+    mustBeRecordType* = "'{0}' должен быть типа RECORD, поскольку был использован в объявлении POINTER";
+    noDeclarationFound* = "не найдено объявления для '{0}'";
+    alreadyDeclared* = "'{0}' уже объявлен";
+    cannotExport* = "не может быть экспортирован внутри процедуры: {0} '{1}'";
+    
+    (* Types.ob *)
+    selectorCantBeApplied* = "селектор '.{0}' не может быть применён к '{1}'";
 
 END Message.

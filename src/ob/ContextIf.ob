@@ -1,6 +1,6 @@
 MODULE ContextIf;
 IMPORT
-    ContextExpression, ContextHierarchy, Errors, Expression, Types;
+    ContextExpression, ContextHierarchy, Errors, Expression, Types, Message, Format;
 TYPE
     Type* = RECORD(ContextExpression.ExpressionHandler)
         PROCEDURE Type*(parent: ContextHierarchy.PNode);
@@ -10,7 +10,7 @@ PROCEDURE handleIfExpression*(e: Expression.PType);
 BEGIN
     type <- e.type();
     IF type # Types.basic.bool THEN
-        Errors.raise("'BOOLEAN' expression expected, got '" + type.description() + "'");
+        Errors.raise(Format.format1(Message.boolExpressionExpected, type.description()));
     END;
 END;
 

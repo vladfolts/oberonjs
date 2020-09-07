@@ -2,7 +2,8 @@ MODULE ContextCase;
 IMPORT
     Cast, Chars, CodeGenerator, ConstValue, ContextExpression, ContextHierarchy,
     Designator, Errors, Expression, ExpressionTree,
-    Record, Scope, String, Symbols, TypeId, Types, Variable;
+    Record, Scope, String, Symbols, TypeId, Types, Variable,
+    Format, Message;
 TYPE
     Type* = RECORD(ContextExpression.ExpressionHandler)
         PROCEDURE Type(parent: ContextHierarchy.PNode);
@@ -77,15 +78,14 @@ BEGIN
         IF (type IS Types.PRecord) OR (type IS Record.PPointer) THEN
             isReference <- (info IS Types.PVariable) & info.isReference();
             IF (type IS Types.PRecord) & ~isReference THEN
-                Errors.raise("only records passed as VAR argument can be used to test type in CASE");
+                Errors.raise(Message.onlyRecordsForCase);
             ELSIF ~(type IS Record.PPointer) OR ~isReference THEN
                 SELF.guardVar := declVar;
             END;
 
             SELF.typeTest := e;
         ELSIF ~Types.isInt(type) & (type # Types.basic.ch) THEN
-            Errors.raise("'RECORD' or 'POINTER' or "
-                         + Types.intsDescription() + " or 'CHAR' expected as CASE expression");
+            Errors.raise(Format.format1(Message.caseExpectations, Types.intsDescription()));
         END;
     END;
 
@@ -114,8 +114,7 @@ END;
 PROCEDURE Type.handleLabelType(type: Types.PType);
 BEGIN
     IF ~Cast.areTypesMatch(type, SELF.type) THEN
-        Errors.raise("label must be '" + SELF.type.description() + "' (the same as case expression), got '"
-                     + type.description() + "'");
+        Errors.raise(Format.format2(Message.caseHandleLabelType, SELF.type.description(), type.description()));                    
     END;
 END;
 
@@ -215,13 +214,13 @@ VAR
     c: CHAR;
 BEGIN
     IF caseContext(SELF).typeTest # NIL THEN
-        Errors.raise("type's name expected in label, got expression: " + e.code());
+        Errors.raise(Format.format1(Message.typeNameExpectedInLabel, e.code()));
     END;
 
     type <- e.type();
     IF type IS Types.PString THEN
         IF ~Types.stringAsChar(type^, c) THEN
-            Errors.raise("single-character string expected");
+            Errors.raise(Message.singleCharStringExpected);
         END;
         handleLabel(SELF, Types.basic.ch, NEW ConstValue.Int(ORD(c)));
     ELSE
@@ -232,7 +231,7 @@ END;
 PROCEDURE Range.handleQIdent(q: ContextHierarchy.QIdent);
 BEGIN
     IF SELF.typeGuardHandled THEN
-        Errors.raise("cannot use diapason (..) with type guard");
+        Errors.raise(Message.canNotUseDiapason);
     END;
 
     found <- ContextHierarchy.getQIdSymbolAndScope(SELF.root()^, q);
@@ -243,10 +242,10 @@ BEGIN
             labelContext(SELF).handleTypeGuard(typeTest, info);
             SELF.typeGuardHandled := TRUE;
         ELSE
-            Errors.raise("'" + q.code + "' is not a type");
+            Errors.raise(Format.format1(Message.isNotAType, q.code));
         END;
     ELSIF ~(info IS Types.PConst) THEN
-        Errors.raise("'" + q.code + "' is not a constant");
+        Errors.raise(Format.format1(Message.isNotAConstant, q.code));
     ELSE
         type <- info.type;
         IF type IS Types.PString THEN

@@ -1,5 +1,6 @@
 MODULE LanguageContext;
-IMPORT Chars, CodeGenerator, Context, Designator, Errors, Expression, OberonRtl, Record, Symbols, T := Types, Variable;
+IMPORT Chars, CodeGenerator, Context, Designator, Errors, Expression, OberonRtl, Record, Symbols, T := Types, Variable,
+	Format, Message;
 
 TYPE
     PType* = POINTER TO Type;
@@ -133,7 +134,7 @@ BEGIN
             result := info.leadCode + "." + codeId;
         END;
     ELSE
-        Errors.raise("cannot reference " + info.idType());
+        Errors.raise(Format.format1(Message.cannotReference, info.idType()));
     END;
     RETURN result;
 END;
