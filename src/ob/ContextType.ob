@@ -2,7 +2,7 @@ MODULE ContextType;
 IMPORT
     Chars, CodeGenerator, ConstValue, Context, ContextExpression, ContextHierarchy, 
     Errors, Expression, ExpressionTree, Object, R := Record, 
-    Scope, ScopeBase, String, Symbols, TypeId, Types;
+    Scope, ScopeBase, String, Symbols, TypeId, Types, Format, Message;
 TYPE
     HandleSymbolAsType* = RECORD(ContextHierarchy.Node)
         PROCEDURE handleQIdent*(q: ContextHierarchy.QIdent);
@@ -199,15 +199,15 @@ PROCEDURE ArrayDimensions.handleExpression(e: Expression.PType);
 BEGIN
     type <- e.type();
     IF type # Types.basic.integer THEN
-        Errors.raise("'INTEGER' constant expression expected, got '" + type.description() + "'");
+        Errors.raise(Format.format1(Message.intContExprExpected, type.description()));
     END;
     value <- e.constValue();
     IF value = NIL THEN
-        Errors.raise("constant expression expected as ARRAY size");
+        Errors.raise(Message.constExprExpected);
     END;
     dimension <- value(ConstValue.PInt).value;
     IF dimension <= 0 THEN
-        Errors.raise("array size must be greater than 0, got " + String.fromInt(dimension));
+        Errors.raise(Format.format1(Message.arraySizeMustBeGrater, String.fromInt(dimension)));
     END;
     SELF.doAddDimension(dimension);
 END;
@@ -258,9 +258,7 @@ PROCEDURE checkIfFieldCanBeExported*(name: STRING; idents: ARRAY OF Context.PIde
 BEGIN
     FOR id IN idents DO
         IF ~id.exported() THEN
-            Errors.raise(
-                "field '" + name + "' can be exported only if " + hint + " '" +
-                id.id() + "' itself is exported too");
+            Errors.raise(Format.format3(Message.fieldExpOnlyIfExported, name, hint, id.id()));
         END;
     END;
 END;
@@ -321,7 +319,7 @@ END;
 PROCEDURE Record.addField(field: Context.PIdentdefInfo; type: Types.PStorageType);
 BEGIN
     IF SELF.root().language().types.isRecursive(type, SELF.type) THEN
-        Errors.raise("recursive field definition: '" + field.id() + "'");
+        Errors.raise(Format.format1(Message.recursiveFieldDef, field.id()));
     END;
     SELF.type.addField(SELF.doMakeField(field, type));
     IF field.exported() THEN
@@ -332,14 +330,10 @@ END;
 PROCEDURE Record.setBaseType(type: Types.PType);
 BEGIN
     IF ~(type IS R.PType) THEN
-        Errors.raise(
-            "RECORD type is expected as a base type, got '"
-            + type.description()
-            + "'");
+        Errors.raise(Format.format1(Message.recTypeExpected, type.description()));
     ELSE
         IF type = SELF.type THEN
-            Errors.raise("recursive inheritance: '"
-                         + SELF.type.description() + "'");
+            Errors.raise(Format.format1(Message.recursiveInheritance, SELF.type.description()));
         END;
 
         SELF.type.setBase(type);
@@ -475,7 +469,7 @@ BEGIN
             IF type # NIL THEN
                 typeDesc := ", got '" + type.description() + "'";
             END;
-            Errors.raise("RECORD is expected as a POINTER base type" + typeDesc);
+            Errors.raise(Format.format1(Message.recExpectedAsPtrBaseType, typeDesc));
         END;
     END;
     
@@ -520,7 +514,7 @@ END;
 
 PROCEDURE Pointer.exportField(field: STRING);
 BEGIN
-    Errors.raise("cannot export anonymous RECORD field: '" + field + "'");
+    Errors.raise(Format.format1(Message.cantExportAnonRecField, field));
 END;
 
 PROCEDURE ResolveClosure.ResolveClosure(root: ContextHierarchy.PRoot; id: STRING)

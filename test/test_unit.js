@@ -1569,8 +1569,8 @@ return {
 "import unknown module": testWithGrammar(
     grammar.module,
     pass(),
-    fail(["MODULE m; IMPORT unknown; END m.", "module(s) not found: unknown"],
-         ["MODULE m; IMPORT unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2"]
+    fail(["MODULE m; IMPORT unknown; END m.", "module not found: unknown"],
+         ["MODULE m; IMPORT unknown1, unknown2; END m.", "modules not found: unknown1, unknown2"]
          )
     ),
 "self import is failed": testWithGrammar(
@@ -1582,7 +1582,7 @@ return {
     grammar.module,
     pass("MODULE m; IMPORT J := JS; END m.",
          "MODULE m; IMPORT J := JS; BEGIN J.alert(\"test\") END m."),
-    fail(["MODULE m; IMPORT u1 := unknown1, unknown2; END m.", "module(s) not found: unknown1, unknown2"],
+    fail(["MODULE m; IMPORT u1 := unknown1, unknown2; END m.", "modules not found: unknown1, unknown2"],
          ["MODULE m; IMPORT a1 := m1, a2 := m1; END m.", "module already imported: 'm1'"],
          ["MODULE m; IMPORT a1 := u1, a1 := u2; END m.", "duplicated alias: 'a1'"],
          ["MODULE m; IMPORT J := JS; BEGIN JS.alert(\"test\") END m.", "undeclared identifier: 'JS'"]

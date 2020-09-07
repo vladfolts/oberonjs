@@ -1,7 +1,7 @@
 MODULE ContextModule;
 IMPORT
     CodeGenerator, ContextHierarchy, ContextType, Errors, LanguageContext, 
-    Object, Scope, ScopeBase, String, Symbols, Types;
+    Object, Scope, ScopeBase, String, Symbols, Types, Format, Message;
 TYPE
     Declaration* = RECORD(ContextHierarchy.Node)
         PROCEDURE findModule(name: STRING): Types.PModule;
@@ -33,14 +33,14 @@ BEGIN
         Scope.defineExports(scope^);
         SELF.codeGenerator().write(SELF.moduleGen.epilog(scope.exports));
     ELSE
-        Errors.raise("original module name '" + SELF.name + "' expected, got '" + id + "'" );
+        Errors.raise(Format.format2(Message.moduleName, SELF.name, id));
     END;
 END;
 
 PROCEDURE Declaration.findModule(name: STRING): Types.PModule;
 BEGIN
     IF name = SELF.name THEN
-        Errors.raise("module '" + SELF.name + "' cannot import itself");
+        Errors.raise(Format.format1(Message.moduleCantImportItself, SELF.name));
     END;
     RETURN SELF.root().findModule(name);
 END;
@@ -109,9 +109,9 @@ BEGIN
     
     FOR a, m IN import.import DO
         IF a = alias THEN
-            Errors.raise("duplicated alias: '" + alias +"'");
+            Errors.raise(Format.format1(Message.duplicateAlias, alias));
         ELSIF m = import.currentModule THEN
-            Errors.raise("module already imported: '" + import.currentModule + "'");
+            Errors.raise(Format.format1(Message.moduleAlreadyImported, import.currentModule));
         END;
     END;
     import.import[alias] := import.currentModule;
@@ -144,8 +144,10 @@ BEGIN
             modules.add(NEW Symbols.Symbol(alias, module));
         END;
     END;
-    IF LEN(unresolved) # 0 THEN
-        Errors.raise("module(s) not found: " + String.join(unresolved, ", "));
+    IF LEN(unresolved) = 1 THEN
+        Errors.raise(Format.format1(Message.moduleNotFound1, String.join(unresolved, ", ")));
+    ELSIF LEN(unresolved) > 1 THEN
+        Errors.raise(Format.format1(Message.moduleNotFound2, String.join(unresolved, ", ")));
     END;
     
     parent.handleImport(modules);

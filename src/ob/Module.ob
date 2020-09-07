@@ -1,6 +1,7 @@
 MODULE Module;
 IMPORT 
-    Context, Errors, Expression, LanguageContext, Procedure, Symbols, TypeId, Types, Variable;
+    Context, Errors, Expression, LanguageContext, Procedure, Symbols, TypeId, Types, Variable,
+    Format, Message;
 CONST
     doProcId = "do";
     varTypeId = "var";
@@ -46,8 +47,7 @@ VAR
         arg := Procedure.checkSingleArgument(args, SELF, cx.language.types, NIL);
         type := arg.type();
         IF ~(type IS Types.PString) THEN
-            Errors.raise("string is expected as an argument of "
-                       + description + ", got " + type.description());
+            Errors.raise(Format.format2(Message.strExpected, description, type.description()));
         END;
         RETURN Expression.makeSimple(Types.stringValue(type(Types.PString)^), NIL)
     END Call.make;
@@ -70,7 +70,7 @@ END;
 PROCEDURE assertProcStatementResult*(type: Types.PType);
 BEGIN
     IF (type # NIL) & ~(type^ IS Types.Any) THEN
-        Errors.raise("procedure returning a result cannot be used as a statement");
+        Errors.raise(Message.procRetResCantBeStatement);
     END;
 END;
 

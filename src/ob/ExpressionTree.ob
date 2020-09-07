@@ -1,7 +1,7 @@
 MODULE ExpressionTree;
 IMPORT
 	Cast, Context, ContextHierarchy,
-	JS, 
+	JS, Format, Message,
 	Errors, Expression, LanguageContext, Operator, Record, String, Types, TypeId;
 TYPE
     BinaryOperator* = PROCEDURE(l, r: Expression.PType): Expression.PType;
@@ -120,7 +120,7 @@ VAR
 
 PROCEDURE throwTypeNameExpected*();
 BEGIN
-    Errors.raise("type name expected");
+    Errors.raise(Message.typeNameExpected);
 END;
 
 PROCEDURE castCode*(type: Types.PType; cx: Context.Type): STRING;
@@ -161,8 +161,7 @@ VAR
             t := t.base;
         END;
         IF t = NIL THEN
-            Errors.raise(prefix + ": '" + to.description()
-                       + "' is not an extension of '" + from.description() + "'");
+            Errors.raise(Format.format3(Message.isNotAnExtencion, prefix, to.description(), from.description()));
         END;
     END;
 
@@ -171,24 +170,17 @@ BEGIN
 
     pointerExpected <- fromType IS Record.PPointer;
     IF ~pointerExpected & ~(fromType IS Record.PType) THEN
-        Errors.raise(
-            prefix + ": POINTER to type or RECORD expected, got '"
-            + fromType.description() + "'");
+        Errors.raise(Format.format2(Message.ptrToTypeExpected, prefix, fromType.description()));
     END;
 
     IF ~pointerExpected THEN
         IF (fromInfo # NIL) & ~fromInfo.isReference() THEN
-            Errors.raise(
-                prefix + ": a value variable cannot be used");
+            Errors.raise(Format.format1(Message.valueVarCantBeUsed, prefix));
         ELSIF ~(toType IS Record.PType) THEN
-            Errors.raise(
-                prefix + ": RECORD type expected as an argument of RECORD " + msg + ", got '"
-              + toType.description() + "'");
+            Errors.raise(Format.format3(Message.recTypeExpectedAsArg, prefix, msg, toType.description()));
         END;
     ELSIF ~(toType IS Record.PPointer) THEN
-        Errors.raise(
-            prefix + ": POINTER type expected as an argument of POINTER " + msg + ", got '"
-          + toType.description() + "'");
+        Errors.raise(Format.format3(Message.ptrTypeExpectedAsArg, prefix, msg, toType.description()));
     END;
 
     IF pointerExpected THEN
@@ -225,16 +217,12 @@ BEGIN
     ELSE
         fromDescription := "no type (proper procedure call)";
     END;
-    Errors.raise("type mismatch: expected '" + to.description() 
-               + "', got " + fromDescription);
+    Errors.raise(Format.format2(Message.typeMismatch, to.description(), fromDescription));
 END;
 
 PROCEDURE throwOperatorTypeMismatch(op, expect: STRING; type: Types.PType);
 BEGIN
-    Errors.raise(
-        "operator '" + op +
-        "' type mismatch: " + expect + " expected, got '" +
-        type.description() + "'");
+    Errors.raise(Format.format3(Message.opTypeMismatch, op, expect, type.description()));
 END;
 
 PROCEDURE checkTypeMatch(from, to: Types.PType);
@@ -298,7 +286,7 @@ PROCEDURE notTypeId(e: Expression.PType);
 BEGIN
     info <- e.info();
     IF info IS TypeId.PType THEN
-        Errors.raise("type name '" + info.type().description() + "' cannot be used as an expression");
+        Errors.raise(Format.format1(Message.typeNameCantBeExpr, info.type().description()));
     END;
 END;
 
@@ -381,7 +369,7 @@ BEGIN
         o := assertNumericOrSetOp(type, s, Operator.mulReal, Operator.mulInt, Operator.setIntersection);
     ELSIF s = "/" THEN
         IF Types.isInt(type) THEN
-            Errors.raise("operator DIV expected for integer division");
+            Errors.raise(Message.opDivExpected);
         END;
         o := assertNumericOrSetOp(type, s, Operator.divReal, NIL, Operator.setSymmetricDiff);
     ELSIF s = "DIV" THEN
@@ -390,8 +378,7 @@ BEGIN
         o := assertIntOp(type, s, Operator.mod);
     ELSIF s = "&" THEN
         IF type # Types.basic.bool THEN
-            Errors.raise("BOOLEAN expected as operand of '&', got '"
-                                 + type.description() + "'");
+            Errors.raise(Format.format1(Message.boolExpectedAsOperand, type.description()));
         END;
         o := Operator.and;
     ELSE
@@ -466,8 +453,7 @@ BEGIN
         result := assertNumericOrSetOp(type, s, Operator.subReal, Operator.subInt, Operator.setDiff);
     ELSIF s = "OR" THEN
         IF type # Types.basic.bool THEN
-            Errors.raise("BOOLEAN expected as operand of 'OR', got '"
-                         + type.description() + "'");
+        	Errors.raise(Format.format1(Message.boolExpectedAsOperandOfOr, type.description()));
         END;
         result := Operator.or;
     END;
@@ -509,7 +495,7 @@ BEGIN
 
     type <- result.type();
     IF type = NIL THEN
-        Errors.raise("procedure returning no result cannot be used in an expression");
+        Errors.raise(Message.procReturningNoResult);
     END;
     RETURN result;
 END;
@@ -539,8 +525,7 @@ END;
 PROCEDURE Ops.in(left, right: Types.PType; cx: ContextHierarchy.Node): BinaryOperatorCx;
 BEGIN
     IF ~Types.isInt(left) THEN
-        Errors.raise(Types.intsDescription() 
-                     + " expected as an element of SET, got '" + left.description() + "'");
+        Errors.raise(Format.format2(Message.expectedAsElemOfSet, Types.intsDescription(), left.description()));
     END;
     checkImplicitCast(cx.root()^, right, Types.basic.set);
 

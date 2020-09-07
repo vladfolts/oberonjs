@@ -10,7 +10,9 @@ IMPORT
     OberonRtl, 
     Precedence := CodePrecedence,
     String,
-    Types;
+    Types,
+    Format,
+    Message;
 CONST
     equalCode* = " == ";
     notEqualCode* = " != ";
@@ -460,12 +462,9 @@ VAR
     PROCEDURE assignArrayFromString(VAR a: Types.Array; s: Types.String): STRING;
     BEGIN
         IF ~(a IS Types.StaticArray) THEN
-            Errors.raise("string cannot be assigned to open " + a.description());
+            Errors.raise(Format.format1(Message.strCantBeAssign, a.description()));
         ELSIF Types.stringLen(s) > a.length() THEN
-            Errors.raise(String.fromInt(a.length()) 
-                         + "-character ARRAY is too small for "
-                         + String.fromInt(Types.stringLen(s))
-                         + "-character string");
+            Errors.raise(Format.format2(Message.arrIsTooSmall, String.fromInt(a.length()), String.fromInt(Types.stringLen(s))));
         END;
 
         l <- cx.language;
@@ -473,7 +472,7 @@ VAR
     END assignArrayFromString;
 BEGIN
     IF ~(info IS Types.PVariable) OR info.isReadOnly() THEN
-        Errors.raise("cannot assign to " + info.idType());
+        Errors.raise(Format.format1(Message.cantAssignTo, info.idType()));
     ELSE 
         rightCode := right.code();
         leftType <- info.type();
@@ -487,11 +486,10 @@ BEGIN
         ELSE
             IF cx.language.types.implicitCast(rightType, leftType, FALSE, castOperation)
                 # Cast.errNo THEN
-                Errors.raise("type mismatch: '" + leftType.description()
-                             + "' cannot be assigned to '" + rightType.description() + "' expression");
+                Errors.raise(Format.format2(Message.typeMismatchExpr, leftType.description(), rightType.description()));
             END;
             IF (leftType IS Types.POpenArray) & (rightType IS Types.PArray) THEN
-                Errors.raise("open '" + leftType.description() + "' cannot be assigned");
+                Errors.raise(Format.format1(Message.openCantBeAssigned, leftType.description()));
             END;
                 
             result := castOperation.assign(cx, info, right);

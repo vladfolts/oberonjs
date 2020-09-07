@@ -2,7 +2,7 @@ MODULE ContextDesignator;
 IMPORT
     Code, ConstValue, ContextExpression, ContextHierarchy, 
     Designator, Errors, Expression, ExpressionTree,
-    Record, String, TypeId, Types, Variable;
+    Record, String, TypeId, Types, Variable, Format, Message;
 TYPE
     Index* = RECORD
         PROCEDURE Index*(length: INTEGER; type: Types.PType; info: Types.PId; code, asProperty: STRING);
@@ -97,7 +97,7 @@ BEGIN
     IF info IS Types.PVariable THEN
         ExpressionTree.checkTypeCast(info, SELF.currentType, type, "type cast");
     ELSE
-        Errors.raise("cannot apply type cast to " + info.idType());
+        Errors.raise(Format.format1(Message.canNotApplyTypecast, info.idType()));
     END;
 
     code <- SELF.root().language().rtl.typeGuard(SELF.code, ExpressionTree.castCode(type, SELF));
@@ -121,7 +121,7 @@ BEGIN
     IF t IS Record.PPointer THEN
         base <- Record.pointerBase(t^);
         IF base.finalizedAsNonExported THEN
-            Errors.raise("POINTER TO non-exported RECORD type cannot be dereferenced");
+            Errors.raise(Message.pointerCantBeDereferenced);
         END;
         designator.currentType := base;
 
@@ -130,8 +130,7 @@ BEGIN
             designator.code := Expression.derefCode(designator.code);
         END;
     ELSE
-        Errors.raise("POINTER TO type expected, got '"
-                     + designator.currentType.description() + "'");
+        Errors.raise(Format.format1(Message.pointerTypeExpected, designator.currentType.description()));
     END;
 END;
 
@@ -194,8 +193,7 @@ END;
 PROCEDURE Type.doCheckIndexType(type: Types.PType);
 BEGIN
     IF ~Types.isInt(type) THEN
-        Errors.raise(Types.intsDescription() + " expression expected, got '" 
-                     + type.description() + "'");
+        Errors.raise(Format.format2(Message.expressionExpected, Types.intsDescription(), type.description()));
     END;
 END;
 
@@ -208,9 +206,7 @@ BEGIN
         length <- index.length;
         IF (((SELF.currentType IS Types.PStaticArray) OR (SELF.currentType IS Types.PString))
           & (value >= length)) THEN
-            Errors.raise("index out of bounds: maximum possible index is "
-                         + String.fromInt(length - 1)
-                         + ", got " + String.fromInt(value));
+            Errors.raise(Format.format2(Message.indexOutOfBonds, String.fromInt(length - 1), String.fromInt(value)));
         END;
     END;
 END;
@@ -226,7 +222,7 @@ BEGIN
     ELSIF type IS Types.PString THEN
         indexType := Types.basic.ch;
     ELSE
-        Errors.raise("ARRAY or string expected, got '" + type.description() + "'");
+        Errors.raise(Format.format1(Message.arrayOrStringExpected, type.description()));
     END;
 
     IF type IS Types.PStaticArray THEN
@@ -234,7 +230,7 @@ BEGIN
     ELSIF type IS Types.PString THEN
         length := Types.stringLen(type^);
         IF length = 0 THEN
-            Errors.raise("cannot index empty string" );
+            Errors.raise(Message.cantIndexEmptString);
         END;
     END;
 

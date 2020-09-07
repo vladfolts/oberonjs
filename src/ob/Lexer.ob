@@ -1,6 +1,6 @@
 MODULE Lexer;
 IMPORT 
-    Chars, ContextExpression, ContextHierarchy, Errors, Stream, String;
+    Chars, ContextExpression, ContextHierarchy, Errors, Stream, String, Message;
 CONST
     doubleQuote = Chars.doubleQuote;
     commentBegin = "(*";
@@ -68,7 +68,7 @@ BEGIN
             hexDetected := TRUE;
             Stream.next(stream, 1);
         ELSIF hexDetected THEN
-            Errors.raise("integer constant looks like having hexadecimal format but 'H' suffix is missing");
+            Errors.raise(Message.intLooksLikeHex);
         END;
 
         IF peekSeparator(stream) THEN
@@ -208,7 +208,7 @@ PROCEDURE string*(VAR stream: Stream.Type; VAR cx: ContextExpression.Str): BOOLE
         END;
         
         IF c # doubleQuote THEN
-            Errors.raise("unexpected end of string");
+            Errors.raise(Message.unexpectedEndOfString);
         END;
         
         cx.handleStr(s);
@@ -280,7 +280,7 @@ BEGIN
             IF ~skipComment(stream, context) THEN
                 Stream.next(stream, 1);
                 IF Stream.eof(stream) THEN
-                    Errors.raise("comment was not closed");
+                    Errors.raise(Message.commentWasNotClosed);
                 END
             END
         END;
