@@ -1,7 +1,7 @@
 MODULE ContextVar;
 IMPORT
     Chars, CodeGenerator, Context, ContextHierarchy, ContextType, Errors, 
-    Object, Symbols, Types, Variable;
+    Object, Symbols, Types, Variable, Format, Message;
 TYPE
     Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
         PROCEDURE doInitCode*(): STRING;
@@ -40,7 +40,7 @@ END;
 PROCEDURE Declaration.handleMessage(VAR msg: ContextHierarchy.Message): Object.PType;
 BEGIN
     IF msg IS ContextType.ForwardTypeMsg THEN
-        Errors.raise("type '" + msg.id + "' was not declared");
+        Errors.raise(Format.format1(Message.typeWasntDeclared, msg.id));
     END;
     RETURN SUPER(msg);
 END;

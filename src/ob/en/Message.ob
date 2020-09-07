@@ -2,5 +2,146 @@ MODULE Message;
 CONST
     methodAnonRec* = "cannot declare methods for anonymous records (POINTER TO RECORD)";
     methodExport* = "{0} '{1}' cannot be exported because record itself is not exported";
+    
+    (* Code.ob *)
+    negativeIndex* = "index is negative: {0}";
+    
+    (* ContextAssignment.ob *)
+    didYouMeanAssign* = "did you mean ':=' (statement expected, got expression)?";
+    
+    (* ContextCase.ob *)
+    onlyRecordsForCase* = "only records passed as VAR argument can be used to test type in CASE";
+    caseExpectations* = "'RECORD' or 'POINTER' or {0} or 'CHAR' expected as CASE expression";
+    caseHandleLabelType* = "label must be '{0}' (the same as case expression), got '{1}'";
+    typeNameExpectedInLabel* = "type's name expected in label, got expression: {0}";
+    singleCharStringExpected* = "single-character string expected";
+    canNotUseDiapason* = "cannot use diapason (..) with type guard";
+    isNotAType* = "'{0}' is not a type";
+    isNotAConstant* = "'{0}' is not a constant";
+    
+    (* ContextConst.ob *)
+    constExpressionExpected* = "constant expression expected";
+    
+    (* ContextDesignator.ob *)
+    canNotApplyTypecast* = "cannot apply type cast to {0}";
+    pointerCantBeDereferenced* = "POINTER TO non-exported RECORD type cannot be dereferenced";
+    pointerTypeExpected* = "POINTER TO type expected, got '{0}'";
+    expressionExpected* = "{0} expression expected, got '{1}'";
+    indexOutOfBonds* = "index out of bounds: maximum possible index is {0}, got {1}";
+    arrayOrStringExpected* = "ARRAY or string expected, got '{0}'";
+    cantIndexEmptString* = "cannot index empty string";
+    
+    (* ContextExpression.ob *)
+    cantBeReferenced* = "{0} cannot be referenced";
+    
+    (* ContextHierarchy.ob *)
+    undeclaredId* = "undeclared identifier: '{0}'";
+    idIsNotExported* = "identifier '{0}' is not exported by module '{1}'";
+    
+    (* ContextIf.ob *)
+    boolExpressionExpected* = "'BOOLEAN' expression expected, got '{0}'";
+    
+    (* ContextLoop.ob *)
+    isNotAVar* = "'{0}' is not a variable";
+    varMustBeInteger* = "'{0}' is a '{1}' variable, 'FOR' control variable must be 'INTEGER'";
+    intExpect* = "'INTEGER' expression expected to assign '{0}', got '{1}'";
+    intExpectedAsTo* = "'INTEGER' expression expected as 'TO' parameter, got '{0}'";
+    intExpectedAsBy* = "'INTEGER' expression expected as 'BY' parameter, got '{0}'";
+    constExpectedAsBy* = "constant expression expected as 'BY' parameter";
+    
+    (* ContextModule.ob *)
+    moduleName* = "original module name '{0}' expected, got '{1}'";
+    moduleCantImportItself* = "module '{0}' cannot import itself";
+    duplicateAlias* = "duplicated alias: '{0}'";
+    moduleAlreadyImported* = "module already imported: '{0}'";
+    moduleNotFound1* = "module not found: {0}";
+    moduleNotFound2* = "modules not found: {0}";
+    
+    (* ContextProcedure.ob *)
+    mismatchedProcName* = "mismatched procedure names: '{0}' at the begining and '{1}' at the end";
+    argSameAsName* = "argument '{0}' has the same name as procedure";
+    unexpectedReturn* = "unexpected RETURN in PROCEDURE declared with no result type";
+    returnTypeMismatch* = "RETURN '{0}' expected, got '{1}'";
+    returnExpectedAtEnd* = "RETURN expected at the end of PROCEDURE declared with '{0}' result type";
+    procedureCantReturn* = "procedure cannot return {0}";
+    procedureExpected* = "PROCEDURE expected, got '{0}'";
+    
+    (* ContextType.ob *)
+    intContExprExpected* = "'INTEGER' constant expression expected, got '{0}'";
+    constExprExpected* = "constant expression expected as ARRAY size";
+    arraySizeMustBeGrater* = "array size must be greater than 0, got {0}";
+    fieldExpOnlyIfExported* = "field '{0}' can be exported only if {1} '{2}' itself is exported too";
+    recursiveFieldDef* = "recursive field definition: '{0}'";
+    recTypeExpected* = "RECORD type is expected as a base type, got '{0}'";
+    recursiveInheritance* = "recursive inheritance: '{0}'";
+    recExpectedAsPtrBaseType* = "RECORD is expected as a POINTER base type{0}";
+    cantExportAnonRecField* = "cannot export anonymous RECORD field: '{0}'";
+    
+    (* ContextVar.ob *)
+    typeWasntDeclared* = "type '{0}' was not declared";
+    
+    (* ExpressionTree.ob *)
+    typeNameExpected* = "type name expected";
+    isNotAnExtencion* = "{0}: '{1}' is not an extension of '{2}'";
+    ptrToTypeExpected* = "{0}: POINTER to type or RECORD expected, got '{1}'";
+    valueVarCantBeUsed* = "{0}: a value variable cannot be used";
+    recTypeExpectedAsArg* = "{0}: RECORD type expected as an argument of RECORD {1}, got '{2}'";
+    ptrTypeExpectedAsArg* = "{0}: POINTER type expected as an argument of POINTER {1}, got '{2}'";
+    typeMismatch* = "type mismatch: expected '{0}', got {1}";
+    opTypeMismatch* = "operator '{0}' type mismatch: {1} expected, got '{2}'";
+    typeNameCantBeExpr* = "type name '{0}' cannot be used as an expression";
+    opDivExpected* = "operator DIV expected for integer division";
+    boolExpectedAsOperand* = "BOOLEAN expected as operand of '&', got '{0}'";
+    boolExpectedAsOperandOfOr* = "BOOLEAN expected as operand of 'OR', got '{0}'";
+    procReturningNoResult* = "procedure returning no result cannot be used in an expression";
+    expectedAsElemOfSet* = "{0} expected as an element of SET, got '{1}'";
+    
+    (* LanguageContext.ob *)
+    cannotReference* = "cannot reference {0}";
+    
+    (* Lexer.ob *)
+    intLooksLikeHex* = "integer constant looks like having hexadecimal format but 'H' suffix is missing";
+    unexpectedEndOfString* = "unexpected end of string";
+    commentWasNotClosed* = "comment was not closed";
+    
+    (* Module.ob *)
+    strExpected* = "string is expected as an argument of {0}, got {1}";
+    procRetResCantBeStatement* = "procedure returning a result cannot be used as a statement";
+    
+    (* Operator.ob *)
+    strCantBeAssign* = "string cannot be assigned to open {0}";
+    arrIsTooSmall* = "{0}-character ARRAY is too small for {1}-character string";
+    cantAssignTo* = "cannot assign to {0}";
+    typeMismatchExpr* = "type mismatch: '{0}' cannot be assigned to '{1}' expression";
+    openCantBeAssigned* = "open '{0}' cannot be assigned";
+    
+    (* Procedure.ob *)
+    typeMismatchForArgPass* = "type mismatch for argument {0}: cannot pass '{1}' as VAR parameter of type '{2}'";
+    typeMismatchForArgConv* = "type mismatch for argument {0}: '{1}' cannot be converted to '{2}'";
+    expCannotUsedAsVar* = "expression cannot be used as VAR parameter";
+    cannotBePassedAsVar* = "{0} cannot be passed as VAR actual parameter";
+    argsExpected* = "{0} argument(s) expected, got {1}";
+    procVarExpected* = "POINTER variable expected, got '{0}'";
+    nonExpRecCantUsedInNew* = "non-exported RECORD type cannot be used in NEW";
+    arrExpectedForLen* = "ARRAY or string is expected as an argument of LEN, got '{0}'";
+    val31expected* = "value (0..31) expected as a second argument of {0}, got {1}";
+    atLeastArgExpected* = "at least {0} argument expected, got {1}";
+    atMostArgExpected* = "at most {0} arguments expected, got {1}";
+    typeMismatchNumExpected* = "type mismatch: expected numeric type, got '{0}'";
+    ordExpectCharBoolSet* = "ORD function expects CHAR or BOOLEAN or SET as an argument, got '{0}'";
+    
+    (* Record.ob *)
+    dupField* = "duplicated field: '{0}'";
+    baseRecHasField* = "base record already has field: '{0}'";
+    typeHasNoField* = "type '{0}' has no '{1}' field";
+    
+    (* Scope.ob *)
+    mustBeRecordType* = "'{0}' must be of RECORD type because it was used before in the declation of POINTER";
+    noDeclarationFound* = "no declaration found for '{0}'";
+    alreadyDeclared* = "'{0}' already declared";
+    cannotExport* = "cannot export from within procedure: {0} '{1}'";
+    
+    (* Types.ob *)
+    selectorCantBeApplied* = "selector '.{0}' cannot be applied to '{1}'";
 
 END Message.

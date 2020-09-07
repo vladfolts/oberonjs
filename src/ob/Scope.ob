@@ -10,7 +10,9 @@ IMPORT
     Symbols, 
     TypeId,
     Types,
-    Variable;
+    Variable,
+    Format,
+    Message;
 TYPE
     Unresolved = ARRAY * OF STRING;
 
@@ -112,10 +114,7 @@ BEGIN
         info := symbol.info();
         type := info(TypeId.PType).type();
         IF (type # NIL) & ~(type IS Record.PType) THEN
-            Errors.raise(
-                "'" 
-                + id
-                + "' must be of RECORD type because it was used before in the declation of POINTER");
+            Errors.raise(Format.format1(Message.mustBeRecordType, id));
         END;
         s.unresolved.remove(i);
     END;
@@ -124,8 +123,7 @@ END;
 PROCEDURE checkAllResolved*(s: Type);
 BEGIN
     IF LEN(s.unresolved) # 0 THEN
-        Errors.raise("no declaration found for '" 
-                     + String.join(s.unresolved, "', '") + "'");
+        Errors.raise(Format.format1(Message.noDeclarationFound, String.join(s.unresolved, "', '")));
     END;
 END;
 
@@ -157,7 +155,7 @@ PROCEDURE Type.addSymbol(s: Symbols.PSymbol; exported: BOOLEAN);
 BEGIN
     id <- s.id();
     IF SELF.findSymbol(id) # NIL THEN
-        Errors.raise("'" + id + "' already declared");
+        Errors.raise(Format.format1(Message.alreadyDeclared, id));
     END;
     SELF.symbols[id] := s;
 END;
@@ -188,8 +186,7 @@ VAR
 BEGIN
     IF exported THEN
         info := s.info();
-        Errors.raise("cannot export from within procedure: "
-                     + info.idType() + " '" + s.id() + "'");
+        Errors.raise(Format.format2(Message.cannotExport, info.idType(), s.id()));
     END;
     SUPER(s, exported);
 END;

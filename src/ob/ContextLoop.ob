@@ -1,7 +1,7 @@
 MODULE ContextLoop;
 IMPORT
     Chars, CodeGenerator, ConstValue, Context, ContextExpression, ContextIf, ContextHierarchy, 
-    Errors, Expression, Operator, String, Types;
+    Errors, Expression, Operator, String, Types, Format, Message;
 TYPE
     While* = RECORD(ContextExpression.ExpressionHandler)
         PROCEDURE While*(parent: ContextHierarchy.PNode);
@@ -110,12 +110,11 @@ BEGIN
     s <- ContextHierarchy.getSymbol(SELF.root()^, id);
     info <- s.info();
     IF ~(info IS Types.PVariable) THEN
-        Errors.raise("'" + s.id() + "' is not a variable");
+        Errors.raise(Format.format1(Message.isNotAVar, s.id()));
     ELSE
         type <- info.type();
         IF type # Types.basic.integer THEN
-            Errors.raise("'" + s.id() + "' is a '" + type.description() 
-                         + "' variable, 'FOR' control variable must be 'INTEGER'");
+            Errors.raise(Format.format2(Message.varMustBeInteger, s.id(), type.description()));
         END;
         SELF.doHandleInitCode(id, "for (" + id + " = ");
     END;
@@ -130,9 +129,7 @@ END;
 PROCEDURE For.doHandleInitExpression(type: Types.PType);
 BEGIN
     IF type # Types.basic.integer THEN
-        Errors.raise(
-            "'INTEGER' expression expected to assign '" + SELF.var
-            + "', got '" + type.description() + "'");
+        Errors.raise(Format.format2(Message.intExpect, SELF.var, type.description()));
     END;
     SELF.initExprParsed := TRUE;
 END;
@@ -144,18 +141,16 @@ BEGIN
         SELF.doHandleInitExpression(type);
     ELSIF ~SELF.toParsed THEN
         IF type # Types.basic.integer THEN
-            Errors.raise("'INTEGER' expression expected as 'TO' parameter, got '" 
-                         + type.description() + "'");
+            Errors.raise(Format.format1(Message.intExpectedAsTo, type.description()));
         END;
         SELF.toParsed := TRUE;
     ELSE
         IF type # Types.basic.integer THEN
-            Errors.raise("'INTEGER' expression expected as 'BY' parameter, got '" 
-                         + type.description() + "'");
+            Errors.raise(Format.format1(Message.intExpectedAsBy, type.description()));
         END;
         value <- e.constValue();
         IF value = NIL THEN
-            Errors.raise("constant expression expected as 'BY' parameter");
+            Errors.raise(Message.constExpectedAsBy);
         END;
         SELF.by := value(ConstValue.PInt).value;
     END;

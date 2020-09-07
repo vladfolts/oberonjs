@@ -1,6 +1,6 @@
 MODULE Record;
 IMPORT
-    Chars, Context, Errors, Object, ScopeBase, TypeId, Types;
+    Chars, Context, Errors, Object, ScopeBase, TypeId, Types, Format, Message;
 TYPE
     FieldsMap = MAP OF Types.PField;
 
@@ -107,10 +107,10 @@ END;
 PROCEDURE Type.addField(f: Types.PField);
 BEGIN
     IF f.id() IN SELF.fields THEN
-        Errors.raise("duplicated field: '" + f.id() + "'");
+        Errors.raise(Format.format1(Message.dupField, f.id()));
     END;
     IF (SELF.base # NIL) & (SELF.base.findSymbol(f.id()) # NIL) THEN
-        Errors.raise("base record already has field: '" + f.id() + "'");
+        Errors.raise(Format.format1(Message.baseRecHasField, f.id()));
     END;
     SELF.fields[f.id()] := f;
     IF ~f.exported() THEN
@@ -134,7 +134,7 @@ PROCEDURE existingField(r: Type; id: STRING; d: Types.NamedType): Types.PField;
 BEGIN
     result <- r.findSymbol(id);
     IF result = NIL THEN
-        Errors.raise("type '" + d.description() + "' has no '" + id + "' field");
+        Errors.raise(Format.format2(Message.typeHasNoField, d.description(), id));
     END;
     RETURN result
 END;

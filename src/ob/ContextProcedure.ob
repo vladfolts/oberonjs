@@ -3,7 +3,7 @@ IMPORT
     Cast, Chars, CodeGenerator, Context, ContextExpression, 
     ContextHierarchy, ContextType, 
     Errors, Expression, ExpressionTree, LanguageContext,
-    Object, Procedure, Scope, Symbols, TypeId, Types, Variable;
+    Object, Procedure, Scope, Symbols, TypeId, Types, Variable, Format, Message;
 TYPE
     Declaration* = RECORD(ContextType.DeclarationAndIdentHandle)
         PROCEDURE Declaration*(parent: ContextHierarchy.PNode);
@@ -82,8 +82,7 @@ PROCEDURE Declaration.handleIdent(id: STRING);
 BEGIN
     expectId <- SELF.id.id();
     IF expectId # id THEN
-        Errors.raise("mismatched procedure names: '" + expectId
-                     + "' at the begining and '" + id + "' at the end");
+        Errors.raise(Format.format2(Message.mismatchedProcName, expectId, id));
     END;
 END;
 
@@ -119,7 +118,7 @@ END;
 PROCEDURE addArgument(VAR declaration: Declaration; name: STRING; arg: Types.ProcedureArgument);
 BEGIN
     IF name = declaration.id.id() THEN
-        Errors.raise("argument '" + name + "' has the same name as procedure");
+        Errors.raise(Format.format1(Message.argSameAsName, name));
     END;
     v <- declaration.doMakeArgumentVariable(arg, name);
     s <- NEW Symbols.Symbol(name, v);
@@ -166,14 +165,12 @@ BEGIN
     type <- e.type();
     result <- SELF.type.result();
     IF result = NIL THEN
-        Errors.raise("unexpected RETURN in PROCEDURE declared with no result type");
+        Errors.raise(Message.unexpectedReturn);
     END;
     
     language <- SELF.root().language();
     IF language.types.implicitCast(type, result, FALSE, op) # Cast.errNo THEN
-        Errors.raise(
-            "RETURN '" + result.description() + "' expected, got '"
-            + type.description() + "'");
+        Errors.raise(Format.format2(Message.returnTypeMismatch, result.description(), type.description()));
     END;
 
     SELF.codeGenerator().write("return " + SELF.doMakeReturnCode(e, op^) + ";" + Chars.ln);
@@ -188,8 +185,7 @@ BEGIN
 
     result <- SELF.type.result();
     IF (result # NIL) & ~SELF.returnParsed THEN
-        Errors.raise("RETURN expected at the end of PROCEDURE declared with '"
-                     + result.description() + "' result type");
+        Errors.raise(Format.format1(Message.returnExpectedAtEnd, result.description()));
     END;
     RETURN TRUE;
 END;
@@ -224,7 +220,7 @@ END;
 PROCEDURE FormalParameters.doCheckResultType(type: Types.PStorageType);
 BEGIN
     IF ~type.isScalar() THEN
-        Errors.raise("procedure cannot return " + type.description());
+        Errors.raise(Format.format1(Message.procedureCantReturn, type.description()));
     END;
 END;
 
@@ -311,7 +307,7 @@ BEGIN
     END;
     
     IF result = NIL THEN
-        Errors.raise("PROCEDURE expected, got '" + unexpected + "'");
+        Errors.raise(Format.format1(Message.procedureExpected, unexpected));
     END;
     
     RETURN result;

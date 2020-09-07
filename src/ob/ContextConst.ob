@@ -1,7 +1,7 @@
 MODULE ContextConst;
 IMPORT
     Chars, ConstValue, Context, ContextExpression, 
-    Errors, Expression, Symbols, Types;
+    Errors, Expression, Symbols, Types, Message;
 TYPE
     Type* = RECORD(ContextExpression.ExpressionHandler)
         PROCEDURE handleIdentdef*(id: Context.PIdentdefInfo);
@@ -21,7 +21,7 @@ PROCEDURE Type.handleExpression(e: Expression.PType);
 BEGIN
     value <- e.constValue();
     IF value = NIL THEN
-        Errors.raise("constant expression expected");
+        Errors.raise(Message.constExpressionExpected);
     END;
     SELF.type := e.type();
     SELF.value := value;

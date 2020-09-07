@@ -1,7 +1,7 @@
 MODULE ContextHierarchy;
 IMPORT 
     CodeGenerator, Context, Designator, Errors, LanguageContext, Module, 
-    OberonRtl, Object, Scope, ScopeBase, Symbols, String, Types;
+    OberonRtl, Object, Scope, ScopeBase, Symbols, String, Types, Format, LocMessage:=Message;
 TYPE
     PRoot* = POINTER TO Root;
     PNode* = POINTER TO Node;
@@ -172,7 +172,7 @@ PROCEDURE getSymbolAndScope*(cx: Root; id: STRING): Symbols.PFoundSymbol;
 BEGIN
     s <- cx.findSymbol(id);
     IF s = NIL THEN
-        Errors.raise("undeclared identifier: '" + id + "'");
+        Errors.raise(Format.format1(LocMessage.undeclaredId, id));
     END;
     RETURN s;
 END;
@@ -181,7 +181,7 @@ PROCEDURE getModuleSymbolAndScope*(m: Module.Type; id: STRING): Symbols.PFoundSy
 BEGIN
     s <- m.findSymbol(id);
     IF s = NIL THEN
-        Errors.raise("identifier '" + id + "' is not exported by module '" + m.name + "'");
+        Errors.raise(Format.format2(LocMessage.idIsNotExported, id, m.name));
     END;
     RETURN s;
 END;
