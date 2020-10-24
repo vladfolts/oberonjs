@@ -9,12 +9,11 @@
             "command": [
                 "${config:python.pythonPath}",
                 "${workspaceFolder}/build.py",
-                "--file",
-                "${file}",
-                "compile"
+                "compile",
+                "${file}"
             ],
             "problemMatcher": {
-                "fileLocation": ["absolute"],
+                "fileLocation": ["relative", "${workspaceFolder}"],
                 "pattern": {
                   "regexp": "^File\\s+\"(.*)\",\\s+line\\s+(\\d+):\\s+(.*)$",
                   "file": 1,
