@@ -7,9 +7,9 @@ You can try the compiler online [here](http://oberspace.dyndns.org/oberonjs.html
 ### How to use
 You can use the project as any other JavaScript library. There is no third-party dependencies. The project has been developing using nodejs, you might need to accommodate nodejs source modules in your project if you want to use nodejs. All source code is under src/ folder. Compiler entry point is `oc.js`.
 
-The repository contains pre-compiled JavaScriprt code of the compiler (ready to run) in .zip [[archive|../../bin/compiled.zip]]. This code is needed to self-compile the compiler (from Oberon sources) for the first time.
+The repository contains pre-compiled JavaScriprt code of the compiler (ready to run) in .zip [archive](../../bin/compiled.zip). This code is needed to self-compile the compiler (from Oberon sources) for the first time.
 
-Python 2.x or 3.x is required. [[build.py|../../build.py]] script is used as a helper for different tasks:
+Python 2.x or 3.x is required. [build.py](../../build.py) script is used as a helper for different tasks:
 * build a test html page locally and see how it works
     ```
     ./build.py html
