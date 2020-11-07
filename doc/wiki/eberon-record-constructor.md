@@ -97,7 +97,7 @@ Fields of non-record types also can be referenced in initialization list. In thi
     END;
 
 Fields must be referenced in the initialization list in the same order as they declared in record. For example above "f2(TRUE), f1(123)" will cause compiler error.
-Only record's own fields can be referenced (not fields from base record). Fields of non-record types may be missed in the list - in this case they will be initialized using default values. Record fields having constructor without parameters will be initialized automatically and must be not referenced in initialzation list. All fields are initialized strictly in the same order as they declared in record - no matter if they referenced in the initialization list or initialized automatically. It is possible to use *SELF* in initialization list but be aware of the initialization order - do not use *SELF* to access not initialized field (the compiler does not diagnose that).
+Only record's own fields can be referenced (not fields from base record). Fields of non-record types may be missed in the list - in this case they will be initialized using default values. Record fields having constructor without parameters will be initialized automatically and must be not referenced in initialization list. All fields are initialized strictly in the same order as they declared in record - no matter if they referenced in the initialization list or initialized automatically. It is possible to use *SELF* in initialization list but be aware of the initialization order - do not use *SELF* to access not initialized field (the compiler does not diagnose that).
 
 The order of execution in constructor: 
 * call base constructor (if present), using *SUPER* (with parameters) or automatically (no parameters)

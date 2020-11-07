@@ -16,8 +16,8 @@ Operator NEW in [[Eberon|eberon]] returns a pointer to created record. So code a
 
 Also operator NEW can be used to initialize a pointer variable to base record (while creating derived record):
 
-    IF condtition1 THEN
-        base := NEW Dervied1();
+    IF condition1 THEN
+        base := NEW Derived1();
     ELSE
         base := NEW Derived2();
     END;

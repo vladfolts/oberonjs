@@ -1,4 +1,4 @@
-**Eberon** is Experimental oBERON. It is my attempt to make a programming language in the right way (in my humble opinion of cause) taking Wirth's Oberon as a start point.
+**Eberon** is Experimental oBERON. It is my attempt to make a programming language in the right way (in my humble opinion of course) taking Wirth's Oberon as a start point.
 
 Eberon basically extends original Oberon (excluding additional [restrictions](#restrictions) below) so any valid oberon program is also a valid eberon program. A new syntax was introduced for extensions but I tried to maintain the original syntax flavor (e.g. CAPS).
 
