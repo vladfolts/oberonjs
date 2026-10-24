@@ -1,0 +1,4 @@
+./build.py --locale=ru self-recompile --skip-tests
+./build.py html
+
+

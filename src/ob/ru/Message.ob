@@ -144,4 +144,32 @@ CONST
     (* Types.ob *)
     selectorCantBeApplied* = "селектор '.{0}' не может быть применён к '{1}'";
 
+    (* JavaScript parser and compiler diagnostics. *)
+    unmatchedParen* = "нет соответствующей закрывающей скобки ')'";
+    invalidOperand* = "недопустимый операнд";
+    expressionRequired* = "ожидается выражение";
+    thenExpected* = "ожидается THEN";
+    endForExpected* = "ожидается END для FOR";
+    endProcedureExpected* = "ожидается END для PROCEDURE";
+    endModuleExpected* = "ожидается END для MODULE";
+    initializationExpected* = "ожидается выражение инициализации";
+    ternaryColonExpected* = "ожидается {0}:{0} после {0}?{0} в условном выражении";
+    ternaryExpressionExpected* = "ожидается выражение после {0}:{0} в условном выражении";
+    tokenExpected* = "ожидается '{0}'";
+    syntaxError* = "синтаксическая ошибка";
+    errorAtLine* = "строка {0}: {1}";
+    internalErrorAtLine* = "внутренняя ошибка транслятора при разборе строки {0}: {1}{2}";
+    fileNotFound* = "не удалось найти файл: '{0}' в {1}";
+    sourceFile* = "Файл {0}{1}{0}";
+
+    (* Runtime diagnostics. *)
+    runtimeCannotCast* = "невозможно выполнить приведение типа";
+    runtimeCastTypes* = " к '";
+    runtimeCastFrom* = "' из '";
+    runtimeIndex* = "индекс за границей: ";
+    runtimeSetBit* = "ожидается целое число от 0 до 31, получено ";
+    runtimeSetRange* = "недопустимый диапазон SET: ";
+    runtimeAssertion* = "нарушено условие ASSERT";
+    runtimeKey* = "недопустимый ключ: ";
+
 END Message.

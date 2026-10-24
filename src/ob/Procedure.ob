@@ -18,7 +18,8 @@ IMPORT
     TypeId,
     Types,
     Format,
-    Message;
+    Message,
+    Variable;
 TYPE
     Call* = RECORD
         PROCEDURE make*(args: ARRAY OF Expression.PType; cx: LanguageContext.PType): Expression.PType
@@ -554,6 +555,21 @@ PROCEDURE incImpl(name: STRING; unary: STRING; incOp: BinaryOpStr; incRefOp: Ope
             END;
             addExp <- SELF.incRefOp(x, y);
             code := Cast.assign(cx, x.info()(Types.PVariable), addExp);
+        ELSIF (x.info()^ IS Variable.PropertyVariable) & cx.language.codeTraits.checkIndexes THEN
+            element <- x.info();
+            traits <- cx.language.codeTraits;
+            IF LEN(args) = 1 THEN
+                valueCode := "1";
+            ELSE
+                valueCode := args[1].code();
+            END;
+            (* Capture the element and its value before evaluating the optional step. *)
+            code := "(function($a, $i){var $v = "
+                + traits.getAt("$a", "$i", Types.basic.integer) + ";return function($n){"
+                + SELF.incOp("$v", "$n") + ";"
+                + traits.putAt("$a", "$i", "$v") + ";};})("
+                + element^(Variable.PropertyVariable).leadCode + ", "
+                + element^(Variable.PropertyVariable).propCode + ")(" + valueCode + ")";
         ELSIF LEN(args) = 1 THEN
             code := SELF.unary + x.code();
         ELSE

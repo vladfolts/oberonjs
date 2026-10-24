@@ -1,5 +1,8 @@
 "use strict";
 
+var Message = require("js/Message.js");
+var Format = require("js/Format.js");
+
 var assert = require("rtl.js").assert;
 var Errors = require("js/Errors.js");
 var Lexer = require("js/Lexer.js");
@@ -87,7 +90,7 @@ exports.required = function(parserOrString, error){
 		if (!parser(stream, context))
 			throw new Errors.Error(error 
 					? error 
-					: ("'" + parserOrString + "' expected"));
+					: Format.format1(Message.tokenExpected, parserOrString));
 		return true;
 	};
 };

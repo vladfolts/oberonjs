@@ -39,7 +39,7 @@ TYPE
 
         code: CodeGenerator.PIGenerator;
         rtl: OberonRtl.PType;
-        checkIndexes: BOOLEAN;
+        checkIndexes-: BOOLEAN;
     END;
 
     Imports = MAP OF STRING;

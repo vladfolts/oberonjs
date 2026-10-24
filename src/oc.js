@@ -1,5 +1,8 @@
 "use strict";
 
+var Message = require("js/Message.js");
+var Format = require("js/Format.js");
+
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var ContextHierarchy = require("js/ContextHierarchy.js");
@@ -25,17 +28,17 @@ function compileModule(grammar, stream, context, handleErrors){
     Lexer.skipSpaces(stream, context);  
     try {
         if (!grammar.module(stream, context))
-            throw new Errors.Error("syntax error");
+            throw new Errors.Error(Message.syntaxError);
     }
     catch (x) {
         if (x instanceof Errors.Error) {
             if (handleErrors){
-                handleErrors("line " + Stream.lineNumber(stream) + ": " + x);
+                handleErrors(Format.format2(Message.errorAtLine, Stream.lineNumber(stream), x));
                 return undefined;
             }
         }
         if (x.message)
-            x.message = "internal compiler error while parsing line " + Stream.lineNumber(stream) + ": " + Stream.currentLine(stream) + "\n" + x.message;
+            x.message = Format.format3(Message.internalErrorAtLine, Stream.lineNumber(stream), Stream.currentLine(stream), "\n" + x.message);
         throw x;
     }
     var scope = context.root().currentScope();

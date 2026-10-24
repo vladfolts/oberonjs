@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 from browser.linkjs import link
 import argparse
 import os

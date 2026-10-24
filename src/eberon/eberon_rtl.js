@@ -12,7 +12,7 @@ function extendMap(base, ext){
 var methods = extendMap(oberon_rtl.rtl.methods, {
     getMappedValue: function(map, key){
         if (!map.hasOwnProperty(key))
-            throw new Error("invalid key: " + key);
+            throw new Error(this.__message("runtimeKey") + key);
         return map[key];
     },
     clearMap: function(map){
@@ -53,7 +53,8 @@ var methods = extendMap(oberon_rtl.rtl.methods, {
 });
 oberon_rtl.applyMap(methods, exports);
 
-var dependencies = extendMap(oberon_rtl.rtl.dependencies, { 
+var dependencies = extendMap(oberon_rtl.rtl.dependencies, {
+        "getMappedValue": ["__message"],
         "clone": oberon_rtl.rtl.dependencies.clone.concat(["__copyMap", "__inheritedClone"]),
         "copy": oberon_rtl.rtl.dependencies.copy.concat(["clearMap", "__copyMap", "__inheritedCopy"])
     });

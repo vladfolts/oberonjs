@@ -1,5 +1,7 @@
 "use strict";
 
+var Message = require("js/Message.js");
+
 // support IE8
 if (!Array.prototype.indexOf)
     Array.prototype.indexOf = function(x){
@@ -40,7 +42,16 @@ var rtlPrototype = {
                 result += ",\n";
             else
                 firstEntry = false;
-            result += "    " + name + ": " + this.__entries[name].toString();
+            // Embed translations so compiled programs need no compiler modules.
+            var code = this.__entries[name].toString();
+            if (name === "__message"){
+                var messages = {};
+                for (var id in Message)
+                    if (id.indexOf("runtime") === 0)
+                        messages[id] = Message[id];
+                code = "function(id){return " + JSON.stringify(messages) + "[id];}";
+            }
+            result += "    " + name + ": " + code;
         }
         if (!firstEntry)
             result += "\n};\n";

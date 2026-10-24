@@ -1,0 +1,49 @@
+(*options:{"checkIndexes": true}*)
+MODULE m;
+VAR
+    a: ARRAY 2 OF INTEGER;
+    matrix: ARRAY 2, 2 OF INTEGER;
+    calls: INTEGER;
+
+PROCEDURE index(): INTEGER;
+BEGIN
+    INC(calls)
+RETURN 1
+END index;
+
+PROCEDURE change(VAR n: INTEGER);
+BEGIN
+    INC(n);
+    DEC(n, 2)
+END change;
+
+PROCEDURE step(): INTEGER;
+BEGIN
+    a[1] := 100
+RETURN 2
+END step;
+
+BEGIN
+    a[1] := 10;
+    DEC(a[index()]);
+    ASSERT(a[1] = 9);
+    ASSERT(calls = 1);
+    INC(a[index()]);
+    ASSERT(a[1] = 10);
+    ASSERT(calls = 2);
+    DEC(a[index()], 3);
+    ASSERT(a[1] = 7);
+    ASSERT(calls = 3);
+    INC(a[index()], a[1]);
+    ASSERT(a[1] = 14);
+    ASSERT(calls = 4);
+    change(a[1]);
+    ASSERT(a[1] = 13);
+    INC(matrix[index(), index()], 5);
+    DEC(matrix[index(), index()], 2);
+    ASSERT(matrix[1, 1] = 3);
+    ASSERT(calls = 8);
+    INC(a[index()], step());
+    ASSERT(a[1] = 15);
+    ASSERT(calls = 9)
+END m.

@@ -29,6 +29,9 @@ Class.extend = function extend(methods){
     };
 
 var methods = {
+    __message: function(id){
+        return require("js/Message.js")[id];
+    },
     extend: function(cons, base, scope){
         function Type(){}
         Type.prototype = base.prototype;
@@ -60,9 +63,9 @@ var methods = {
             else
                 toStr = "" + to;
             
-            var msg = "cannot cast";
+            var msg = this.__message("runtimeCannotCast");
             if (fromStr || toStr)               
-                msg += " to '" + toStr + "' from '" + fromStr + "'";
+                msg += this.__message("runtimeCastTypes") + toStr + this.__message("runtimeCastFrom") + fromStr + "'";
             throw new Error(msg);
         }
         return from;
@@ -70,18 +73,18 @@ var methods = {
     charAt: function(s, index){
         if (index >= 0 && index < s.length)
             return s.charCodeAt(index);
-        throw new Error("index out of bounds: " + index);
+        throw new Error(this.__message("runtimeIndex") + index);
     },
     getAt: function(where, index){
         if (index >= 0 && index < where.length)
             return where[index];
-        throw new Error("index out of bounds: " + index);
+        throw new Error(this.__message("runtimeIndex") + index);
     },
     putAt: function(where, index, what){
         if (index >= 0 && index < where.length)
             where[index] = what;
         else
-            throw new Error("index out of bounds: " + index);
+            throw new Error(this.__message("runtimeIndex") + index);
     },
     makeArray: function(/*dimensions, initializer*/){
         var forward = Array.prototype.slice.call(arguments);
@@ -144,11 +147,12 @@ var methods = {
         return makeArray.apply(undefined, forward);
     },
     makeSet: function(/*...*/){
+        var rtl = this;
         var result = 0;
         
         function checkBit(b){
             if (b < 0 || b > 31)
-                throw new Error("integers between 0 and 31 expected, got " + b);
+                throw new Error(rtl.__message("runtimeSetBit") + b);
         }
 
         function setBit(b){
@@ -162,7 +166,7 @@ var methods = {
                 var from = b[0];
                 var to = b[1];
                 if (to < from)
-                    throw new Error("invalid SET diapason: " + from + ".." + to);
+                    throw new Error(this.__message("runtimeSetRange") + from + ".." + to);
                 for(var bi = from; bi <= to; ++bi)
                     setBit(bi);
             }
@@ -243,13 +247,19 @@ var methods = {
     },
     assert: function(condition){
         if (!condition)
-            throw new Error("assertion failed");
+            throw new Error(this.__message("runtimeAssertion"));
     }
 };
 
 exports.Class = Class;
 exports.rtl = {
-    dependencies: { 
+    dependencies: {
+        "typeGuard": ["__message"],
+        "charAt": ["__message"],
+        "getAt": ["__message"],
+        "putAt": ["__message"],
+        "makeSet": ["__message"],
+        "assert": ["__message"],
         "copy": ["clone"],
         "clone": ["copy"],
         "makeCharArray": ["__makeCharArray"],

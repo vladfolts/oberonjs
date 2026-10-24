@@ -1,5 +1,8 @@
 "use strict";
 
+var Format = require("js/Format.js");
+var Message = require("js/Message.js");
+
 var Cast = require("js/EberonCast.js");
 var EbArray = require("js/EberonArray.js");
 var CodeGenerator = require("js/CodeGenerator.js");
@@ -37,7 +40,7 @@ function makeStrucType(base, type){
 
 function makeStatement(base, statementSequence, ident, expression){
     return or(context(and("FOR", ident, optional(and(",", ident)), "IN", expression, "DO", 
-                          statementSequence, required("END", "END expected (FOR)")), 
+                          statementSequence, required("END", Message.endForExpected)),
                       EberonContextLoop.ForEach),
               base
               );
@@ -51,7 +54,7 @@ function makeProcedureHeading(ident, identdef, formalParameters){
 }
 
 function makeInPlaceInit(ident, expression, inPlaceContext){
-    return context(and(ident, "<-", required(expression, "initialization expression expected")), inPlaceContext);
+    return context(and(ident, "<-", required(expression, Message.initializationExpected)), inPlaceContext);
 }
 
 function makeAssignmentOrProcedureCall(ident, designator, assignment, expression){
@@ -83,9 +86,9 @@ function makeExpression(base){
     var relExp = context(base, EberonContextExpression.RelationExpression);
     var expression = context(
         and(relExp, optional(and("?", relExp, 
-                                 required(":", "expected \":\" after \"?\" in ternary operator"), 
+                                 required(":", Format.format1(Message.ternaryColonExpected, '"')),
                                  required(function(){ return expression.apply(this, arguments);}, 
-                                          "expression is expected after \":\" in ternary operator")))),
+                                          Format.format1(Message.ternaryExpressionExpected, '"'))))),
         EberonContextExpression.ExpressionNode);
     return expression;
 }
@@ -197,7 +200,7 @@ exports.language = {
     codeGenerator: {
         make: function(){ return new CodeGenerator.Generator(); },                                                                                                                                                                                          
         nil: CodeGenerator.nullGenerator()
-    },                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+    },
     makeCodeTraits: function(codeGenerator, rtl, options){
         return new EberonLanguageContext.CodeTraits(codeGenerator, rtl, options && options.checkIndexes); 
     },

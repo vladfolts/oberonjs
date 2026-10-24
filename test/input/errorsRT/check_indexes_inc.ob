@@ -1,0 +1,7 @@
+(*options:{"checkIndexes": true}*)
+MODULE m;
+VAR a: ARRAY 1 OF INTEGER; i: INTEGER;
+BEGIN
+    i := -1;
+    INC(a[i])
+END m.

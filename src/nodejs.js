@@ -1,5 +1,8 @@
 "use strict";
 
+var Message = require("js/Message.js");
+var Format = require("js/Format.js");
+
 var Class = require("rtl.js").Class;
 var Code = require("js/Code.js");
 var CodeGenerator = require("js/CodeGenerator.js");
@@ -77,10 +80,10 @@ function compile(sources, language, handleErrors, includeDirs, outDir, importDir
                     ++i;
                 }
                 if (!fs.existsSync(readPath))
-                    throw new Error("cannot find file: '" + fileName + "' in " + includeDirs);
+                    throw new Error(Format.format2(Message.fileNotFound, fileName, includeDirs));
                 return new oc.ReadModule(
                     fs.readFileSync(readPath, "utf8"),
-                    "File \"" + readPath + "\"");
+                    Format.format2(Message.sourceFile, '"', readPath));
             },
             language.grammar,
             function(moduleResolver){
